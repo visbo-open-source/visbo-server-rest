@@ -4,3 +4,5 @@ apidoc/
 npm-debug.log
 .DS_Store
 public/ui/
+.env
+.env
