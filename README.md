@@ -26,17 +26,17 @@ here URL is the http url you get from the repository page, <a href="https://gith
 run the command
 
 	npm install
-	
+
 wait for it to be completed. It usually takes a minute or less to complete.<br>
 It will download all the dependencies.<br><br>
 
 <b>4. Now run the command</b>
 
-	npm start	
+	npm start
 or,
 
 	node ./bin/www
-	
+
 It will serve the project on default port (3484). <br><br>
 
 
@@ -44,7 +44,8 @@ It will serve the project on default port (3484). <br><br>
 <h2>API Documentation</h2>
 
 Find the API documentation <a href="https://api.tanmoythander.info/node-rest-server">here</a>.<br>
-To create your own API documentation, <a href="http://apidocjs.com/">follow this link</a>.
+To create your own API documentation run command in the roor folder apidoc -i routes -o public/apidoc
+<br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
 
 <h2>Developer Hint</h2>
@@ -58,7 +59,7 @@ in case of mac, you might need to mention "sudo"<br><br>
 run the command
 
 	nodemon ./bin/www
-	
+
 It will serve the project and restart on any file change<br>
 It's good to remember that, <b>./bin/www</b> is the entry point to the app.<br><br>
 
@@ -70,5 +71,3 @@ It's good to remember that, <b>./bin/www</b> is the entry point to the app.<br><
 <b>Indent size</b>: 2
 
 <b>Line endings</b>: LF (unix)
-
-
