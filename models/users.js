@@ -2,57 +2,27 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var userSchema = new mongoose.Schema({
-	email: {
-		type: String,
-		required: true
-	},
-	googleId: String,
-	googleToken: String,
-	name: {
-		type: String,
-		required: true,
-		maxlength: 100
-	},
-	password: {
-		type: String,
-		required: true
-	},
-	created_at: {
-		type: Date,
-		default: Date.now
-	},
+	email: {type: String, required: true},
+	name: {type: String, required: false, maxlength: 100},
+	password: {type: String, required: true},
+	lastLogin: {type: Date},
 	profile: {
-		dob: {
-			type: Date,
-			required: true
-		},
+		// address: {type: String, maxlength: 100, minlength: 5, default: 'not set'},
+		firstName: {type: String, required: true, maxlength: 100},
+		lastName: {type: String, required: true, maxlength: 100},
+		company: {type: String, maxlength: 100},
+		phone: {type: String, maxlength: 20},
 		address: {
-			type: String,
-			maxlength: 100,
-			minlength: 5,
-			default: 'not set'
-		},
-		company: {
-			type: String,
-			maxlength: 100,
-			minlength: 2,
-			default: 'not set'
-		},
-		phone: {
-			type: String,
-			minlength: 6,
-			maxlength: 20,
-			default: 'not set'
-		},
-		updated_at: {
-			type: Date
+			street: {type: String, maxlength: 100},
+			city: {type: String, maxlength: 100},
+			zip: {type: String, maxlength: 10},
+			state: {type: String, maxlength: 100},
+			country: {type: String, maxlength: 100}
 		}
-	},
-	posts: [{
-		type: Schema.Types.ObjectId,
-		ref: 'Post'
-	}]
+	}
 });
+// Set Creation and modification date automatically
+userSchema.set('timestamps', true);
 
 // declare a model
 mongoose.model('User', userSchema);

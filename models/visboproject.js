@@ -1,0 +1,17 @@
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var visboProjectSchema = new mongoose.Schema({
+	name: { type: String, required: true, maxlength: 100},
+	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
+	users: [{
+		userId: {type: Schema.Types.ObjectId, ref: 'userId', required: false},
+		email: {type: String, required: true},
+		role: {type: String, required: true}
+	}]
+});
+// Set Creation and modification date automatically
+visboProjectSchema.set('timestamps', true);
+
+// declare a model
+mongoose.model('VisboProject', visboProjectSchema);

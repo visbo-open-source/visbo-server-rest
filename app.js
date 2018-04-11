@@ -1,4 +1,4 @@
-var express = require('express');
+var express = require('express'); // MS Commment
 var path = require('path');
 var favicon = require('serve-favicon');
 var cors = require('cors');
@@ -6,18 +6,22 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
-
+var environment = require('dotenv');
+var moment = require('moment');
 
 //initialize mongoose schemas
-require('./models/posts');
 require('./models/users');
 require('./models/logs');
-require('./models/admins');
+require('./models/visbocenter');
+require('./models/visboproject');
+require('./models/visboprojectversion');
 
 // include the route modules
 var user = require('./routes/user');
-var admin = require('./routes/admin');
 var token = require('./routes/token');
+var vc = require('./routes/visbocenter');
+var vp = require('./routes/visboproject');
+var vpv = require('./routes/visboprojectversion');
 
 // Require mongoose
 var mongoose = require('mongoose');
@@ -57,24 +61,22 @@ function delayString(seconds) {
     str += ' second'
     if (sec>1) str += 's';
   }
-  return str; 
+  return str;
 }
-function dbConnect() {
-  console.log('Connecting database ...');
+function dbConnect(dbconnection) {
+  console.log('%s: Connecting database %s', moment().format('YYYY-MM-DD HH:mm:ss'), dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
   mongoose.connect(
     // Replace CONNECTION_URI with your connection uri
-    'CONNECTION_URI',
+    dbconnection,
     dbOptions
   ).then(function() {
-    console.log('Database connection successful !!!');
-    console.log('Server is fully functional');
+    console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:SS'));
   }, function(err) {
-    console.log('Database connection failed');
+    console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:SS'), err);
 
     reconnectTries++;
-    console.log('Reconnecting after '+delayString(trialDelay));
-    console.log('Reconnect trial: '+reconnectTries);
-    console.log('');
+    console.log('%s: Reconnecting after '+delayString(trialDelay), moment().format('YYYY-MM-DD HH:mm:SS'));
+    console.log('%s: Reconnect trial: '+reconnectTries, moment().format('YYYY-MM-DD HH:mm:SS'));
     delay(trialDelay*1000).then(function() {
       trialDelay += trialDelay;
       if (trialDelay>7200) trialDelay = 7200;
@@ -83,23 +85,32 @@ function dbConnect() {
     });
   });
 }
-dbConnect();
 
-// CORS Config
+// dbConnect();
+
+// CORS Config, whitelist is an array
 var whitelist = [
   undefined, // POSTMAN Support
-  'http://localhost:XXXX', // DEV Support
-  'https://example.com' // Production Support
+  'http://localhost:3484', // DEV Support
+  'http://visbo.myhome-server.de:3484', // Production Support
+  'http://localhost:4200' // MS Todo UI Support DEV Support
 ]
+// corsoptions is an object consisting of a property origin, the function is called if property is requested
+// MS Todo: check where Corsoptions is called with undefined
 var corsOptions = {
   origin: function (origin, callback) {
+    //console.log("%s Check CorsOptions %s", moment().format('YYYY-MM-DD HH:mm:ss'), origin);
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
+      //callback(null, true) // temporary enable cors for all sites
       callback(new Error(origin + ' is not allowed to access'))
     }
   }
 }
+// setup environment variables
+environment.config();
+console.log("%s: Starting in Environment %s", moment().format('YYYY-MM-DD HH:mm:ss'), process.env.NODE_ENV);
 
 // start express app
 var app = express();
@@ -107,31 +118,81 @@ var app = express();
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
+app.engine('.html', require('ejs').renderFile);
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
+// set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
-app.use(logger('dev'));
+
+// define the log entry for processing pages
+//app.use(logger('common'));
+app.use(logger(function (tokens, req, res) {
+  // console.log("%s: Request %O", moment().format('YYYY-MM-DD HH:mm:ss'), req.get('User-Agent'));
+  return [
+    moment().format('YYYY-MM-DD HH:mm:ss')+':',
+    tokens.method(req, res),
+    // 'base url', req.baseUrl,
+    //'Url', req.originalUrl,
+    tokens.url(req, res),
+    tokens.status(req, res),
+    tokens.res(req, res, 'content-length')||0+' Bytes',
+    Math.round(tokens['response-time'](req, res))+'ms',
+    req.ip,
+    req.get('User-Agent'),
+    ''
+  ].join(' ')
+}));
+
+dbConnect(process.env.NODE_VISBODB);
 
 
-app.use(express.static(path.join(__dirname, 'public')));
+var options = {
+  dotfiles: 'ignore',
+  etag: false,
+  extensions: ['htm', 'html'],
+  index: 'index.html',
+  maxAge: '1d',
+  redirect: false,
+  setHeaders: function (res, path, stat) {
+    res.set('x-timestamp', Date.now())
+  }
+}
+app.use(express.static(path.join(__dirname, 'public'), options));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
 app.use(bodyParser.json());
 
+// simple logger for this router's requests
+// all requests to this router will first hit this middleware
+app.use(function(req, res, next) {
+  console.log('%s: Method %s %s', moment().format('YYYY-MM-DD HH:mm:ss'), req.method, req.url);
+  next();
+});
+
+// Catch all routes from the ui client and return the index file
+app.get('/ui/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/ui/index.html'));
+});
+
+
 // Register the main routes
 app.use('/user', user);
-app.use('/admin', admin);
+//app.use('/admin', admin);
 app.use('/token', token);
+app.use('/vc', vc);
+app.use('/vp', vp);
+app.use('/vpv', vpv);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
+  console.log("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
   err.status = 404;
-  next(err);
+  res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
+  //next(err);
 });
 
 
@@ -139,7 +200,8 @@ app.use(function(req, res, next) {
 
 // development error handler
 // will print stacktrace
-if (app.get('env') === 'development') {
+if (process.env.NODE_ENV === 'development') {
+//if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
     res.status(err.status || 500);
     res.send({

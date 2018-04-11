@@ -1,10 +1,10 @@
 module.exports = {
 	user: {
-		'secret': 'now you see me',
+		'secret': 'now you see visual board',
 		'expiresIn': 3600
 	},
 	admin: {
-		'secret': 'a good day to die',
+		'secret': 'a good day to use visual board',
 		'expiresIn': 3600
 	}
 };
