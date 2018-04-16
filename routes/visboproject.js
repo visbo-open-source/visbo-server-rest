@@ -221,7 +221,8 @@ router.route('/')
 						});
 					}
 					// console.log("Found Users %d", listUsers.length);		// MS Log
-
+					newVP.vc.name = vc.name;
+					console.log("VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
 					// console.log("Save VisboProject %s  with Users %O", newVP.name, newVP.users);
 					newVP.save(function(err, vp) {
 						if (err) {
@@ -306,7 +307,7 @@ router.route('/')
 		})
 
 		/**
-		 * @api {put} /vp/:projectsid Update Visbo Project
+		 * @api {put} /vp/:projectid Update Visbo Project
 		 * @apiVersion 0.0.1
 		 * @apiGroup VisboProject
 		 * @apiName UpdateVisboProjects
@@ -369,6 +370,15 @@ router.route('/')
 				}
 				// console.log("PUT/Save Visbo Project %O ", oneVP);		// MS Log
 				oneVP.name = req.body.name;
+				var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVP.updatedAt);
+				// console.log("PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
+
+				if (origDate - putDate == 0 && req.body.users.length > 0){
+						oneVP.users = req.body.users
+						console.log("PUT/Save Visbo Project %s: no inbetween changes and users present, update permission ok \n%O ", oneVP._id, oneVP);		// MS Log
+				} else {
+					console.log("PUT/Save Visbo Project %s: Difference in updatedAt (%d sec) or no Users specified", req.params.vpid, (origDate-putDate)/1000);		// MS Log
+				}
 				// MS Todo update other properties also
 
 				oneVP.save(function(err, oneVP) {

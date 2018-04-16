@@ -39,8 +39,8 @@ router.route('/')
 	*   "message":"Returned Visbo Project Versions",
 	*   "vpv":[
 	*    {
-	*       "_id":"5aa64e70cde84541c754feaa",
-	*       "xxx":"xxx"
+	*       "_id":"vpv5aa64e70cde84541c754feaa",
+	*   		"allOthers": "all properties of visbo project version"
 	*    }
 	*  ]
 	* }
@@ -103,8 +103,9 @@ router.route('/')
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vpv
 	 * {
-	 *  "name":"My first Visbo Project",
-	 *	"vpid": "5aaf992ce2bd3711cf3da025"
+	 *  "name":"My first Visbo Project Version",
+	 *	"vpid": "vp5aaf992ce2bd3711cf3da025"
+	 *  "allOthers": "all properties of visbo project version"
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
 	 *     HTTP/1.1 200 OK
@@ -115,20 +116,10 @@ router.route('/')
 	 *   "__v":0,
 	 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 	 *   "createdAt":"2018-03-19T11:04:12.094Z",
-	 *   "name":"My first Visbo Project",
 	 *   "_id":"5aaf992ce2bd3711cf3da025",
-	 *   "users":[
-	 *    {
-	 *     "_id":null, (MS ToDo: Set the correct UserID)
-	 *     "email":"example@visbo.de",
-	 *     "role":"Admin"
-	 *    },
-	 *    {
-	 *     "email":"example2@visbo.de",
-	 *     "role":"User",
-	 *     "_id":null
-	 *    }
-	 *   ]
+	 *	 "name":"My first Visbo Project Version",
+	 *   "vpid": "vp5aaf992ce2bd3711cf3da025"
+	 *   "allOthers": "all properties of visbo project version"
 	 *  }]
 	 * }
 	 */
@@ -209,22 +200,14 @@ router.route('/')
 	 	*   "state":"success",
 	 	*   "message":"Returned Visbo Projects",
 	 	*   "vpv": [{
-	 	*    "_id":"5aa64e70cde84541c754feaa",
-	 	*    "updatedAt":"2018-03-16T12:39:54.042Z",
-	 	*    "createdAt":"2018-03-12T09:54:56.411Z",
-	 	*    "name":"My new Visbo Project",
-	 	*    "users":[
-	 	*     {
-	 	*      "email":"example1@visbo.de",
-	 	*      "role":"Admin",
-	 	*      "_id":"5aa64e70cde84541c754feab"
-	 	*     },
-	 	*     {
-	 	*      "email":"example2@visbo.de",
-	 	*      "role":"User",
-	 	*      "_id":"5aa64e70cde84541c754feac"
-	 	*     }
-	 	*    ]
+	 	*     "_id":"5aa64e70cde84541c754feaa",
+  	*     "name":"My new Visbo Project Version",
+		*     "updatedAt":"2018-03-19T11:04:12.094Z",
+  	*     "createdAt":"2018-03-19T11:04:12.094Z",
+  	*     "_id":"5aaf992ce2bd3711cf3da025",
+  	*	    "name":"My first Visbo Project",
+		*     "vpid": "5aaf992ce2bd3711cf3da025"
+  	*     "allOthers": "all properties of visbo project version"
 	 	*   }]
 	 	* }
 		*/
@@ -264,7 +247,8 @@ router.route('/')
 		 * @apiExample Example usage:
 		 *   url: http://localhost:3484/vpv/5aada025
 		 * {
-		 *  "name":"My first Visbo Project Renamed",
+		 *   "name":"My first Visbo Project Renamed",
+		 *   "allOthers": "all properties of visbo project version"
 		 * }
 		 * @apiSuccessExample {json} Success-Response:
 		 *     HTTP/1.1 200 OK
@@ -273,22 +257,12 @@ router.route('/')
 		 *  "message":"Successfully updated VisboProjectVersion Renamed",
 		 *  "vpv":[{
 		 *   "__v":0,
+		 *   "_id":"vpv5aaf992ce2bd3711cf3da025",
 		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 		 *   "createdAt":"2018-03-19T11:04:12.094Z",
 		 *   "name":"My first Visbo Project Renamed",
-		 *   "_id":"5aaf992ce2bd3711cf3da025",
-		 *   "users":[
-		 *    {
-		 *     "_id":null, (MS ToDo: Set the correct UserID)
-		 *     "email":"example@visbo.de",
-		 *     "role":"Admin"
-		 *    },
-		 *    {
-		 *     "email":"example2@visbo.de",
-		 *     "role":"User",
-		 *     "_id":null
-		 *    }
-		 *   ]
+		 *   "vpid": "vp5aaf992ce2bd3711cf3da025"
+		 *   "allOthers": "all properties of visbo project version"
 		 *  }]
 		 * }
 		 */

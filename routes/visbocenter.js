@@ -333,7 +333,8 @@ router.route('/:vcid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			// console.log("PUT/Save Visbo Center %O ", oneVC);		// MS Log
+			var vpPopulate = oneVC.name != req.body.name ? true : false;
+			console.log("PUT/Save Visbo Center %O new Name %s", oneVC, req.body);		// MS Log
 			oneVC.name = req.body.name;
 			// MS Todo update other properties also
 
@@ -343,6 +344,39 @@ router.route('/:vcid')
 						state: 'failure',
 						message: 'Error updating Visbo Center',
 						error: err
+					});
+				}
+				// Update underlying projects if name has changed
+				if (vpPopulate){
+					// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+					console.log("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+					//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"vc.name": oneVC.name}}).exec();
+					var updateVP = VisboProject.find({"vcid": oneVC._id})
+
+					updateVP.select('_id name');
+					updateVP.exec(function (err, listVP) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error getting Visbo Projects',
+								error: err
+							});
+						}
+						// console.log("Update the following VP: %O", listVP);
+						for (let i = 0; i < listVP.length; i++) {
+							console.log("Update VP %s", listVP[i].name);
+							listVP[i].vc.name = oneVC.name
+							listVP[i].save(function(err, vp){
+								if (err){
+									console.log("Problem updating VP Projects %d %s for VC", i, listVP[i]._id);
+									return res.status(500).send({
+										state: 'failure',
+										message: 'Error updating Visbo Projects',
+										error: err
+									});
+								}
+							})
+						};
 					});
 				}
 				return res.status(200).send({

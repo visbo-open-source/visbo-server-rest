@@ -8,7 +8,10 @@ var visboProjectSchema = new mongoose.Schema({
 		userId: {type: Schema.Types.ObjectId, ref: 'userId', required: false},
 		email: {type: String, required: true},
 		role: {type: String, required: true}
-	}]
+	}],
+	vc: {
+		name: { type: String, required: false, maxlength: 100}
+	}
 });
 // Set Creation and modification date automatically
 visboProjectSchema.set('timestamps', true);
