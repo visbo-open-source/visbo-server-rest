@@ -8,6 +8,16 @@ var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 
+
+var findUser = function(currentUser) {
+		return currentUser == this;
+}
+
+var findUserList = function(currentUser) {
+		//console.log("compare %s %s", currentUser.email, this);
+		return currentUser.email == this;
+}
+
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 
@@ -153,32 +163,21 @@ router.route('/')
 			}
 			// console.log("Create Visbo Center (name is already unique) check users");
 			var newVC = new VisboCenter();
-			// MS Todo: Check for Valid Name and existing eMail Address check & add all emails
 			newVC.name = req.body.name;
-			// MS Todo: check that the Admins are available
-			// MS Todo: set the id property of users to the userid instead of autogenerate
+			// Check for Valid User eMail remove non existing eMails
+
 			var i;
 			var vcUsers = new Array();
 			if (req.body.users) {
 				for (i = 0; i < req.body.users.length; i++) {
-					// console.log("Add VisboCenter User%d: %O", i+1, req.body.users[i]);
-					req.body.users[i]._id = null; /* MS Todo: remove id temporarily, replayce by real userid */
-					newVC.users.push(req.body.users[i]);
-					vcUsers.push(req.body.users[i].email)
+					// build up unique user list vcUsers to check that they exist
+					if (!vcUsers.find(findUser, req.body.users[i].email)){
+						vcUsers.push(req.body.users[i].email)
+					}
 				};
 			};
-			// console.log("Check that Users are defined at all %d %O ", newVC.users.length, newVC);
-			// check that there is an Admin available, if not add the current user as Admin
-			if (newVC.users.filter(users => users.role == 'Admin').length == 0) {
-				var admin = {email:useremail, role:"Admin"};
-				// console.log("No Admin User found add current user as admin");
-				newVC.users.push(admin);
-			};
-
-			// console.log("Check users if they exist %O", newVC);
-
-			//var queryUsers = Users.find({'email': {$in:vcUsers.toString()}});
-			var queryUsers = User.find({});	//MS Todo: check only the required instead of all
+			//console.log("Check users if they exist %s", JSON.stringify(vcUsers));
+			var queryUsers = User.find({'email': {'$in': vcUsers}});
 			queryUsers.select('email');
 			queryUsers.exec(function (err, listUsers) {
 				if (err) {
@@ -188,7 +187,28 @@ router.route('/')
 						error: err
 					});
 				}
-				// console.log("Found Users %d", listUsers.length);		// MS Log
+				if (listUsers.length != vcUsers.length) console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
+				// copy all existing users to newVC
+				if (req.body.users) {
+					for (i = 0; i < req.body.users.length; i++) {
+						// build up user list for newVC and a unique list of vcUsers
+						vcUser = listUsers.find(findUserList, req.body.users[i].email);
+						// if user does not exist, ignore the user
+						if (vcUser){
+							req.body.users[i].userId = vcUser._id;
+							newVC.users.push(req.body.users[i]);
+						}
+					};
+				};
+				// check that there is an Admin available, if not add the current user as Admin
+				if (newVC.users.filter(users => users.role == 'Admin').length == 0) {
+					var admin = {userId: userId, email:useremail, role:"Admin"};
+					// console.log("No Admin User found add current user as admin");
+					newVC.users.push(admin);
+					if (!vcUsers.find(findUser, useremail)){
+						vcUsers.push(useremail)
+					}
+				};
 
 				// console.log("Save VisboCenter %s  with Users %O", newVC.name, newVC.users);
 				newVC.save(function(err, vc) {
@@ -208,7 +228,6 @@ router.route('/')
 			});
 	  });
 	})
-
 
 router.route('/:vcid')
  /**
@@ -336,55 +355,165 @@ router.route('/:vcid')
 			var vpPopulate = oneVC.name != req.body.name ? true : false;
 			console.log("PUT/Save Visbo Center %O new Name %s", oneVC, req.body);		// MS Log
 			oneVC.name = req.body.name;
-			// MS Todo update other properties also
-
-			oneVC.save(function(err, oneVC) {
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error updating Visbo Center',
-						error: err
-					});
-				}
-				// Update underlying projects if name has changed
-				if (vpPopulate){
-					// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
-					console.log("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
-					//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"vc.name": oneVC.name}}).exec();
-					var updateVP = VisboProject.find({"vcid": oneVC._id})
-
-					updateVP.select('_id name');
-					updateVP.exec(function (err, listVP) {
+			// update users only if users is set in body and check consistency
+			var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVC.updatedAt);
+			if (origDate - putDate !== 0 && req.body.users.length > 0){
+				// PUT Request with change User list, but the original List that was feteched was already changed, return error
+				console.log("Error VC PUT: Change User List but VC was already changed afterwards");
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Change User List but Visbo Center was already changed afterwards',
+					error: err
+				});
+			};
+			var i;
+			var vcUsers = new Array();
+			if (req.body.users) {
+				for (i = 0; i < req.body.users.length; i++) {
+					// build up unique user list vcUsers to check that they exist
+					if (!vcUsers.find(findUser, req.body.users[i].email)){
+						vcUsers.push(req.body.users[i].email)
+					}
+				};
+				//console.log("Check users if they exist %s", JSON.stringify(vcUsers));
+				var queryUsers = User.find({'email': {'$in': vcUsers}});
+				queryUsers.select('email');
+				queryUsers.exec(function (err, listUsers) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting Users for VisboCenters',
+							error: err
+						});
+					}
+					if (listUsers.length != vcUsers.length) console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
+					// copy all existing users to newVC
+					if (req.body.users) {
+						// empty the user list and take the users from the delivered body
+						oneVC.users = [];
+						for (i = 0; i < req.body.users.length; i++) {
+							// build up user list for newVC and a unique list of vcUsers
+							vcUser = listUsers.find(findUserList, req.body.users[i].email);
+							// if user does not exist, ignore the user
+							if (vcUser){
+								req.body.users[i].userId = vcUser._id;
+								oneVC.users.push(req.body.users[i]);
+							}
+						};
+					};
+					// check that there is an Admin available, if not add the current user as Admin
+					if (oneVC.users.filter(users => users.role == 'Admin').length == 0) {
+						console.log("Error VC PUT: No Admin User found add current user as admin");
+						return res.status(409).send({
+							state: 'failure',
+							message: 'Inconsistent Users for VisboCenters',
+							error: err
+						});
+					};
+					console.log("PUT VC: Save VC after user change");
+					oneVC.save(function(err, oneVC) {
 						if (err) {
 							return res.status(500).send({
 								state: 'failure',
-								message: 'Error getting Visbo Projects',
+								message: 'Error updating Visbo Center',
 								error: err
 							});
 						}
-						// console.log("Update the following VP: %O", listVP);
-						for (let i = 0; i < listVP.length; i++) {
-							console.log("Update VP %s", listVP[i].name);
-							listVP[i].vc.name = oneVC.name
-							listVP[i].save(function(err, vp){
-								if (err){
-									console.log("Problem updating VP Projects %d %s for VC", i, listVP[i]._id);
+						// Update underlying projects if name has changed
+						if (vpPopulate){
+							// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+							console.log("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+							//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"vc.name": oneVC.name}}).exec();
+							var updateVP = VisboProject.find({"vcid": oneVC._id})
+
+							updateVP.select('_id name');
+							updateVP.exec(function (err, listVP) {
+								if (err) {
 									return res.status(500).send({
 										state: 'failure',
-										message: 'Error updating Visbo Projects',
+										message: 'Error getting Visbo Projects',
 										error: err
 									});
 								}
-							})
-						};
+								// console.log("Update the following VP: %O", listVP);
+								for (let i = 0; i < listVP.length; i++) {
+									console.log("Update VP %s", listVP[i].name);
+									listVP[i].vc.name = oneVC.name
+									listVP[i].save(function(err, vp){
+										if (err){
+											console.log("Problem updating VP Projects %d %s for VC", i, listVP[i]._id);
+											return res.status(500).send({
+												state: 'failure',
+												message: 'Error updating Visbo Projects',
+												error: err
+											});
+										}
+									})
+								};
+							});
+						}
+						console.log("PUT VC: all done now return result");
+						return res.status(200).send({
+							state: 'success',
+							message: 'Updated Visbo Center',
+							vc: [ oneVC ]
+						});
 					});
-				}
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Center',
-					vc: [ oneVC ]
 				});
-			});
+			}
+
+			else {
+				// No User Updates just the VC itself
+
+				console.log("PUT VC: no user changes, save now");
+				oneVC.save(function(err, oneVC) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Center',
+							error: err
+						});
+					}
+					// Update underlying projects if name has changed
+					if (vpPopulate){
+						// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+						console.log("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+						//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"vc.name": oneVC.name}}).exec();
+						var updateVP = VisboProject.find({"vcid": oneVC._id})
+
+						updateVP.select('_id name');
+						updateVP.exec(function (err, listVP) {
+							if (err) {
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error getting Visbo Projects',
+									error: err
+								});
+							}
+							// console.log("Update the following VP: %O", listVP);
+							for (let i = 0; i < listVP.length; i++) {
+								console.log("Update VP %s", listVP[i].name);
+								listVP[i].vc.name = oneVC.name
+								listVP[i].save(function(err, vp){
+									if (err){
+										console.log("Problem updating VP Projects %d %s for VC", i, listVP[i]._id);
+										return res.status(500).send({
+											state: 'failure',
+											message: 'Error updating Visbo Projects',
+											error: err
+										});
+									}
+								})
+							};
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Center',
+						vc: [ oneVC ]
+					});
+				});
+			}
 		});
 	})
 
