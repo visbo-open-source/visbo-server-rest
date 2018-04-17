@@ -90,14 +90,14 @@ router.route('/')
 	})
 
 	/**
-	 * @api {post} /vpv Create a Visbo Project
+	 * @api {post} /vpv Create a Visbo Project Version
 	 * @apiVersion 0.0.1
 	 * @apiGroup VisboProjectVersion
 	 * @apiName CreateVisboProjectVersions
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
 	 * @apiError Duplicate VisboProjectVersion does already exist HTTP 409
-	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project
+	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
 	 * @apiPermission user must be authenticated and user must have permission to create a VP (MS Todo)
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
@@ -183,10 +183,10 @@ router.route('/')
 
 	router.route('/:vpvid')
 	 /**
-	 	* @api {get} /vpv/:vpvid Get a Visbo Project
+	 	* @api {get} /vpv/:vpvid Get a Visbo Project Version
 	 	* @apiVersion 0.0.1
 	 	* @apiGroup VisboProjectVersion
-	 	* @apiName GetVisboProject
+	 	* @apiName GetVisboProjectVersion
 	 	* @apiHeader {String} access-key User authentication token.
 	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
 	 	* @apiError NotAuthenticated no valid token HTTP 401
@@ -198,15 +198,13 @@ router.route('/')
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   "state":"success",
-	 	*   "message":"Returned Visbo Projects",
+	 	*   "message":"Returned Visbo Project Versions",
 	 	*   "vpv": [{
 	 	*     "_id":"5aa64e70cde84541c754feaa",
   	*     "name":"My new Visbo Project Version",
 		*     "updatedAt":"2018-03-19T11:04:12.094Z",
   	*     "createdAt":"2018-03-19T11:04:12.094Z",
-  	*     "_id":"5aaf992ce2bd3711cf3da025",
-  	*	    "name":"My first Visbo Project",
-		*     "vpid": "5aaf992ce2bd3711cf3da025"
+  	*     "vpid": "5aaf992ce2bd3711cf3da025"
   	*     "allOthers": "all properties of visbo project version"
 	 	*   }]
 	 	* }
@@ -214,7 +212,7 @@ router.route('/')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+			console.log("Get Visbo Project Version for userid %s email %s and vpv %s ", userId, useremail, req.params.vpvid);		// MS Log
 
 			var queryVPV = VisboProjectVersion.find({'users.email': useremail, '_id':req.params.vpvid});
 			queryVPV.select('name users updatedAt createdAt');
@@ -229,14 +227,14 @@ router.route('/')
 				// console.log("Found VCs %d %O", listVPV.length, listVPV);		// MS Log
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Visbo Projects',
+					message: 'Returned Visbo Project Versions',
 					vpv: listVPV
 				});
 			});
 		})
 
 		/**
-		 * @api {put} /vpv/:projectsid Update Visbo Project
+		 * @api {put} /vpv/:projectsid Update Visbo Project Version
 		 * @apiVersion 0.0.1
 		 * @apiGroup VisboProjectVersion
 		 * @apiName UpdateVisboProjectVersions
@@ -247,7 +245,7 @@ router.route('/')
 		 * @apiExample Example usage:
 		 *   url: http://localhost:3484/vpv/5aada025
 		 * {
-		 *   "name":"My first Visbo Project Renamed",
+		 *   "name":"My first Visbo Project Version Renamed",
 		 *   "allOthers": "all properties of visbo project version"
 		 * }
 		 * @apiSuccessExample {json} Success-Response:
@@ -260,7 +258,7 @@ router.route('/')
 		 *   "_id":"vpv5aaf992ce2bd3711cf3da025",
 		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 		 *   "createdAt":"2018-03-19T11:04:12.094Z",
-		 *   "name":"My first Visbo Project Renamed",
+		 *   "name":"My first Visbo Project Version Renamed",
 		 *   "vpid": "vp5aaf992ce2bd3711cf3da025"
 		 *   "allOthers": "all properties of visbo project version"
 		 *  }]
@@ -269,7 +267,7 @@ router.route('/')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("PUT/Save Visbo Project for userid %s email %s and vpv %s ", userId, useremail, req.params.vpvid);		// MS Log
+			console.log("PUT/Save Visbo Project Version for userid %s email %s and vpv %s ", userId, useremail, req.params.vpvid);		// MS Log
 
 			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVPV.select('name users updatedAt createdAt');
@@ -277,7 +275,7 @@ router.route('/')
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error getting Visbo Projects',
+						message: 'Error getting Visbo Project Versions',
 						error: err
 					});
 				}
@@ -309,10 +307,10 @@ router.route('/')
 		})
 
 	/**
-		* @api {delete} /vpv/:vpvid Delete a Visbo Projects
+		* @api {delete} /vpv/:vpvid Delete a Visbo Project Versions
 		* @apiVersion 0.0.1
 		* @apiGroup VisboProjectVersion
-		* @apiName DeleteVisboProject
+		* @apiName DeleteVisboProjectVersion
 		* @apiHeader {String} access-key User authentication token.
 		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
 		* @apiError NotAuthenticated no valid token HTTP 401
@@ -325,13 +323,13 @@ router.route('/')
 		* HTTP/1.1 200 OK
 		* {
 		*   "state":"success",
-		*   "message":"Deleted Visbo Projects"
+		*   "message":"Deleted Visbo Project Versions"
 		* }
 		*/
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("DELETE Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+			console.log("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
 
 			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVPV.select('name users updatedAt createdAt');
@@ -339,29 +337,29 @@ router.route('/')
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error getting Visbo Projects',
+						message: 'Error getting Visbo Project Versions',
 						error: err
 					});
 				}
 				if (!oneVPV) {
 					return res.status(500).send({
 						state: 'failure',
-						message: 'No Visbo Project or no Permission'
+						message: 'No Visbo Project Version or no Permission'
 					});
 				}
-				console.log("Delete Visbo Project %s %O", req.params.vpvid, oneVPV);		// MS Log
+				console.log("Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);		// MS Log
 
 				oneVPV.remove(function(err, empty) {
 					if (err) {
 						return res.status(500).send({
 							state: 'failure',
-							message: 'Error deleting Visbo Project',
+							message: 'Error deleting Visbo Project Version',
 							error: err
 						});
 					}
 					return res.status(200).send({
 						state: 'success',
-						message: 'Deleted Visbo Project'
+						message: 'Deleted Visbo Project Version'
 					});
 				});
 			});

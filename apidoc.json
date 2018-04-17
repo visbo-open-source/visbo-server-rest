@@ -1,10 +1,10 @@
 {
-  "name": "Node REST Server",
+  "name": "Visbo ReST Server",
   "version": "0.0.1",
-  "description": "REST API documentation for Node REST Server",
-  "title": "API Documentation - Node REST Server",
+  "description": "REST API documentation for Visbo ReST Server",
+  "title": "API Documentation - Visbo ReST Server",
   "footer": {
-  	"title": "2018 © Tanmoy Thander"
+  	"title": "2018 © Visbo GmbH"
   },
   "order": [
   	"Authentication",

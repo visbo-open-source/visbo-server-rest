@@ -1,6 +1,6 @@
 {
-  "name": "node-rest-server",
-  "author": "Tanmoy Thander",
+  "name": "visbo-rest-server",
+  "author": "Visbo GmbH",
   "version": "0.0.1",
   "private": true,
   "scripts": {

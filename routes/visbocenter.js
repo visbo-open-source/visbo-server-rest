@@ -33,6 +33,8 @@ router.route('/')
 	* @apiGroup VisboCenter
 	* @apiName GetVisboCenters
 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription GET /vc retruns all VC the user has access permission to
+	* In case of success it delivers an array of VCs, the array contains in each element a VC
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -93,6 +95,10 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup VisboCenter
 	 * @apiName CreateVisboCenters
+	 * @apiDescription POST /vc creates a new VC
+	 * with a unique name and the users with their roles as defined in the body.
+ 	 * If no admin is specified the current user is added as Admin.
+	 * In case of success it delivers an array of VCs to be uniform to GET, the array contains as one element the created VC.
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to create a VisboCenter HTTP 403
 	 * @apiError Duplicate VisboCenter does already exist HTTP 409
@@ -141,12 +147,13 @@ router.route('/')
 	 * }
 	 */
  .post(function(req, res) {
-	 // MS Done: User is authenticated, Check that Visbo Center Name is unique
-	 // MS Todo: check that users are known, set the USerIDs for the user correct, Check that there is at least one admin
+	 // User is authenticated already
 	 var userId = req.decoded._id;
 	 var useremail = req.decoded.email;
 	 // console.log("Post a new Visbo Center Req Body: %O Name %s", req.body, req.body.name);		// MS Log
 	 // console.log("Post a new Visbo Center with name %s executed by user %s ", req.body.name, useremail);		// MS Log
+
+	 // check that VC name is unique
 	 VisboCenter.findOne({ "name": req.body.name }, function(err, vc) {
 			if (err) {
 				return res.status(500).send({
@@ -166,6 +173,7 @@ router.route('/')
 			newVC.name = req.body.name;
 			// Check for Valid User eMail remove non existing eMails
 
+			// check the users that they exist already, if not ignore the non existing users
 			var i;
 			var vcUsers = new Array();
 			if (req.body.users) {
@@ -187,8 +195,9 @@ router.route('/')
 						error: err
 					});
 				}
-				if (listUsers.length != vcUsers.length) console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
-				// copy all existing users to newVC
+				if (listUsers.length != vcUsers.length)
+					console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
+				// copy all existing users to newVC and set the userId correct.
 				if (req.body.users) {
 					for (i = 0; i < req.body.users.length; i++) {
 						// build up user list for newVC and a unique list of vcUsers
@@ -235,6 +244,9 @@ router.route('/:vcid')
  	* @apiVersion 0.0.1
  	* @apiGroup VisboCenter
  	* @apiName GetVisboCenter
+	* @apiDescription GET /vc/:vcid gets a specific VC
+	* the system checks if the user has access permission to it.
+	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
  	* @apiHeader {String} access-key User authentication token.
  	* @apiPermission user must be authenticated and user must have permission to access the VisboCenter
  	* @apiError NotAuthenticated no valid token HTTP 401
@@ -296,8 +308,17 @@ router.route('/:vcid')
 	 * @apiVersion 0.0.1
 	 * @apiGroup VisboCenter
 	 * @apiName UpdateVisboCenters
+	 * @apiDescription PUT /vc/:vcid updates a specific VC
+   * the system checks if the user has access permission to it.
+	 * If no user list is delivered in the body, no updates will be performed to the users.
+	 * if the VC Name is changed, the VC Name is populated to the Visbo Projects.
+	 * If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
+	 * If not equal, the system delivers an error because the VC was updated between the read and write of the user and therefore it might lead to inconsitency.
+ 	 * In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
+	 * @apiHeader {String} access-key User authentication token.
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to update this VisboCenter HTTP 403
+	 * @apiError VC was updated in between HTTP 409
 	 * @apiPermission user must be authenticated and user must have Admin permission for this VC (MS Todo)
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
@@ -461,10 +482,8 @@ router.route('/:vcid')
 					});
 				});
 			}
-
 			else {
 				// No User Updates just the VC itself
-
 				console.log("PUT VC: no user changes, save now");
 				oneVC.save(function(err, oneVC) {
 					if (err) {

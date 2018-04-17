@@ -20,7 +20,7 @@ run the command
 
 	git clone URL
 
-here URL is the http url you get from the repository page, <a href="https://github.com/tanmoythander/node-rest-server">Click here to clone</a><br><br>
+here URL is the http url you get from the repository page.<br><br>
 
 <b>3. now navigate to the project directory with cmd (terminal for mac)</b><br>
 run the command
@@ -43,7 +43,7 @@ It will serve the project on default port (3484). <br><br>
 
 <h2>API Documentation</h2>
 
-Find the API documentation <a href="https://api.tanmoythander.info/node-rest-server">here</a>.<br>
+Find the API documentation <a href="https://localdev:3484/apidoc/">here</a>.<br>
 To create your own API documentation run command in the roor folder apidoc -i routes -o public/apidoc
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
