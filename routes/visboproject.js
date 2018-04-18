@@ -9,6 +9,21 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var moment = require('moment');
 
+var findUser = function(currentUser) {
+		return currentUser == this;
+}
+
+var findUserList = function(currentUser) {
+		//console.log("compare %s %s", currentUser.email, this);
+		return currentUser.email == this;
+}
+var debuglevel = 9;
+var debuglog = function(level, logstring, arg1, arg2, arg2, arg4, arg5, arg6, arg7, arg8, arg9) {
+	if (debuglevel >= level ){
+		console.log("%s: VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), logstring, arg1, arg2, arg2, arg4, arg5, arg6, arg7, arg8, arg9);
+	}
+};
+
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 
@@ -26,6 +41,9 @@ router.route('/')
 	* @apiGroup VisboProject
 	* @apiName GetVisboProjects
 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription GET /vp retruns all VP the user has access permission to
+	* In case of success it delivers an array of VPs, the array contains in each element a VP
+	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -49,12 +67,12 @@ router.route('/')
 	*       {
 	*        "email":"example1@visbo.de",
 	*        "role":"Admin",
-	*        "_id":"5aa64e70cde84541c754feab"
+	*        "userId":"usc754feab"
 	*       },
 	*       {
 	*        "email":"example2@visbo.de",
 	*        "role":"User",
-	*        "_id":"5aa64e70cde84541c754feac"
+	*        "userId":"usc754feac"
 	*       }
 	*     ]
 	*    }
@@ -62,12 +80,14 @@ router.route('/')
 	* }
 	*/
 	.get(function(req, res) {
+		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'users.email': useremail };
+
+		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) query.vcid = req.query.vcid;
-		// console.log("%s: Get Project for user %s with query parameters %O %O", moment().format('YYYY-MM-DD HH:MM:ss'), userId, req.query, query);		// MS Log
-		var queryVP = VisboProject.find(query);
+		console.log("%s: Get Project for user %s with query parameters %O %O", moment().format('YYYY-MM-DD HH:MM:ss'), userId, req.query, query);		// MS Log
+		var queryVP = VisboProject.find({'users.email': useremail });
 		queryVP.exec(function (err, listVP) {
 
 			if (err) {
@@ -93,12 +113,16 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup VisboProject
 	 * @apiName CreateVisboProjects
+	 * @apiDescription POST /vp creates a new VP
+	 * with a unique name inside VC and the users with their roles as defined in the body.
+ 	 * If no admin is specified the current user is added as Admin.
+	 * In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
+	 * @apiHeader {String} access-key User authentication token.
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to create a VisboProject HTTP 403
 	 * @apiError Duplicate VisboProject does already exist HTTP 409
 	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project
 	 * @apiPermission user must be authenticated and user must have permission to create a VP (MS Todo)
-	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vp
 	 * {
@@ -106,7 +130,6 @@ router.route('/')
 	 *  "vcid": "vc5aaf992",
 	 *  "users":[
 	 *   {
-	 *    "_id": "",
 	 *    "email":"example1@visbo.de",
 	 *    "role": "<Admin"
 	 *   },
@@ -130,20 +153,21 @@ router.route('/')
 	 *   "vcid": "vc5aaf992",
 	 *   "users":[
 	 *    {
-	 *     "_id":null, (MS ToDo: Set the correct UserID)
+	 *     "userID": "us5aaf992",
 	 *     "email":"example@visbo.de",
 	 *     "role":"Admin"
 	 *    },
 	 *    {
 	 *     "email":"example2@visbo.de",
 	 *     "role":"User",
-	 *     "_id":null
+	 *     "userId":us5aaf993
 	 *    }
 	 *   ]
 	 *  }]
 	 * }
 	 */
 	.post(function(req, res) {
+		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		var vcid = ( !req.body && !req.body.vcid ) ? '' : req.body.vcid
@@ -194,23 +218,14 @@ router.route('/')
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (i = 0; i < req.body.users.length; i++) {
-						// console.log("Add VisboProject User%d: %O", i+1, req.body.users[i]);
-						req.body.users[i]._id = null; /* MS Todo: remove id temporarily, replayce by real userid */
-						newVP.users.push(req.body.users[i]);
-						vpUsers.push(req.body.users[i].email)
+						// build up unique user list vcUsers to check that they exist
+						if (!vpUsers.find(findUser, req.body.users[i].email)){
+							vpUsers.push(req.body.users[i].email)
+						}
 					};
 				};
-				// console.log("Check that Users are defined at all %d %O ", newVP.users.length, newVP);
-				// check that there is an Admin available, if not add the current user as Admin
-				if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
-					var admin = {email:useremail, role:"Admin"};
-					console.log("No Admin User found add current user as admin");
-					newVP.users.push(admin);
-				};
-
-				// console.log("Check users if they exist");
-				//var queryUsers = Users.find({'email': {$in:vcUsers.toString()}});
-				var queryUsers = User.find({});	//MS Todo: check only the required instead of all
+				//console.log("Check users if they exist %s", JSON.stringify(vcUsers));
+				var queryUsers = User.find({'email': {'$in': vpUsers}});
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
 					if (err) {
@@ -220,7 +235,27 @@ router.route('/')
 							error: err
 						});
 					}
-					// console.log("Found Users %d", listUsers.length);		// MS Log
+					if (listUsers.length != vpUsers.length)
+						console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+					// copy all existing users to newVP and set the userId correct.
+					if (req.body.users) {
+						for (i = 0; i < req.body.users.length; i++) {
+							// build up user list for newVC and a unique list of vcUsers
+							vpUser = listUsers.find(findUserList, req.body.users[i].email);
+							// if user does not exist, ignore the user
+							if (vpUser){
+								req.body.users[i].userId = vpUser._id;
+								newVP.users.push(req.body.users[i]);
+							}
+						};
+					};
+					// check that there is an Admin available, if not add the current user as Admin
+					if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
+						var admin = {userId: userId, email:useremail, role:"Admin"};
+						console.log("No Admin User found add current user as admin");
+						newVP.users.push(admin);
+					};
+					// set the VC Name
 					newVP.vc.name = vc.name;
 					console.log("VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
 					// console.log("Save VisboProject %s  with Users %O", newVP.name, newVP.users);
@@ -250,6 +285,9 @@ router.route('/')
 	 	* @apiGroup VisboProject
 	 	* @apiName GetVisboProject
 	 	* @apiHeader {String} access-key User authentication token.
+		* @apiDescription GET /vp/:vpid gets a specific VP
+		* the system checks if the user has access permission to it.
+		* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
 	 	* @apiError NotAuthenticated no valid token HTTP 401
 		* @apiError NoPermission user does not have access to the VisboProject HTTP 403
@@ -262,7 +300,7 @@ router.route('/')
 	 	*   "state":"success",
 	 	*   "message":"Returned Visbo Projects",
 	 	*   "vp": [{
-	 	*    "_id":"5aa64e70cde84541c754feaa",
+	 	*    "_id":"vpc754feaa",
 	 	*    "updatedAt":"2018-03-16T12:39:54.042Z",
 	 	*    "createdAt":"2018-03-12T09:54:56.411Z",
 	 	*    "name":"My new Visbo Project",
@@ -271,12 +309,12 @@ router.route('/')
 	 	*     {
 	 	*      "email":"example1@visbo.de",
 	 	*      "role":"Admin",
-	 	*      "_id":"5aa64e70cde84541c754feab"
+	 	*      "userId":"usc754feab"
 	 	*     },
 	 	*     {
 	 	*      "email":"example2@visbo.de",
 	 	*      "role":"User",
-	 	*      "_id":"5aa64e70cde84541c754feac"
+	 	*      "userId":"usc754feac"
 	 	*     }
 	 	*    ]
 	 	*   }]
@@ -288,7 +326,7 @@ router.route('/')
 			// console.log("Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.find({'users.email': useremail, '_id':req.params.vpid});
-			queryVP.select('name users updatedAt createdAt');
+			queryVP.select('name users vc updatedAt createdAt');
 			queryVP.exec(function (err, listVP) {
 				if (err) {
 					return res.status(404).send({
@@ -311,6 +349,13 @@ router.route('/')
 		 * @apiVersion 0.0.1
 		 * @apiGroup VisboProject
 		 * @apiName UpdateVisboProjects
+		 * @apiDescription PUT /vp/:vpid updates a specific VP
+	   * the system checks if the user has access permission to it.
+		 * If no user list is delivered in the body, no updates will be performed to the users.
+		 * if the VP Name is changed, the VP Name is populated to the Visbo Project Versions.
+		 * If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
+		 * If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
+	 	 * In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 		 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 		 * @apiError NoPermission No permission to update this VisboProject HTTP 403
 		 * @apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
@@ -330,18 +375,18 @@ router.route('/')
 		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 		 *   "createdAt":"2018-03-19T11:04:12.094Z",
 		 *   "name":"My first Visbo Project Renamed",
-		 *   "_id":"5aaf992ce2bd3711cf3da025",
+		 *   "_id":"vpcf3da025",
 		 *   "vcid": "vc5aaf992",
 		 *   "users":[
 		 *    {
-		 *     "_id":null, (MS ToDo: Set the correct UserID)
+		 *     "userId":"us5aaf992"
 		 *     "email":"example@visbo.de",
 		 *     "role":"Admin"
 		 *    },
 		 *    {
 		 *     "email":"example2@visbo.de",
 		 *     "role":"User",
-		 *     "_id":null
+		 *     "userId":"us5aaf993"
 		 *    }
 		 *   ]
 		 *  }]
@@ -353,7 +398,7 @@ router.route('/')
 			// console.log("PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
-			queryVP.select('name users updatedAt createdAt');
+			queryVP.select('name users vcid, vc, updatedAt createdAt');
 			queryVP.exec(function (err, oneVP) {
 				if (err) {
 					return res.status(500).send({
@@ -368,33 +413,165 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
-				// console.log("PUT/Save Visbo Project %O ", oneVP);		// MS Log
+				var vpvPopulate = oneVP.name != req.body.name ? true : false;
 				oneVP.name = req.body.name;
 				var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVP.updatedAt);
 				// console.log("PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
-
-				if (origDate - putDate == 0 && req.body.users.length > 0){
-						oneVP.users = req.body.users
-						console.log("PUT/Save Visbo Project %s: no inbetween changes and users present, update permission ok \n%O ", oneVP._id, oneVP);		// MS Log
-				} else {
-					console.log("PUT/Save Visbo Project %s: Difference in updatedAt (%d sec) or no Users specified", req.params.vpid, (origDate-putDate)/1000);		// MS Log
-				}
-				// MS Todo update other properties also
-
-				oneVP.save(function(err, oneVP) {
-					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Project',
-							error: err
-						});
-					}
-					return res.status(200).send({
-						state: 'success',
-						message: 'Updated Visbo Project',
-						vp: [ oneVP ]
+				if (origDate - putDate !== 0 && req.body.users.length > 0){
+					// PUT Request with change User list, but the original List that was feteched was already changed, return error
+					console.log("Error VP PUT: Change User List but VP was already changed afterwards");
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Change User List but Visbo Project was already changed afterwards',
+						error: err
 					});
-				});
+				};
+				var i;
+				var vpUsers = new Array();
+				if (req.body.users) {
+					for (i = 0; i < req.body.users.length; i++) {
+						// build up unique user list vpUsers to check that they exist
+						if (!vpUsers.find(findUser, req.body.users[i].email)){
+							vpUsers.push(req.body.users[i].email)
+						}
+					};
+					//console.log("Check users if they exist %s", JSON.stringify(vpUsers));
+					var queryUsers = User.find({'email': {'$in': vpUsers}});
+					queryUsers.select('email');
+					queryUsers.exec(function (err, listUsers) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error getting Users for Visbo Projects',
+								error: err
+							});
+						}
+						if (listUsers.length != vpUsers.length) console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+						// copy all existing users to newVP
+						if (req.body.users) {
+							// empty the user list and take the users from the delivered body
+							oneVP.users = [];
+							for (i = 0; i < req.body.users.length; i++) {
+								// build up user list for newVP and a unique list of vpUsers
+								vpUser = listUsers.find(findUserList, req.body.users[i].email);
+								// if user does not exist, ignore the user
+								if (vpUsers){
+									req.body.users[i].userId = vpUser._id;
+									oneVP.users.push(req.body.users[i]);
+								}
+							};
+						};
+						// check that there is an Admin available, if not add the current user as Admin
+						if (oneVP.users.filter(users => users.role == 'Admin').length == 0) {
+							console.log("Error VP PUT: No Admin User found");
+							return res.status(409).send({
+								state: 'failure',
+								message: 'Inconsistent Users for VisboProjects',
+								error: err
+							});
+						};
+						console.log("PUT VP: Save VP after user change");
+						oneVP.save(function(err, oneVP) {
+							if (err) {
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error updating Visbo Project',
+									error: err
+								});
+							}
+							// Update underlying project versions if name has changed
+							if (vpvPopulate){
+								// VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role': 'Admin'});
+								console.log("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+								//VisboProject.where({'vpid': oneVP._id}).update({"$set": {"name": oneVP.name}}).exec();
+								var updateVPV = VisboProjectVersion.find({"vpid": oneVP._id})
+
+								updateVPV.select('_id name');
+								updateVPV.exec(function (err, listVPV) {
+									if (err) {
+										return res.status(500).send({
+											state: 'failure',
+											message: 'Error getting Visbo Project Versions',
+											error: err
+										});
+									}
+									// console.log("Update the following VPV: %O", listVP);
+									for (let i = 0; i < listVPV.length; i++) {
+										console.log("Update VPV %s", listVPV[i].name);
+										listVPV[i].name = oneVP.name
+										listVPV[i].save(function(err, vpv){
+											if (err){
+												console.log("Problem updating VPV Projects %d %s for VP", i, listVPV[i]._id);
+												return res.status(500).send({
+													state: 'failure',
+													message: 'Error updating Visbo Project Versions',
+													error: err
+												});
+											}
+										})
+									};
+								});
+							}
+							console.log("PUT VP: all done now return result");
+							return res.status(200).send({
+								state: 'success',
+								message: 'Updated Visbo Project',
+								vp: [ oneVP ]
+							});
+						});
+					});
+				}
+				else {
+					// No User Updates just the VP itself
+					console.log("PUT VP: no user changes, save now");
+					oneVC.save(function(err, oneVP) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Project',
+								error: err
+							});
+						}
+						// Update underlying projects if name has changed
+						if (vpvPopulate){
+							// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+							console.log("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+							//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"name": oneVP.name}}).exec();
+							var updateVPV = VisboProjectVersion.find({"vpid": oneVP._id})
+
+							updateVP.select('_id name');
+							updateVP.exec(function (err, listVPV) {
+								if (err) {
+									return res.status(500).send({
+										state: 'failure',
+										message: 'Error getting Visbo Project Versions',
+										error: err
+									});
+								}
+								// console.log("Update the following VPV: %O", listVP);
+								for (let i = 0; i < listVPV.length; i++) {
+									console.log("Update VPV %s", listVPV[i].name);
+									listVPV[i].name = oneVP.name
+									listVPV[i].save(function(err, vpv){
+										if (err){
+											console.log("Problem updating Visbo Project Versions %d %s for VP", i, listVPV[i]._id);
+											return res.status(500).send({
+												state: 'failure',
+												message: 'Error updating Visbo Project Versions',
+												error: err
+											});
+										}
+									})
+								};
+							});
+						}
+						return res.status(200).send({
+							state: 'success',
+							message: 'Updated Visbo Project',
+							vp: [ oneVP ]
+						});
+					});
+				}
 			});
 		})
 
@@ -421,7 +598,7 @@ router.route('/')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// console.log("DELETE Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
+			// console.log("DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVP.select('name users updatedAt createdAt');

@@ -54,12 +54,12 @@ router.route('/')
 	*       {
 	*        "email":"example1@visbo.de",
 	*        "role":"Admin",
-	*        "_id":"5aa64e70cde84541c754feab"
+	*        "userId":"usc754feab"
 	*       },
 	*       {
 	*        "email":"example2@visbo.de",
 	*        "role":"User",
-	*        "_id":"5aa64e70cde84541c754feac"
+	*        "userId":"usc754feac"
 	*       }
 	*     ]
 	*   }]
@@ -69,7 +69,7 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		// console.log("Get Visbo Center for user %s", useremail);
+		console.log("Get Visbo Center for user %s", useremail);
 
 		var queryVC = VisboCenter.find({'users.email': useremail});
 		queryVC.select('name users updatedAt createdAt');
@@ -110,9 +110,8 @@ router.route('/')
 	 *  "name":"My first Visbo Center",
 	 *  "users":[
 	 *   {
-	 *    "_id": "",
 	 *    "email":"example1@visbo.de",
-	 *    "role": "<Admin"
+	 *    "role": "Admin"
 	 *   },
 	 *   {
 	 *    "email":"example2@visbo.de",
@@ -268,12 +267,12 @@ router.route('/:vcid')
  	*      {
  	*       "email":"example1@visbo.de",
  	*       "role":"Admin",
- 	*       "_id":"5aa64e70cde84541c754feab"
+ 	*       "userId":"usc754feab"
  	*      },
  	*      {
  	*       "email":"example2@visbo.de",
  	*       "role":"User",
- 	*       "_id":"5aa64e70cde84541c754feac"
+ 	*       "userId":"usc754feac"
  	*      }
  	*     ]
  	*   }]
@@ -339,14 +338,14 @@ router.route('/:vcid')
 	 *    "_id":"5aaf992ce2bd3711cf3da025",
 	 *    "users":[
 	 *     {
-	 *      "_id":null,
+	 *      "userId":"us5aaf992",
 	 *      "email":"example@visbo.de",
 	 *      "role":"Admin"
 	 *     },
 	 *     {
 	 *      "email":"example2@visbo.de",
 	 *      "role":"User",
-	 *      "_id":null
+	 *      "userId":"us5aaf993"
 	 *     }
 	 *    ]
 	 *  }]
@@ -424,7 +423,7 @@ router.route('/:vcid')
 					};
 					// check that there is an Admin available, if not add the current user as Admin
 					if (oneVC.users.filter(users => users.role == 'Admin').length == 0) {
-						console.log("Error VC PUT: No Admin User found add current user as admin");
+						console.log("Error VC PUT: No Admin User found");
 						return res.status(409).send({
 							state: 'failure',
 							message: 'Inconsistent Users for VisboCenters',
