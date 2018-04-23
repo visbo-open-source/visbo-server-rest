@@ -309,7 +309,7 @@ router.route('/:vcid')
 					error: err
 				});
 			}
-			debuglog(1, "Found VCs %d %O", listVC.length, listVC);		// MS Log
+			debuglog(5, "Found VCs %d", listVC.length);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',

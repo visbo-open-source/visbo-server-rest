@@ -229,13 +229,13 @@ router.route('/')
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (i = 0; i < req.body.users.length; i++) {
-						// build up unique user list vcUsers to check that they exist
+						// build up unique user list vpUsers to check that they exist
 						if (!vpUsers.find(findUser, req.body.users[i].email)){
 							vpUsers.push(req.body.users[i].email)
 						}
 					};
 				};
-				debuglog(5, "Check users if they exist %s", JSON.stringify(vcUsers));
+				debuglog(5, "Check users if they exist %s", JSON.stringify(vpUsers));
 				var queryUsers = User.find({'email': {'$in': vpUsers}});
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
@@ -251,7 +251,7 @@ router.route('/')
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
 						for (i = 0; i < req.body.users.length; i++) {
-							// build up user list for newVC and a unique list of vcUsers
+							// build up user list for newVC and a unique list of vpUsers
 							vpUser = listUsers.find(findUserList, req.body.users[i].email);
 							// if user does not exist, ignore the user
 							if (vpUser){
