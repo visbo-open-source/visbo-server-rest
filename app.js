@@ -64,19 +64,19 @@ function delayString(seconds) {
   return str;
 }
 function dbConnect(dbconnection) {
-  console.log('%s: Connecting database %s', moment().format('YYYY-MM-DD HH:mm:ss'), dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+  console.log('%s: Connecting database %s', moment().format('YYYY-MM-DD HH:mm:ss:SSS'), dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
   mongoose.connect(
     // Replace CONNECTION_URI with your connection uri
     dbconnection,
     dbOptions
   ).then(function() {
-    console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:SS'));
+    console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:ss:SSS'));
   }, function(err) {
-    console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:SS'), err);
+    console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:ss'), err);
 
     reconnectTries++;
-    console.log('%s: Reconnecting after '+delayString(trialDelay), moment().format('YYYY-MM-DD HH:mm:SS'));
-    console.log('%s: Reconnect trial: '+reconnectTries, moment().format('YYYY-MM-DD HH:mm:SS'));
+    console.log('%s: Reconnecting after '+delayString(trialDelay), moment().format('YYYY-MM-DD HH:mm:ss'));
+    console.log('%s: Reconnect trial: '+reconnectTries, moment().format('YYYY-MM-DD HH:mm:ss'));
     delay(trialDelay*1000).then(function() {
       trialDelay += trialDelay;
       if (trialDelay>7200) trialDelay = 7200;

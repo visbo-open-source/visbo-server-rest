@@ -7,6 +7,7 @@ var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
+var VisboProjectVersion = mongoose.model('Project');
 var moment = require('moment');
 
 var findUser = function(currentUser) {
@@ -17,10 +18,19 @@ var findUserList = function(currentUser) {
 		//console.log("compare %s %s", currentUser.email, this);
 		return currentUser.email == this;
 }
-var debuglevel = 9;
-var debuglog = function(level, logstring, arg1, arg2, arg2, arg4, arg5, arg6, arg7, arg8, arg9) {
+var debuglevel = 5;
+var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
 	if (debuglevel >= level ){
-		console.log("%s: VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), logstring, arg1, arg2, arg2, arg4, arg5, arg6, arg7, arg8, arg9);
+		if (arg1 == undefined) arg1 = '';
+		if (arg2 == undefined) arg2 = '';
+		if (arg3 == undefined) arg3 = '';
+		if (arg4 == undefined) arg4 = '';
+		if (arg5 == undefined) arg5 = '';
+		if (arg6 == undefined) arg6 = '';
+		if (arg7 == undefined) arg7 = '';
+		if (arg8 == undefined) arg8 = '';
+		if (arg9 == undefined) arg9 = '';
+		console.log("%s: Level%d VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 	}
 };
 
@@ -83,11 +93,12 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-
+		var query = {'users.email': useremail };
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) query.vcid = req.query.vcid;
-		console.log("%s: Get Project for user %s with query parameters %O %O", moment().format('YYYY-MM-DD HH:MM:ss'), userId, req.query, query);		// MS Log
-		var queryVP = VisboProject.find({'users.email': useremail });
+		debuglog(1, "%s: Get Project for user %s with query parameters %O", moment().format('YYYY-MM-DD HH:MM:ss'), userId, query);		// MS Log
+
+		var queryVP = VisboProject.find(query);
 		queryVP.exec(function (err, listVP) {
 
 			if (err) {
@@ -97,8 +108,8 @@ router.route('/')
 					error: err
 				});
 			};
-			// console.log("Found %d Projects", listVP.length);
-			// console.log("Found Projects/n", listVP);
+			debuglog(5, "Found %d Projects", listVP.length);
+			debuglog(9, "Found Projects/n", listVP);
 
 			return res.status(200).send({
 				state: 'success',
@@ -172,7 +183,7 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		var vcid = ( !req.body && !req.body.vcid ) ? '' : req.body.vcid
 		var vpname = ( !req.body && !req.body.name ) ? '' : req.body.name
-		// console.log("Post a new Visbo Project for user %s with name %s in VisboCenter %s for Users %O", useremail, req.body.name, vcid, req.body.users);		// MS Log
+		debuglog(1, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for Users %O", useremail, req.body.name, vcid, req.body.users);		// MS Log
 		var newVP = new VisboProject();
 
 		VisboCenter.findOne({'_id': vcid,
@@ -192,7 +203,7 @@ router.route('/')
 					message: 'Visbo Centers not found or no Admin'
 				});
 			};
-			// console.log("User has permission to create Project %s in  %s", vpname, vc.name);
+			debuglog(9, "User has permission to create Project %s in  %s", vpname, vc.name);
 			// check duplicate Name
 			VisboProject.findOne({'vcid': vcid,
 													'name': vpname
@@ -204,7 +215,7 @@ router.route('/')
 						error: err
 					});
 				}
-				// console.log("Duplicate Name check returned %O", vp);
+				debuglog(2, "Duplicate Name check returned %O", vp);
 				if (vp) {
 					return res.status(404).send({
 						state: 'failure',
@@ -224,7 +235,7 @@ router.route('/')
 						}
 					};
 				};
-				//console.log("Check users if they exist %s", JSON.stringify(vcUsers));
+				debuglog(5, "Check users if they exist %s", JSON.stringify(vcUsers));
 				var queryUsers = User.find({'email': {'$in': vpUsers}});
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
@@ -236,7 +247,7 @@ router.route('/')
 						});
 					}
 					if (listUsers.length != vpUsers.length)
-						console.log("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+						debuglog(2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
 						for (i = 0; i < req.body.users.length; i++) {
@@ -252,13 +263,13 @@ router.route('/')
 					// check that there is an Admin available, if not add the current user as Admin
 					if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
 						var admin = {userId: userId, email:useremail, role:"Admin"};
-						console.log("No Admin User found add current user as admin");
+						debuglog(2, "No Admin User found add current user as admin");
 						newVP.users.push(admin);
 					};
 					// set the VC Name
 					newVP.vc.name = vc.name;
-					console.log("VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
-					// console.log("Save VisboProject %s  with Users %O", newVP.name, newVP.users);
+					debuglog(9, "VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
+					debuglog(5, "Save VisboProject %s  with Users %O", newVP.name, newVP.users);
 					newVP.save(function(err, vp) {
 						if (err) {
 							return res.status(500).send({
@@ -323,7 +334,7 @@ router.route('/')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// console.log("Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(1, "Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.find({'users.email': useremail, '_id':req.params.vpid});
 			queryVP.select('name users vc updatedAt createdAt');
@@ -335,7 +346,7 @@ router.route('/')
 						error: err
 					});
 				}
-				// console.log("Found VCs %d %O", listVP.length, listVP);		// MS Log
+				debuglog(5, "Found VCs %d %O", listVP.length, listVP);		// MS Log
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Projects',
@@ -395,7 +406,7 @@ router.route('/')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// console.log("PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVP.select('name users vcid, vc, updatedAt createdAt');
@@ -416,10 +427,10 @@ router.route('/')
 				var vpvPopulate = oneVP.name != req.body.name ? true : false;
 				oneVP.name = req.body.name;
 				var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVP.updatedAt);
-				// console.log("PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
+				debuglog(5, "PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
 				if (origDate - putDate !== 0 && req.body.users.length > 0){
 					// PUT Request with change User list, but the original List that was feteched was already changed, return error
-					console.log("Error VP PUT: Change User List but VP was already changed afterwards");
+					debuglog(1, "Error VP PUT: Change User List but VP was already changed afterwards");
 					return res.status(409).send({
 						state: 'failure',
 						message: 'Change User List but Visbo Project was already changed afterwards',
@@ -435,7 +446,7 @@ router.route('/')
 							vpUsers.push(req.body.users[i].email)
 						}
 					};
-					//console.log("Check users if they exist %s", JSON.stringify(vpUsers));
+					debuglog(9, "Check users if they exist %s", JSON.stringify(vpUsers));
 					var queryUsers = User.find({'email': {'$in': vpUsers}});
 					queryUsers.select('email');
 					queryUsers.exec(function (err, listUsers) {
@@ -463,14 +474,14 @@ router.route('/')
 						};
 						// check that there is an Admin available, if not add the current user as Admin
 						if (oneVP.users.filter(users => users.role == 'Admin').length == 0) {
-							console.log("Error VP PUT: No Admin User found");
+							debuglog(1, "Error VP PUT: No Admin User found");
 							return res.status(409).send({
 								state: 'failure',
 								message: 'Inconsistent Users for VisboProjects',
 								error: err
 							});
 						};
-						console.log("PUT VP: Save VP after user change");
+						debuglog(9, "PUT VP: Save VP after user change");
 						oneVP.save(function(err, oneVP) {
 							if (err) {
 								return res.status(500).send({
@@ -479,51 +490,39 @@ router.route('/')
 									error: err
 								});
 							}
-							// Update underlying project versions if name has changed
 							if (vpvPopulate){
-								// VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role': 'Admin'});
-								console.log("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
-								//VisboProject.where({'vpid': oneVP._id}).update({"$set": {"name": oneVP.name}}).exec();
-								var updateVPV = VisboProjectVersion.find({"vpid": oneVP._id})
-
-								updateVPV.select('_id name');
-								updateVPV.exec(function (err, listVPV) {
-									if (err) {
+								debuglog(5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+								var updateQuery = {"vpid": oneVP._id};
+								var updateUpdate = {$set: {"name": oneVP.name}};
+								var updateOption = {upsert: false, multi: "true"};
+								VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+									if (err){
+										debuglog(2, "Problem updating VP Versions for VP %s", oneVP._id);
 										return res.status(500).send({
 											state: 'failure',
-											message: 'Error getting Visbo Project Versions',
+											message: 'Error updating Visbo Project',
 											error: err
 										});
 									}
-									// console.log("Update the following VPV: %O", listVP);
-									for (let i = 0; i < listVPV.length; i++) {
-										console.log("Update VPV %s", listVPV[i].name);
-										listVPV[i].name = oneVP.name
-										listVPV[i].save(function(err, vpv){
-											if (err){
-												console.log("Problem updating VPV Projects %d %s for VP", i, listVPV[i]._id);
-												return res.status(500).send({
-													state: 'failure',
-													message: 'Error updating Visbo Project Versions',
-													error: err
-												});
-											}
-										})
-									};
+									debuglog(5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
+									return res.status(200).send({
+										state: 'success',
+										message: 'Updated Visbo Project',
+										vp: [ oneVP ]
+									});
+								});
+							} else {
+								return res.status(200).send({
+									state: 'success',
+									message: 'Updated Visbo Project',
+									vp: [ oneVP ]
 								});
 							}
-							console.log("PUT VP: all done now return result");
-							return res.status(200).send({
-								state: 'success',
-								message: 'Updated Visbo Project',
-								vp: [ oneVP ]
-							});
 						});
 					});
-				}
-				else {
+				} else {
 					// No User Updates just the VP itself
-					console.log("PUT VP: no user changes, save now");
+					debuglog(5, "PUT VP: no user changes, save now");
 					oneVC.save(function(err, oneVP) {
 						if (err) {
 							return res.status(500).send({
@@ -534,42 +533,33 @@ router.route('/')
 						}
 						// Update underlying projects if name has changed
 						if (vpvPopulate){
-							// VisboProject.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
-							console.log("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
-							//VisboProject.where({'vcid': oneVC._id}).update({"$set": {"name": oneVP.name}}).exec();
-							var updateVPV = VisboProjectVersion.find({"vpid": oneVP._id})
-
-							updateVP.select('_id name');
-							updateVP.exec(function (err, listVPV) {
-								if (err) {
+							debuglog(5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+							var updateQuery = {"vpid": oneVP._id};
+							var updateUpdate = {$set: {"name": oneVP.name}};
+							var updateOption = {upsert: false, multi: "true"};
+							VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+								if (err){
+									debuglog(2, "Problem updating VP Versions for VP %s", oneVP._id);
 									return res.status(500).send({
 										state: 'failure',
-										message: 'Error getting Visbo Project Versions',
+										message: 'Error updating Visbo Project',
 										error: err
 									});
 								}
-								// console.log("Update the following VPV: %O", listVP);
-								for (let i = 0; i < listVPV.length; i++) {
-									console.log("Update VPV %s", listVPV[i].name);
-									listVPV[i].name = oneVP.name
-									listVPV[i].save(function(err, vpv){
-										if (err){
-											console.log("Problem updating Visbo Project Versions %d %s for VP", i, listVPV[i]._id);
-											return res.status(500).send({
-												state: 'failure',
-												message: 'Error updating Visbo Project Versions',
-												error: err
-											});
-										}
-									})
-								};
+								debuglog(5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
+								return res.status(200).send({
+									state: 'success',
+									message: 'Updated Visbo Project',
+									vp: [ oneVP ]
+								});
+							});
+						} else {
+							return res.status(200).send({
+								state: 'success',
+								message: 'Updated Visbo Project',
+								vp: [ oneVP ]
 							});
 						}
-						return res.status(200).send({
-							state: 'success',
-							message: 'Updated Visbo Project',
-							vp: [ oneVP ]
-						});
 					});
 				}
 			});
@@ -598,7 +588,7 @@ router.route('/')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// console.log("DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(1, "DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVP.select('name users updatedAt createdAt');
@@ -616,7 +606,7 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
-				// console.log("Delete Visbo Project %s %O", req.params.vpid, oneVP);		// MS Log
+				debuglog(1, "Delete Visbo Project after perm check success %s %O", req.params.vpid, oneVP);		// MS Log
 
 				oneVP.remove(function(err, empty) {
 					if (err) {

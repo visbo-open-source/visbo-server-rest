@@ -18,6 +18,21 @@ router.use('/', auth.verifyUser);
 // /vpv
 /////////////////
 
+var debuglevel = 5;
+var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
+	if (debuglevel >= level ){
+		if (arg1 == undefined) arg1 = '';
+		if (arg2 == undefined) arg2 = '';
+		if (arg3 == undefined) arg3 = '';
+		if (arg4 == undefined) arg4 = '';
+		if (arg5 == undefined) arg5 = '';
+		if (arg6 == undefined) arg6 = '';
+		if (arg7 == undefined) arg7 = '';
+		if (arg8 == undefined) arg8 = '';
+		if (arg9 == undefined) arg9 = '';
+		console.log("%s: Level%d VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+	}
+};
 
 router.route('/')
 
@@ -27,6 +42,14 @@ router.route('/')
 	* @apiGroup VisboProjectVersion
 	* @apiName GetVisboProjectVersions
 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription GET /vpv retruns for all VisboProjects the user has access permission to the latest VisboProjectVersion
+	* In case of success it delivers an array of VPVs, the array contains in each element a VPV
+	* instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
+	* has to ask for a specific vpvid with get vpv/:vpvid
+	* with an additional query paramteter ?vpid=vp5aaf992 the system restricts the list of VPV to the specified VP
+	* if no vpid is delivered as query parameter only the latest version of each VP is delivered
+	* with an additional parameter refdate only the latest version before the reference date for each selected project is delivered
+	* in case a refdate is specified the full blown project version is delivered otherwise a reduced list only
 	* @apiPermission user must be authenticated, user must have access to related VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -39,8 +62,13 @@ router.route('/')
 	*   "message":"Returned Visbo Project Versions",
 	*   "vpv":[
 	*    {
-	*       "_id":"vpv5aa64e70cde84541c754feaa",
-	*   		"allOthers": "all properties of visbo project version"
+	*       "_id":"vpvc754feaa",
+	*				"name":"Project Name",
+	*   		"vpid": "vpvc754feaa",
+	* 			"timestamp": "2018-01-01",
+	* 			"Erloes": "100",
+	*				"endDate": "2018-12-31",
+	*				"variantName": ""
 	*    }
 	*  ]
 	* }
@@ -49,10 +77,23 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin','User']}};
-		var query = {};
-		if (req.query && req.query.vpid) queryvp._id = req.query.vpid;
-		// console.log("%s: Get Project Versions for user %s with VP %s", moment().format('YYYY-MM-DD HH:MM:ss'), userId, queryvp._id);
+		var queryvpv = {};
+		var latestOnly = false;
+		var nowDate = new Date();
+		if (req.query && req.query.vpid)
+			queryvp._id = req.query.vpid;
+		else {
+			latestOnly = true //no project specified show latest only project version of all projects
+		}
+		if (req.query && req.query.refdate){
+			queryvpv.timestamp =  {$lt: Date(req.query.refdate)};
+			latestOnly = true;
+		} else {
+			queryvpv.timestamp =  {$lt: nowDate }
+		}
+		debuglog(1, "Get Project Versions for user %s with VP %s and timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.timestamp, latestOnly);
 		var queryVP = VisboProject.find(queryvp)
+		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
 			if (err) {
 				return res.status(500).send({
@@ -61,15 +102,21 @@ router.route('/')
 					error: err
 				});
 			};
-			// console.log("%s: Filter ProjectVersions to %s Projects", moment().format('YYYY-MM-DD HH:MM:ss'), listVP.length);
+			debuglog(5, "Filter ProjectVersions to %s Projects", listVP.length);
 			var vpArray = [];
 			var vp;
 			for (vp in listVP) {
 				vpArray.push(listVP[vp]._id);
 			}
-			// console.log("%s: Filter Projects %O", moment().format('YYYY-MM-DD HH:MM:ss'), vpArray);
-			query = {vpid: {$in: vpArray}};
-			var queryVPV = VisboProjectVersion.find(query);
+			debuglog(9, "Filter Projects %O", vpArray);
+			queryvpv.vpid = {$in: vpArray};
+			debuglog(5, "VPV query string %s", JSON.stringify(queryvpv));
+			var queryVPV = VisboProjectVersion.find(queryvpv);
+			if (latestOnly == false) {
+				// deliver only the short info about project versions
+				queryVPV.select('_id vpid name timestamp Erloes endDate variantName updatedAt createdAt');
+			}
+			queryVPV.sort('vpid name variantName -timestamp')
 			queryVPV.exec(function (err, listVPV) {
 				if (err) {
 					return res.status(500).send({
@@ -78,13 +125,33 @@ router.route('/')
 						error: err
 					});
 				};
-				// console.log("Found %d Project Versions", listVPV.length);
-
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Project Versions',
-					vpv: listVPV
-				});
+				debuglog(2, "Found %d Project Versions", listVPV.length);
+				// if latestonly, reduce the list and deliver only the latest version of each project and variant
+				if (listVPV.length > 1 && latestOnly){
+					var listVPVfiltered = [];
+					listVPVfiltered.push(listVPV[0]);
+					for (let i = 1; i < listVPV.length; i++){
+						//compare current ite with previous and ignore if it is the same vpid & variantname
+						debuglog(9, "compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
+						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
+							listVPVfiltered.push(listVPV[i])
+							debuglog(9, "compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+						}
+					}
+					debuglog(2, "Found %d Project Versions after Filtering", listVPVfiltered.length);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Versions',
+						vpv: listVPVfiltered
+					});
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Versions',
+						vpv: listVPV
+					});
+				}
 			});
 		});
 	})
@@ -127,8 +194,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		var vpid = ( !req.body && !req.body.vpid ) ? null : req.body.vpid
-		var vpname = ( !req.body && !req.body.name ) ? '' : req.body.name
-		console.log("Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
+		debuglog(1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
 		var newVPV = new VisboProjectVersion();
 		// check that vpid ist set and exists and user has Admin permission
 		if (!vpid) {
@@ -155,15 +221,46 @@ router.route('/')
 					message: 'Visbo Project not found or no Admin'
 				});
 			};
-			console.log("User has permission to create a Version %s in  %s", vpname, vp.name);
-			// we do not need to check duplicate names as every post creates a new version
-			// possible checks could be: set _id to undefined to guarantee that mongo creates its unique id
-			// how to copy all attributes from body to the VisboProjectVersion
-			var newVPV = new VisboProjectVersion;
-			newVPV.name = vp.name;
-			newVPV.vpid = vpid;
+			debuglog(5, "User has permission to create a Version in  %s", vp.name);
+			// copy all attributes
 
-			console.log("Save VisboProjectVersion %s ", newVPV.name);
+			newVPV.name = vp.name;
+			newVPV.vpid = vp._id;
+			newVPV.variantName = req.body.variantName;
+			newVPV.variantDescription = req.body.variantDescription;
+			newVPV.Risiko = req.body.Risiko;
+			newVPV.StrategicFit = req.body.StrategicFit;
+			newVPV.customDblFields = req.body.customDblFields;
+			newVPV.customStringFields = req.body.customStringFields;
+			newVPV.customBoolFields = req.body.customBoolFields;
+			newVPV.Erloes = req.body.Erloes;
+			newVPV.leadPerson = req.body.leadPerson;
+			newVPV.tfSpalte = req.body.tfSpalte;
+			newVPV.tfZeile = req.body.tfZeile;
+			newVPV.startDate = req.body.startDate;
+			newVPV.endDate = req.body.endDate;
+			newVPV.earliestStart = req.body.earliestStart;
+			newVPV.earliestStartDate = req.body.earliestStartDate;
+			newVPV.latestStart = req.body.latestStart;
+			newVPV.latestStartDate = req.body.latestStartDate;
+			newVPV.status = req.body.status;
+			newVPV.ampelStatus = req.body.ampelStatus;
+			newVPV.ampelErlaeuterung = req.body.ampelErlaeuterung;
+			newVPV.farbe = req.body.farbe;
+			newVPV.Schrift = req.body.Schrift;
+			newVPV.Schriftfarbe = req.body.Schriftfarbe;
+			newVPV.VorlagenName = req.body.VorlagenName;
+			newVPV.Dauer = req.body.Dauer;
+			newVPV.AllPhases = req.body.AllPhases;
+			newVPV.hierarchy = req.body.hierarchy;
+			newVPV.volumen = req.body.volumen;
+			newVPV.complexity = req.body.complexity;
+			newVPV.description = req.body.description;
+			newVPV.businessUnit = req.body.businessUnit;
+
+			newVPV.timestamp = Date();
+
+			debuglog(5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 			newVPV.save(function(err, vpv) {
 				if (err) {
 					return res.status(500).send({
@@ -188,6 +285,8 @@ router.route('/')
 	 	* @apiGroup VisboProjectVersion
 	 	* @apiName GetVisboProjectVersion
 	 	* @apiHeader {String} access-key User authentication token.
+		* @apiDescription GET /vpv/:vpvid retruns a specific VisboProjectVersion the user has access permission to the VisboProject
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
 	 	* @apiError NotAuthenticated no valid token HTTP 401
 		* @apiError NoPermission user does not have access to the VisboProjectVersion HTTP 403
@@ -212,23 +311,52 @@ router.route('/')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("Get Visbo Project Version for userid %s email %s and vpv %s ", userId, useremail, req.params.vpvid);		// MS Log
-
-			var queryVPV = VisboProjectVersion.find({'users.email': useremail, '_id':req.params.vpvid});
-			queryVPV.select('name users updatedAt createdAt');
-			queryVPV.exec(function (err, listVPV) {
+			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin','User']}};
+			var queryvpv = {'_id': req.params.vpvid};
+			debuglog(1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid, queryvpv);		// MS Log
+			var queryVPV = VisboProjectVersion.findOne(queryvpv);
+			queryVPV.exec(function (err, oneVPV) {
 				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Internal Server Error with DB Connection',
+						error: err
+					});
+				};
+				debuglog(2, "Found specific Project Versions for Project %O", oneVPV);
+				if (!oneVPV){
 					return res.status(404).send({
 						state: 'failure',
-						message: 'Error getting VisboProjectVersions',
+						message: 'Visbo Project Version not found or no Permission',
 						error: err
 					});
 				}
-				// console.log("Found VCs %d %O", listVPV.length, listVPV);		// MS Log
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Project Versions',
-					vpv: listVPV
+				// check access Permission
+				queryvp._id = oneVPV.vpid;
+				var queryVP = VisboProject.findOne(queryvp)
+				queryVP.select('_id name');
+				queryVP.exec(function (err, oneVP) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Internal Server Error with DB Connection',
+							error: err
+						});
+					};
+					debuglog(5, "Found %s Project with Permission", oneVP._id);
+					if (!oneVP){
+						return res.status(404).send({
+							state: 'failure',
+							message: 'Visbo Project Version not found or no Permission',
+							error: err
+						});
+					} else {
+						return res.status(200).send({
+							state: 'success',
+							message: 'Returned Visbo Project Version',
+							vpv: [oneVPV]
+						});
+					}
 				});
 			});
 		})
@@ -267,8 +395,13 @@ router.route('/')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("PUT/Save Visbo Project Version for userid %s email %s and vpv %s ", userId, useremail, req.params.vpvid);		// MS Log
-
+			debuglog(1, "PUT/Save Visbo Project Version for userid %s email %s and vpv %s not allowed ", userId, useremail, req.params.vpvid);		// MS Log
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to update a Visbo Project Version',
+				error: err
+			});
+/*
 			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVPV.select('name users updatedAt createdAt');
 			queryVPV.exec(function (err, oneVPV) {
@@ -285,7 +418,7 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
-				console.log("PUT/Save Visbo Project %O ", oneVPV);		// MS Log
+				debuglog(5, "PUT/Save Visbo Project %O ", oneVPV);		// MS Log
 				oneVPV.name = req.body.name;
 				// MS Todo update other properties also
 
@@ -304,6 +437,7 @@ router.route('/')
 					});
 				});
 			});
+*/
 		})
 
 	/**
@@ -329,10 +463,13 @@ router.route('/')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			console.log("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin']}};
+			var queryvpv = {'_id': req.params.vpvid};
+			debuglog(1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
 
-			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
-			queryVPV.select('name users updatedAt createdAt');
+			// var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
+			var queryVPV = VisboProjectVersion.findOne(queryvpv);
+			queryVPV.select('_id vpid name');
 			queryVPV.exec(function (err, oneVPV) {
 				if (err) {
 					return res.status(500).send({
@@ -342,25 +479,48 @@ router.route('/')
 					});
 				}
 				if (!oneVPV) {
-					return res.status(500).send({
+					return res.status(404).send({
 						state: 'failure',
-						message: 'No Visbo Project Version or no Permission'
+						message: 'No Visbo Project Version found or no Permission'
 					});
 				}
-				console.log("Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);		// MS Log
-
-				oneVPV.remove(function(err, empty) {
+				debuglog(1, "Delete Visbo Project Check Permission Missing for VP %s", req.params.vpvid);
+				// check access Permission
+				queryvp._id = oneVPV.vpid;
+				var queryVP = VisboProject.findOne(queryvp)
+				queryVP.select('_id name');
+				queryVP.exec(function (err, oneVP) {
 					if (err) {
 						return res.status(500).send({
 							state: 'failure',
-							message: 'Error deleting Visbo Project Version',
+							message: 'Internal Server Error with DB Connection',
 							error: err
 						});
+					};
+					debuglog(5, "Found %s Project with Permission", oneVP._id);
+					if (!oneVP){
+						return res.status(404).send({
+							state: 'failure',
+							message: 'Visbo Project Version not found or no Permission',
+							error: err
+						});
+					} else {
+						debuglog(2, "Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);
+						oneVPV.remove(function(err, empty) {
+							if (err) {
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error deleting Visbo Project Version',
+									error: err
+								});
+							}
+							return res.status(200).send({
+								state: 'success',
+								message: 'Deleted Visbo Project Version',
+								result: [oneVPV]
+							});
+						});
 					}
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Project Version'
-					});
 				});
 			});
 		});
