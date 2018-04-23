@@ -42,14 +42,14 @@ router.route('/')
 	* @apiGroup VisboProjectVersion
 	* @apiName GetVisboProjectVersions
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vpv retruns for all VisboProjects the user has access permission to the latest VisboProjectVersion
-	* In case of success it delivers an array of VPVs, the array contains in each element a VPV
-	* instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
-	* has to ask for a specific vpvid with get vpv/:vpvid
-	* with an additional query paramteter ?vpid=vp5aaf992 the system restricts the list of VPV to the specified VP
-	* if no vpid is delivered as query parameter only the latest version of each VP is delivered
-	* with an additional parameter refdate only the latest version before the reference date for each selected project is delivered
-	* in case a refdate is specified the full blown project version is delivered otherwise a reduced list only
+	* @apiDescription GET /vpv retruns for all VisboProjects, the user has access permission to, the latest VisboProjectVersion
+	* In case of success it delivers an array of VPVs, the array contains in each element a VPV.
+	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
+	* has to ask for a specific vpvid with get vpv/:vpvid.
+	* With an additional query paramteter ?vpid=vp5aaf992 the system restricts the list of VPV to the specified VP.
+	* If no vpid is delivered as query parameter only the latest version of each VP is delivered
+	* With an additional parameter refdate only the latest version before the reference date for each selected project is delivered.
+	* In case a refdate is specified the full blown project version is delivered otherwise a reduced list only
 	* @apiPermission user must be authenticated, user must have access to related VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -60,17 +60,15 @@ router.route('/')
 	* {
 	*   "state":"success",
 	*   "message":"Returned Visbo Project Versions",
-	*   "vpv":[
-	*    {
-	*       "_id":"vpvc754feaa",
-	*				"name":"Project Name",
-	*   		"vpid": "vpvc754feaa",
-	* 			"timestamp": "2018-01-01",
-	* 			"Erloes": "100",
-	*				"endDate": "2018-12-31",
-	*				"variantName": ""
-	*    }
-	*  ]
+	*   "vpv":[{
+	*     "_id":"vpvc754feaa",
+	*     "name":"Project Name",
+	*     "vpid": "vpvc754feaa",
+	*     "timestamp": "2018-01-01",
+	*     "Erloes": "100",
+	*     "endDate": "2018-12-31",
+	*     "variantName": ""
+	*   }]
 	* }
 	*/
 	.get(function(req, res) {
@@ -161,6 +159,9 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup VisboProjectVersion
 	 * @apiName CreateVisboProjectVersions
+	 * @apiDescription POST /vpv creates a new Visbo Project Version.
+	 * The user needs to have Admin permission in the Referenced Project.
+	 * Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
 	 * @apiError Duplicate VisboProjectVersion does already exist HTTP 409
@@ -170,8 +171,7 @@ router.route('/')
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vpv
 	 * {
-	 *  "name":"My first Visbo Project Version",
-	 *	"vpid": "vp5aaf992ce2bd3711cf3da025"
+	 *  "vpid": "vp5aaf992ce2bd3711cf3da025"
 	 *  "allOthers": "all properties of visbo project version"
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
