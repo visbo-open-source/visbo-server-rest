@@ -28,6 +28,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
+	bewertungen:[Schema.Types.Mixed],
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
@@ -97,7 +98,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Dauer: { type: Number, required: false},
 	AllPhases: [{ type: clsPhase, required: false}],
 	hierarchy: {
-		allNodes: [Schema.Types.Mixed]
+		allNodes: {type: Schema.Types.Mixed}
 	},
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},
