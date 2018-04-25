@@ -28,7 +28,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
-	bewertungen:[Schema.Types.Mixed],
+	bewertungen:{type: Schema.Types.Mixed},
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
@@ -44,7 +44,7 @@ var clsPhase = new Schema({
 	AllRoles: [{ type: clsRole }],
 	AllCosts: [{ type: clsKostenart }],
 	AllResults: [{ type: clsResult }],
-	AllBewertungen: [Schema.Types.Mixed],
+	AllBewertungen: {type: Schema.Types.Mixed},
 
 	percentDone: { type: Number },
 	responsible: { type: String },
@@ -75,9 +75,9 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	variantDescription: { type: String, required: false, maxlength: 500},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},
-  customDblFields: [Schema.Types.Mixed],
-	customStringFields: [Schema.Types.Mixed],
-	customBoolFields: [Schema.Types.Mixed],
+  customDblFields: {type: Schema.Types.Mixed},
+	customStringFields: {type: Schema.Types.Mixed},
+	customBoolFields: {type: Schema.Types.Mixed},
 	Erloes: { type: Number, required: false},
 	leadPerson: { type: String, required: false, maxlength: 100},
 	tfSpalte: { type: Number, required: false},
