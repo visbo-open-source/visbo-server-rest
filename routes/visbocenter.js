@@ -46,7 +46,7 @@ router.route('/')
 	/**
 	* @api {get} /vc Get Visbo Centers
 	* @apiVersion 0.0.1
-	* @apiGroup VisboCenter
+	* @apiGroup Visbo Center
 	* @apiName GetVisboCenters
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription GET /vc retruns all VC the user has access permission to
@@ -62,7 +62,7 @@ router.route('/')
 	*   "state":"success",
 	*   "message":"Returned Visbo Centers",
 	*   "vc":[{
-	*      "_id":"5aa64e70cde84541c754feaa",
+	*      "_id":"vc541c754feaa",
 	*      "updatedAt":"2018-03-16T12:39:54.042Z",
 	*      "createdAt":"2018-03-12T09:54:56.411Z",
 	*      "name":"My new VisobCenter",
@@ -70,12 +70,12 @@ router.route('/')
 	*       {
 	*        "email":"example1@visbo.de",
 	*        "role":"Admin",
-	*        "userId":"usc754feab"
+	*        "userId":"us5c754feab"
 	*       },
 	*       {
 	*        "email":"example2@visbo.de",
 	*        "role":"User",
-	*        "userId":"usc754feac"
+	*        "userId":"us5c754feac"
 	*       }
 	*     ]
 	*   }]
@@ -109,7 +109,7 @@ router.route('/')
 	/**
 	 * @api {post} /vc Create a Visbo Center
 	 * @apiVersion 0.0.1
-	 * @apiGroup VisboCenter
+	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
 	 * @apiDescription POST /vc creates a new VC
 	 * with a unique name and the users with their roles as defined in the body.
@@ -145,17 +145,17 @@ router.route('/')
 	 *    "updatedAt":"2018-03-19T11:04:12.094Z",
 	 *    "createdAt":"2018-03-19T11:04:12.094Z",
 	 *    "name":"My first Visbo Center",
-	 *    "_id":"5aaf992ce2bd3711cf3da025",
+	 *    "_id":"vc541c754feaa",
 	 *    "users":[
 	 *     {
-	 *      "_id":null, (MS ToDo: Set the correct UserID)
-	 *      "email":"example@visbo.de",
-	 *      "role":"Admin"
+	 *      "_id": "us5c754feab"
+	 *      "email": "example@visbo.de",
+	 *      "role": "Admin"
 	 *     },
 	 *    {
-	 *     "email":"example2@visbo.de",
-	 *     "role":"User",
-	 *     "_id":null
+	 *     "email": "example2@visbo.de",
+	 *     "role": "User",
+	 *     "_id": "us5c754feac"
 	 *    }
 	 *   ]
 	 *  }]
@@ -257,7 +257,7 @@ router.route('/:vcid')
  /**
  	* @api {get} /vc/:vcid Get a Visbo Center
  	* @apiVersion 0.0.1
- 	* @apiGroup VisboCenter
+ 	* @apiGroup Visbo Center
  	* @apiName GetVisboCenter
 	* @apiDescription GET /vc/:vcid gets a specific VC
 	* the system checks if the user has access permission to it.
@@ -268,14 +268,14 @@ router.route('/:vcid')
 	* @apiError NoPermission user does not have access to the VisboCenter HTTP 403
  	* @apiError ServerIssue No DB Connection HTTP 500
  	* @apiExample Example usage:
- 	* url: http://localhost:3484/vc/5aada025
+ 	* url: http://localhost:3484/vc/vc5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
  	*   "state":"success",
  	*   "message":"Returned Visbo Centers",
  	*   "vc": [{
- 	*     "_id":"5aa64e70cde84541c754feaa",
+ 	*     "_id":"vc541c754feaa",
  	*     "updatedAt":"2018-03-16T12:39:54.042Z",
  	*     "createdAt":"2018-03-12T09:54:56.411Z",
  	*     "name":"My new VisobCenter",
@@ -283,12 +283,12 @@ router.route('/:vcid')
  	*      {
  	*       "email":"example1@visbo.de",
  	*       "role":"Admin",
- 	*       "userId":"usc754feab"
+ 	*       "userId":"us5c754feab"
  	*      },
  	*      {
  	*       "email":"example2@visbo.de",
  	*       "role":"User",
- 	*       "userId":"usc754feac"
+ 	*       "userId":"us5c754feac"
  	*      }
  	*     ]
  	*   }]
@@ -321,7 +321,7 @@ router.route('/:vcid')
 	/**
 	 * @api {put} /vc/:vcid Update Visbo Center
 	 * @apiVersion 0.0.1
-	 * @apiGroup VisboCenter
+	 * @apiGroup Visbo Center
 	 * @apiName UpdateVisboCenters
 	 * @apiDescription PUT /vc/:vcid updates a specific VC
    * the system checks if the user has access permission to it.
@@ -337,7 +337,7 @@ router.route('/:vcid')
 	 * @apiPermission user must be authenticated and user must have Admin permission for this VC (MS Todo)
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
-	 * url: http://localhost:3484/vc/5aada025
+	 * url: http://localhost:3484/vc/vc5aada025
 	 * {
 	 *  "name":"My first Visbo Center Renamed",
 	 * }
@@ -351,7 +351,7 @@ router.route('/:vcid')
 	 *    "updatedAt":"2018-03-19T11:04:12.094Z",
 	 *    "createdAt":"2018-03-19T11:04:12.094Z",
 	 *    "name":"My first Visbo Center",
-	 *    "_id":"5aaf992ce2bd3711cf3da025",
+	 *    "_id":"vc541c754feaa",
 	 *    "users":[
 	 *     {
 	 *      "userId":"us5aaf992",
@@ -537,7 +537,7 @@ router.route('/:vcid')
 	/**
   	* @api {delete} /vc/:vcid Delete a Visbo Centers
   	* @apiVersion 0.0.1
-  	* @apiGroup VisboCenter
+  	* @apiGroup Visbo Center
   	* @apiName DeleteVisboCenter
   	* @apiHeader {String} access-key User authentication token.
   	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboCenter
@@ -546,7 +546,7 @@ router.route('/:vcid')
 		* @apiError NotFound VisboCenter does not exist HTTP 404
   	* @apiError ServerIssue No DB Connection HTTP 500
   	* @apiExample Example usage:
-  	* url: http://localhost:3484/vc/5aada025
+  	* url: http://localhost:3484/vc/vc5aada025
   	* @apiSuccessExample {json} Success-Response:
   	* HTTP/1.1 200 OK
   	* {

@@ -47,9 +47,9 @@ router.use('/', auth.verifyUser);
 router.route('/')
 
 	/**
-	* @api {get} /vp Get Visbo Projects
+	* @api {get} /vp Get Projects
 	* @apiVersion 0.0.1
-	* @apiGroup VisboProject
+	* @apiGroup Visbo Project
 	* @apiName GetVisboProjects
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription GET /vp retruns all VP the user has access permission to
@@ -69,7 +69,7 @@ router.route('/')
 	*   "message":"Returned Visbo Projects",
 	*   "vp":[
 	*    {
-	*       "_id":"5aa64e70cde84541c754feaa",
+	*       "_id":"vp541c754feaa",
 	*      "updatedAt":"2018-03-16T12:39:54.042Z",
 	*      "createdAt":"2018-03-12T09:54:56.411Z",
 	*      "name":"My new VisobProject",
@@ -78,12 +78,12 @@ router.route('/')
 	*       {
 	*        "email":"example1@visbo.de",
 	*        "role":"Admin",
-	*        "userId":"usc754feab"
+	*        "userId":"us5c754feab"
 	*       },
 	*       {
 	*        "email":"example2@visbo.de",
 	*        "role":"User",
-	*        "userId":"usc754feac"
+	*        "userId":"us5c754feac"
 	*       }
 	*     ]
 	*    }
@@ -121,9 +121,9 @@ router.route('/')
 	})
 
 	/**
-	 * @api {post} /vp Create a Visbo Project
+	 * @api {post} /vp Create Project
 	 * @apiVersion 0.0.1
-	 * @apiGroup VisboProject
+	 * @apiGroup Visbo Project
 	 * @apiName CreateVisboProjects
 	 * @apiDescription POST /vp creates a new VP
 	 * with a unique name inside VC and the users with their roles as defined in the body.
@@ -143,7 +143,7 @@ router.route('/')
 	 *  "users":[
 	 *   {
 	 *    "email":"example1@visbo.de",
-	 *    "role": "<Admin"
+	 *    "role": "Admin"
 	 *   },
 	 *   {
 	 *    "email":"example2@visbo.de",
@@ -292,9 +292,9 @@ router.route('/')
 
 	router.route('/:vpid')
 	 /**
-	 	* @api {get} /vp/:vpid Get a Visbo Project
+	 	* @api {get} /vp/:vpid Get specific Project
 	 	* @apiVersion 0.0.1
-	 	* @apiGroup VisboProject
+	 	* @apiGroup Visbo Project
 	 	* @apiName GetVisboProject
 	 	* @apiHeader {String} access-key User authentication token.
 		* @apiDescription GET /vp/:vpid gets a specific VP
@@ -312,7 +312,7 @@ router.route('/')
 	 	*   "state":"success",
 	 	*   "message":"Returned Visbo Projects",
 	 	*   "vp": [{
-	 	*    "_id":"vpc754feaa",
+	 	*    "_id":"vp5c754feaa",
 	 	*    "updatedAt":"2018-03-16T12:39:54.042Z",
 	 	*    "createdAt":"2018-03-12T09:54:56.411Z",
 	 	*    "name":"My new Visbo Project",
@@ -321,12 +321,12 @@ router.route('/')
 	 	*     {
 	 	*      "email":"example1@visbo.de",
 	 	*      "role":"Admin",
-	 	*      "userId":"usc754feab"
+	 	*      "userId":"us5c754feab"
 	 	*     },
 	 	*     {
 	 	*      "email":"example2@visbo.de",
 	 	*      "role":"User",
-	 	*      "userId":"usc754feac"
+	 	*      "userId":"us5c754feac"
 	 	*     }
 	 	*    ]
 	 	*   }]
@@ -357,9 +357,9 @@ router.route('/')
 		})
 
 		/**
-		 * @api {put} /vp/:projectid Update Visbo Project
+		 * @api {put} /vp/:projectid Update specific Project
 		 * @apiVersion 0.0.1
-		 * @apiGroup VisboProject
+		 * @apiGroup Visbo Project
 		 * @apiName UpdateVisboProjects
 		 * @apiDescription PUT /vp/:vpid updates a specific VP
 	   * the system checks if the user has access permission to it.
@@ -373,7 +373,7 @@ router.route('/')
 		 * @apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
 		 * @apiHeader {String} access-key User authentication token.
 		 * @apiExample Example usage:
-		 *   url: http://localhost:3484/vp/5aada025
+		 *   url: http://localhost:3484/vp/vp5cf3da025
 		 * {
 		 *  "name":"My first Visbo Project Renamed",
 		 * }
@@ -387,7 +387,7 @@ router.route('/')
 		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 		 *   "createdAt":"2018-03-19T11:04:12.094Z",
 		 *   "name":"My first Visbo Project Renamed",
-		 *   "_id":"vpcf3da025",
+		 *   "_id":"vp5cf3da025",
 		 *   "vcid": "vc5aaf992",
 		 *   "users":[
 		 *    {
@@ -567,9 +567,9 @@ router.route('/')
 		})
 
 	/**
-		* @api {delete} /vp/:vpid Delete a Visbo Projects
+		* @api {delete} /vp/:vpid Delete a Project
 		* @apiVersion 0.0.1
-		* @apiGroup VisboProject
+		* @apiGroup Visbo Project
 		* @apiName DeleteVisboProject
 		* @apiHeader {String} access-key User authentication token.
 		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProject
@@ -578,7 +578,7 @@ router.route('/')
 		* @apiError NotFound VisboProject does not exist HTTP 404
 		* @apiError ServerIssue No DB Connection HTTP 500
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/5aada025
+		*   url: http://localhost:3484/vp/vp5aada025
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -627,9 +627,9 @@ router.route('/')
 
 		router.route('/:vpid/lock')
 			/**
-			 * @api {post} /vp/:vpid/lock Create a Lock for a Visbo Project
+			 * @api {post} /vp/:vpid/lock Create Lock
 			 * @apiVersion 0.0.1
-			 * @apiGroup VisboProject
+			 * @apiGroup Visbo Project
 			 * @apiName LockVisboProjects
 			 * @apiDescription POST /vp/:vpid/lock creates or renews a lock for a user to a specific project and variant
 			 * In case a lock is already active for another user, the lock reuest fails, in case a lock exists for the current user, it gets replaced by the new lock
@@ -740,9 +740,9 @@ router.route('/')
 			})
 
 		/**
-			* @api {delete} /vp/:vpid/lock Delete a Visbo Projects Lock
+			* @api {delete} /vp/:vpid/lock Delete Lock
 			* @apiVersion 0.0.1
-			* @apiGroup VisboProject
+			* @apiGroup Visbo Project
 			* @apiName DeleteVisboProjectLock
 			* @apiDescription DELETE /vp/:vpid/lock removes a lock for a user to a specific project and variant
 			* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
@@ -753,7 +753,7 @@ router.route('/')
 			* @apiError NotFound VisboProject does not exist HTTP 404
 			* @apiError ServerIssue No DB Connection HTTP 500
 			* @apiExample Example usage:
-			*   url: http://localhost:3484/vp/5aada025/lock
+			*   url: http://localhost:3484/vp/vp5aada025/lock
 			* @apiSuccessExample {json} Success-Response:
 			* HTTP/1.1 200 OK
 			* {

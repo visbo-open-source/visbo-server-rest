@@ -37,9 +37,9 @@ var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, ar
 router.route('/')
 
 	/**
-	* @api {get} /vpv Get Visbo Project Versions
+	* @api {get} /vpv Get Versions
 	* @apiVersion 0.0.1
-	* @apiGroup VisboProjectVersion
+	* @apiGroup Visbo Project Version
 	* @apiName GetVisboProjectVersions
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription GET /vpv retruns for all VisboProjects, the user has access permission to, the latest VisboProjectVersion
@@ -54,16 +54,16 @@ router.route('/')
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv?vpid=5aa1c754feaa
+	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
 	*   "state":"success",
 	*   "message":"Returned Visbo Project Versions",
 	*   "vpv":[{
-	*     "_id":"vpvc754feaa",
+	*     "_id":"vpv5c754feaa",
 	*     "name":"Project Name",
-	*     "vpid": "vpvc754feaa",
+	*     "vpid": "vp5c754feaa",
 	*     "timestamp": "2018-01-01",
 	*     "Erloes": "100",
 	*     "endDate": "2018-12-31",
@@ -155,9 +155,9 @@ router.route('/')
 	})
 
 	/**
-	 * @api {post} /vpv Create a Visbo Project Version
+	 * @api {post} /vpv Create a Version
 	 * @apiVersion 0.0.1
-	 * @apiGroup VisboProjectVersion
+	 * @apiGroup Visbo Project Version
 	 * @apiName CreateVisboProjectVersions
 	 * @apiDescription POST /vpv creates a new Visbo Project Version.
 	 * The user needs to have Admin permission in the Referenced Project.
@@ -171,7 +171,7 @@ router.route('/')
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vpv
 	 * {
-	 *  "vpid": "vp5aaf992ce2bd3711cf3da025"
+	 *  "vpid": "vp5c754feaa"
 	 *  "allOthers": "all properties of visbo project version"
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
@@ -183,9 +183,9 @@ router.route('/')
 	 *   "__v":0,
 	 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 	 *   "createdAt":"2018-03-19T11:04:12.094Z",
-	 *   "_id":"5aaf992ce2bd3711cf3da025",
+	 *   "_id":"vpv5c754feaa",
 	 *	 "name":"My first Visbo Project Version",
-	 *   "vpid": "vp5aaf992ce2bd3711cf3da025"
+	 *   "vpid": "vp5c754feaa"
 	 *   "allOthers": "all properties of visbo project version"
 	 *  }]
 	 * }
@@ -280,9 +280,9 @@ router.route('/')
 
 	router.route('/:vpvid')
 	 /**
-	 	* @api {get} /vpv/:vpvid Get a Visbo Project Version
+	 	* @api {get} /vpv/:vpvid Get specific Version
 	 	* @apiVersion 0.0.1
-	 	* @apiGroup VisboProjectVersion
+	 	* @apiGroup Visbo Project Version
 	 	* @apiName GetVisboProjectVersion
 	 	* @apiHeader {String} access-key User authentication token.
 		* @apiDescription GET /vpv/:vpvid retruns a specific VisboProjectVersion the user has access permission to the VisboProject
@@ -292,18 +292,18 @@ router.route('/')
 		* @apiError NoPermission user does not have access to the VisboProjectVersion HTTP 403
 	 	* @apiError ServerIssue No DB Connection HTTP 500
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/5aada025
+	 	*   url: http://localhost:3484/vpv/vpv5aada025
 	 	* @apiSuccessExample {json} Success-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   "state":"success",
 	 	*   "message":"Returned Visbo Project Versions",
 	 	*   "vpv": [{
-	 	*     "_id":"5aa64e70cde84541c754feaa",
+	 	*     "_id":"vpv5c754feaa",
   	*     "name":"My new Visbo Project Version",
 		*     "updatedAt":"2018-03-19T11:04:12.094Z",
   	*     "createdAt":"2018-03-19T11:04:12.094Z",
-  	*     "vpid": "5aaf992ce2bd3711cf3da025"
+  	*     "vpid": "vp5c754feaa"
   	*     "allOthers": "all properties of visbo project version"
 	 	*   }]
 	 	* }
@@ -362,36 +362,37 @@ router.route('/')
 		})
 
 		/**
-		 * @api {put} /vpv/:projectsid Update Visbo Project Version
-		 * @apiVersion 0.0.1
-		 * @apiGroup VisboProjectVersion
-		 * @apiName UpdateVisboProjectVersions
-		 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-		 * @apiError NoPermission No permission to update this VisboProjectVersion HTTP 403
-		 * @apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
-		 * @apiHeader {String} access-key User authentication token.
-		 * @apiExample Example usage:
-		 *   url: http://localhost:3484/vpv/5aada025
+		 * @ api {put} /vpv/:projectsid Update Version
+		 * @ apiVersion 0.0.1
+		 * @ apiGroup Visbo Project Version
+		 * @ apiName UpdateVisboProjectVersions
+		 * @ apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
+		 * @ apiError NoPermission No permission to update this VisboProjectVersion HTTP 403
+		 * @ apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
+		 * @ apiHeader {String} access-key User authentication token.
+		 * @ apiExample Example usage:
+		 *   url: http://localhost:3484/vpv/vpv5c754feaa
 		 * {
 		 *   "name":"My first Visbo Project Version Renamed",
 		 *   "allOthers": "all properties of visbo project version"
 		 * }
-		 * @apiSuccessExample {json} Success-Response:
+		 * @ apiSuccessExample {json} Success-Response:
 		 *     HTTP/1.1 200 OK
 		 * {
 		 *  "state":"success",
 		 *  "message":"Successfully updated VisboProjectVersion Renamed",
 		 *  "vpv":[{
 		 *   "__v":0,
-		 *   "_id":"vpv5aaf992ce2bd3711cf3da025",
+		 *   "_id":"vpv5c754feaa",
 		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
 		 *   "createdAt":"2018-03-19T11:04:12.094Z",
 		 *   "name":"My first Visbo Project Version Renamed",
-		 *   "vpid": "vp5aaf992ce2bd3711cf3da025"
+		 *   "vpid": "vp5c754feaa"
 		 *   "allOthers": "all properties of visbo project version"
 		 *  }]
 		 * }
 		 */
+/*
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
@@ -401,7 +402,6 @@ router.route('/')
 				message: 'No Permission to update a Visbo Project Version',
 				error: err
 			});
-/*
 			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVPV.select('name users updatedAt createdAt');
 			queryVPV.exec(function (err, oneVPV) {
@@ -437,13 +437,13 @@ router.route('/')
 					});
 				});
 			});
-*/
 		})
+*/
 
 	/**
-		* @api {delete} /vpv/:vpvid Delete a Visbo Project Versions
+		* @api {delete} /vpv/:vpvid Delete specific Versions
 		* @apiVersion 0.0.1
-		* @apiGroup VisboProjectVersion
+		* @apiGroup Visbo Project Version
 		* @apiName DeleteVisboProjectVersion
 		* @apiHeader {String} access-key User authentication token.
 		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
@@ -452,7 +452,7 @@ router.route('/')
 		* @apiError NotFound VisboProjectVersion does not exist HTTP 404
 		* @apiError ServerIssue No DB Connection HTTP 500
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vpv/5aada025
+		*   url: http://localhost:3484/vpv/vpv5c754feaa
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

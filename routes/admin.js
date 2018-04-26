@@ -12,7 +12,7 @@ router.use('/profile', auth.verifyAdmin);
 
 
 /////////////////
-// Profile API 
+// Profile API
 // /profile
 /////////////////
 
@@ -22,12 +22,12 @@ router.use('/profile', auth.verifyAdmin);
 router.route('/profile')
 	// get profile
 	/**
-	 * @api {get} /admin/profile Get admin profile
-	 * @apiHeader {String} access-key Admin authentication token.
-	 * @apiVersion 0.0.1
-	 * @apiGroup AdminProfile
-	 * @apiName GetAdminProfile
-	 * @apiExample Example usage:
+	 * @ api {get} /admin/profile Get admin profile
+	 * @ apiHeader {String} access-key Admin authentication token.
+	 * @ apiVersion 0.0.1
+	 * @ apiGroup AdminProfile
+	 * @ apiName GetAdminProfile
+	 * @ apiExample Example usage:
 	 *   url: http://localhost:3484/admin/profile
 	 *
 	 */
@@ -50,12 +50,12 @@ router.route('/profile')
 	})
 	// Update profile
 	/**
-	 * @api {put} /admin/profile Update admin profile
-	 * @apiHeader {String} access-key Admin authentication token.
-	 * @apiVersion 0.0.1
-	 * @apiGroup AdminProfile
-	 * @apiName UpdateAdminProfile
-	 * @apiExample Example usage:
+	 * @ api {put} /admin/profile Update admin profile
+	 * @ apiHeader {String} access-key Admin authentication token.
+	 * @ apiVersion 0.0.1
+	 * @ apiGroup AdminProfile
+	 * @ apiName UpdateAdminProfile
+	 * @ apiExample Example usage:
 	 *   url: http://localhost:3484/admin/profile
 	 *
 	 *   body:
@@ -69,12 +69,12 @@ router.route('/profile')
 	 *     }
 	 *   }
 	 *
-	 * @apiParam {String} name Admin's name.
-	 * @apiParam {Object} profile Profile object.
-	 * @apiParam {String} profile.address Address.
-	 * @apiParam {String} profile.company Company.
-	 * @apiParam {String} profile.phone Phone number.
-	 * @apiParam {Date} profile.dob Date of birth.
+	 * @ apiParam {String} name Admin's name.
+	 * @ apiParam {Object} profile Profile object.
+	 * @ apiParam {String} profile.address Address.
+	 * @ apiParam {String} profile.company Company.
+	 * @ apiParam {String} profile.phone Phone number.
+	 * @ apiParam {Date} profile.dob Date of birth.
 	 */
 	.put(function(req, res) {
 		Admin.findById(req.decoded._id, function(err, admin) {
