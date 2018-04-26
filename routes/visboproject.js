@@ -7,6 +7,7 @@ var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
+var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('Project');
 var moment = require('moment');
 
@@ -623,5 +624,225 @@ router.route('/')
 				});
 			});
 		});
+
+		router.route('/:vpid/lock')
+			/**
+			 * @api {post} /vp/:vpid/lock Create a Lock for a Visbo Project
+			 * @apiVersion 0.0.1
+			 * @apiGroup VisboProject
+			 * @apiName LockVisboProjects
+			 * @apiDescription POST /vp/:vpid/lock creates or renews a lock for a user to a specific project and variant
+			 * In case a lock is already active for another user, the lock reuest fails, in case a lock exists for the current user, it gets replaced by the new lock
+			 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
+			 * @apiError NoPermission No permission to update this VisboProject HTTP 403
+			 * @apiPermission user must be authenticated and user must have permission for this VP
+			 * @apiHeader {String} access-key User authentication token.
+			 * @apiExample Example usage:
+			 *   url: http://localhost:3484/vp/vp5aada025/lock
+			 * {
+			 *  "variantName": "",
+		 	 *  "email": "someone@visbo.de",
+		 	 *  "expiresAt": "2018-04-26T12:04:12.094Z"
+			 * }
+			 * @apiSuccessExample {json} Success-Response:
+			 *     HTTP/1.1 200 OK
+			 * {
+			 *  "state":"success",
+			 *  "message":"Successfully locked VisboProject",
+			 *  "lock":[{
+			 *    "variantName": "",
+		 	 *    "email": "someone@visbo.de",
+		 	 *    "createdAt": "2018-04-26T11:04:12.094Z",
+		 	 *    "expiresAt": "2018-04-26T12:04:12.094Z"
+			 *  }]
+			 * }
+			 */
+			.post(function(req, res) {
+				var userId = req.decoded._id;
+				var useremail = req.decoded.email;
+				debuglog(1, "POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
+
+				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail });
+				queryVP.select('name users vcid, lock');
+				queryVP.exec(function (err, oneVP) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting Visbo Projects',
+							error: err
+						});
+					}
+					if (!oneVP) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'No Visbo Project or no Permission'
+						});
+					}
+					listLock = oneVP.lock;
+					newLock = new Lock;
+					newLock.email = useremail;
+					newLock.expiresAt = req.body.expiresAt;
+					newLock.variantName = req.body.variantName;
+					newLock.createdAt = Date();
+					listLockNew = [];
+					locksuccess = true;
+					for (i = 0; i < listLock.length; i++) {
+						if (listLock[i].expiresAt >=  newLock.createdAt ){							// the lock is still valid
+								if (listLock[i].variantName != newLock.variantName ) { // lock for a different variant
+									debuglog(9, "POST Lock check lock %O different Variant", listLock[i]);
+									listLockNew.push(listLock[i]) // keep the lock
+								} else if ( listLock[i].email != newLock.email ) { // existing lock for a different user
+									locksuccess = false;
+									debuglog(9, "POST Lock check lock %O same Variant different user", listLock[i]);
+									listLockNew.push(listLock[i]) // keep the lock
+								} else {
+									// otherwise same variant and user ignore the old one keep the new one
+									debuglog(9, "POST Lock check same Variant same user", listLock[i]);
+								}
+						} else {
+							debuglog(9, "POST Lock check lock %O expired %s", listLock[i], newLock.createdAt);
+						}
+					}
+					if (locksuccess) {
+						if (newLock.expiresAt > newLock.createdAt) {
+							debuglog(9, "POST Lock is not already expired");
+							listLockNew.push(newLock);
+						} else {
+							locksuccess = false
+						}
+					}
+					debuglog(5, "POST Lock Visbo Project success %s old Lock \n %O \n new Lock \n %O ", locksuccess, listLock, listLockNew);
+					if (locksuccess || listLockNew.length != listLock.length) {
+						// added the new lock or lock list has changed because of expired locks update the VP
+						oneVP.lock = listLockNew;
+						oneVP.save(function(err, oneVP) {
+							if (err) {
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error updating Visbo Project Locks',
+									error: err
+								});
+							}
+							return res.status(200).send({
+								state: 'success',
+								message: 'Updated Visbo Project Locks',
+								lock: listLockNew
+							});
+						});
+					} else {
+						return res.status(401).send({
+							state: 'failiure',
+							message: 'Visbo Project already locked or no changes',
+							lock: listLockNew
+						});
+					}
+				});
+			})
+
+		/**
+			* @api {delete} /vp/:vpid/lock Delete a Visbo Projects Lock
+			* @apiVersion 0.0.1
+			* @apiGroup VisboProject
+			* @apiName DeleteVisboProjectLock
+			* @apiDescription DELETE /vp/:vpid/lock removes a lock for a user to a specific project and variant
+			* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
+			* @apiHeader {String} access-key User authentication token.
+			* @apiPermission user must be authenticated and user must have permission to access the VisboProject
+			* @apiError NotAuthenticated no valid token HTTP 401
+			* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
+			* @apiError NotFound VisboProject does not exist HTTP 404
+			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiExample Example usage:
+			*   url: http://localhost:3484/vp/5aada025/lock
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 200 OK
+			* {
+			*   "state":"success",
+			*   "message":"Deleted Visbo Project Lock"
+			* }
+			*/
+			.delete(function(req, res) {
+				var userId = req.decoded._id;
+				var useremail = req.decoded.email;
+				var variantName = "";
+				if (req.query && req.query.variantName) variantName = req.query.variantName
+				debuglog(1, "DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
+
+				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail});
+				queryVP.select('name users lock updatedAt createdAt');
+				queryVP.exec(function (err, oneVP) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting Visbo Projects',
+							error: err
+						});
+					}
+					if (!oneVP) {
+						return res.status(401).send({
+							state: 'failure',
+							message: 'No Visbo Project or no Permission'
+						});
+					}
+					listLock = oneVP.lock;
+					debuglog(9, "Delete Lock for VP :%s: after perm check has %d Locks \n %O", oneVP.name, listLock.length, oneVP.users);		// MS Log
+					currentDate = new Date();
+					listLockNew = [];
+					for (i = 0; i < listLock.length; i++) {
+						debuglog(9, "DELETE Lock check lock %s vs %s result %s", listLock[i].expiresAt, currentDate, listLock[i].expiresAt >= currentDate);
+						if (listLock[i].expiresAt >=  currentDate ){							// the lock is still valid
+								if (listLock[i].variantName != variantName ) { // lock for a different variant
+									debuglog(9, "DELETE Lock check lock different Variant :%s: :%s:", listLock[i].variantName, variantName);
+									listLockNew.push(listLock[i]) // keep the lock
+								} else if ( listLock[i].email != useremail ) { // existing lock for a different user
+									debuglog(9, "DELETE Lock check lock: same Variant different user");
+									adminPerm = false;
+									for (j = 0; j < oneVP.users.length;j++){
+										if (oneVP.users[j].email == useremail && oneVP.users[j].role == 'Admin'){
+											adminPerm = true;
+											break;
+										}
+									}
+									debuglog(9, "DELETE Lock check different user: admin Permission: %s", adminPerm);
+									if (!adminPerm)
+										listLockNew.push(listLock[i]) // keep the lock
+								} else {
+									// same variant and same user remove the lock
+									debuglog(9, "DELETE Lock check same Variant same user", listLock[i]);
+								}
+						} else {
+							debuglog(9, "DELETE Lock check lock %O expired %s", listLock[i], newLock.createdAt);
+						}
+					}
+					debuglog(9, "DELETE Lock Visbo Project new Lock \n %O ", listLockNew);
+					if ( listLockNew.length != listLock.length) {
+						if (listLockNew.length) {
+							oneVP.lock = listLockNew;
+						} else {
+							delete oneVP.lock;
+						}
+						oneVP.save(function(err, empty) {
+							if (err) {
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error deleting Visbo Project',
+									error: err
+								});
+							}
+							return res.status(200).send({
+								state: 'success',
+								message: 'Deleted Visbo Project Locks',
+								lock: listLockNew
+							});
+						});
+					} else {
+						return res.status(401).send({
+							state: 'failure',
+							message: 'No locks to delete',
+							lock: listLockNew
+						});
+					}
+				});
+			});
 
 module.exports = router;

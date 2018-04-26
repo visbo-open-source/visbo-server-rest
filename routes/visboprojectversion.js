@@ -18,7 +18,7 @@ router.use('/', auth.verifyUser);
 // /vpv
 /////////////////
 
-var debuglevel = 5;
+var debuglevel = 9;
 var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
 	if (debuglevel >= level ){
 		if (arg1 == undefined) arg1 = '';

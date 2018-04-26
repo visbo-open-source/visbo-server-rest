@@ -1,6 +1,13 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
+var lockSchema = new Schema({
+	variantName: { type: String },
+	email: { type: String, required: true },
+	createdAt: { type: Date, reuqired: true },
+	expiresAt: { type: Date, reuqired: true }
+});
+
 var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 100},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
@@ -11,10 +18,12 @@ var visboProjectSchema = new mongoose.Schema({
 	}],
 	vc: {
 		name: { type: String, required: false, maxlength: 100}
-	}
+	},
+	lock: [{type: lockSchema, required: false}]
 });
 // Set Creation and modification date automatically
 visboProjectSchema.set('timestamps', true);
 
 // declare a model
 mongoose.model('VisboProject', visboProjectSchema);
+mongoose.model('Lock', lockSchema);
