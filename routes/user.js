@@ -4,10 +4,13 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var logging = require('./../components/logging');
 var User = mongoose.model('User');
 
 //Register the authentication middleware
 router.use('/profile', auth.verifyUser);
+
+var debuglevel = 5;
 
 /////////////////
 // Profile API
@@ -58,7 +61,7 @@ router.route('/profile')
 	 * }
  */
 	.get(function(req, res) {
-		console.log("Get Profile ");		// MS Log
+		debuglog(debuglevel, 1, "Get Profile ");		// MS Log
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				return res.status(500).send({

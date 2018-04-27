@@ -4,6 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
@@ -19,20 +20,6 @@ var findUserList = function(currentUser) {
 }
 
 var debuglevel = 9;
-var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-	if (debuglevel >= level ){
-		if (arg1 == undefined) arg1 = '';
-		if (arg2 == undefined) arg2 = '';
-		if (arg3 == undefined) arg3 = '';
-		if (arg4 == undefined) arg4 = '';
-		if (arg5 == undefined) arg5 = '';
-		if (arg6 == undefined) arg6 = '';
-		if (arg7 == undefined) arg7 = '';
-		if (arg8 == undefined) arg8 = '';
-		if (arg9 == undefined) arg9 = '';
-		console.log("%s: Level%d VC ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-	}
-};
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -85,7 +72,7 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(1, "Get Visbo Center for user %s", useremail);
+		debuglog(debuglevel, 1, "Get Visbo Center for user %s", useremail);
 
 		var queryVC = VisboCenter.find({'users.email': useremail});
 		queryVC.select('name users updatedAt createdAt');
@@ -97,7 +84,7 @@ router.route('/')
 					error: err
 				});
 			}
-			debuglog(2, "Found VCs %d", listVC.length);		// MS Log
+			debuglog(debuglevel, 2, "Found VCs %d", listVC.length);		// MS Log
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',
@@ -165,8 +152,8 @@ router.route('/')
 	 // User is authenticated already
 	 var userId = req.decoded._id;
 	 var useremail = req.decoded.email;
-	 debuglog(9, "Post a new Visbo Center Req Body: %O Name %s", req.body, req.body.name);		// MS Log
-	 debuglog(5, "Post a new Visbo Center with name %s executed by user %s ", req.body.name, useremail);		// MS Log
+	 debuglog(debuglevel, 9, "Post a new Visbo Center Req Body: %O Name %s", req.body, req.body.name);		// MS Log
+	 debuglog(debuglevel, 5, "Post a new Visbo Center with name %s executed by user %s ", req.body.name, useremail);		// MS Log
 
 	 // check that VC name is unique
 	 VisboCenter.findOne({ "name": req.body.name }, function(err, vc) {
@@ -183,7 +170,7 @@ router.route('/')
 					message: "Visbo Center already exists"
 				});
 			}
-			debuglog(5, "Create Visbo Center (name is already unique) check users");
+			debuglog(debuglevel, 5, "Create Visbo Center (name is already unique) check users");
 			var newVC = new VisboCenter();
 			newVC.name = req.body.name;
 			// Check for Valid User eMail remove non existing eMails
@@ -199,7 +186,7 @@ router.route('/')
 					}
 				};
 			};
-			debuglog(9, "Check users if they exist %s", JSON.stringify(vcUsers));
+			debuglog(debuglevel, 9, "Check users if they exist %s", JSON.stringify(vcUsers));
 			var queryUsers = User.find({'email': {'$in': vcUsers}});
 			queryUsers.select('email');
 			queryUsers.exec(function (err, listUsers) {
@@ -211,7 +198,7 @@ router.route('/')
 					});
 				}
 				if (listUsers.length != vcUsers.length)
-					debuglog(2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
+					debuglog(debuglevel, 2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
 				// copy all existing users to newVC and set the userId correct.
 				if (req.body.users) {
 					for (i = 0; i < req.body.users.length; i++) {
@@ -227,14 +214,14 @@ router.route('/')
 				// check that there is an Admin available, if not add the current user as Admin
 				if (newVC.users.filter(users => users.role == 'Admin').length == 0) {
 					var admin = {userId: userId, email:useremail, role:"Admin"};
-					debuglog(2, "No Admin User found add current user as admin");
+					debuglog(debuglevel, 2, "No Admin User found add current user as admin");
 					newVC.users.push(admin);
 					if (!vcUsers.find(findUser, useremail)){
 						vcUsers.push(useremail)
 					}
 				};
 
-				debuglog(2, "Save VisboCenter %s  with Users %O", newVC.name, newVC.users);
+				debuglog(debuglevel, 2, "Save VisboCenter %s  with Users %O", newVC.name, newVC.users);
 				newVC.save(function(err, vc) {
 					if (err) {
 						return res.status(500).send({
@@ -297,7 +284,7 @@ router.route('/:vcid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+		debuglog(debuglevel, 1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
 		var queryVC = VisboCenter.find({'users.email': useremail, '_id':req.params.vcid});
 		queryVC.select('name users updatedAt createdAt');
@@ -309,7 +296,7 @@ router.route('/:vcid')
 					error: err
 				});
 			}
-			debuglog(5, "Found VCs %d", listVC.length);
+			debuglog(debuglevel, 5, "Found VCs %d", listVC.length);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',
@@ -370,7 +357,7 @@ router.route('/:vcid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(1, "PUT/Save Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+		debuglog(debuglevel, 1, "PUT/Save Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
 		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
 		queryVC.select('name users updatedAt createdAt');
@@ -389,13 +376,13 @@ router.route('/:vcid')
 				});
 			}
 			var vpPopulate = oneVC.name != req.body.name ? true : false;
-			debuglog(2, "PUT/Save Visbo Center %O new Name %s", oneVC, req.body);		// MS Log
+			debuglog(debuglevel, 2, "PUT/Save Visbo Center %O new Name %s", oneVC, req.body);		// MS Log
 			oneVC.name = req.body.name;
 			// update users only if users is set in body and check consistency
 			var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVC.updatedAt);
 			if (origDate - putDate !== 0 && req.body.users.length > 0){
 				// PUT Request with change User list, but the original List that was feteched was already changed, return error
-				debuglog(2, "Error VC PUT: Change User List but VC was already changed afterwards");
+				debuglog(debuglevel, 2, "Error VC PUT: Change User List but VC was already changed afterwards");
 				return res.status(409).send({
 					state: 'failure',
 					message: 'Change User List but Visbo Center was already changed afterwards',
@@ -411,7 +398,7 @@ router.route('/:vcid')
 						vcUsers.push(req.body.users[i].email)
 					}
 				};
-				debuglog(5, "Check users if they exist %s", JSON.stringify(vcUsers));
+				debuglog(debuglevel, 5, "Check users if they exist %s", JSON.stringify(vcUsers));
 				var queryUsers = User.find({'email': {'$in': vcUsers}});
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
@@ -423,7 +410,7 @@ router.route('/:vcid')
 						});
 					}
 					if (listUsers.length != vcUsers.length)
-						debuglog(2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
+						debuglog(debuglevel, 2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);		// MS Log
 					// copy all existing users to newVC
 					if (req.body.users) {
 						// empty the user list and take the users from the delivered body
@@ -440,14 +427,14 @@ router.route('/:vcid')
 					};
 					// check that there is an Admin available, if not add the current user as Admin
 					if (oneVC.users.filter(users => users.role == 'Admin').length == 0) {
-						debuglog(2, "Error VC PUT: No Admin User found");
+						debuglog(debuglevel, 2, "Error VC PUT: No Admin User found");
 						return res.status(409).send({
 							state: 'failure',
 							message: 'Inconsistent Users for VisboCenters',
 							error: err
 						});
 					};
-					debuglog(9, "PUT VC: Save VC after user change");
+					debuglog(debuglevel, 9, "PUT VC: Save VC after user change");
 					oneVC.save(function(err, oneVC) {
 						if (err) {
 							return res.status(500).send({
@@ -458,20 +445,20 @@ router.route('/:vcid')
 						}
 						// Update underlying projects if name has changed
 						if (vpPopulate){
-							debuglog(5, "VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+							debuglog(debuglevel, 5, "VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
 							var updateQuery = {"vcid": oneVC._id};
 							var updateUpdate = {$set: {"vc": { "name": oneVC.name}}};
 							var updateOption = {upsert: false, multi: "true"};
 							VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 								if (err){
-									debuglog(2, "Problem updating VP Projects for VC %s", oneVC._id);
+									debuglog(debuglevel, 2, "Problem updating VP Projects for VC %s", oneVC._id);
 									return res.status(500).send({
 										state: 'failure',
 										message: 'Error updating Visbo Projects',
 										error: err
 									});
 								}
-								debuglog(5, "Update VC names in VP found %d updated %d", result.n, result.nModified)
+								debuglog(debuglevel, 5, "Update VC names in VP found %d updated %d", result.n, result.nModified)
 								return res.status(200).send({
 									state: 'success',
 									message: 'Updated Visbo Center',
@@ -490,7 +477,7 @@ router.route('/:vcid')
 			}
 			else {
 				// No User Updates just the VC itself
-				debuglog(9, "PUT VC: no user changes, save now");
+				debuglog(debuglevel, 9, "PUT VC: no user changes, save now");
 				oneVC.save(function(err, oneVC) {
 					if (err) {
 						return res.status(500).send({
@@ -501,20 +488,20 @@ router.route('/:vcid')
 					}
 					// Update underlying projects if name has changed
 					if (vpPopulate){
-						debuglog(5, "VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+						debuglog(debuglevel, 5, "VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
 						var updateQuery = {"vcid": oneVC._id};
 						var updateUpdate = {$set: {"vc": { "name": oneVC.name}}};
 						var updateOption = {upsert: false, multi: "true"};
 						VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 							if (err){
-								debuglog(2, "Problem updating VP Projects for VC %s", oneVC._id);
+								debuglog(debuglevel, 2, "Problem updating VP Projects for VC %s", oneVC._id);
 								return res.status(500).send({
 									state: 'failure',
 									message: 'Error updating Visbo Projects',
 									error: err
 								});
 							}
-							debuglog(5, "Update VC names in VP found %d updated %d", result.n, result.nModified)
+							debuglog(debuglevel, 5, "Update VC names in VP found %d updated %d", result.n, result.nModified)
 							return res.status(200).send({
 								state: 'success',
 								message: 'Updated Visbo Center',
@@ -557,7 +544,7 @@ router.route('/:vcid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(1, "DELETE Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+		debuglog(debuglevel, 1, "DELETE Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
 		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
 		queryVC.select('name users updatedAt createdAt');
@@ -575,7 +562,7 @@ router.route('/:vcid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			debuglog(1, "Delete Visbo Center after premission check %s %O", req.params.vcid, oneVC);		// MS Log
+			debuglog(debuglevel, 1, "Delete Visbo Center after premission check %s %O", req.params.vcid, oneVC);		// MS Log
 
 			oneVC.remove(function(err, empty) {
 				if (err) {

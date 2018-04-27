@@ -4,6 +4,8 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var lock = require('./../components/lock');
+var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
@@ -20,20 +22,6 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 var debuglevel = 5;
-var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-	if (debuglevel >= level ){
-		if (arg1 == undefined) arg1 = '';
-		if (arg2 == undefined) arg2 = '';
-		if (arg3 == undefined) arg3 = '';
-		if (arg4 == undefined) arg4 = '';
-		if (arg5 == undefined) arg5 = '';
-		if (arg6 == undefined) arg6 = '';
-		if (arg7 == undefined) arg7 = '';
-		if (arg8 == undefined) arg8 = '';
-		if (arg9 == undefined) arg9 = '';
-		console.log("%s: Level%d VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-	}
-};
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -97,7 +85,7 @@ router.route('/')
 		var query = {'users.email': useremail };
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) query.vcid = req.query.vcid;
-		debuglog(1, "%s: Get Project for user %s with query parameters %O", moment().format('YYYY-MM-DD HH:MM:ss'), userId, query);		// MS Log
+		debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);		// MS Log
 
 		var queryVP = VisboProject.find(query);
 		queryVP.exec(function (err, listVP) {
@@ -109,8 +97,8 @@ router.route('/')
 					error: err
 				});
 			};
-			debuglog(5, "Found %d Projects", listVP.length);
-			debuglog(9, "Found Projects/n", listVP);
+			debuglog(debuglevel,  5, "Found %d Projects", listVP.length);
+			debuglog(debuglevel,  9, "Found Projects/n", listVP);
 
 			return res.status(200).send({
 				state: 'success',
@@ -184,7 +172,7 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		var vcid = ( !req.body && !req.body.vcid ) ? '' : req.body.vcid
 		var vpname = ( !req.body && !req.body.name ) ? '' : req.body.name
-		debuglog(1, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for Users %O", useremail, req.body.name, vcid, req.body.users);		// MS Log
+		debuglog(debuglevel,  1, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for Users %O", useremail, req.body.name, vcid, req.body.users);		// MS Log
 		var newVP = new VisboProject();
 
 		VisboCenter.findOne({'_id': vcid,
@@ -204,7 +192,7 @@ router.route('/')
 					message: 'Visbo Centers not found or no Admin'
 				});
 			};
-			debuglog(9, "User has permission to create Project %s in  %s", vpname, vc.name);
+			debuglog(debuglevel,  9, "User has permission to create Project %s in  %s", vpname, vc.name);
 			// check duplicate Name
 			VisboProject.findOne({'vcid': vcid,
 													'name': vpname
@@ -216,7 +204,7 @@ router.route('/')
 						error: err
 					});
 				}
-				debuglog(2, "Duplicate Name check returned %O", vp);
+				debuglog(debuglevel,  2, "Duplicate Name check returned %O", vp);
 				if (vp) {
 					return res.status(404).send({
 						state: 'failure',
@@ -236,7 +224,7 @@ router.route('/')
 						}
 					};
 				};
-				debuglog(5, "Check users if they exist %s", JSON.stringify(vpUsers));
+				debuglog(debuglevel,  5, "Check users if they exist %s", JSON.stringify(vpUsers));
 				var queryUsers = User.find({'email': {'$in': vpUsers}});
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
@@ -248,7 +236,7 @@ router.route('/')
 						});
 					}
 					if (listUsers.length != vpUsers.length)
-						debuglog(2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+						debuglog(debuglevel,  2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
 						for (i = 0; i < req.body.users.length; i++) {
@@ -264,13 +252,13 @@ router.route('/')
 					// check that there is an Admin available, if not add the current user as Admin
 					if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
 						var admin = {userId: userId, email:useremail, role:"Admin"};
-						debuglog(2, "No Admin User found add current user as admin");
+						debuglog(debuglevel,  2, "No Admin User found add current user as admin");
 						newVP.users.push(admin);
 					};
 					// set the VC Name
 					newVP.vc.name = vc.name;
-					debuglog(9, "VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
-					debuglog(5, "Save VisboProject %s  with Users %O", newVP.name, newVP.users);
+					debuglog(debuglevel,  9, "VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
+					debuglog(debuglevel,  5, "Save VisboProject %s  with Users %O", newVP.name, newVP.users);
 					newVP.save(function(err, vp) {
 						if (err) {
 							return res.status(500).send({
@@ -335,7 +323,7 @@ router.route('/')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			debuglog(1, "Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(debuglevel,  1, "Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.find({'users.email': useremail, '_id':req.params.vpid});
 			queryVP.select('name users vc updatedAt createdAt');
@@ -347,7 +335,7 @@ router.route('/')
 						error: err
 					});
 				}
-				debuglog(5, "Found VCs %d %O", listVP.length, listVP);		// MS Log
+				debuglog(debuglevel,  5, "Found VCs %d %O", listVP.length, listVP);		// MS Log
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Projects',
@@ -407,7 +395,7 @@ router.route('/')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			debuglog(1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(debuglevel,  1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVP.select('name users vcid, vc, updatedAt createdAt');
@@ -425,13 +413,20 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
+				if (lock.lockedVP(oneVP, useremail, undefined)) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Project locked',
+						vp: [oneVP]
+					});
+				}
 				var vpvPopulate = oneVP.name != req.body.name ? true : false;
 				oneVP.name = req.body.name;
 				var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVP.updatedAt);
-				debuglog(5, "PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
+				debuglog(debuglevel,  5, "PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
 				if (origDate - putDate !== 0 && req.body.users.length > 0){
 					// PUT Request with change User list, but the original List that was feteched was already changed, return error
-					debuglog(1, "Error VP PUT: Change User List but VP was already changed afterwards");
+					debuglog(debuglevel,  1, "Error VP PUT: Change User List but VP was already changed afterwards");
 					return res.status(409).send({
 						state: 'failure',
 						message: 'Change User List but Visbo Project was already changed afterwards',
@@ -447,7 +442,7 @@ router.route('/')
 							vpUsers.push(req.body.users[i].email)
 						}
 					};
-					debuglog(9, "Check users if they exist %s", JSON.stringify(vpUsers));
+					debuglog(debuglevel,  9, "Check users if they exist %s", JSON.stringify(vpUsers));
 					var queryUsers = User.find({'email': {'$in': vpUsers}});
 					queryUsers.select('email');
 					queryUsers.exec(function (err, listUsers) {
@@ -475,14 +470,14 @@ router.route('/')
 						};
 						// check that there is an Admin available, if not add the current user as Admin
 						if (oneVP.users.filter(users => users.role == 'Admin').length == 0) {
-							debuglog(1, "Error VP PUT: No Admin User found");
+							debuglog(debuglevel,  1, "Error VP PUT: No Admin User found");
 							return res.status(409).send({
 								state: 'failure',
 								message: 'Inconsistent Users for VisboProjects',
 								error: err
 							});
 						};
-						debuglog(9, "PUT VP: Save VP after user change");
+						debuglog(debuglevel,  9, "PUT VP: Save VP after user change");
 						oneVP.save(function(err, oneVP) {
 							if (err) {
 								return res.status(500).send({
@@ -492,20 +487,20 @@ router.route('/')
 								});
 							}
 							if (vpvPopulate){
-								debuglog(5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+								debuglog(debuglevel, 5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
 								var updateQuery = {"vpid": oneVP._id};
 								var updateUpdate = {$set: {"name": oneVP.name}};
 								var updateOption = {upsert: false, multi: "true"};
 								VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 									if (err){
-										debuglog(2, "Problem updating VP Versions for VP %s", oneVP._id);
+										debuglog(debuglevel, 2, "Problem updating VP Versions for VP %s", oneVP._id);
 										return res.status(500).send({
 											state: 'failure',
 											message: 'Error updating Visbo Project',
 											error: err
 										});
 									}
-									debuglog(5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
+									debuglog(debuglevel, 5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
 									return res.status(200).send({
 										state: 'success',
 										message: 'Updated Visbo Project',
@@ -523,7 +518,7 @@ router.route('/')
 					});
 				} else {
 					// No User Updates just the VP itself
-					debuglog(5, "PUT VP: no user changes, save now");
+					debuglog(debuglevel, 5, "PUT VP: no user changes, save now");
 					oneVC.save(function(err, oneVP) {
 						if (err) {
 							return res.status(500).send({
@@ -534,20 +529,20 @@ router.route('/')
 						}
 						// Update underlying projects if name has changed
 						if (vpvPopulate){
-							debuglog(5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+							debuglog(debuglevel, 5, "VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
 							var updateQuery = {"vpid": oneVP._id};
 							var updateUpdate = {$set: {"name": oneVP.name}};
 							var updateOption = {upsert: false, multi: "true"};
 							VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 								if (err){
-									debuglog(2, "Problem updating VP Versions for VP %s", oneVP._id);
+									debuglog(debuglevel, 2, "Problem updating VP Versions for VP %s", oneVP._id);
 									return res.status(500).send({
 										state: 'failure',
 										message: 'Error updating Visbo Project',
 										error: err
 									});
 								}
-								debuglog(5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
+								debuglog(debuglevel, 5, "Update VP names in VPV found %d updated %d", result.n, result.nModified)
 								return res.status(200).send({
 									state: 'success',
 									message: 'Updated Visbo Project',
@@ -589,7 +584,7 @@ router.route('/')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			debuglog(1, "DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
+			debuglog(debuglevel, 1, "DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
 			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
 			queryVP.select('name users updatedAt createdAt');
@@ -607,8 +602,14 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
-				debuglog(1, "Delete Visbo Project after perm check success %s %O", req.params.vpid, oneVP);		// MS Log
-
+				debuglog(debuglevel, 1, "Delete Visbo Project after perm check success %s %O", req.params.vpid, oneVP);		// MS Log
+				if (lock.lockedVP(oneVP, useremail, undefined)) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Project locked',
+						vp: [oneVP]
+					});
+				}
 				oneVP.remove(function(err, empty) {
 					if (err) {
 						return res.status(500).send({
@@ -660,7 +661,7 @@ router.route('/')
 			.post(function(req, res) {
 				var userId = req.decoded._id;
 				var useremail = req.decoded.email;
-				debuglog(1, "POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
+				debuglog(debuglevel, 1, "POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 
 				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail });
 				queryVP.select('name users vcid, lock');
@@ -689,29 +690,29 @@ router.route('/')
 					for (i = 0; i < listLock.length; i++) {
 						if (listLock[i].expiresAt >=  newLock.createdAt ){							// the lock is still valid
 								if (listLock[i].variantName != newLock.variantName ) { // lock for a different variant
-									debuglog(9, "POST Lock check lock %O different Variant", listLock[i]);
+									debuglog(debuglevel, 9, "POST Lock check lock %O different Variant", listLock[i]);
 									listLockNew.push(listLock[i]) // keep the lock
 								} else if ( listLock[i].email != newLock.email ) { // existing lock for a different user
 									locksuccess = false;
-									debuglog(9, "POST Lock check lock %O same Variant different user", listLock[i]);
+									debuglog(debuglevel, 9, "POST Lock check lock %O same Variant different user", listLock[i]);
 									listLockNew.push(listLock[i]) // keep the lock
 								} else {
 									// otherwise same variant and user ignore the old one keep the new one
-									debuglog(9, "POST Lock check same Variant same user", listLock[i]);
+									debuglog(debuglevel, 9, "POST Lock check same Variant same user", listLock[i]);
 								}
 						} else {
-							debuglog(9, "POST Lock check lock %O expired %s", listLock[i], newLock.createdAt);
+							debuglog(debuglevel, 9, "POST Lock check lock %O expired %s", listLock[i], newLock.createdAt);
 						}
 					}
 					if (locksuccess) {
 						if (newLock.expiresAt > newLock.createdAt) {
-							debuglog(9, "POST Lock is not already expired");
+							debuglog(debuglevel, 9, "POST Lock is not already expired");
 							listLockNew.push(newLock);
 						} else {
 							locksuccess = false
 						}
 					}
-					debuglog(5, "POST Lock Visbo Project success %s old Lock \n %O \n new Lock \n %O ", locksuccess, listLock, listLockNew);
+					debuglog(debuglevel, 5, "POST Lock Visbo Project success %s old Lock \n %O \n new Lock \n %O ", locksuccess, listLock, listLockNew);
 					if (locksuccess || listLockNew.length != listLock.length) {
 						// added the new lock or lock list has changed because of expired locks update the VP
 						oneVP.lock = listLockNew;
@@ -766,7 +767,7 @@ router.route('/')
 				var useremail = req.decoded.email;
 				var variantName = "";
 				if (req.query && req.query.variantName) variantName = req.query.variantName
-				debuglog(1, "DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
+				debuglog(debuglevel, 1, "DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
 
 				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail});
 				queryVP.select('name users lock updatedAt createdAt');
@@ -785,17 +786,17 @@ router.route('/')
 						});
 					}
 					listLock = oneVP.lock;
-					debuglog(9, "Delete Lock for VP :%s: after perm check has %d Locks \n %O", oneVP.name, listLock.length, oneVP.users);		// MS Log
+					debuglog(debuglevel, 9, "Delete Lock for VP :%s: after perm check has %d Locks \n %O", oneVP.name, listLock.length, oneVP.users);		// MS Log
 					currentDate = new Date();
 					listLockNew = [];
 					for (i = 0; i < listLock.length; i++) {
-						debuglog(9, "DELETE Lock check lock %s vs %s result %s", listLock[i].expiresAt, currentDate, listLock[i].expiresAt >= currentDate);
+						debuglog(debuglevel, 9, "DELETE Lock check lock %s vs %s result %s", listLock[i].expiresAt, currentDate, listLock[i].expiresAt >= currentDate);
 						if (listLock[i].expiresAt >=  currentDate ){							// the lock is still valid
 								if (listLock[i].variantName != variantName ) { // lock for a different variant
-									debuglog(9, "DELETE Lock check lock different Variant :%s: :%s:", listLock[i].variantName, variantName);
+									debuglog(debuglevel, 9, "DELETE Lock check lock different Variant :%s: :%s:", listLock[i].variantName, variantName);
 									listLockNew.push(listLock[i]) // keep the lock
 								} else if ( listLock[i].email != useremail ) { // existing lock for a different user
-									debuglog(9, "DELETE Lock check lock: same Variant different user");
+									debuglog(debuglevel, 9, "DELETE Lock check lock: same Variant different user");
 									adminPerm = false;
 									for (j = 0; j < oneVP.users.length;j++){
 										if (oneVP.users[j].email == useremail && oneVP.users[j].role == 'Admin'){
@@ -803,18 +804,18 @@ router.route('/')
 											break;
 										}
 									}
-									debuglog(9, "DELETE Lock check different user: admin Permission: %s", adminPerm);
+									debuglog(debuglevel, 9, "DELETE Lock check different user: admin Permission: %s", adminPerm);
 									if (!adminPerm)
 										listLockNew.push(listLock[i]) // keep the lock
 								} else {
 									// same variant and same user remove the lock
-									debuglog(9, "DELETE Lock check same Variant same user", listLock[i]);
+									debuglog(debuglevel, 9, "DELETE Lock check same Variant same user", listLock[i]);
 								}
 						} else {
-							debuglog(9, "DELETE Lock check lock %O expired %s", listLock[i], newLock.createdAt);
+							debuglog(debuglevel, 9, "DELETE Lock check lock %O expired %s", listLock[i], newLock.createdAt);
 						}
 					}
-					debuglog(9, "DELETE Lock Visbo Project new Lock \n %O ", listLockNew);
+					debuglog(debuglevel, 9, "DELETE Lock Visbo Project new Lock \n %O ", listLockNew);
 					if ( listLockNew.length != listLock.length) {
 						if (listLockNew.length) {
 							oneVP.lock = listLockNew;

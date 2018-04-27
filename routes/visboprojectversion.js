@@ -4,9 +4,12 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var lock = require('./../components/lock');
+var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
+var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('Project');
 var moment = require('moment');
 
@@ -19,20 +22,6 @@ router.use('/', auth.verifyUser);
 /////////////////
 
 var debuglevel = 9;
-var debuglog = function(level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-	if (debuglevel >= level ){
-		if (arg1 == undefined) arg1 = '';
-		if (arg2 == undefined) arg2 = '';
-		if (arg3 == undefined) arg3 = '';
-		if (arg4 == undefined) arg4 = '';
-		if (arg5 == undefined) arg5 = '';
-		if (arg6 == undefined) arg6 = '';
-		if (arg7 == undefined) arg7 = '';
-		if (arg8 == undefined) arg8 = '';
-		if (arg9 == undefined) arg9 = '';
-		console.log("%s: Level%d VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-	}
-};
 
 router.route('/')
 
@@ -89,7 +78,7 @@ router.route('/')
 		} else {
 			queryvpv.timestamp =  {$lt: nowDate }
 		}
-		debuglog(1, "Get Project Versions for user %s with VP %s and timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.timestamp, latestOnly);
+		debuglog(debuglevel, 1, "Get Project Versions for user %s with VP %s and timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.timestamp, latestOnly);
 		var queryVP = VisboProject.find(queryvp)
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
@@ -100,15 +89,15 @@ router.route('/')
 					error: err
 				});
 			};
-			debuglog(5, "Filter ProjectVersions to %s Projects", listVP.length);
+			debuglog(debuglevel, 5, "Filter ProjectVersions to %s Projects", listVP.length);
 			var vpArray = [];
 			var vp;
 			for (vp in listVP) {
 				vpArray.push(listVP[vp]._id);
 			}
-			debuglog(9, "Filter Projects %O", vpArray);
+			debuglog(debuglevel, 9, "Filter Projects %O", vpArray);
 			queryvpv.vpid = {$in: vpArray};
-			debuglog(5, "VPV query string %s", JSON.stringify(queryvpv));
+			debuglog(debuglevel, 5, "VPV query string %s", JSON.stringify(queryvpv));
 			var queryVPV = VisboProjectVersion.find(queryvpv);
 			if (latestOnly == false) {
 				// deliver only the short info about project versions
@@ -123,21 +112,21 @@ router.route('/')
 						error: err
 					});
 				};
-				debuglog(2, "Found %d Project Versions", listVPV.length);
+				debuglog(debuglevel, 2, "Found %d Project Versions", listVPV.length);
 				// if latestonly, reduce the list and deliver only the latest version of each project and variant
 				if (listVPV.length > 1 && latestOnly){
 					var listVPVfiltered = [];
 					listVPVfiltered.push(listVPV[0]);
 					for (let i = 1; i < listVPV.length; i++){
 						//compare current ite with previous and ignore if it is the same vpid & variantname
-						debuglog(9, "compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+						debuglog(debuglevel, 9, "compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
 						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
 							listVPVfiltered.push(listVPV[i])
-							debuglog(9, "compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+							debuglog(debuglevel, 9, "compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 						}
 					}
-					debuglog(2, "Found %d Project Versions after Filtering", listVPVfiltered.length);
+					debuglog(debuglevel, 2, "Found %d Project Versions after Filtering", listVPVfiltered.length);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Versions',
@@ -194,7 +183,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		var vpid = ( !req.body && !req.body.vpid ) ? null : req.body.vpid
-		debuglog(1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
+		debuglog(debuglevel, 1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
 		var newVPV = new VisboProjectVersion();
 		// check that vpid ist set and exists and user has Admin permission
 		if (!vpid) {
@@ -207,7 +196,7 @@ router.route('/')
 		VisboProject.findOne({'_id': vpid,
 												'users.email': useremail,
 												'users.role' : 'Admin'
-											}, function (err, vp) {
+											}, function (err, oneVP) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -215,17 +204,25 @@ router.route('/')
 					error: err
 				});
 			}
-			if (!vp) {
+			if (!oneVP) {
 				return res.status(404).send({
 					state: 'failure',
 					message: 'Visbo Project not found or no Admin'
 				});
 			};
-			debuglog(5, "User has permission to create a Version in  %s", vp.name);
+			debuglog(debuglevel, 5, "User has permission to create a Version in  %s", oneVP.name);
+			// check if the version is locked
+			if (lock.lockedVP(oneVP, useremail, req.body.variantName)) {
+				return res.status(401).send({
+					state: 'failure',
+					message: 'Visbo Project locked',
+					vp: [oneVP]
+				});
+			}
+			// keep unchangable attributes
+			newVPV.name = oneVP.name;
+			newVPV.vpid = oneVP._id;
 			// copy all attributes
-
-			newVPV.name = vp.name;
-			newVPV.vpid = vp._id;
 			newVPV.variantName = req.body.variantName;
 			newVPV.variantDescription = req.body.variantDescription;
 			newVPV.Risiko = req.body.Risiko;
@@ -260,8 +257,8 @@ router.route('/')
 
 			newVPV.timestamp = Date();
 
-			debuglog(5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
-			newVPV.save(function(err, vpv) {
+			debuglog(debuglevel, 5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
+			newVPV.save(function(err, oneVPV) {
 				if (err) {
 					return res.status(500).send({
 						state: "failure",
@@ -272,7 +269,7 @@ router.route('/')
 				return res.status(200).send({
 					state: "success",
 					message: "Successfully created new Project Version",
-					vpv: [ vpv ]
+					vpv: [ oneVPV ]
 				});
 			});
 		});
@@ -313,7 +310,7 @@ router.route('/')
 			var useremail = req.decoded.email;
 			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin','User']}};
 			var queryvpv = {'_id': req.params.vpvid};
-			debuglog(1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid, queryvpv);		// MS Log
+			debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid, queryvpv);		// MS Log
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
 			queryVPV.exec(function (err, oneVPV) {
 				if (err) {
@@ -323,7 +320,7 @@ router.route('/')
 						error: err
 					});
 				};
-				debuglog(2, "Found specific Project Versions for Project %O", oneVPV);
+				debuglog(debuglevel, 2, "Found specific Project Versions for Project %O", oneVPV);
 				if (!oneVPV){
 					return res.status(404).send({
 						state: 'failure',
@@ -343,7 +340,7 @@ router.route('/')
 							error: err
 						});
 					};
-					debuglog(5, "Found %s Project with Permission", oneVP._id);
+					debuglog(debuglevel, 5, "Found %s Project with Permission", oneVP._id);
 					if (!oneVP){
 						return res.status(404).send({
 							state: 'failure',
@@ -396,7 +393,7 @@ router.route('/')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			debuglog(1, "PUT/Save Visbo Project Version for userid %s email %s and vpv %s not allowed ", userId, useremail, req.params.vpvid);		// MS Log
+			debuglog(debuglevel, 1, "PUT/Save Visbo Project Version for userid %s email %s and vpv %s not allowed ", userId, useremail, req.params.vpvid);		// MS Log
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to update a Visbo Project Version',
@@ -418,7 +415,7 @@ router.route('/')
 						message: 'No Visbo Project or no Permission'
 					});
 				}
-				debuglog(5, "PUT/Save Visbo Project %O ", oneVPV);		// MS Log
+				debuglog(debuglevel, 5, "PUT/Save Visbo Project %O ", oneVPV);		// MS Log
 				oneVPV.name = req.body.name;
 				// MS Todo update other properties also
 
@@ -465,7 +462,7 @@ router.route('/')
 			var useremail = req.decoded.email;
 			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin']}};
 			var queryvpv = {'_id': req.params.vpvid};
-			debuglog(1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+			debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
 
 			// var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
@@ -484,7 +481,8 @@ router.route('/')
 						message: 'No Visbo Project Version found or no Permission'
 					});
 				}
-				debuglog(1, "Delete Visbo Project Check Permission Missing for VP %s", req.params.vpvid);
+				// Project Version found check permission against VP and also the lock of VP
+				debuglog(debuglevel, 1, "Delete Visbo Project Check Permission for VP %s", oneVPV.vpid);
 				// check access Permission
 				queryvp._id = oneVPV.vpid;
 				var queryVP = VisboProject.findOne(queryvp)
@@ -497,7 +495,6 @@ router.route('/')
 							error: err
 						});
 					};
-					debuglog(5, "Found %s Project with Permission", oneVP._id);
 					if (!oneVP){
 						return res.status(404).send({
 							state: 'failure',
@@ -505,7 +502,15 @@ router.route('/')
 							error: err
 						});
 					} else {
-						debuglog(2, "Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);
+						// check if the project is locked
+						if (lock.lockedVP(oneVP, useremail, oneVPV.variantName)) {
+							return res.status(401).send({
+								state: 'failure',
+								message: 'Visbo Project locked',
+								vp: [oneVP]
+							});
+						}
+						debuglog(debuglevel, 2, "Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);
 						oneVPV.remove(function(err, empty) {
 							if (err) {
 								return res.status(500).send({

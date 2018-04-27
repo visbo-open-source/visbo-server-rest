@@ -5,6 +5,8 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
+var logging = require('./../components/logging');
+
 // var nodemailer = require('nodemailer');
 var moment = require('moment');
 var mail = require('./../components/mail');
@@ -18,6 +20,7 @@ var isValidPassword = function(user, password){
 var createHash = function(password){
 	return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
 };
+var debuglevel = 5;
 
 /**
  * @api {post} /token/user/login User Login
@@ -55,7 +58,7 @@ var createHash = function(password){
  */
 router.route('/user/login')
 	.post(function(req, res) {
-		// console.log("%s: Try to Login %s", moment().format('YYYY-MM-DD HH:MM:ss'), req.body.email);
+		debuglog(debuglevel, 8, "Try to Login %s", req.body.email);
 		if (!req.body.email || !req.body.password){
 			return res.status(400).send({
 				state: "failure",
@@ -83,7 +86,7 @@ router.route('/user/login')
 					message: "email or password mismatch"
 				});
 			}
-			// console.log("%s: Try to Login %s username&password accepted", moment().format('YYYY-MM-DD HH:MM:ss'), req.body.email);
+			debuglog(debuglevel, 8, "Try to Login %s username&password accepted", req.body.email);
 			user.password = undefined;
 			jwt.sign(user, jwtSecret.user.secret,
 				{ expiresIn: jwtSecret.user.expiresIn },
@@ -121,7 +124,7 @@ router.route('/user/login')
  */
 router.route('/user/forgottenpw')
 	.post(function(req, res) {
-		// console.log("%s: Requested Password Reset through e-Mail %s", moment().format('YYYY-MM-DD HH:MM:ss'), req.body.email);
+		debuglog(debuglevel, 8, "Requested Password Reset through e-Mail %s", req.body.email);
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -137,7 +140,7 @@ router.route('/user/forgottenpw')
 				});
 			}
 		user.password = undefined;		// MS Todo: clear before send wrong place
-		// console.log("%s: Requested Password Reset through e-Mail %s with pw", moment().format('YYYY-MM-DD HH:MM:ss'), user.email);
+		debuglog(debuglevel, 8, "Requested Password Reset through e-Mail %s with pw", user.email);
 		jwt.sign(user, jwtSecret.user.secret,
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
@@ -231,7 +234,7 @@ router.route('/user/forgottenpw')
   */
 router.route('/user/signup')
 	.post(function(req, res) {
-		// console.log("%s: Signup Request for e-Mail %s", moment().format('YYYY-MM-DD HH:MM:ss'), req.body.email);
+		debuglog(debuglevel, 8, "Signup Request for e-Mail %s", req.body.email);
 		visbouser.findOne({ "email": req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -247,7 +250,7 @@ router.route('/user/signup')
 				});
 			}
 			var newUser = new visbouser();
-			// console.log("%s: Signup Request newUser before init %O", moment().format('YYYY-MM-DD HH:MM:ss'), newUser);
+			debuglog(debuglevel, 8, "Signup Request newUser before init %O", newUser);
 			if (req.body.profile) {
 				newUser.profile.firstName = req.body.profile.firstName;
 				newUser.profile.lastName = req.body.profile.lastName;
@@ -262,12 +265,12 @@ router.route('/user/signup')
 				}
 			}
 			newUser.email = req.body.email;
-			// console.log("%s: Signup Request newUser %O", moment().format('YYYY-MM-DD HH:MM:ss'), newUser);
+			debuglog(debuglevel, 8, "Signup Request newUser %O", newUser);
 			newUser.password = createHash(req.body.password);
 			newUser._id = undefined;	// is the reset required or does it guarantee uniqueness already?
 			newUser.save(function(err, user) {
 				if (err) {
-					// console.log("%s: Signup Error %O", moment().format('YYYY-MM-DD HH:MM:ss'), err);
+					debuglog(debuglevel, 8, "Signup Error %O", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",
