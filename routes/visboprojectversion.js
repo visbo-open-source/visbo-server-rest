@@ -101,7 +101,7 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpv);
 			if (latestOnly == false) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp Erloes endDate variantName updatedAt createdAt');
+				queryVPV.select('_id vpid name timestamp Erloes startdate endDate ampelStatus variantName');
 			}
 			queryVPV.sort('vpid name variantName -timestamp')
 			queryVPV.exec(function (err, listVPV) {
