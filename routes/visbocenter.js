@@ -165,7 +165,7 @@ router.route('/')
 				});
 			}
 			if (vc) {
-				return res.status(500).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "Visbo Center already exists"
 				});
@@ -286,7 +286,7 @@ router.route('/:vcid')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
-		var queryVC = VisboCenter.find({'users.email': useremail, '_id':req.params.vcid});
+		var queryVC = VisboCenter.find({'_id':req.params.vcid, 'users.email': useremail});
 		queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, listVC) {
 			if (err) {
@@ -359,7 +359,7 @@ router.route('/:vcid')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "PUT/Save Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
-		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
 		queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {
@@ -380,7 +380,7 @@ router.route('/:vcid')
 			oneVC.name = req.body.name;
 			// update users only if users is set in body and check consistency
 			var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVC.updatedAt);
-			if (origDate - putDate !== 0 && req.body.users.length > 0){
+			if (origDate - putDate !== 0 && req.body.users && req.body.users.length > 0){
 				// PUT Request with change User list, but the original List that was feteched was already changed, return error
 				debuglog(debuglevel, 2, "Error VC PUT: Change User List but VC was already changed afterwards");
 				return res.status(409).send({
@@ -546,7 +546,7 @@ router.route('/:vcid')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "DELETE Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
-		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail, 'users.role': 'Admin'});
+		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
 		queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {

@@ -63,7 +63,7 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin','User']}};
+		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
 		var queryvpv = {};
 		var latestOnly = false;
 		var nowDate = new Date();
@@ -194,8 +194,7 @@ router.route('/')
 			});
 		}
 		VisboProject.findOne({'_id': vpid,
-												'users.email': useremail,
-												'users.role' : 'Admin'
+												'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}
 											}, function (err, oneVP) {
 			if (err) {
 				return res.status(500).send({
@@ -308,7 +307,7 @@ router.route('/')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin','User']}};
+			var queryvp = {'users.email': useremail};
 			var queryvpv = {'_id': req.params.vpvid};
 			debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid, queryvpv);		// MS Log
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
@@ -399,7 +398,7 @@ router.route('/')
 				message: 'No Permission to update a Visbo Project Version',
 				error: err
 			});
-			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
+			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}}});
 			queryVPV.select('name users updatedAt createdAt');
 			queryVPV.exec(function (err, oneVPV) {
 				if (err) {
@@ -460,11 +459,11 @@ router.route('/')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var queryvp = {'users.email': useremail, 'users.role':{$in:['Admin']}};
+			var queryvp = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};
 			var queryvpv = {'_id': req.params.vpvid};
 			debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
 
-			// var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users.email': useremail, 'users.role' : 'Admin' });
+			// var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
 			queryVPV.select('_id vpid name');
 			queryVPV.exec(function (err, oneVPV) {

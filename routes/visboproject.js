@@ -82,7 +82,7 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'users.email': useremail };
+		var query = {'users.email': useremail};
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) query.vcid = req.query.vcid;
 		debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);		// MS Log
@@ -176,8 +176,7 @@ router.route('/')
 		var newVP = new VisboProject();
 
 		VisboCenter.findOne({'_id': vcid,
-												'users.email': useremail,
-												'users.role' : 'Admin'
+												'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}
 											}, function (err, vc) {
 			if (err) {
 				return res.status(500).send({
@@ -206,7 +205,7 @@ router.route('/')
 				}
 				debuglog(debuglevel,  2, "Duplicate Name check returned %O", vp);
 				if (vp) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Project with same name exists'
 					});
@@ -325,7 +324,7 @@ router.route('/')
 			var useremail = req.decoded.email;
 			debuglog(debuglevel,  1, "Get Visbo Project for userid %s email %s and vc %s ", userId, useremail, req.params.vpid);		// MS Log
 
-			var queryVP = VisboProject.find({'users.email': useremail, '_id':req.params.vpid});
+			var queryVP = VisboProject.find({'_id':req.params.vpid, 'users.email': useremail});
 			queryVP.select('name users vc updatedAt createdAt');
 			queryVP.exec(function (err, listVP) {
 				if (err) {
@@ -397,7 +396,7 @@ router.route('/')
 			var useremail = req.decoded.email;
 			debuglog(debuglevel,  1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
-			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
+			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
 			queryVP.select('name users vcid, vc, updatedAt createdAt');
 			queryVP.exec(function (err, oneVP) {
 				if (err) {
@@ -408,7 +407,7 @@ router.route('/')
 					});
 				}
 				if (!oneVP) {
-					return res.status(500).send({
+					return res.status(403).send({
 						state: 'failure',
 						message: 'No Visbo Project or no Permission'
 					});
@@ -424,7 +423,7 @@ router.route('/')
 				oneVP.name = req.body.name;
 				var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVP.updatedAt);
 				debuglog(debuglevel,  5, "PUT/Save Visbo Project %s: time diff %d ", req.params.vpid, origDate - putDate);		// MS Log
-				if (origDate - putDate !== 0 && req.body.users.length > 0){
+				if (origDate - putDate !== 0 && req.body.users && req.body.users.length > 0){
 					// PUT Request with change User list, but the original List that was feteched was already changed, return error
 					debuglog(debuglevel,  1, "Error VP PUT: Change User List but VP was already changed afterwards");
 					return res.status(409).send({
@@ -519,7 +518,7 @@ router.route('/')
 				} else {
 					// No User Updates just the VP itself
 					debuglog(debuglevel, 5, "PUT VP: no user changes, save now");
-					oneVC.save(function(err, oneVP) {
+					oneVP.save(function(err, oneVP) {
 						if (err) {
 							return res.status(500).send({
 								state: 'failure',
@@ -586,7 +585,7 @@ router.route('/')
 			var useremail = req.decoded.email;
 			debuglog(debuglevel, 1, "DELETE Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
 
-			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail, 'users.role' : 'Admin' });
+			var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
 			queryVP.select('name users updatedAt createdAt');
 			queryVP.exec(function (err, oneVP) {
 				if (err) {
@@ -663,7 +662,7 @@ router.route('/')
 				var useremail = req.decoded.email;
 				debuglog(debuglevel, 1, "POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 
-				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail });
+				var queryVP = VisboProject.findOne({'_id':req.params.vpid, 'users.email': useremail});
 				queryVP.select('name users vcid, lock');
 				queryVP.exec(function (err, oneVP) {
 					if (err) {

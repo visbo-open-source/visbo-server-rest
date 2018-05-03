@@ -45,21 +45,21 @@ router.route('/profile')
 	 *    "email":"markus.seyfried@visbo.de",
 	 *    "__v":0,
 	 *    "profile": {
- 	* 			"firstname": "First",
- 	* 			"lastname": "Last",
- 	* 			"company": "Company inc",
- 	* 			"phone": "0151-11223344",
-   * 			"address" : {
- 	* 				"street": "Street",
- 	* 				"city": "City",
- 	* 				"zip": "88888",
- 	* 				"state": "State",
- 	* 				"country": "Country",
- 	* 			}
- 	* 	 }
+ 	 *      "firstname": "First",
+ 	 *      "lastname": "Last",
+ 	 *      "company": "Company inc",
+ 	 *      "phone": "0151-11223344",
+   *      "address" : {
+ 	 *        "street": "Street",
+ 	 *        "city": "City",
+ 	 *        "zip": "88888",
+ 	 *        "state": "State",
+ 	 *        "country": "Country",
+ 	 *      }
+ 	 *    }
 	 *  }
-	 * }
- */
+	 *}
+   */
 	.get(function(req, res) {
 		debuglog(debuglevel, 1, "Get Profile ");		// MS Log
 		User.findById(req.decoded._id, function(err, user) {
@@ -90,18 +90,26 @@ router.route('/profile')
 	 *   url: http://localhost:3484/user/profile
 	 *   body:
 	 *   {
-	 *     "name":"First Last-Name",
-	 *     "profile" : {
-	 *      "address" : "Kurt Koch Str. 4a, 83607 Holzkirchen",
-	 *      "company": "Visbo GmbH",
-	 *      "phone": "0151-11111111"
-	 *     }
+	 *     "profile": {
+ 	 *       "firstname": "First",
+ 	 *       "lastname": "Last",
+ 	 *       "company": "Company inc",
+ 	 *       "phone": "0151-11223344",
+   *       "address" : {
+ 	 *         "street": "Street",
+ 	 *         "city": "City",
+ 	 *         "zip": "88888",
+ 	 *         "state": "State",
+ 	 *         "country": "Country",
+ 	 *       }
+ 	 *     }
 	 *   }
-	 * @apiParam {String} name User's name.
 	 * @apiParam {Object} profile Profile object.
-	 * @apiParam {String} profile.address Address.
-	 * @apiParam {String} profile.company Company.
-	 * @apiParam {String} profile.phone Phone number.
+	 * @apiParam {String} profile.firstname first name of user
+	 * @apiParam {String} profile.lastname last name of user
+	 * @apiParam {Object} profile.address Address of user
+	 * @apiParam {String} profile.company Company
+	 * @apiParam {String} profile.phone Phone number
 	 * @apiSuccessExample {json} Success-Response:
  	 * HTTP/1.1 200 OK
 	 * {
@@ -112,13 +120,19 @@ router.route('/profile')
 	 *    "updatedAt":"2018-03-20T10:31:27.216Z",
 	 *    "createdAt":"2018-02-28T09:38:04.774Z",
 	 *    "email":"markus.seyfried@visbo.de",
-	 *    "name":"First Last-Name",
-	 *    "__v":0,
-	 *    "profile":{
-	 *      "address":"Kurt Koch Str. 4a, 83607 Holzkirchen",
-	 *      "company":"Visbo GmbH",
-	 *      "phone":"0151-11111111"
-	 *    }
+	 *    "profile": {
+ 	 *      "firstname": "First",
+ 	 *      "lastname": "Last",
+ 	 *      "company": "Company inc",
+ 	 *      "phone": "0151-11223344",
+   *      "address" : {
+ 	 *        "street": "Street",
+ 	 *        "city": "City",
+ 	 *        "zip": "88888",
+ 	 *        "state": "State",
+ 	 *        "country": "Country",
+ 	 *      }
+ 	 *    }
 	 *  }
 	 * }
 	 */
@@ -131,8 +145,16 @@ router.route('/profile')
 					error: err
 				});
 			}
+			if (!req.body || !req.body.profile || !req.body.profile.firstname || !req.body.profile.lastname) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Body does not contain correct Profile data',
+					error: err
+				});
+			}
 
-			user.name = req.body.name;
+			user.profile.firstname = req.body.profile.firstname;
+			user.profile.lastname = req.body.profile.lastname;
 			user.profile.address = req.body.profile.address;
 			user.profile.company = req.body.profile.company;
 			user.profile.phone = req.body.profile.phone;

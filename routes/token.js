@@ -47,12 +47,23 @@ var debuglevel = 5;
  *   "message":"Successfully logged in",
  *   "token":"eyJhbG...brDI",
  *   "user":{
- *    "_id":"5a96787976294c5417f0e409",
- *    "updatedAt":"2018-02-28T09:38:04.774Z",
- *    "createdAt":"2018-02-28T09:38:04.774Z",
- *    "email":"example@example.com",
- *    "name":"Example Example",
- *    "__v":0
+ *     "_id":"5a96787976294c5417f0e409",
+ *     "updatedAt":"2018-02-28T09:38:04.774Z",
+ *     "createdAt":"2018-02-28T09:38:04.774Z",
+ *     "email":"example@example.com",
+ *     "profile": {
+ *       "firstname": "First",
+ *       "lastname": "Last",
+ *       "company": "Company inc",
+ *       "phone": "0151-11223344",
+ *       "address" : {
+ *         "street": "Street",
+ *         "city": "City",
+ *         "zip": "88888",
+ *         "state": "State",
+ *         "country": "Country",
+ *       }
+ *     }
  *   }
  * }
  */
@@ -201,7 +212,6 @@ router.route('/user/forgottenpw')
 	*       }
 	*     }
   *   }
-	* @apiParam {String} name First and Last Name of User.
 	* @apiParam {String} email Users email.
   * @apiParam {String} password Users password.
 	* @apiSuccessExample {json} Success-Response:
