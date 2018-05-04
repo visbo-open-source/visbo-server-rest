@@ -104,12 +104,6 @@ router.route('/profile')
  	 *       }
  	 *     }
 	 *   }
-	 * @apiParam {Object} profile Profile object.
-	 * @apiParam {String} profile.firstname first name of user
-	 * @apiParam {String} profile.lastname last name of user
-	 * @apiParam {Object} profile.address Address of user
-	 * @apiParam {String} profile.company Company
-	 * @apiParam {String} profile.phone Phone number
 	 * @apiSuccessExample {json} Success-Response:
  	 * HTTP/1.1 200 OK
 	 * {

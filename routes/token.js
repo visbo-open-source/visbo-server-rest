@@ -38,8 +38,6 @@ var debuglevel = 5;
  *     "email": "example@example.com",
  *     "password": "thisIsPassword"
  *   }
- * @apiParam {String} email Users email.
- * @apiParam {String} password Users password.
  * @apiSuccessExample {json} Success-Response:
  * HTTP/1.1 200 OK
  * {
@@ -131,7 +129,6 @@ router.route('/user/login')
  *   {
  *     "email": "example@example.com",
  *   }
- * @apiParam {String} email Users email.
  */
 router.route('/user/forgottenpw')
 	.post(function(req, res) {
@@ -212,8 +209,6 @@ router.route('/user/forgottenpw')
 	*       }
 	*     }
   *   }
-	* @apiParam {String} email Users email.
-  * @apiParam {String} password Users password.
 	* @apiSuccessExample {json} Success-Response:
   * HTTP/1.1 200 OK
   * {

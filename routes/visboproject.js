@@ -43,6 +43,7 @@ router.route('/')
 	* @apiDescription GET /vp retruns all VP the user has access permission to
 	* In case of success it delivers an array of VPs, the array contains in each element a VP
 	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
+	* @apiParam {String} vcid Deliver only projects for this Visbo Center
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -747,6 +748,7 @@ router.route('/')
 			* @apiDescription DELETE /vp/:vpid/lock removes a lock for a user to a specific project and variant
 			* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
 			* @apiHeader {String} access-key User authentication token.
+			* @apiParam {String} variantName The Variant Name of the Project for the Lock
 			* @apiPermission user must be authenticated and user must have permission to access the VisboProject
 			* @apiError NotAuthenticated no valid token HTTP 401
 			* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
@@ -754,6 +756,7 @@ router.route('/')
 			* @apiError ServerIssue No DB Connection HTTP 500
 			* @apiExample Example usage:
 			*   url: http://localhost:3484/vp/vp5aada025/lock
+			*   url: http://localhost:3484/vp/vp5aada025/lock?variantName=Variant1
 			* @apiSuccessExample {json} Success-Response:
 			* HTTP/1.1 200 OK
 			* {

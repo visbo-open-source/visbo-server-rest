@@ -21,7 +21,7 @@ router.use('/', auth.verifyUser);
 // /vpv
 /////////////////
 
-var debuglevel = 9;
+var debuglevel = 6;
 
 router.route('/')
 
@@ -37,13 +37,18 @@ router.route('/')
 	* has to ask for a specific vpvid with get vpv/:vpvid.
 	* With an additional query paramteter ?vpid=vp5aaf992 the system restricts the list of VPV to the specified VP.
 	* If no vpid is delivered as query parameter only the latest version of each VP is delivered
-	* With an additional parameter refdate only the latest version before the reference date for each selected project is delivered.
-	* In case a refdate is specified the full blown project version is delivered otherwise a reduced list only
+	* With an additional parameter refDate only the latest version before the reference date for each selected project is delivered.
+	* @apiParam {Date} refDate Deliver only the latest Version of the project before the reference date
+	* @apiParam {String} vpid Deliver only versions for the specified project
+	* @apiParam {String} variantName Deliver only versions for the specified variant
+	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
+	* In case a refDate is specified the full blown project version is delivered otherwise a reduced list only
 	* @apiPermission user must be authenticated, user must have access to related VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa
+	*   url: http://localhost:3484/vpv
+	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -55,7 +60,9 @@ router.route('/')
 	*     "vpid": "vp5c754feaa",
 	*     "timestamp": "2018-01-01",
 	*     "Erloes": "100",
+	*     "startDate": "2018-01-01",
 	*     "endDate": "2018-12-31",
+	*     "ampelStatus": "2",
 	*     "variantName": ""
 	*   }]
 	* }
@@ -65,20 +72,28 @@ router.route('/')
 		var useremail = req.decoded.email;
 		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
 		var queryvpv = {};
-		var latestOnly = false;
+		var latestOnly = true; 	// as default show latest only project version of all projects
+		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
-		if (req.query && req.query.vpid)
-			queryvp._id = req.query.vpid;
-		else {
-			latestOnly = true //no project specified show latest only project version of all projects
+		queryvpv.timestamp =  {$lt: nowDate };
+		if (req.query) {
+			if (req.query.vpid) {
+				queryvp._id = req.query.vpid;
+				latestOnly = false // if project is specified show all project versions
+			}
+			if (req.query.refDate){
+				queryvpv.timestamp =  {$lt: Date(req.query.refDate)};
+				latestOnly = true;
+			}
+			if (req.query.variantName != undefined){
+				debuglog(debuglevel, 9, "Variant Query String :%s:", req.query.variantName);
+				queryvpv.variantName = req.query.variantName
+			}
+			if (req.query.longList != undefined){ // user can specify to get the long list with all details for a project version
+				longList = true;
+			}
 		}
-		if (req.query && req.query.refdate){
-			queryvpv.timestamp =  {$lt: Date(req.query.refdate)};
-			latestOnly = true;
-		} else {
-			queryvpv.timestamp =  {$lt: nowDate }
-		}
-		debuglog(debuglevel, 1, "Get Project Versions for user %s with VP %s and timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.timestamp, latestOnly);
+		debuglog(debuglevel, 1, "Get Project Versions for user %s with VP %s/%s, timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 		var queryVP = VisboProject.find(queryvp)
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
@@ -97,11 +112,11 @@ router.route('/')
 			}
 			debuglog(debuglevel, 9, "Filter Projects %O", vpArray);
 			queryvpv.vpid = {$in: vpArray};
-			debuglog(debuglevel, 5, "VPV query string %s", JSON.stringify(queryvpv));
+			debuglog(debuglevel, 7, "VPV query string %s", JSON.stringify(queryvpv));
 			var queryVPV = VisboProjectVersion.find(queryvpv);
-			if (latestOnly == false) {
+			if (!longList) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp Erloes startdate endDate ampelStatus variantName');
+				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
 			}
 			queryVPV.sort('vpid name variantName -timestamp')
 			queryVPV.exec(function (err, listVPV) {
@@ -118,7 +133,7 @@ router.route('/')
 					var listVPVfiltered = [];
 					listVPVfiltered.push(listVPV[0]);
 					for (let i = 1; i < listVPV.length; i++){
-						//compare current ite with previous and ignore if it is the same vpid & variantname
+						//compare current item with previous and ignore if it is the same vpid & variantname
 						debuglog(debuglevel, 9, "compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
 						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
