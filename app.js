@@ -15,6 +15,7 @@ require('./models/logs');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
+require('./models/vcrole');
 
 // include the route modules
 var user = require('./routes/user');

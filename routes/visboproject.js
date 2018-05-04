@@ -114,9 +114,9 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Project
 	 * @apiName CreateVisboProjects
-	 * @apiDescription POST /vp creates a new VP
+	 * @apiDescription Post creates a new VP
 	 * with a unique name inside VC and the users with their roles as defined in the body.
- 	 * If no admin is specified the current user is added as Admin.
+ 	 * If no admin is specified for the project the current user is added as Admin.
 	 * In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
@@ -285,7 +285,7 @@ router.route('/')
 	 	* @apiGroup Visbo Project
 	 	* @apiName GetVisboProject
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription GET /vp/:vpid gets a specific VP
+		* @apiDescription Get a specific Visbo Project
 		* the system checks if the user has access permission to it.
 		* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
@@ -349,13 +349,14 @@ router.route('/')
 		 * @apiVersion 0.0.1
 		 * @apiGroup Visbo Project
 		 * @apiName UpdateVisboProjects
-		 * @apiDescription PUT /vp/:vpid updates a specific VP
-	   * the system checks if the user has access permission to it.
+		 * @apiDescription Put updates a specific Visbo Project
+	   * the system checks if the user has admin permission to it.
 		 * If no user list is delivered in the body, no updates will be performed to the users.
-		 * if the VP Name is changed, the VP Name is populated to the Visbo Project Versions.
 		 * If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 		 * If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
-	 	 * In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
+	 	 *
+		 * If the VP Name is changed, the VP Name is populated to the Visbo Project Versions.
+		 * In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 		 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 		 * @apiError NoPermission No permission to update this VisboProject HTTP 403
 		 * @apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
@@ -566,6 +567,7 @@ router.route('/')
 		* @apiVersion 0.0.1
 		* @apiGroup Visbo Project
 		* @apiName DeleteVisboProject
+		* @apiDescription Deletes a specific Visbo Project.
 		* @apiHeader {String} access-key User authentication token.
 		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProject
 		* @apiError NotAuthenticated no valid token HTTP 401
@@ -632,8 +634,8 @@ router.route('/')
 			 * @apiVersion 0.0.1
 			 * @apiGroup Visbo Project
 			 * @apiName LockVisboProjects
-			 * @apiDescription POST /vp/:vpid/lock creates or renews a lock for a user to a specific project and variant
-			 * In case a lock is already active for another user, the lock reuest fails, in case a lock exists for the current user, it gets replaced by the new lock
+			 * @apiDescription Post creates or renews a lock for a user to a specific project and variant
+			 * In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock
 			 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 			 * @apiError NoPermission No permission to update this VisboProject HTTP 403
 			 * @apiPermission user must be authenticated and user must have permission for this VP
@@ -745,7 +747,7 @@ router.route('/')
 			* @apiVersion 0.0.1
 			* @apiGroup Visbo Project
 			* @apiName DeleteVisboProjectLock
-			* @apiDescription DELETE /vp/:vpid/lock removes a lock for a user to a specific project and variant
+			* @apiDescription Deletes a lock for a user to a specific project and variant
 			* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
 			* @apiHeader {String} access-key User authentication token.
 			* @apiParam {String} variantName The Variant Name of the Project for the Lock

@@ -31,13 +31,21 @@ router.route('/')
 	* @apiGroup Visbo Project Version
 	* @apiName GetVisboProjectVersions
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vpv retruns for all VisboProjects, the user has access permission to, the latest VisboProjectVersion
+	* @apiDescription Get versions returns for all VisboProjects, the user has access permission to, the latest VisboProjectVersion
+	*
 	* In case of success it delivers an array of VPVs, the array contains in each element a VPV.
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
-	* has to ask for a specific vpvid with get vpv/:vpvid.
-	* With an additional query paramteter ?vpid=vp5aaf992 the system restricts the list of VPV to the specified VP.
-	* If no vpid is delivered as query parameter only the latest version of each VP is delivered
-	* With an additional parameter refDate only the latest version before the reference date for each selected project is delivered.
+	* has to specify the query parameter longList.
+	*
+	* With an additional parameter refDate only the latest version before the reference date for each selected project is delivered,
+	* in case refDate ist not specified the current date&time is used.
+	*
+	* With an additional query paramteter vpid=vp5aaf992 the system restricts the list of versions to the specified VP,
+	* if no refDate is specified the system delivers all versions of this project.
+	*
+	* With an additional query paramteter variantName the system restricts the list of versions to the specified VariantName,
+	* to query only the main version of a project, use variantName= in the query string.
+	*
 	* @apiParam {Date} refDate Deliver only the latest Version of the project before the reference date
 	* @apiParam {String} vpid Deliver only versions for the specified project
 	* @apiParam {String} variantName Deliver only versions for the specified variant
@@ -163,7 +171,7 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Project Version
 	 * @apiName CreateVisboProjectVersions
-	 * @apiDescription POST /vpv creates a new Visbo Project Version.
+	 * @apiDescription Post creates a new Visbo Project Version.
 	 * The user needs to have Admin permission in the Referenced Project.
 	 * Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
@@ -296,7 +304,7 @@ router.route('/')
 	 	* @apiGroup Visbo Project Version
 	 	* @apiName GetVisboProjectVersion
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription GET /vpv/:vpvid retruns a specific VisboProjectVersion the user has access permission to the VisboProject
+		* @apiDescription Get returns a specific VisboProjectVersion the user has access permission to the VisboProject
 		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
 	 	* @apiError NotAuthenticated no valid token HTTP 401
@@ -452,10 +460,11 @@ router.route('/')
 */
 
 	/**
-		* @api {delete} /vpv/:vpvid Delete specific Versions
+		* @api {delete} /vpv/:vpvid Delete specific Version
 		* @apiVersion 0.0.1
 		* @apiGroup Visbo Project Version
 		* @apiName DeleteVisboProjectVersion
+		* @apiDescription Deletes a specific Visbo Project Version.
 		* @apiHeader {String} access-key User authentication token.
 		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
 		* @apiError NotAuthenticated no valid token HTTP 401
@@ -468,7 +477,7 @@ router.route('/')
 		* HTTP/1.1 200 OK
 		* {
 		*   "state":"success",
-		*   "message":"Deleted Visbo Project Versions"
+		*   "message":"Deleted Visbo Project Version"
 		* }
 		*/
 		.delete(function(req, res) {

@@ -8,6 +8,7 @@ var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
+var VCRole = mongoose.model('VCRole');
 var moment = require('moment');
 
 var findUser = function(currentUser) {
@@ -36,7 +37,7 @@ router.route('/')
 	* @apiGroup Visbo Center
 	* @apiName GetVisboCenters
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vc retruns all VC the user has access permission to
+	* @apiDescription Get retruns all VC where the user has access permission to
 	* In case of success it delivers an array of VCs, the array contains in each element a VC
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
@@ -98,7 +99,7 @@ router.route('/')
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
-	 * @apiDescription POST /vc creates a new VC
+	 * @apiDescription Post creates a new VC
 	 * with a unique name and the users with their roles as defined in the body.
  	 * If no admin is specified the current user is added as Admin.
 	 * In case of success it delivers an array of VCs to be uniform to GET, the array contains as one element the created VC.
@@ -246,7 +247,7 @@ router.route('/:vcid')
  	* @apiVersion 0.0.1
  	* @apiGroup Visbo Center
  	* @apiName GetVisboCenter
-	* @apiDescription GET /vc/:vcid gets a specific VC
+	* @apiDescription Gets a specific Visbo Center
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
  	* @apiHeader {String} access-key User authentication token.
@@ -310,13 +311,15 @@ router.route('/:vcid')
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Center
 	 * @apiName UpdateVisboCenters
-	 * @apiDescription PUT /vc/:vcid updates a specific VC
+	 * @apiDescription Put updates a specific Visbo Center.
    * the system checks if the user has access permission to it.
+	 *
 	 * If no user list is delivered in the body, no updates will be performed to the users.
-	 * if the VC Name is changed, the VC Name is populated to the Visbo Projects.
 	 * If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 	 * If not equal, the system delivers an error because the VC was updated between the read and write of the user and therefore it might lead to inconsitency.
  	 * In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
+	 *
+	 * If the VC Name is changed, the VC Name is populated to the Visbo Projects.
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to update this VisboCenter HTTP 403
@@ -526,6 +529,8 @@ router.route('/:vcid')
   	* @apiVersion 0.0.1
   	* @apiGroup Visbo Center
   	* @apiName DeleteVisboCenter
+		* @apiDescription Deletes a specific Visbo Center.
+    * the system checks if the user has Admin permission to it.
   	* @apiHeader {String} access-key User authentication token.
   	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboCenter
   	* @apiError NotAuthenticated no valid token HTTP 401
@@ -579,5 +584,353 @@ router.route('/:vcid')
 			});
 		});
 	});
+
+router.route('/:vcid/role')
+	/**
+	* @api {get} /vc/:vcid/role Get Roles
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Center Properties
+	* @apiName GetVisboCenterRole
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Gets all roles of the specified Visbo Center
+	*
+	* @apiPermission user must be authenticated, user must have access to referenced VisboCenter
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vc/:vcid/role
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Project Versions",
+	*   "vcrole":[{
+	*     "_id":"vcrole5c754feaa",
+	*     "name":"Role Name",
+	*     "vcid": "vc5c754feaa",
+	*     "timestamp": "2018-01-01",
+	*     "allOthers": ""
+	*   }]
+	* }
+	*/
+	.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			debuglog(debuglevel, 1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+
+			mongoose.set('debug', true);
+			var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail});
+			queryVC.select('name users updatedAt createdAt');
+			queryVC.exec(function (err, oneVC) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenters',
+						error: err
+					});
+				}
+				if (!oneVC) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Center not found or no permission',
+						error: err
+					});
+				}
+				debuglog(debuglevel, 5, "Found VC %s now Deliver the Roles", oneVC._id);
+				var queryVCRole = VCRole.find({'vcid': oneVC._id});
+				// queryVCRole.select('_id vcid name');
+				queryVCRole.exec(function (err, listVCRole) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting VisboCenter Roles',
+							error: err
+						});
+					}
+					debuglog(debuglevel, 5, "Found %d Roles for VC", listVCRole.length);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Center Roles',
+						vcrole: listVCRole
+					});
+				});
+			});
+		})
+
+		/**
+		* @api {post} /vc/:vcid/role Create a Role
+		* @apiVersion 0.0.1
+		* @apiGroup Visbo Center Properties
+		* @apiName PostVisboCenterRole
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new role inside the Visbo Center
+		*
+		* User must have Amdin Permission in the VC to create new roles
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/role
+		*  {
+ 	  *    "name":"My first Role",
+ 	  *    "uid": "1",
+	  *    "defaultKapa": "1",
+	  *    "allOthers": ""
+ 	  *  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Center Role",
+		*   "vcrole":[{
+		*     "_id":"vcrole5c754feaa",
+		*     "name":"My first Role",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "allOthers": ""
+		*   }]
+		* }
+		*/
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		debuglog(debuglevel, 9, "Post a new Visbo Center Role Req Body: %O Name %s", req.body, req.body.name);		// MS Log
+		debuglog(debuglevel, 5, "Post a new Visbo Center Role with name %s executed by user %s ", req.body.name, useremail);		// MS Log
+
+		if (!req.body || !req.body.name) {
+			return res.status(404).send({
+				state: 'failure',
+				message: 'No valid role definition'
+			});
+		}
+		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+		queryVC.select('name users updatedAt createdAt');
+		queryVC.exec(function (err, oneVC) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Centers',
+					error: err
+				});
+			}
+			if (!oneVC) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			debuglog(debuglevel, 1, "Post Role to VC %s Permission is ok", req.params.vcid);		// MS Log
+			var vcRole = new VCRole();
+			vcRole.name = req.body.name;
+			vcRole.vcid = oneVC._id;
+			vcRole.uid = req.body.uid;
+			vcRole.subRoleIDs = req.body.subRoleIDs;
+			vcRole.farbe = req.body.farbe;
+			vcRole.defaultKapa = req.body.defaultKapa;
+			vcRole.tagessatzIntern = req.body.tagessatzIntern;
+			vcRole.tagessatzExtern = req.body.tagessatzExtern;
+			vcRole.kapazitaet = req.body.kapazitaet;
+			vcRole.externeKapazitaet = req.body.externeKapazitaet;
+			vcRole.startOfCal = req.body.startOfCal;
+			vcRole.timestamp = Date();
+			vcRole.save(function(err, oneVcRole) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Center Role',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Inserted Visbo Center Role',
+					vcrole: [ oneVcRole ]
+				});
+			});
+		})
+	})
+
+
+router.route('/:vcid/role/:roleid')
+	/**
+	* @api {delete} /vc/:vcid/role/:roleid Delete a Role
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Center Properties
+	* @apiName DeleteVisboCenterRole
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Deletes the specified role in the Visbo Center
+	*
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vc/:vcid/role/:roleid
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Visbo Center Role deleted"
+	* }
+	*/
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		debuglog(debuglevel, 1, "DELETE Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);		// MS Log
+
+		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+		queryVC.select('name users updatedAt createdAt');
+		queryVC.exec(function (err, oneVC) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Centers',
+					error: err
+				});
+			}
+			if (!oneVC) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			debuglog(debuglevel, 1, "Delete Visbo Center Role after premission check %s", req.params.vcid);		// MS Log
+			var queryVCRole = VCRole.findOne({'_id': req.params.roleid});
+			// queryVCRole.select('_id vcid name');
+			queryVCRole.exec(function (err, oneVCRole) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenter Roles',
+						error: err
+					});
+				}
+				if (!oneVCRole) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Center Role not found',
+						error: err
+					});
+				}
+				debuglog(debuglevel, 5, "Found the Role for VC");
+				oneVCRole.remove(function(err, empty) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error deleting Visbo Center Role',
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Deleted Visbo Center Role'
+					});
+				});
+			});
+		});
+	})
+
+	/**
+	* @api {put} /vc/:vcid/role/:roleid Update a Role
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Center Properties
+	* @apiName PutVisboCenterRole
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Put updates a role inside the Visbo Center
+	*
+	* User must have Amdin Permission in the VC to create new roles
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vc/:vcid/role/:roleid
+	*  {
+  *    "name":"My first Role Renamed",
+  *    "uid": "2",
+  *    "defaultKapa": "2",
+  *    "allOthers": ""
+  *   }
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Center Role",
+	*   "vcrole":[{
+	*     "_id":"vcrole5c754feaa",
+	*     "name":"My first Role Renamed",
+	*     "vcid": "vc5c754feaa",
+	*     "timestamp": "2018-01-01",
+	*     "allOthers": ""
+	*   }]
+	* }
+	*/
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		debuglog(debuglevel, 1, "PUT Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);		// MS Log
+
+		var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+		queryVC.select('name users updatedAt createdAt');
+		queryVC.exec(function (err, oneVC) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Centers',
+					error: err
+				});
+			}
+			if (!oneVC) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			debuglog(debuglevel, 1, "Delete Visbo Center Role after premission check %s", req.params.vcid);		// MS Log
+			var queryVCRole = VCRole.findOne({'_id': req.params.roleid});
+			// queryVCRole.select('_id vcid name');
+			queryVCRole.exec(function (err, oneVCRole) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenter Roles',
+						error: err
+					});
+				}
+				if (!oneVCRole) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Center Role not found',
+						error: err
+					});
+				}
+				debuglog(debuglevel, 5, "Found the Role for VC");
+				oneVCRole.name = req.body.name;
+				oneVCRole.uid = req.body.uid;
+				oneVCRole.subRoleIDs = req.body.subRoleIDs;
+				oneVCRole.farbe = req.body.farbe;
+				oneVCRole.defaultKapa = req.body.defaultKapa;
+				oneVCRole.tagessatzIntern = req.body.tagessatzIntern;
+				oneVCRole.tagessatzExtern = req.body.tagessatzExtern;
+				oneVCRole.kapazitaet = req.body.kapazitaet;
+				oneVCRole.externeKapazitaet = req.body.externeKapazitaet;
+				oneVCRole.startOfCal = req.body.startOfCal;
+				oneVCRole.timestamp = Date();
+				oneVCRole.save(function(err, oneVcRole) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Center Role',
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Center Role',
+						vcrole: [ oneVcRole ]
+					});
+				});
+			});
+		});
+	})
 
 module.exports = router;
