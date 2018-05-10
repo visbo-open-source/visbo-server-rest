@@ -11,7 +11,7 @@ debuglog = function(maxlevel, level, logstring, arg1, arg2, arg3, arg4, arg5, ar
 		if (arg7 == undefined) arg7 = '';
 		if (arg8 == undefined) arg8 = '';
 		if (arg9 == undefined) arg9 = '';
-		console.log("%s: Level%d VP ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss:SSS'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+		console.log("%s: Level%d ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss:SSS'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 	}
 };
 

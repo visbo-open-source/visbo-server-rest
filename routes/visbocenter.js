@@ -9,6 +9,7 @@ var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
+var VCCost = mongoose.model('VCCost');
 var moment = require('moment');
 
 var findUser = function(currentUser) {
@@ -616,9 +617,8 @@ router.route('/:vcid/role')
 	.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			debuglog(debuglevel, 1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+			debuglog(debuglevel, 1, "Get Visbo Center Role for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
 
-			mongoose.set('debug', true);
 			var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail});
 			queryVC.select('name users updatedAt createdAt');
 			queryVC.exec(function (err, oneVC) {
@@ -698,7 +698,7 @@ router.route('/:vcid/role')
 		debuglog(debuglevel, 9, "Post a new Visbo Center Role Req Body: %O Name %s", req.body, req.body.name);		// MS Log
 		debuglog(debuglevel, 5, "Post a new Visbo Center Role with name %s executed by user %s ", req.body.name, useremail);		// MS Log
 
-		if (!req.body || !req.body.name) {
+		if (!req.body || !req.body.name || !req.body.uid) {
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid role definition'
@@ -720,32 +720,51 @@ router.route('/:vcid/role')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			debuglog(debuglevel, 1, "Post Role to VC %s Permission is ok", req.params.vcid);		// MS Log
-			var vcRole = new VCRole();
-			vcRole.name = req.body.name;
-			vcRole.vcid = oneVC._id;
-			vcRole.uid = req.body.uid;
-			vcRole.subRoleIDs = req.body.subRoleIDs;
-			vcRole.farbe = req.body.farbe;
-			vcRole.defaultKapa = req.body.defaultKapa;
-			vcRole.tagessatzIntern = req.body.tagessatzIntern;
-			vcRole.tagessatzExtern = req.body.tagessatzExtern;
-			vcRole.kapazitaet = req.body.kapazitaet;
-			vcRole.externeKapazitaet = req.body.externeKapazitaet;
-			vcRole.startOfCal = req.body.startOfCal;
-			vcRole.timestamp = Date();
-			vcRole.save(function(err, oneVcRole) {
+			debuglog(debuglevel, 1, "Post Role to VC %s Permission is ok, check unique uid", req.params.vcid);		// MS Log
+			var queryVCRole = VCRole.findOne({'vcid': oneVC._id, 'uid': req.body.uid});
+			queryVCRole.select('name uid');
+			queryVCRole.exec(function (err, oneVCRole) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error updating Visbo Center Role',
+						message: 'Error getting Visbo Center Roles',
 						error: err
 					});
 				}
-				return res.status(200).send({
-					state: 'success',
-					message: 'Inserted Visbo Center Role',
-					vcrole: [ oneVcRole ]
+				if (oneVCRole) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'Visbo Center Role exists already'
+					});
+				}
+				debuglog(debuglevel, 1, "Post Role to VC %s now", req.params.vcid);		// MS Log
+
+				var vcRole = new VCRole();
+				vcRole.name = req.body.name;
+				vcRole.vcid = oneVC._id;
+				vcRole.uid = req.body.uid;
+				vcRole.subRoleIDs = req.body.subRoleIDs;
+				vcRole.farbe = req.body.farbe;
+				vcRole.defaultKapa = req.body.defaultKapa;
+				vcRole.tagessatzIntern = req.body.tagessatzIntern;
+				vcRole.tagessatzExtern = req.body.tagessatzExtern;
+				vcRole.kapazitaet = req.body.kapazitaet;
+				vcRole.externeKapazitaet = req.body.externeKapazitaet;
+				vcRole.startOfCal = req.body.startOfCal;
+				vcRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
+				vcRole.save(function(err, oneVcRole) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Center Role',
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Inserted Visbo Center Role',
+						vcrole: [ oneVcRole ]
+					});
 				});
 			});
 		})
@@ -885,7 +904,7 @@ router.route('/:vcid/role/:roleid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			debuglog(debuglevel, 1, "Delete Visbo Center Role after premission check %s", req.params.vcid);		// MS Log
+			debuglog(debuglevel, 1, "Update Visbo Center Role after premission check %s", req.params.vcid);		// MS Log
 			var queryVCRole = VCRole.findOne({'_id': req.params.roleid});
 			// queryVCRole.select('_id vcid name');
 			queryVCRole.exec(function (err, oneVCRole) {
@@ -905,7 +924,6 @@ router.route('/:vcid/role/:roleid')
 				}
 				debuglog(debuglevel, 5, "Found the Role for VC");
 				oneVCRole.name = req.body.name;
-				oneVCRole.uid = req.body.uid;
 				oneVCRole.subRoleIDs = req.body.subRoleIDs;
 				oneVCRole.farbe = req.body.farbe;
 				oneVCRole.defaultKapa = req.body.defaultKapa;
@@ -914,7 +932,7 @@ router.route('/:vcid/role/:roleid')
 				oneVCRole.kapazitaet = req.body.kapazitaet;
 				oneVCRole.externeKapazitaet = req.body.externeKapazitaet;
 				oneVCRole.startOfCal = req.body.startOfCal;
-				oneVCRole.timestamp = Date();
+				oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
 				oneVCRole.save(function(err, oneVcRole) {
 					if (err) {
 						return res.status(500).send({
@@ -932,5 +950,339 @@ router.route('/:vcid/role/:roleid')
 			});
 		});
 	})
+
+	router.route('/:vcid/cost')
+		/**
+		* @api {get} /vc/:vcid/cost Get Costs
+		* @apiVersion 0.0.1
+		* @apiGroup Visbo Center Properties
+		* @apiName GetVisboCenterCost
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all costs of the specified Visbo Center
+		*
+		* @apiPermission user must be authenticated, user must have access to referenced VisboCenter
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/cost
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Project Versions",
+		*   "vccost":[{
+		*     "_id":"vccost5c754feaa",
+		*     "name":"Cost Name",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "uid": "1",
+		*     "farbe": "49407"
+		*   }]
+		* }
+		*/
+		.get(function(req, res) {
+				var userId = req.decoded._id;
+				var useremail = req.decoded.email;
+				debuglog(debuglevel, 1, "Get Visbo Center for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);		// MS Log
+
+				var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users.email': useremail});
+				queryVC.select('name users updatedAt createdAt');
+				queryVC.exec(function (err, oneVC) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting VisboCenters',
+							error: err
+						});
+					}
+					if (!oneVC) {
+						return res.status(401).send({
+							state: 'failure',
+							message: 'Visbo Center not found or no permission',
+							error: err
+						});
+					}
+					debuglog(debuglevel, 5, "Found VC %s now Deliver the Costs", oneVC._id);
+					var queryVCCost = VCCost.find({'vcid': oneVC._id});
+					// queryVCCost.select('_id vcid name');
+					queryVCCost.exec(function (err, listVCCost) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error getting VisboCenter Costs',
+								error: err
+							});
+						}
+						debuglog(debuglevel, 5, "Found %d Costs for VC", listVCCost.length);
+						return res.status(200).send({
+							state: 'success',
+							message: 'Returned Visbo Center Costs',
+							vccost: listVCCost
+						});
+					});
+				});
+			})
+
+			/**
+			* @api {post} /vc/:vcid/cost Create a Cost Definition
+			* @apiVersion 0.0.1
+			* @apiGroup Visbo Center Properties
+			* @apiName PostVisboCenterCost
+			* @apiHeader {String} access-key User authentication token.
+			* @apiDescription Post creates a new cost inside the Visbo Center
+			*
+			* User must have Amdin Permission in the VC to create new costs
+			* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+			* @apiError NotAuthenticated no valid token HTTP 401
+			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiExample Example usage:
+			*   url: http://localhost:3484/vc/:vcid/cost
+			*  {
+	 	  *    "name":"My first Cost",
+	 	  *    "uid": "1",
+			*    "farbe": "49407"
+	 	  *  }
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 200 OK
+			* {
+			*   "state":"success",
+			*   "message":"Returned Visbo Center Cost",
+			*   "vccost":[{
+			*     "_id":"vccost5c754feaa",
+			*     "name":"My first Cost",
+			*     "vcid": "vc5c754feaa",
+			*     "timestamp": "2018-01-01",
+			*     "uid": "1",
+			*     "farbe": "49407"
+			*   }]
+			* }
+			*/
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			debuglog(debuglevel, 9, "Post a new Visbo Center Cost Req Body: %O Name %s", req.body, req.body.name);		// MS Log
+			debuglog(debuglevel, 5, "Post a new Visbo Center Cost with name %s executed by user %s ", req.body.name, useremail);		// MS Log
+
+			if (!req.body || !req.body.name) {
+				return res.status(404).send({
+					state: 'failure',
+					message: 'No valid cost definition'
+				});
+			}
+			var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+			queryVC.select('name users updatedAt createdAt');
+			queryVC.exec(function (err, oneVC) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting Visbo Centers',
+						error: err
+					});
+				}
+				if (!oneVC) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Center or no Permission'
+					});
+				}
+				debuglog(debuglevel, 1, "Post Cost to VC %s Permission is ok", req.params.vcid);		// MS Log
+				var vcCost = new VCCost();
+				vcCost.name = req.body.name;
+				vcCost.vcid = oneVC._id;
+				vcCost.uid = req.body.uid;
+				vcCost.farbe = req.body.farbe;
+				vcCost.timestamp = Date();
+				vcCost.save(function(err, oneVcCost) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Center Cost',
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Inserted Visbo Center Cost',
+						vccost: [ oneVcCost ]
+					});
+				});
+			})
+		})
+
+
+	router.route('/:vcid/cost/:costid')
+		/**
+		* @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
+		* @apiVersion 0.0.1
+		* @apiGroup Visbo Center Properties
+		* @apiName DeleteVisboCenterCost
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the specified cost in the Visbo Center
+		*
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/cost/:costid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Visbo Center Cost deleted"
+		* }
+		*/
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			debuglog(debuglevel, 1, "DELETE Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);		// MS Log
+
+			var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+			queryVC.select('name users updatedAt createdAt');
+			queryVC.exec(function (err, oneVC) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting Visbo Centers',
+						error: err
+					});
+				}
+				if (!oneVC) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Center or no Permission'
+					});
+				}
+				debuglog(debuglevel, 1, "Delete Visbo Center Cost after premission check %s", req.params.vcid);		// MS Log
+				var queryVCCost = VCCost.findOne({'_id': req.params.costid});
+				// queryVCCost.select('_id vcid name');
+				queryVCCost.exec(function (err, oneVCCost) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting VisboCenter Costs',
+							error: err
+						});
+					}
+					if (!oneVCCost) {
+						return res.status(401).send({
+							state: 'failure',
+							message: 'Visbo Center Cost not found',
+							error: err
+						});
+					}
+					debuglog(debuglevel, 5, "Found the Cost for VC");
+					oneVCCost.remove(function(err, empty) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error deleting Visbo Center Cost',
+								error: err
+							});
+						}
+						return res.status(200).send({
+							state: 'success',
+							message: 'Deleted Visbo Center Cost'
+						});
+					});
+				});
+			});
+		})
+
+		/**
+		* @api {put} /vc/:vcid/cost/:costid Update a Cost Definition
+		* @apiVersion 0.0.1
+		* @apiGroup Visbo Center Properties
+		* @apiName PutVisboCenterCost
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Put updates a cost definition inside the Visbo Center
+		*
+		* User must have Amdin Permission in the VC to create new costs
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/cost/:costid
+		*  {
+	  *    "name":"My first Cost Renamed",
+	  *    "uid": "2",
+		*    "farbe": "49407"
+	  *   }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Center Cost",
+		*   "vccost":[{
+		*     "_id":"vccost5c754feaa",
+		*     "name":"My first Cost Renamed",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "uid": "1",
+		*     "farbe": "49407"
+		*   }]
+		* }
+		*/
+		.put(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			debuglog(debuglevel, 1, "PUT Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);		// MS Log
+
+			var queryVC = VisboCenter.findOne({'_id':req.params.vcid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
+			queryVC.select('name users updatedAt createdAt');
+			queryVC.exec(function (err, oneVC) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting Visbo Centers',
+						error: err
+					});
+				}
+				if (!oneVC) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Center or no Permission'
+					});
+				}
+				debuglog(debuglevel, 1, "Update Visbo Center Cost after premission check %s", req.params.vcid);		// MS Log
+				var queryVCCost = VCCost.findOne({'_id': req.params.costid});
+				// queryVCCost.select('_id vcid name');
+				queryVCCost.exec(function (err, oneVCCost) {
+					if (err) {
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error getting VisboCenter Costs',
+							error: err
+						});
+					}
+					if (!oneVCCost) {
+						return res.status(401).send({
+							state: 'failure',
+							message: 'Visbo Center Cost not found',
+							error: err
+						});
+					}
+					debuglog(debuglevel, 5, "Found the Cost for VC");
+					oneVCCost.name = req.body.name;
+					oneVCCost.uid = req.body.uid;
+					oneVCCost.farbe = req.body.farbe;
+					oneVCCost.timestamp = Date();
+					oneVCCost.save(function(err, oneVcCost) {
+						if (err) {
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Center Cost',
+								error: err
+							});
+						}
+						return res.status(200).send({
+							state: 'success',
+							message: 'Updated Visbo Center Cost',
+							vccost: [ oneVcCost ]
+						});
+					});
+				});
+			});
+		})
 
 module.exports = router;
