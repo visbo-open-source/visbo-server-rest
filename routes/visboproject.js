@@ -10,7 +10,7 @@ var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
-var VisboProjectVersion = mongoose.model('Project');
+var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var moment = require('moment');
 
 var findUser = function(currentUser) {

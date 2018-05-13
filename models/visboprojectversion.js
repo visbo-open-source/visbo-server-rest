@@ -110,4 +110,4 @@ var visboProjectVersionSchema = new mongoose.Schema({
 visboProjectVersionSchema.set('timestamps', true);
 
 // declare a model
-mongoose.model('Project', visboProjectVersionSchema);
+mongoose.model('VisboProjectVersion', visboProjectVersionSchema);
