@@ -42,6 +42,7 @@ router.route('/')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription GET /vp retruns all VP the user has access permission to
 	* In case of success it delivers an array of VPs, the array contains in each element a VP
+	* the lock section is empty if no lock is set
 	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiParam {String} vcid Deliver only projects for this Visbo Center
 	* @apiPermission user must be authenticated
@@ -74,8 +75,16 @@ router.route('/')
 	*        "role":"User",
 	*        "userId":"us5c754feac"
 	*       }
-	*     ]
-	*    }
+	*     ],
+	*     "lock": [
+	*      {
+	*       "variantName": "",
+	*       "email": "someone@visbo.de",
+	*       "createdAt": "2018-04-26T11:04:12.094Z",
+	*       "expiresAt": "2018-04-26T12:04:12.094Z"
+	*      }
+	*    ]
+	*   }
 	*  ]
 	* }
 	*/
@@ -110,7 +119,7 @@ router.route('/')
 	})
 
 	/**
-	 * @api {post} /vp Create Project
+	 * @api {post} /vp Create a Project
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Project
 	 * @apiName CreateVisboProjects
@@ -163,7 +172,8 @@ router.route('/')
 	 *     "role":"User",
 	 *     "userId":us5aaf993
 	 *    }
-	 *   ]
+	 *   ],
+	 *   "lock": []
 	 *  }]
 	 * }
 	 */
@@ -173,7 +183,7 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		var vcid = ( !req.body && !req.body.vcid ) ? '' : req.body.vcid
 		var vpname = ( !req.body && !req.body.name ) ? '' : req.body.name
-		debuglog(debuglevel,  1, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for Users %O", useremail, req.body.name, vcid, req.body.users);		// MS Log
+		debuglog(debuglevel,  2, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for %d Users", useremail, req.body.name, vcid, req.body.users.length);		// MS Log
 		var newVP = new VisboProject();
 
 		VisboCenter.findOne({'_id': vcid,
@@ -258,7 +268,7 @@ router.route('/')
 					// set the VC Name
 					newVP.vc.name = vc.name;
 					debuglog(debuglevel,  9, "VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
-					debuglog(debuglevel,  5, "Save VisboProject %s  with Users %O", newVP.name, newVP.users);
+					debuglog(debuglevel,  5, "Save VisboProject %s  with %d Users", newVP.name, newVP.users.length);
 					newVP.save(function(err, vp) {
 						if (err) {
 							return res.status(500).send({
@@ -280,7 +290,7 @@ router.route('/')
 
 	router.route('/:vpid')
 	 /**
-	 	* @api {get} /vp/:vpid Get specific Project
+	 	* @api {get} /vp/:vpid Get a Project
 	 	* @apiVersion 0.0.1
 	 	* @apiGroup Visbo Project
 	 	* @apiName GetVisboProject
@@ -316,7 +326,15 @@ router.route('/')
 	 	*      "role":"User",
 	 	*      "userId":"us5c754feac"
 	 	*     }
-	 	*    ]
+	 	*    ],
+		*    "lock": [
+		*      {
+		*       "variantName": "",
+		*       "email": "someone@visbo.de",
+		*       "createdAt": "2018-04-26T11:04:12.094Z",
+		*       "expiresAt": "2018-04-26T12:04:12.094Z"
+		*      }
+		*    ]
 	 	*   }]
 	 	* }
 		*/
@@ -345,7 +363,7 @@ router.route('/')
 		})
 
 		/**
-		 * @api {put} /vp/:projectid Update specific Project
+		 * @api {put} /vp/:projectid Update Project
 		 * @apiVersion 0.0.1
 		 * @apiGroup Visbo Project
 		 * @apiName UpdateVisboProjects
@@ -632,7 +650,7 @@ router.route('/')
 			/**
 			 * @api {post} /vp/:vpid/lock Create Lock
 			 * @apiVersion 0.0.1
-			 * @apiGroup Visbo Project
+			 * @apiGroup Visbo Project Properties
 			 * @apiName LockVisboProjects
 			 * @apiDescription Post creates or renews a lock for a user to a specific project and variant
 			 * In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock
@@ -745,7 +763,7 @@ router.route('/')
 		/**
 			* @api {delete} /vp/:vpid/lock Delete Lock
 			* @apiVersion 0.0.1
-			* @apiGroup Visbo Project
+			* @apiGroup Visbo Project Properties
 			* @apiName DeleteVisboProjectLock
 			* @apiDescription Deletes a lock for a user to a specific project and variant
 			* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project

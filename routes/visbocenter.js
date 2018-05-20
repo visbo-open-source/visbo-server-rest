@@ -22,7 +22,7 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 
-var debuglevel = 0;
+var debuglevel = 1;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -352,7 +352,7 @@ router.route('/:vcid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(debuglevel, 1, "PUT/Save Visbo Center for userid %s email %s and vc %s oneVC %s is Admin %s ", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);		// MS Log
+		debuglog(debuglevel, 1, "PUT/Save Visbo Center for userid %s vc %s oneVC %s is Admin %s ", userId, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);		// MS Log
 
 		if (!req.body) {
 			return res.status(409).send({
@@ -370,11 +370,12 @@ router.route('/:vcid')
 		if (req.body.name && req.oneVC.name != req.body.name ) {
 			vpPopulate = true;
 		}
-		debuglog(debuglevel, 5, "PUT/Save Visbo Center %O new Name %s", req.oneVC, req.body);		// MS Log
+		debuglog(debuglevel, 5, "PUT/Save Visbo Center %s Name %s Namechange: %s", req.oneVC._id, req.body.name, vpPopulate);		// MS Log
 		req.oneVC.name = req.body.name;
 		// update users only if users is set in body and check consistency
-		var origDate = new Date(req.body.updatedAt), putDate = new Date(oneVC.updatedAt);
-		if (origDate - putDate !== 0 && req.body.users && req.body.users.length > 0){
+		var putDate = req.body.updatedAt ? new Date(req.body.updatedAt) : new Date();
+		var origDate = new Date(req.oneVC.updatedAt);
+		if (origDate - putDate != 0 && typeof(req.body.users) != "undefined") {
 			// PUT Request with change User list, but the original List that was feteched was already changed, return error
 			debuglog(debuglevel, 2, "Error VC PUT: Change User List but VC was already changed afterwards");
 			return res.status(409).send({
@@ -384,6 +385,7 @@ router.route('/:vcid')
 			});
 		};
 		var vcUsers = new Array();
+		debuglog(debuglevel, 5, "PUT/Save Visbo Center check the users in body");		// MS Log
 		if (req.body.users) {
 			for (var i = 0; i < req.body.users.length; i++) {
 				// build up unique user list vcUsers to check that they exist
@@ -439,13 +441,13 @@ router.route('/:vcid')
 					}
 					// Update underlying projects if name has changed
 					if (vpPopulate){
-						debuglog(debuglevel, 5, "VC PUT %s: Update SubProjects to %s", oneVC._id, req.oneVC.name);
-						var updateQuery = {"vcid": oneVC._id};
-						var updateUpdate = {$set: {"vc": { "name": oneVC.name}}};
+						debuglog(debuglevel, 5, "VC PUT %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
+						var updateQuery = {"vcid": req.oneVC._id};
+						var updateUpdate = {$set: {"vc": { "name": req.oneVC.name}}};
 						var updateOption = {upsert: false, multi: "true"};
 						VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 							if (err){
-								debuglog(debuglevel, 2, "Problem updating VP Projects for VC %s", oneVC._id);
+								debuglog(debuglevel, 2, "Problem updating VP Projects for VC %s", req.oneVC._id);
 								return res.status(500).send({
 									state: 'failure',
 									message: 'Error updating Visbo Projects',
@@ -456,14 +458,14 @@ router.route('/:vcid')
 							return res.status(200).send({
 								state: 'success',
 								message: 'Updated Visbo Center',
-								vc: [ oneVC ]
+								vc: [ req.oneVC ]
 							});
 						});
 					} else {
 						return res.status(200).send({
 							state: 'success',
 							message: 'Updated Visbo Center',
-							vc: [ oneVC ]
+							vc: [ req.oneVC ]
 						});
 					}
 				});
@@ -688,7 +690,7 @@ router.route('/:vcid/role')
 
 			var vcRole = new VCRole();
 			vcRole.name = req.body.name;
-			vcRole.vcid = oneVC._id;
+			vcRole.vcid = req.params.vcid;
 			vcRole.uid = req.body.uid;
 			vcRole.subRoleIDs = req.body.subRoleIDs;
 			vcRole.farbe = req.body.farbe;
