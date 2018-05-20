@@ -130,9 +130,8 @@ app.use(cors(corsOptions));
 // define the log entry for processing pages
 //app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  // console.log("%s: Request %O", moment().format('YYYY-MM-DD HH:mm:ss'), req.get('User-Agent'));
   return [
-    moment().format('YYYY-MM-DD HH:mm:ss')+':',
+    moment().format('YYYY-MM-DD HH:mm:ss:SSS:'),
     tokens.method(req, res),
     // 'base url', req.baseUrl,
     //'Url', req.originalUrl,
@@ -169,10 +168,10 @@ app.use(bodyParser.json());
 
 // simple logger for this router's requests
 // all requests to this router will first hit this middleware
-app.use(function(req, res, next) {
-  console.log('%s: Method %s %s', moment().format('YYYY-MM-DD HH:mm:ss'), req.method, req.url);
-  next();
-});
+// app.use(function(req, res, next) {
+//   console.log('%s: Method %s %s', moment().format('YYYY-MM-DD HH:mm:ss'), req.method, req.url);
+//   next();
+// });
 
 // Catch all routes from the ui client and return the index file
 app.get('/ui/*', (req, res) => {

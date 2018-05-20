@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var VisboCenter = mongoose.model('VisboCenter');
 var logging = require('./../components/logging');
-var debuglevel = 5;
+var debuglevel = 0;
 
 // Verify Visbo Center and the role of the user
 function verifyVc(req, res, next) {
@@ -14,8 +14,8 @@ function verifyVc(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
-	debuglog(debuglevel, 9, "Verify access permission for VisboCenter %s to User %s", vcid, useremail);
-	return next();
+	debuglog(debuglevel, 8, "Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
+	// return next();
 	var queryVC = VisboCenter.findOne({'_id':vcid, 'users.email': useremail});
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
@@ -42,8 +42,6 @@ function verifyVc(req, res, next) {
 		debuglog(debuglevel, 1, "Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
 		return next();
 	});
-	// MS TODO: can I wait for the resul?
-	return next();
 }
 	// var token = req.headers['access-key'];
   //
