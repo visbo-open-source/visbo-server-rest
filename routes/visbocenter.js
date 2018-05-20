@@ -4,6 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var verify = require('./../components/verifyVc');
 var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
@@ -25,6 +26,7 @@ var debuglevel = 9;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+router.use('/', verify.verifyVc);
 
 /////////////////
 // Visbo Center API
