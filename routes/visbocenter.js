@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
-var verify = require('./../components/verifyVc');
+var verifyVc = require('./../components/verifyVc');
 var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
@@ -27,7 +27,7 @@ var debuglevel = 1;
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // register the VC middleware to check that the user has access to the VC
-router.use('/', verify.verifyVc);
+router.use('/', verifyVc.verifyVc);
 
 /////////////////
 // Visbo Center API
@@ -235,6 +235,7 @@ router.route('/')
 							error: err
 						});
 					}
+					req.oneVC = vc;
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully created new VisboCenter",

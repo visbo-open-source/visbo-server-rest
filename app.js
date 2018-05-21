@@ -11,7 +11,7 @@ var moment = require('moment');
 
 //initialize mongoose schemas
 require('./models/users');
-require('./models/logs');
+require('./models/audit');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
@@ -24,6 +24,7 @@ var token = require('./routes/token');
 var vc = require('./routes/visbocenter');
 var vp = require('./routes/visboproject');
 var vpv = require('./routes/visboprojectversion');
+var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
 var mongoose = require('mongoose');
@@ -130,6 +131,8 @@ app.use(cors(corsOptions));
 // define the log entry for processing pages
 //app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
+  // console.log("LOGGER");
+  visboAudit.visboAudit(tokens, req, res);
   return [
     moment().format('YYYY-MM-DD HH:mm:ss:SSS:'),
     tokens.method(req, res),
