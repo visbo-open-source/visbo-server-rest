@@ -5,6 +5,7 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lock = require('./../components/lock');
+var verifyVpv = require('./../components/verifyVpv');
 var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
@@ -15,6 +16,8 @@ var moment = require('moment');
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+// register the VPV middleware to check that the user has access to the VPV
+router.use('/', verifyVpv.verifyVpv);
 
 /////////////////
 // Visbo Project Versions API
@@ -298,259 +301,103 @@ router.route('/')
 	})
 
 	router.route('/:vpvid')
-	 /**
-	 	* @api {get} /vpv/:vpvid Get specific Version
-	 	* @apiVersion 0.0.1
-	 	* @apiGroup Visbo Project Version
-	 	* @apiName GetVisboProjectVersion
-	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns a specific VisboProjectVersion the user has access permission to the VisboProject
-		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
-	 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
-	 	* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError NoPermission user does not have access to the VisboProjectVersion HTTP 403
-	 	* @apiError ServerIssue No DB Connection HTTP 500
-	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025
-	 	* @apiSuccessExample {json} Success-Response:
-	 	* HTTP/1.1 200 OK
-	 	* {
-	 	*   "state":"success",
-	 	*   "message":"Returned Visbo Project Versions",
-	 	*   "vpv": [{
-	 	*     "_id":"vpv5c754feaa",
-  	*     "name":"My new Visbo Project Version",
-		*     "updatedAt":"2018-03-19T11:04:12.094Z",
-  	*     "createdAt":"2018-03-19T11:04:12.094Z",
-  	*     "vpid": "vp5c754feaa"
-  	*     "allOthers": "all properties of visbo project version"
-	 	*   }]
-	 	* }
-		*/
-		.get(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var queryvp = {'users.email': useremail};
-			var queryvpv = {'_id': req.params.vpvid};
-			debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid, queryvpv);		// MS Log
-			var queryVPV = VisboProjectVersion.findOne(queryvpv);
-			queryVPV.exec(function (err, oneVPV) {
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
-				};
-				debuglog(debuglevel, 2, "Found specific Project Versions for Project %O", oneVPV);
-				if (!oneVPV){
-					return res.status(404).send({
-						state: 'failure',
-						message: 'Visbo Project Version not found or no Permission',
-						error: err
-					});
-				}
-				// check access Permission
-				queryvp._id = oneVPV.vpid;
-				var queryVP = VisboProject.findOne(queryvp)
-				queryVP.select('_id name');
-				queryVP.exec(function (err, oneVP) {
-					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Internal Server Error with DB Connection',
-							error: err
-						});
-					};
-					debuglog(debuglevel, 5, "Found %s Project with Permission", oneVP._id);
-					if (!oneVP){
-						return res.status(404).send({
-							state: 'failure',
-							message: 'Visbo Project Version not found or no Permission',
-							error: err
-						});
-					} else {
-						return res.status(200).send({
-							state: 'success',
-							message: 'Returned Visbo Project Version',
-							vpv: [oneVPV]
-						});
-					}
-				});
-			});
-		})
+ /**
+ 	* @api {get} /vpv/:vpvid Get specific Version
+ 	* @apiVersion 0.0.1
+ 	* @apiGroup Visbo Project Version
+ 	* @apiName GetVisboProjectVersion
+ 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Get returns a specific VisboProjectVersion the user has access permission to the VisboProject
+	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
+ 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
+ 	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboProjectVersion HTTP 403
+ 	* @apiError ServerIssue No DB Connection HTTP 500
+ 	* @apiExample Example usage:
+ 	*   url: http://localhost:3484/vpv/vpv5aada025
+ 	* @apiSuccessExample {json} Success-Response:
+ 	* HTTP/1.1 200 OK
+ 	* {
+ 	*   "state":"success",
+ 	*   "message":"Returned Visbo Project Versions",
+ 	*   "vpv": [{
+ 	*     "_id":"vpv5c754feaa",
+	*     "name":"My new Visbo Project Version",
+	*     "updatedAt":"2018-03-19T11:04:12.094Z",
+	*     "createdAt":"2018-03-19T11:04:12.094Z",
+	*     "vpid": "vp5c754feaa"
+	*     "allOthers": "all properties of visbo project version"
+ 	*   }]
+ 	* }
+	*/
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
-		/**
-		 * @ api {put} /vpv/:projectsid Update Version
-		 * @ apiVersion 0.0.1
-		 * @ apiGroup Visbo Project Version
-		 * @ apiName UpdateVisboProjectVersions
-		 * @ apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-		 * @ apiError NoPermission No permission to update this VisboProjectVersion HTTP 403
-		 * @ apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
-		 * @ apiHeader {String} access-key User authentication token.
-		 * @ apiExample Example usage:
-		 *   url: http://localhost:3484/vpv/vpv5c754feaa
-		 * {
-		 *   "name":"My first Visbo Project Version Renamed",
-		 *   "allOthers": "all properties of visbo project version"
-		 * }
-		 * @ apiSuccessExample {json} Success-Response:
-		 *     HTTP/1.1 200 OK
-		 * {
-		 *  "state":"success",
-		 *  "message":"Successfully updated VisboProjectVersion Renamed",
-		 *  "vpv":[{
-		 *   "__v":0,
-		 *   "_id":"vpv5c754feaa",
-		 *   "updatedAt":"2018-03-19T11:04:12.094Z",
-		 *   "createdAt":"2018-03-19T11:04:12.094Z",
-		 *   "name":"My first Visbo Project Version Renamed",
-		 *   "vpid": "vp5c754feaa"
-		 *   "allOthers": "all properties of visbo project version"
-		 *  }]
-		 * }
-		 */
-/*
-		.put(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			debuglog(debuglevel, 1, "PUT/Save Visbo Project Version for userid %s email %s and vpv %s not allowed ", userId, useremail, req.params.vpvid);		// MS Log
+		debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);		// MS Log
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned Visbo Project Version',
+			vpv: [req.oneVPV]
+		});
+	})
+
+/**
+	* @api {delete} /vpv/:vpvid Delete specific Version
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Project Version
+	* @apiName DeleteVisboProjectVersion
+	* @apiDescription Deletes a specific Visbo Project Version.
+	* @apiHeader {String} access-key User authentication token.
+	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboProjectVersion as Admin HTTP 403
+	* @apiError NotFound VisboProjectVersion does not exist HTTP 404
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vpv/vpv5c754feaa
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Deleted Visbo Project Version"
+	* }
+	*/
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+
+		if (!req.oneVPisAdmin) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to update a Visbo Project Version',
-				error: err
+				message: 'No Admin Permission',
+				vp: [req.oneVP]
 			});
-			var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}}});
-			queryVPV.select('name users updatedAt createdAt');
-			queryVPV.exec(function (err, oneVPV) {
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error getting Visbo Project Versions',
-						error: err
-					});
-				}
-				if (!oneVPV) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'No Visbo Project or no Permission'
-					});
-				}
-				debuglog(debuglevel, 5, "PUT/Save Visbo Project %O ", oneVPV);		// MS Log
-				oneVPV.name = req.body.name;
-				// MS Todo update other properties also
-
-				oneVPV.save(function(err, oneVPV) {
-					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Project',
-							error: err
-						});
-					}
-					return res.status(200).send({
-						state: 'success',
-						message: 'Updated Visbo Project',
-						vpv: [ oneVPV ]
-					});
-				});
+		}
+		// check if the project is locked
+		if (lock.lockedVP(req.oneVP, useremail, req.oneVPV.variantName)) {
+			return res.status(401).send({
+				state: 'failure',
+				message: 'Visbo Project locked',
+				vp: [req.oneVP]
 			});
-		})
-*/
-
-	/**
-		* @api {delete} /vpv/:vpvid Delete specific Version
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Project Version
-		* @apiName DeleteVisboProjectVersion
-		* @apiDescription Deletes a specific Visbo Project Version.
-		* @apiHeader {String} access-key User authentication token.
-		* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError NoPermission user does not have access to the VisboProjectVersion as Admin HTTP 403
-		* @apiError NotFound VisboProjectVersion does not exist HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vpv/vpv5c754feaa
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Deleted Visbo Project Version"
-		* }
-		*/
-		.delete(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var queryvp = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};
-			var queryvpv = {'_id': req.params.vpvid};
-			debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
-
-			// var queryVPV = VisboProjectVersion.findOne({'_id':req.params.vpvid, 'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}});
-			var queryVPV = VisboProjectVersion.findOne(queryvpv);
-			queryVPV.select('_id vpid name');
-			queryVPV.exec(function (err, oneVPV) {
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error getting Visbo Project Versions',
-						error: err
-					});
-				}
-				if (!oneVPV) {
-					return res.status(404).send({
-						state: 'failure',
-						message: 'No Visbo Project Version found or no Permission'
-					});
-				}
-				// Project Version found check permission against VP and also the lock of VP
-				debuglog(debuglevel, 1, "Delete Visbo Project Check Permission for VP %s", oneVPV.vpid);
-				// check access Permission
-				queryvp._id = oneVPV.vpid;
-				var queryVP = VisboProject.findOne(queryvp)
-				queryVP.select('_id name');
-				queryVP.exec(function (err, oneVP) {
-					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Internal Server Error with DB Connection',
-							error: err
-						});
-					};
-					if (!oneVP){
-						return res.status(404).send({
-							state: 'failure',
-							message: 'Visbo Project Version not found or no Permission',
-							error: err
-						});
-					} else {
-						// check if the project is locked
-						if (lock.lockedVP(oneVP, useremail, oneVPV.variantName)) {
-							return res.status(401).send({
-								state: 'failure',
-								message: 'Visbo Project locked',
-								vp: [oneVP]
-							});
-						}
-						debuglog(debuglevel, 2, "Delete Visbo Project Version %s %O", req.params.vpvid, oneVPV);
-						oneVPV.remove(function(err, empty) {
-							if (err) {
-								return res.status(500).send({
-									state: 'failure',
-									message: 'Error deleting Visbo Project Version',
-									error: err
-								});
-							}
-							return res.status(200).send({
-								state: 'success',
-								message: 'Deleted Visbo Project Version',
-								result: [oneVPV]
-							});
-						});
-					}
+		}
+		debuglog(debuglevel, 2, "Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
+		req.oneVPV.remove(function(err, empty) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error deleting Visbo Project Version',
+					error: err
 				});
+			}
+			return res.status(200).send({
+				state: 'success',
+				message: 'Deleted Visbo Project Version',
+				result: [req.oneVPV]
 			});
 		});
+	})
 
 module.exports = router;

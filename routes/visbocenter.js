@@ -485,8 +485,8 @@ router.route('/:vcid')
 				// Update underlying projects if name has changed
 				if (vpPopulate){
 					debuglog(debuglevel, 5, "VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
-					var updateQuery = {"vcid": oneVC._id};
-					var updateUpdate = {$set: {"vc": { "name": oneVC.name}}};
+					var updateQuery = {"vcid": req.oneVC._id};
+					var updateUpdate = {$set: {"vc": { "name": req.oneVC.name}}};
 					var updateOption = {upsert: false, multi: "true"};
 					VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 						if (err){
