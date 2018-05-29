@@ -44,7 +44,7 @@ It will serve the project on default port (3484). <br><br>
 <h2>API Documentation</h2>
 
 Find the API documentation <a href="https://localdev:3484/apidoc/">here</a>.<br>
-To create your own API documentation run command in the roor folder apidoc -i routes -o public/apidoc
+To create your own API documentation run command in the root folder apidoc -i routes -o public/apidoc
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
 

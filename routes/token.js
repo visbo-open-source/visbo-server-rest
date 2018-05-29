@@ -20,7 +20,7 @@ var isValidPassword = function(user, password){
 var createHash = function(password){
 	return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
 };
-var debuglevel = 5;
+var debuglevel = 9;
 
 /**
  * @api {post} /token/user/login User Login
@@ -68,6 +68,7 @@ var debuglevel = 5;
 router.route('/user/login')
 	.post(function(req, res) {
 		debuglog(debuglevel, 8, "Try to Login %s", req.body.email);
+		debuglog(debuglevel, 9, "Try to Login %O", req.body);
 		if (!req.body.email || !req.body.password){
 			return res.status(400).send({
 				state: "failure",

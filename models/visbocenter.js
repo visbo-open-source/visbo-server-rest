@@ -7,7 +7,8 @@ var visboCenterSchema = new mongoose.Schema({
 		userId: {type: Schema.Types.ObjectId, ref: 'User'},
 		email: {type: String, required: true},
 		role: {type: String, required: false}
-	}]
+	}],
+	vpCount: { type: Number, reuqired: false }
 });
 // Set Creation and modification date automatically
 visboCenterSchema.set('timestamps', true);

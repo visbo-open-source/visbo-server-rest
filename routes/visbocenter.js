@@ -22,7 +22,7 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 
-var debuglevel = 1;
+var debuglevel = 9;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -212,6 +212,7 @@ router.route('/')
 						// if user does not exist, ignore the user
 						if (vcUser){
 							req.body.users[i].userId = vcUser._id;
+							delete req.body.users[i]._id;
 							newVC.users.push(req.body.users[i]);
 						}
 					};
@@ -378,11 +379,10 @@ router.route('/:vcid')
 		var origDate = new Date(req.oneVC.updatedAt);
 		if (origDate - putDate != 0 && typeof(req.body.users) != "undefined") {
 			// PUT Request with change User list, but the original List that was feteched was already changed, return error
-			debuglog(debuglevel, 2, "Error VC PUT: Change User List but VC was already changed afterwards");
+			debuglog(debuglevel, 2, "Error VC PUT: Change User List but VC was already changed afterwards", origDate, putDate);
 			return res.status(409).send({
 				state: 'failure',
-				message: 'Change User List but Visbo Center was already changed afterwards',
-				error: err
+				message: 'Change User List but Visbo Center was already changed afterwards'
 			});
 		};
 		var vcUsers = new Array();
@@ -418,6 +418,7 @@ router.route('/:vcid')
 						// if user does not exist, ignore the user
 						if (vcUser){
 							req.body.users[i].userId = vcUser._id;
+							delete req.body.users[i]._id;
 							req.oneVC.users.push(req.body.users[i]);
 						}
 					};
@@ -658,16 +659,17 @@ router.route('/:vcid/role')
 		debuglog(debuglevel, 9, "Post a new Visbo Center Role Req Body: %O Name %s", req.body, req.body.name);		// MS Log
 		debuglog(debuglevel, 5, "Post a new Visbo Center Role with name %s executed by user %s ", req.body.name, useremail);		// MS Log
 
-		if (!req.body || !req.body.name || !req.body.uid) {
-			return res.status(404).send({
-				state: 'failure',
-				message: 'No valid role definition'
-			});
-		}
 		if (!req.oneVCisAdmin) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
+			});
+		}
+		if (req.body == undefined || req.body.name == undefined ) { //|| req.body.uid == undefined) {
+			debuglog(debuglevel, 1, "Body is inconsistent %O", req.body);		// MS Log
+			return res.status(404).send({
+				state: 'failure',
+				message: 'No valid role definition'
 			});
 		}
 		debuglog(debuglevel, 1, "Post Role to VC %s Permission is ok, check unique uid", req.params.vcid);		// MS Log

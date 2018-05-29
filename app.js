@@ -118,6 +118,8 @@ console.log("%s: Starting in Environment %s", moment().format('YYYY-MM-DD HH:mm:
 // start express app
 var app = express();
 
+// console.log("Body Size Limit %d", app.Limit);		// MS Log
+
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -167,7 +169,7 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
 
 // simple logger for this router's requests
 // all requests to this router will first hit this middleware

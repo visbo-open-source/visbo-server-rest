@@ -48,7 +48,7 @@ function visboAudit(tokens, req, res) {
 		}
 	});
 
-	debuglog(debuglevel, 8, "VisboAudit %s %s", tokens.url(req, res), auditEntry.result.status);
+	debuglog(debuglevel, 8, "VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
 }
 
 module.exports = {

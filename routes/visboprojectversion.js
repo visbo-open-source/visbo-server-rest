@@ -208,20 +208,19 @@ router.route('/')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
-		var vpid = ( !req.body && !req.body.vpid ) ? null : req.body.vpid
+		var vpid = req.body.vpid || 0;
+		var variantName = req.body.variantName || "";
+
 		debuglog(debuglevel, 1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
 		var newVPV = new VisboProjectVersion();
 		// check that vpid ist set and exists and user has Admin permission
 		if (!vpid) {
 			return res.status(400).send({
 				state: 'failure',
-				message: 'No Visbo Project ID defined',
-				error: ''
+				message: 'No Visbo Project ID defined'
 			});
 		}
-		VisboProject.findOne({'_id': vpid,
-												'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}
-											}, function (err, oneVP) {
+		VisboProject.findOne({'_id': vpid, 'users.email': useremail}, function (err, oneVP) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -230,12 +229,42 @@ router.route('/')
 				});
 			}
 			if (!oneVP) {
-				return res.status(404).send({
+				return res.status(403).send({
 					state: 'failure',
-					message: 'Visbo Project not found or no Admin'
+					message: 'Visbo Project not found or no Permission'
+				});
+			}
+			req.oneVP = oneVP;
+			var allowPost = false
+			var variantExists = false;
+
+			// check that the user has Admin Permission
+			for (var i=0; i < oneVP.users.length; i++) {
+				if (oneVP.users[i].email == useremail && oneVP.users[i].role == "Admin") {
+					req.oneVPisAdmin = true;
+					allowPost = true;
+					break;
+				}
+			}
+			if (variantName != "") {
+				// check that the Variant exists
+				for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
+					if (req.oneVP.variant[variantIndex].variantName == variantName) {
+						variantExists = true;
+						if (req.oneVP.variant[variantIndex].email == useremail || req.oneVPisAdmin == true) {
+							allowPost = true;
+						}
+						break;
+					}
+				}
+			}
+			if (allowPost == false) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'Visbo Project not found or no Permission'
 				});
 			};
-			debuglog(debuglevel, 5, "User has permission to create a Version in  %s", oneVP.name);
+			debuglog(debuglevel, 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// check if the version is locked
 			if (lock.lockedVP(oneVP, useremail, req.body.variantName)) {
 				return res.status(401).send({
@@ -247,8 +276,10 @@ router.route('/')
 			// keep unchangable attributes
 			newVPV.name = oneVP.name;
 			newVPV.vpid = oneVP._id;
+			newVPV.variantName = variantName;
+			newVPV.timestamp = Date();
+
 			// copy all attributes
-			newVPV.variantName = req.body.variantName;
 			newVPV.variantDescription = req.body.variantDescription;
 			newVPV.Risiko = req.body.Risiko;
 			newVPV.StrategicFit = req.body.StrategicFit;
@@ -280,8 +311,6 @@ router.route('/')
 			newVPV.description = req.body.description;
 			newVPV.businessUnit = req.body.businessUnit;
 
-			newVPV.timestamp = Date();
-
 			debuglog(debuglevel, 5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 			newVPV.save(function(err, oneVPV) {
 				if (err) {
@@ -291,11 +320,29 @@ router.route('/')
 						error: err
 					});
 				}
-				return res.status(200).send({
-					state: "success",
-					message: "Successfully created new Project Version",
-					vpv: [ oneVPV ]
-				});
+				req.oneVPV = oneVPV;
+				// update the version count of the base version or the variant
+				if (variantName == "") {
+					req.oneVP.vpCount = req.oneVP.vpCount == undefined ? 1 : req.oneVP.vpCount + 1;
+				} else {
+					req.oneVP.variant[variantIndex].vpCount += 1;
+				}
+				req.oneVP.save(function(err, vp) {
+					if (err) {
+						debuglog(debuglevel,  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error, failed to update Visbo Project",
+							error: err
+						});
+					}
+					req.oneVP = vp;
+					return res.status(200).send({
+						state: "success",
+						message: "Successfully created new Project Version",
+						vpv: [ oneVPV ]
+					});
+				})
 			});
 		});
 	})
@@ -384,6 +431,7 @@ router.route('/')
 			});
 		}
 		debuglog(debuglevel, 2, "Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
+		var variantName = req.oneVPV.variantName;
 		req.oneVPV.remove(function(err, empty) {
 			if (err) {
 				return res.status(500).send({
@@ -392,11 +440,28 @@ router.route('/')
 					error: err
 				});
 			}
-			return res.status(200).send({
-				state: 'success',
-				message: 'Deleted Visbo Project Version',
-				result: [req.oneVPV]
-			});
+			if (variantName == "") {
+				req.oneVP.vpCount = req.oneVP.vpCount == undefined ? 0 : req.oneVP.vpCount - 1;
+			} else {
+				req.oneVP.variant[variantIndex].vpCount -= 1;
+			}
+
+			req.oneVP.save(function(err, vp) {
+				if (err) {
+					debuglog(debuglevel,  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
+					return res.status(500).send({
+						state: "failure",
+						message: "database error, failed to update Visbo Project",
+						error: err
+					});
+				}
+				req.oneVP = vp;
+				return res.status(200).send({
+					state: "success",
+					message: "Successfully deleted Project Version",
+					vp: [ req.oneVP ]
+				});
+			})
 		});
 	})
 
