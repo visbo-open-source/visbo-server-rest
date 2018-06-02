@@ -674,159 +674,6 @@ router.route('/:vpid')
 		});
 	})
 
-router.route('/:vpid/vpv')
-/**
- * @api {post} /vp/:vpid/vpv Create Version in project
- * @apiVersion 0.0.1
- * @apiGroup Visbo Project
- * @apiName CreateVisboProjectVersions
- * @apiDescription Post creates a new Visbo Project Version.
- * The user needs to have Admin permission in the referenced Project or needs to have user permission if the Version is a Variant
- * Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
- * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
- * @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
- * @apiError Duplicate VisboProjectVersion does already exist HTTP 409
- * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
- * @apiPermission user must be authenticated and user must have permission to create a VP (MS Todo)
- * @apiHeader {String} access-key User authentication token.
- * @apiExample Example usage:
- *   url: http://localhost:3484/vp/vp5c754feaa/vpv
- * {
- *  "allVersionProperties": "all properties of visbo project version"
- * }
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 OK
- * {
- *  "state":"success",
- *  "message":"Successfully created new VisboProjectVersion",
- *  "vpv":[{
- *   "__v":0,
- *   "updatedAt":"2018-03-19T11:04:12.094Z",
- *   "createdAt":"2018-03-19T11:04:12.094Z",
- *   "_id":"vpv5c754feaa",
- *	 "name":"My first Visbo Project Version",
- *   "vpid": "vp5c754feaa",
- *   "allOthers": "all properties of visbo project version"
- *  }]
- * }
- */
-.post(function(req, res) {
-	var userId = req.decoded._id;
-	var useremail  = req.decoded.email;
-	var vpid = req.oneVP.vpid;
-	var variantName = req.body.variantName || "";
-
-	debuglog(debuglevel, 1, "Post a new Visbo Project Version for user %s Variant :%s: in VisboProject %s", useremail, variantName, req.oneVP.name);		// MS Log
-	var newVPV = new VisboProjectVersion();
-	// check that vpid ist set and exists and user has Admin permission
-	if (variantName == "" && req.oneVPisAdmin == false) {
-		return res.status(403).send({
-			state: 'failure',
-			message: 'No Permission to create new Version',
-			vp: [req.oneVP]
-		});
-	}
-	var variantExists = false;
-	if (variantName == "") {
-		variantExists = true
-	} else {
-		for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
-			if (req.oneVP.variant[variantIndex].variantName == variantName && (req.oneVP.variant[variantIndex].email != useremail || req.oneVPisAdmin == false)) {
-				variantExists = true;
-				break;
-			}
-		}
-	}
-	if ( !variantExists ) {
-		return res.status(403).send({
-			state: 'failure',
-			message: 'Visbo Project Variant does not exist',
-			vp: [req.oneVP]
-		});
-	}
-	debuglog(debuglevel, 5, "User has permission to create a Version in %s", req.oneVP.name);
-	// check if the version is locked
-	if (lock.lockedVP(req.oneVP, useremail, variantName)) {
-		return res.status(401).send({
-			state: 'failure',
-			message: 'Visbo Project locked',
-			vp: [req.oneVP]
-		});
-	}
-	// keep unchangable attributes
-	newVPV.name = req.oneVP.name;
-	newVPV.vpid = req.oneVP._id;
-	newVPV.variantName = variantName;
-	newVPV.timestamp = Date();
-
-	// copy all attributes
-	newVPV.variantDescription = req.body.variantDescription;
-	newVPV.Risiko = req.body.Risiko;
-	newVPV.StrategicFit = req.body.StrategicFit;
-	newVPV.customDblFields = req.body.customDblFields;
-	newVPV.customStringFields = req.body.customStringFields;
-	newVPV.customBoolFields = req.body.customBoolFields;
-	newVPV.Erloes = req.body.Erloes;
-	newVPV.leadPerson = req.body.leadPerson;
-	newVPV.tfSpalte = req.body.tfSpalte;
-	newVPV.tfZeile = req.body.tfZeile;
-	newVPV.startDate = req.body.startDate;
-	newVPV.endDate = req.body.endDate;
-	newVPV.earliestStart = req.body.earliestStart;
-	newVPV.earliestStartDate = req.body.earliestStartDate;
-	newVPV.latestStart = req.body.latestStart;
-	newVPV.latestStartDate = req.body.latestStartDate;
-	newVPV.status = req.body.status;
-	newVPV.ampelStatus = req.body.ampelStatus;
-	newVPV.ampelErlaeuterung = req.body.ampelErlaeuterung;
-	newVPV.farbe = req.body.farbe;
-	newVPV.Schrift = req.body.Schrift;
-	newVPV.Schriftfarbe = req.body.Schriftfarbe;
-	newVPV.VorlagenName = req.body.VorlagenName;
-	newVPV.Dauer = req.body.Dauer;
-	newVPV.AllPhases = req.body.AllPhases;
-	newVPV.hierarchy = req.body.hierarchy;
-	newVPV.volumen = req.body.volumen;
-	newVPV.complexity = req.body.complexity;
-	newVPV.description = req.body.description;
-	newVPV.businessUnit = req.body.businessUnit;
-
-	debuglog(debuglevel, 5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
-	newVPV.save(function(err, oneVPV) {
-		if (err) {
-			return res.status(500).send({
-				state: "failure",
-				message: "database error, failed to create VisboProjectVersion",
-				error: err
-			});
-		}
-		req.oneVPV = oneVPV;
-		// update the version count of the base version or the variant
-		if (variantName == "") {
-			req.oneVP.vpCount = req.oneVP.vpCount == undefined ? 1 : req.oneVP.vpCount + 1;
-		} else {
-			req.oneVP.variant[variantIndex].vpCount += 1;
-		}
-
-		req.oneVP.save(function(err, vp) {
-			if (err) {
-				debuglog(debuglevel,  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
-				return res.status(500).send({
-					state: "failure",
-					message: "database error, failed to update Visbo Project",
-					error: err
-				});
-			}
-			req.oneVP = vp;
-			return res.status(200).send({
-				state: "success",
-				message: "Successfully created new Project Version",
-				vpv: [ oneVPV ]
-			});
-		})
-	});
-})
-
 router.route('/:vpid/lock')
 	/**
 	 * @api {post} /vp/:vpid/lock Create Lock
@@ -1114,7 +961,7 @@ router.route('/:vpid/variant')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Visbo Project Variant',
-				vp: req.oneVP
+				vp: [req.oneVP]
 			});
 		});
 	})
@@ -1151,8 +998,8 @@ router.route('/:vpid/variant/:vid')
 		debuglog(debuglevel, 1, "DELETE Visbo Project Variant for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vid);
 
 		var variantExists = false;
-		for (var i = 0; i < req.oneVP.variant.length; i++) {
-			if (req.oneVP.variant[i]._id == variantId) {
+		for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
+			if (req.oneVP.variant[variantIndex]._id == variantId) {
 				variantExists = true;
 				break;
 			}
@@ -1165,14 +1012,21 @@ router.route('/:vpid/variant/:vid')
 			});
 		}
 		//variant belongs to a different user and curr. user is not an Admin
-		if (req.oneVP.variant[i].email != useremail && req.oneVPisAdmin == false) {
+		if (req.oneVP.variant[variantIndex].email != useremail && req.oneVPisAdmin == false) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete',
 				vp: [req.oneVP]
 			});
 		}
-		req.oneVP.variant.splice(i, 1);
+		if (lock.lockedVP(req.oneVP, useremail, undefined)) {
+			return res.status(401).send({
+				state: 'failure',
+				message: 'Visbo Project locked',
+				vp: [req.oneVP]
+			});
+		}
+		req.oneVP.variant.splice(variantIndex, 1);
 		debuglog(debuglevel, 9, "DELETE Visbo Project Variant List after %O", req.oneVP.variant);
 
 		// MS TODO Remove the Variant Versions of the Project or mark them as deleted

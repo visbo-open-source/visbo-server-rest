@@ -24,7 +24,7 @@ router.use('/', verifyVpv.verifyVpv);
 // /vpv
 /////////////////
 
-var debuglevel = 6;
+var debuglevel = 9;
 
 router.route('/')
 
@@ -236,7 +236,7 @@ router.route('/')
 			}
 			req.oneVP = oneVP;
 			var allowPost = false
-			var variantExists = false;
+			var variantExists = true;
 
 			// check that the user has Admin Permission
 			for (var i=0; i < oneVP.users.length; i++) {
@@ -248,8 +248,11 @@ router.route('/')
 			}
 			if (variantName != "") {
 				// check that the Variant exists
+				variantExists = false;
+				debuglog(debuglevel, 9, "Variant search :%s: for user %s", variantName, useremail);		// MS Log
 				for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
 					if (req.oneVP.variant[variantIndex].variantName == variantName) {
+						debuglog(debuglevel, 9, "Variant exists :%s: for user %s", variantName, req.oneVP.variant[variantIndex].email);		// MS Log
 						variantExists = true;
 						if (req.oneVP.variant[variantIndex].email == useremail || req.oneVPisAdmin == true) {
 							allowPost = true;
@@ -262,6 +265,13 @@ router.route('/')
 				return res.status(403).send({
 					state: 'failure',
 					message: 'Visbo Project not found or no Permission'
+				});
+			};
+			if (variantExists == false) {
+				return res.status(401).send({
+					state: 'failure',
+					message: 'Visbo Project variant does not exist',
+					vp: [req.oneVP]
 				});
 			};
 			debuglog(debuglevel, 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
@@ -277,7 +287,7 @@ router.route('/')
 			newVPV.name = oneVP.name;
 			newVPV.vpid = oneVP._id;
 			newVPV.variantName = variantName;
-			newVPV.timestamp = Date();
+			newVPV.timestamp = req.body.timestamp || Date();
 
 			// copy all attributes
 			newVPV.variantDescription = req.body.variantDescription;
@@ -323,10 +333,11 @@ router.route('/')
 				req.oneVPV = oneVPV;
 				// update the version count of the base version or the variant
 				if (variantName == "") {
-					req.oneVP.vpCount = req.oneVP.vpCount == undefined ? 1 : req.oneVP.vpCount + 1;
+					req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 1 : req.oneVP.vpvCount + 1;
 				} else {
-					req.oneVP.variant[variantIndex].vpCount += 1;
+					req.oneVP.variant[variantIndex].vpvCount += 1;
 				}
+				debuglog(debuglevel,  5, "Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
 				req.oneVP.save(function(err, vp) {
 					if (err) {
 						debuglog(debuglevel,  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
@@ -415,6 +426,18 @@ router.route('/')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
 
+		var variantExists = false;
+		if (variantName == "") {
+			variantExists = true
+		} else {
+			for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
+				if (req.oneVP.variant[variantIndex].variantName == variantName && (req.oneVP.variant[variantIndex].email != useremail || req.oneVPisAdmin == false)) {
+					variantExists = true;
+					break;
+				}
+			}
+		}
+		// MS TODO Improve the Check that the User can delete his variant
 		if (!req.oneVPisAdmin) {
 			return res.status(403).send({
 				state: 'failure',
@@ -441,9 +464,9 @@ router.route('/')
 				});
 			}
 			if (variantName == "") {
-				req.oneVP.vpCount = req.oneVP.vpCount == undefined ? 0 : req.oneVP.vpCount - 1;
+				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 0 : req.oneVP.vpvCount - 1;
 			} else {
-				req.oneVP.variant[variantIndex].vpCount -= 1;
+				req.oneVP.variant[variantIndex].vpvCount -= 1;
 			}
 
 			req.oneVP.save(function(err, vp) {
