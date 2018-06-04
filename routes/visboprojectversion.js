@@ -276,7 +276,7 @@ router.route('/')
 			};
 			debuglog(debuglevel, 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// check if the version is locked
-			if (lock.lockedVP(oneVP, useremail, req.body.variantName)) {
+			if (lock.lockedVP(oneVP, useremail, req.body.variantName).locked) {
 				return res.status(401).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
@@ -446,7 +446,7 @@ router.route('/')
 			});
 		}
 		// check if the project is locked
-		if (lock.lockedVP(req.oneVP, useremail, req.oneVPV.variantName)) {
+		if (lock.lockedVP(req.oneVP, useremail, req.oneVPV.variantName).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',

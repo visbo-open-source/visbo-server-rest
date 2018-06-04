@@ -1,28 +1,44 @@
-var moment = require('moment');
+var logging = require('./../components/logging');
+var debuglevel = 9;
 
-
-// check if Visbo Project is Locked
+// check if Visbo Project has a valid lock
 lockedVP = function(vp, useremail, variantName) {
 	// debuglog(9, "lockedVP Check Lock for VP %s for User %s and Variant :%s: Locks %O", vp._id, useremail, variantName, vp.lock);
-	var result = false;
+	var result = {locked: false, lockindex: "-1"};
 	var nowDate = new Date();
-	if (!vp.lock) {
-		result = false;	// no lock exists at all
-	} else {
+	if (vp.lock) {
 		for (i = 0; i < vp.lock.length; i++) {
 			// debuglog(9, "Check Lock: Nr. %d %s", i, vp.lock[i]);
 			if (vp.lock[i].expiresAt >= nowDate){	// lock is valid
-				if (!variantName || vp.lock[i].variantName == variantName){ // all variants or a specific
+				if (vp.lock[i].variantName == variantName){ // lock for the specific variant
 					//lock for the current variant found
-					result = vp.lock[i].email == useremail ? false : true;
+					result.locked = vp.lock[i].email == useremail ? false : true;
+					result.lockindex = i;
+					return result;
 				}
 			}
 		}
 	}
 	// debuglog(8, "lockedVP check :%s: result %s", vp._id, result);
-	return false;
+	return result;
+};
+
+// cleanup expired locks
+lockCleanupVP = function(listLock) {
+	var listLockNew = [];
+	var dateNow = new Date();
+	debuglog(debuglevel, 9, "lock CleanUP expired locks from list %d ", listLock.length);
+	for (var i = 0; i < listLock.length; i++) {
+		if (listLock[i].expiresAt >=  dateNow ){			// the lock is still valid
+			listLockNew.push(listLock[i]) 							// keep the lock
+		} else {
+			debuglog(debuglevel, 9, "POST Lock check lock %O expired %s", listLock[i], dateNow);
+		}
+	}
+	return listLockNew;
 };
 
 module.exports = {
-	lockedVP: lockedVP
+	lockedVP: lockedVP,
+	lockCleanupVP: lockCleanupVP
 };
