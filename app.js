@@ -15,6 +15,7 @@ require('./models/audit');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
+require('./models/visboportfolio');
 require('./models/vcrole');
 require('./models/vccost');
 

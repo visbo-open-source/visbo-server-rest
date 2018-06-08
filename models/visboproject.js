@@ -18,6 +18,7 @@ var variantSchema = new Schema({
 var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 100},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
+	portfolio: { type: Boolean, reuqired: false },
 	users: [{
 		userId: {type: Schema.Types.ObjectId, ref: 'userId', required: false},
 		email: {type: String, required: true},

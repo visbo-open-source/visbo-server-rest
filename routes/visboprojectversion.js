@@ -5,6 +5,7 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lock = require('./../components/lock');
+var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
 var logging = require('./../components/logging');
 var User = mongoose.model('User');
@@ -210,8 +211,9 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		var vpid = req.body.vpid || 0;
 		var variantName = req.body.variantName || "";
+		var variantIndex = -1;
 
-		debuglog(debuglevel, 1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);		// MS Log
+		debuglog(debuglevel, 1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);
 		var newVPV = new VisboProjectVersion();
 		// check that vpid ist set and exists and user has Admin permission
 		if (!vpid) {
@@ -238,51 +240,36 @@ router.route('/')
 			var allowPost = false
 			var variantExists = true;
 
-			// check that the user has Admin Permission
-			for (var i=0; i < oneVP.users.length; i++) {
-				if (oneVP.users[i].email == useremail && oneVP.users[i].role == "Admin") {
-					req.oneVPisAdmin = true;
-					allowPost = true;
-					break;
-				}
-			}
 			if (variantName != "") {
 				// check that the Variant exists
 				variantExists = false;
-				debuglog(debuglevel, 9, "Variant search :%s: for user %s", variantName, useremail);		// MS Log
-				for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
-					if (req.oneVP.variant[variantIndex].variantName == variantName) {
-						debuglog(debuglevel, 9, "Variant exists :%s: for user %s", variantName, req.oneVP.variant[variantIndex].email);		// MS Log
-						variantExists = true;
-						if (req.oneVP.variant[variantIndex].email == useremail || req.oneVPisAdmin == true) {
-							allowPost = true;
-						}
-						break;
-					}
-				}
+				variantIndex = variant.findVariant(req.oneVP, variantName)
+				if (variantIndex < 0) {
+					return res.status(401).send({
+						state: 'failure',
+						message: 'Visbo Project variant does not exist',
+						vp: [req.oneVP]
+					});
+				};
 			}
-			if (allowPost == false) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'Visbo Project not found or no Permission'
-				});
-			};
-			if (variantExists == false) {
-				return res.status(401).send({
-					state: 'failure',
-					message: 'Visbo Project variant does not exist',
-					vp: [req.oneVP]
-				});
-			};
-			debuglog(debuglevel, 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// check if the version is locked
 			if (lock.lockedVP(oneVP, useremail, req.body.variantName).locked) {
 				return res.status(401).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
-					vp: [oneVP]
+					vp: [req.oneVP]
 				});
 			}
+			// user does not have admin permission and does not own the variant
+			if (req.oneVPisAdmin == false && variantName != "" && req.oneVP.variant[variantIndex].email != useremail) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'Visbo Project Version no permission to update',
+					vp: [req.oneVP]
+				});
+			}
+			debuglog(debuglevel, 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
+
 			// keep unchangable attributes
 			newVPV.name = oneVP.name;
 			newVPV.vpid = oneVP._id;
@@ -392,7 +379,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);		// MS Log
+		debuglog(debuglevel, 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Project Version',
@@ -424,7 +411,7 @@ router.route('/')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);		// MS Log
+		debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
 
 		var variantExists = false;
 		if (variantName == "") {

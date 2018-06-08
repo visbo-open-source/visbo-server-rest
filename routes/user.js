@@ -61,7 +61,7 @@ router.route('/profile')
 	 *}
    */
 	.get(function(req, res) {
-		debuglog(debuglevel, 1, "Get Profile ");		// MS Log
+		debuglog(debuglevel, 1, "Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				return res.status(500).send({

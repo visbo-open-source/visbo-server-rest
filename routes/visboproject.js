@@ -5,6 +5,7 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lock = require('./../components/lock');
+var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var logging = require('./../components/logging');
 var User = mongoose.model('User');
@@ -13,6 +14,7 @@ var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var Variant = mongoose.model('Variant');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
+var VisboPortfolio = mongoose.model('VisboPortfolio');
 var moment = require('moment');
 
 var findUser = function(currentUser) {
@@ -38,7 +40,7 @@ router.use('/', verifyVp.verifyVp);
 
 router.route('/')
 
-	/**
+/**
 	* @api {get} /vp Get Projects
 	* @apiVersion 0.0.1
 	* @apiGroup Visbo Project
@@ -66,8 +68,9 @@ router.route('/')
 	*       "_id":"vp541c754feaa",
 	*      "updatedAt":"2018-03-16T12:39:54.042Z",
 	*      "createdAt":"2018-03-12T09:54:56.411Z",
-	*      "name":"My new VisobProject",
-	*      "vcid": "vc5aaf992"
+	*      "name":"My new VisboProject",
+	*      "vcid": "vc5aaf992",
+	*      "vpvCount": "0",
 	*      "users":[
 	*       {
 	*        "email":"example1@visbo.de",
@@ -102,14 +105,14 @@ router.route('/')
 	*/
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
-		debuglog(debuglevel,  1, "Get Project with query parameters");		// MS Log
+		debuglog(debuglevel,  1, "Get Project with query parameters");
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var query = {'users.email': useremail};
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
-		debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);		// MS Log
+		debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
 
 		var queryVP = VisboProject.find(query);
 		queryVP.exec(function (err, listVP) {
@@ -175,6 +178,7 @@ router.route('/')
 	 *   "name":"My first Visbo Project",
 	 *   "_id":"vp5aaf882",
 	 *   "vcid": "vc5aaf992",
+	 *   "vpvCount": "0",
 	 *   "users":[
 	 *    {
 	 *     "userID": "us5aaf992",
@@ -196,7 +200,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		if (req.body == undefined || req.body.vcid == undefined || req.body.name == undefined) {
-				debuglog(debuglevel,  1, "No VCID or Name in Body");		// MS Log
+				debuglog(debuglevel,  1, "No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
 				message: 'No VCID or Name in Body'
@@ -204,8 +208,8 @@ router.route('/')
 		}
 		var vcid = req.body.vcid
 		var vpname = req.body.name
-		debuglog(debuglevel,  2, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for %d Users", useremail, req.body.name, vcid, req.body.users.length);		// MS Log
-		debuglog(debuglevel,  9, "Post a new Visbo Project body %O", req.body);		// MS Log
+		debuglog(debuglevel,  2, "Post a new Visbo Project for user %s with name %s in VisboCenter %s for %d Users", useremail, req.body.name, vcid, req.body.users.length);
+		debuglog(debuglevel,  9, "Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
 		VisboCenter.findOne({'_id': vcid,
@@ -247,6 +251,7 @@ router.route('/')
 				var newVP = new VisboProject;
 				newVP.name = req.body.name;
 				newVP.vcid = vcid;
+				newVP.portfolio = req.body.portfolio == undefined ? false: true;
 				newVP.vpvCount = 0;
 				var i;
 				var vpUsers = new Array();
@@ -270,7 +275,7 @@ router.route('/')
 						});
 					}
 					if (listUsers.length != vpUsers.length)
-						debuglog(debuglevel,  2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+						debuglog(debuglevel,  2, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
 						for (i = 0; i < req.body.users.length; i++) {
@@ -292,7 +297,7 @@ router.route('/')
 					};
 					// set the VC Name
 					newVP.vc.name = vc.name;
-					debuglog(debuglevel,  9, "VP Create add VC Name %s %O", vc.name, newVP);		// MS Log
+					debuglog(debuglevel,  9, "VP Create add VC Name %s %O", vc.name, newVP);
 					debuglog(debuglevel,  5, "Save VisboProject %s  with %d Users", newVP.name, newVP.users.length);
 					newVP.save(function(err, vp) {
 						if (err) {
@@ -355,6 +360,7 @@ router.route('/:vpid')
  	*    "createdAt":"2018-03-12T09:54:56.411Z",
  	*    "name":"My new Visbo Project",
 	*		 "vcid": "vc5aaf992",
+	*    "vpvCount": "0",
  	*    "users":[
  	*     {
  	*      "email":"example1@visbo.de",
@@ -381,7 +387,7 @@ router.route('/:vpid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(debuglevel, 1, "Get Visbo Project for userid %s email %s and vp %s oneVC %s Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);		// MS Log
+		debuglog(debuglevel, 1, "Get Visbo Project for userid %s email %s and vp %s oneVC %s Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
 
 		// we have found the VP already in middleware
 		return res.status(200).send({
@@ -425,6 +431,7 @@ router.route('/:vpid')
 	 *   "name":"My first Visbo Project Renamed",
 	 *   "_id":"vp5cf3da025",
 	 *   "vcid": "vc5aaf992",
+	 *   "vpvCount": "0",
 	 *   "users":[
 	 *    {
 	 *     "userId":"us5aaf992"
@@ -443,7 +450,7 @@ router.route('/:vpid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(debuglevel,  1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);		// MS Log
+		debuglog(debuglevel,  1, "PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 
 		if (!req.body) {
 			return res.status(409).send({
@@ -496,7 +503,7 @@ router.route('/:vpid')
 					});
 				}
 				if (listUsers.length != vpUsers.length) {
-					debuglog(debuglevel, 1, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);		// MS Log
+					debuglog(debuglevel, 1, "Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);
 				}
 				// copy all existing users to newVP
 				if (req.body.users) {
@@ -629,7 +636,7 @@ router.route('/:vpid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog(debuglevel, 1, "DELETE Visbo Project for userid %s email %s and vp %s oneVP %s is Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);		// MS Log
+		debuglog(debuglevel, 1, "DELETE Visbo Project for userid %s email %s and vp %s oneVP %s is Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
 
 		if (!req.oneVPisAdmin) {
 			return res.status(403).send({
@@ -637,7 +644,7 @@ router.route('/:vpid')
 				message: 'No Visbo Project or no Permission'
 			});
 		}
-		debuglog(debuglevel, 9, "Delete Visbo Project after perm check success %s %O", req.params.vpid, req.oneVP);		// MS Log
+		debuglog(debuglevel, 9, "Delete Visbo Project after perm check success %s %O", req.params.vpid, req.oneVP);
 		if (lock.lockedVP(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -679,7 +686,7 @@ router.route('/:vpid/lock')
 	 * @api {post} /vp/:vpid/lock Create Lock
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Project Properties
-	 * @apiName LockVisboProjects
+	 * @apiName CreateLock
 	 * @apiDescription Post creates or renews a lock for a user to a specific project and variant
 	 * In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
@@ -718,6 +725,14 @@ router.route('/:vpid/lock')
 			// set the lock date to 1 hour later
 			expiredAt.setHours(expiredAt.getHours() + 1);
 		} 
+
+		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
+			return res.status(401).send({
+				state: 'failiure',
+				message: 'Visbo Project Variant does not exist',
+				lock: req.oneVP.lock
+			});
+		}
 
 		if (lock.lockedVP(req.oneVP, useremail, variantName).locked) {
 			return res.status(403).send({
@@ -763,7 +778,7 @@ router.route('/:vpid/lock')
 	* @api {delete} /vp/:vpid/lock Delete Lock
 	* @apiVersion 0.0.1
 	* @apiGroup Visbo Project Properties
-	* @apiName DeleteVisboProjectLock
+	* @apiName DeleteLock
 	* @apiDescription Deletes a lock for a specific project and a specific variantName
 	* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
 	* @apiHeader {String} access-key User authentication token.
@@ -792,7 +807,7 @@ router.route('/:vpid/lock')
 
 	var resultLock = lock.lockedVP(req.oneVP, useremail, variantName);
 	if (resultLock.lockindex < 0) {
-		debuglog(debuglevel, 5, "Delete Lock for VP :%s: No Lock exists", req.oneVP.name);		// MS Log
+		debuglog(debuglevel, 5, "Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'VP no Lock exists for Deletion',
@@ -800,7 +815,7 @@ router.route('/:vpid/lock')
 		});
 	}
 	if (resultLock.locked && req.oneVPisAdmin == false) {	// lock from a different user and no Admin, deny to delete
-		debuglog(debuglevel, 5, "Delete Lock for VP :%s: Project is locked by another user Locks \n %O", req.oneVP.name, req.oneVP.lock);		// MS Log
+		debuglog(debuglevel, 5, "Delete Lock for VP :%s: Project is locked by another user Locks \n %O", req.oneVP.name, req.oneVP.lock);
 		return res.status(403).send({
 			state: 'failure',
 			message: 'VP locked for another user',
@@ -808,11 +823,11 @@ router.route('/:vpid/lock')
 		});
 	}
 
-	debuglog(debuglevel, 9, "Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);		// MS Log
+	debuglog(debuglevel, 9, "Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 	req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
 	var listLockNew = lock.lockCleanupVP(req.oneVP.lock);
 	req.oneVP.lock = listLockNew;
-	debuglog(debuglevel, 9, "Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);		// MS Log
+	debuglog(debuglevel, 9, "Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
 	req.oneVP.save(function(err, empty) {
 		if (err) {
@@ -835,7 +850,7 @@ router.route('/:vpid/variant')
 	 * @api {post} /vp/:vpid/variant Create a Variant
 	 * @apiVersion 0.0.1
 	 * @apiGroup Visbo Project Properties
-	 * @apiName VisboProjectVariant
+	 * @apiName CreateVisboProjectVariant
 	 * @apiDescription Post creates a new Variant for the Visbo Project
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to see this VisboProject HTTP 403
@@ -850,12 +865,12 @@ router.route('/:vpid/variant')
 	 *     HTTP/1.1 200 OK
 	 * {
 	 *  "state":"success",
-	 *  "message":"Successfully locked VisboProject",
+	 *  "message":"Successfully created Variant for Visbo Project",
 	 *  "vp":[{
    *       "_id":"vp541c754feaa",
  	 *      "updatedAt":"2018-03-16T12:39:54.042Z",
  	 *      "createdAt":"2018-03-12T09:54:56.411Z",
- 	 *      "name":"My new VisobProject",
+ 	 *      "name":"My new VisboProject",
  	 *      "vcid": "vc5aaf992"
  	 *      "users":[
  	 *       {
@@ -869,7 +884,7 @@ router.route('/:vpid/variant')
  	 *        "userId":"us5c754feac"
  	 *       }
  	 *     ],
- 	 *     "lock": [{c
+ 	 *     "lock": [{
  	 *       "variantName": "",
  	 *       "email": "someone@visbo.de",
  	 *       "createdAt": "2018-04-26T11:04:12.094Z",
@@ -965,20 +980,15 @@ router.route('/:vpid/variant/:vid')
 		var variantId = req.params.vid;
 		debuglog(debuglevel, 1, "DELETE Visbo Project Variant for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vid);
 
-		var variantExists = false;
-		for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
-			if (req.oneVP.variant[variantIndex]._id == variantId) {
-				variantExists = true;
-				break;
-			}
-		}
-		if (!variantExists) {
+		var variantIndex = variant.findVariantId(req.oneVP, variantId);
+		if (variantIndex < 0) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Variant does not exists',
 				vp: [req.oneVP]
 			});
 		}
+		var variantName = req.oneVP.variant[variantIndex].variantName;
 		//variant belongs to a different user and curr. user is not an Admin
 		if (req.oneVP.variant[variantIndex].email != useremail && req.oneVPisAdmin == false) {
 			return res.status(403).send({
@@ -987,7 +997,8 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP]
 			});
 		}
-		if (lock.lockedVP(req.oneVP, useremail, undefined).locked) {
+		lockResult = lock.lockedVP(req.oneVP, useremail, variantName);
+		if (lockResult.locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -995,6 +1006,9 @@ router.route('/:vpid/variant/:vid')
 			});
 		}
 		req.oneVP.variant.splice(variantIndex, 1);
+		if (lockResult.lockindex >= 0) {
+			req.oneVP.lock.splice(lockResult.lockindex, 1);
+		}
 		debuglog(debuglevel, 9, "DELETE Visbo Project Variant List after %O", req.oneVP.variant);
 
 		// MS TODO Remove the Variant Versions of the Project or mark them as deleted
@@ -1013,6 +1027,339 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP]
 			});
 		})
+	})
+
+
+router.route('/:vpid/portfolio')
+/**
+	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Portfolio
+	* @apiName GetPortfolio
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Visbo Project
+	* In case of success it delivers an array of Portfolios, the array contains in each element a Portfolio
+	* @apiPermission user must be authenticated
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/vp5aaf992/portfolio
+	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Portfolios",
+	*   "vpf": [{
+	*   "updatedAt": "2018-06-07T13:17:35.434Z",
+	*   "createdAt": "2018-06-07T13:17:35.434Z",
+	*   "sortType": 1,
+	*   "timestamp": "2018-06-07T13:17:35.000Z",
+	*   "name": "VP Test01 PF",
+	*   "variantName": "",
+	*   "vpid": "5b192d7915609a50f5702a2c",
+	*   "_id": "5b19306f53eb4b516619a5ab",
+	*   "allItems": [{
+	*     "vpid": "5b1532e8586c150506ab9633",
+	*     "name": "VisboProject Name",
+	*     "variantName": "",
+	*     "Start": "2018-04-01T12:00:00.000Z",
+	*     "show": true,
+	*     "zeile": 2,
+	*     "reasonToInclude": "Description Text Include",
+	*     "reasonToExclude": "Description Text Exclude",
+	*     "_id": "5b19306f53eb4b516619a5ac"
+	*   }]
+  * }
+	*/
+	.get(function(req, res) {
+		// no need to check authentication, already done centrally
+		debuglog(debuglevel,  1, "Get Portfolio Versions");
+
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var query = {'vpid': req.oneVP._id};
+		// check if query string is used to restrict to a specific VC
+		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
+		// debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
+
+		var queryVPF = VisboPortfolio.find(query);
+		queryVPF.exec(function (err, listVPF) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Internal Server Error with DB Connection',
+					error: err
+				});
+			};
+			debuglog(debuglevel,  5, "Found %d Portfolios", listVPF.length);
+			debuglog(debuglevel,  9, "Found Portfolios/n", listVPF);
+
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Portfolios',
+				vpf: listVPF
+			});
+		});
+	})
+
+/**
+	* @api {post} /vp/:vpid/portfolio Create a Portfolio
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Portfolio
+	* @apiName CreatePortfolio
+	* @apiDescription Post creates a new Definition of a Portfolio for the Visbo Project
+	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
+	* @apiError NoPermission No permission to see this VisboProject HTTP 403
+	* @apiPermission user must be authenticated and user must have Admin permission for this VP
+	* @apiHeader {String} access-key User authentication token.
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/vp5aada025/portfolio
+	*  {
+	*    "variantName": "name of the portfolio variant",
+	*    "allItems": [{
+	*      "vpid" : "VisboProject ID",
+	*      "name" : "VisboProject Name",
+	*      "variantName" : "name of the Variant of the Project",
+	*      "Start" : "2018-04-01T12:00:00.000Z",
+	*      "show" : "true",
+	*      "zeile" : "row number",
+	*      "reasonToInclude" : "Description Text",
+	*      "reasonToExclude" : "Description Text"
+	*    }],
+	*   "sortType": "1",
+	*   "sortList": "internal Object",
+	*   "lastCustomList": "internal Object"
+	* }
+	* @apiSuccessExample {json} Success-Response:
+	*     HTTP/1.1 200 OK
+	*  {
+	*    "state":"success",
+	*    "message":"Successfully Created Visbo Portfolio",
+	*    "vpf":[{
+	*      "_id":"vpf541c754feaa",
+	*      "updatedAt":"2018-03-16T12:39:54.042Z",
+	*      "createdAt":"2018-03-12T09:54:56.411Z",
+	*      "vpid" : "VisboProject ID",
+	*      "name" : "VisboProject Name",
+	*      "allItems": [{
+	*        "vpid" : "VisboProject ID",
+	*        "name" : "VisboProject Name",
+	*        "variantName" : "name of the Variant of the Project",
+	*        "Start" : "2018-04-01T12:00:00.000Z",
+	*        "show" : "true",
+	*        "zeile" : "row number",
+	*        "reasonToInclude" : "Description Text",
+	*        "reasonToInclude" : "Description Text"
+	*      }],
+	*      "sortType": "1",
+	*      "sortList": "internal Object",
+	*      "lastCustomList": "internal Object"
+	*    }]
+	*  }
+	*/
+	.post(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		debuglog(debuglevel, 1, "POST Visbo Portfolio for userid %s email %s and vp %s Portfolio %O", userId, useremail, req.params.vpid, req.body);
+
+		debuglog(debuglevel, 9, "Variant %s", variantName);
+
+		if (req.oneVPisAdmin != true) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to Change Portfolio',
+				vp: [req.oneVP]
+			});
+		}
+		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
+		var variantIndex = variant.findVariant(req.oneVP, variantName);
+		if (variantName != "" && variantIndex < 0) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Variant does not exists',
+				vp: [req.oneVP]
+			});
+		}
+		if (req.oneVP.portfolio != true) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo Project is not a Portfolio Project',
+				vp: [req.oneVP]
+			});
+		}
+		var newPortfolio = new VisboPortfolio;
+		newPortfolio.vpid = req.oneVP._id;
+		newPortfolio.variantName = variantName;
+		newPortfolio.name = req.oneVP.name;
+
+		newPortfolio.timestamp = req.body.timestamp || Date();
+		newPortfolio.allItems = req.body.allItems;
+		newPortfolio.sortType = req.body.sortType;
+		newPortfolio.sortList = req.body.sortList;
+		newPortfolio.lastCustomList = req.body.lastCustomList;
+
+		newPortfolio.save(function(err, onePortfolio) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error updating Visbo Portfolio',
+					error: err
+				});
+			}
+			return res.status(200).send({
+				state: 'success',
+				message: 'Created Visbo Portfolio Version',
+				vpf: [onePortfolio]
+			});
+		});
+	})
+
+router.route('/:vpid/portfolio/:vpfid')
+/**
+	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Portfolio
+	* @apiName GetVisboPortfolio
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Visbo Project
+	* In case of success it delivers an array of Portfolios, the array contains in each element a Portfolio
+	* @apiPermission user must be authenticated
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Portfolios",
+	*   "vpf": [{
+	*   "updatedAt": "2018-06-07T13:17:35.434Z",
+	*   "createdAt": "2018-06-07T13:17:35.434Z",
+	*   "sortType": 1,
+	*   "timestamp": "2018-06-07T13:17:35.000Z",
+	*   "name": "VP Test01 PF",
+	*   "variantName": "",
+	*   "vpid": "5b192d7915609a50f5702a2c",
+	*   "_id": "5b19306f53eb4b516619a5ab",
+	*   "allItems": [{
+	*     "vpid": "5b1532e8586c150506ab9633",
+	*     "name": "VisboProject Name",
+	*     "variantName": "",
+	*     "Start": "2018-04-01T12:00:00.000Z",
+	*     "show": true,
+	*     "zeile": 2,
+	*     "reasonToInclude": "Description Text Include",
+	*     "reasonToExclude": "Description Text Exclude",
+	*     "_id": "5b19306f53eb4b516619a5ac"
+	*   }]
+  * }
+	*/
+	.get(function(req, res) {
+		// no need to check authentication, already done centrally
+		debuglog(debuglevel,  1, "Get Portfolio Versions");
+
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var query = {'_id': req.params.vpfid};
+		// check if query string is used to restrict to a specific VC
+		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
+		// debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
+
+		var queryVPF = VisboPortfolio.find(query);
+		queryVPF.exec(function (err, listVPF) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Internal Server Error with DB Connection',
+					error: err
+				});
+			};
+			debuglog(debuglevel,  5, "Found %d Portfolios", listVPF.length);
+			debuglog(debuglevel,  9, "Found Portfolios/n", listVPF);
+
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Portfolios',
+				vpf: listVPF
+			});
+		});
+	})
+
+/**
+	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Portfolio
+	* @apiName DeleteVisboPortfolio
+	* @apiDescription Deletes a specific Portfolio Version
+	* the user needs to have admin access to the Visbo Project
+	* @apiHeader {String} access-key User authentication token.
+	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/vp5aada025/portfolio/vpf5aada
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Deleted Visbo Portfolio Version",
+	*   "vp": [vpList]
+	* }
+	*/
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var vpfid = req.params.vpfid;
+		debuglog(debuglevel, 1, "DELETE Visbo Portfolio for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vpfid);
+
+		if (!req.oneVPisAdmin) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo no Permission to delete Portfolio',
+				vp: [req.oneVP]
+			});
+		}
+		debuglog(debuglevel, 9, "DELETE Visbo Portfolio in Project %s", req.oneVP.name);
+		var queryVPF = VisboPortfolio.findOne({'_id':vpfid});
+		queryVPF.exec(function (err, oneVPF) {
+			if (err) {
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Portfolio',
+					error: err
+				});
+			}
+			if (!oneVPF) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Portfolio or no Permission'
+				});
+			}
+			lockResult = lock.lockedVP(req.oneVP, useremail, oneVPF.variantName);
+			if (lockResult.locked) {
+				return res.status(401).send({
+					state: 'failure',
+					message: 'Visbo Portfolio Project locked',
+					vp: [req.oneVP]
+				});
+			}
+			oneVPF.remove(function(err, empty) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error deleting Visbo Portfolio',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Portfolio'
+				});
+			});
+		});
 	})
 
 module.exports = router;
