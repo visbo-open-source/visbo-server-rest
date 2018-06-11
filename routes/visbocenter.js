@@ -76,6 +76,7 @@ router.route('/')
 	*/
 .get(function(req, res) {
 		// no need to check authentication, already done centrally
+		debuglog(debuglevel, 1, "Get Visbo Center decoded %s", JSON.stringify(req.decoded));
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "Get Visbo Center for user %s", useremail);
@@ -155,6 +156,7 @@ router.route('/')
 	 *  }]
 	 * }
 	 */
+// Create a Visbo Center
  .post(function(req, res) {
 	 // User is authenticated already
 	 var userId = req.decoded._id;
@@ -322,7 +324,7 @@ router.route('/:vcid')
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to update this VisboCenter HTTP 403
 	 * @apiError VC was updated in between HTTP 409
-	 * @apiPermission user must be authenticated and user must have Admin permission for this VC (MS Todo)
+	 * @apiPermission user must be authenticated and user must have Admin permission for this VC
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
 	 * url: http://localhost:3484/vc/vc5aada025
@@ -657,6 +659,7 @@ router.route('/:vcid/role')
 		*   }]
 		* }
 		*/
+// Create a Visbo Center Role
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
@@ -972,6 +975,7 @@ router.route('/:vcid/cost')
 	*   }]
 	* }
 	*/
+// Create Visbo Center Cost
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;

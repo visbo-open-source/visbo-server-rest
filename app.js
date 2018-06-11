@@ -32,8 +32,7 @@ var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
   autoReconnect: true,
-  reconnectInterval: 3000,
-  useMongoClient: true
+  reconnectInterval: 3000
 };
 
 var reconnectTries = 0;
@@ -74,6 +73,7 @@ function dbConnect(dbconnection) {
     dbconnection,
     dbOptions
   ).then(function() {
+    //mongoose.set('debug', true);
     console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:ss:SSS'));
   }, function(err) {
     console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:ss'), err);

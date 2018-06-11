@@ -17,15 +17,29 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var moment = require('moment');
 
+// find a user in a simple array of user names
 var findUser = function(currentUser) {
 		return currentUser == this;
 }
 
+// find a user in an array of a structured user (name, id, ...)
 var findUserList = function(currentUser) {
 		//console.log("compare %s %s", currentUser.email, this);
 		return currentUser.email == this;
 }
-var debuglevel = 9;
+
+// find a user in a simple array of user names
+var findVP = function(vpid) {
+		return vpid == this;
+}
+
+// find a project in an array of a structured projects (name, id)
+var findVPList = function(vp) {
+		//console.log("compare %s %s result %s", vp._id.toString(), this.toString(), vp._id.toString() == this.toString());
+		return vp._id.toString() == this.toString();
+}
+
+var debuglevel = 5;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -149,7 +163,7 @@ router.route('/')
 	 * @apiError NoPermission No permission to create a VisboProject HTTP 403
 	 * @apiError Duplicate VisboProject does already exist HTTP 409
 	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project
-	 * @apiPermission user must be authenticated and user must have permission to create a VP (MS Todo)
+	 * @apiPermission user must be authenticated and user must have permission to create a VP
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vp
 	 * {
@@ -195,6 +209,7 @@ router.route('/')
 	 *  }]
 	 * }
 	 */
+// Post a Project or Portfolio Project
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
@@ -412,7 +427,7 @@ router.route('/:vpid')
 	 * In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	 * @apiError NoPermission No permission to update this VisboProject HTTP 403
-	 * @apiPermission user must be authenticated and user must have Admin permission for this VP (MS Todo)
+	 * @apiPermission user must be authenticated and user must have Admin permission for this VP
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vp/vp5cf3da025
@@ -712,6 +727,7 @@ router.route('/:vpid/lock')
 	 *  }]
 	 * }
 	 */
+// Create a Lock for a Project
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -900,6 +916,7 @@ router.route('/:vpid/variant')
  	 *  ]
  	 * }
 	 */
+// Create a Variant inside a Project
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1158,6 +1175,7 @@ router.route('/:vpid/portfolio')
 	*    }]
 	*  }
 	*/
+// Post a Portfolio List
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1173,11 +1191,18 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
-		var variantIndex = variant.findVariant(req.oneVP, variantName);
-		if (variantName != "" && variantIndex < 0) {
+		var variantIndex = variantName == "" ? 0 : variant.findVariant(req.oneVP, variantName);
+		if (variantIndex < 0) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Variant does not exists',
+				vp: [req.oneVP]
+			});
+		}
+		if (!req.body.allItems || req.body.allItems.length == 0) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No Project Items in Portfolio',
 				vp: [req.oneVP]
 			});
 		}
@@ -1192,25 +1217,61 @@ router.route('/:vpid/portfolio')
 		newPortfolio.vpid = req.oneVP._id;
 		newPortfolio.variantName = variantName;
 		newPortfolio.name = req.oneVP.name;
-
 		newPortfolio.timestamp = req.body.timestamp || Date();
-		newPortfolio.allItems = req.body.allItems;
-		newPortfolio.sortType = req.body.sortType;
-		newPortfolio.sortList = req.body.sortList;
-		newPortfolio.lastCustomList = req.body.lastCustomList;
 
-		newPortfolio.save(function(err, onePortfolio) {
+		// check that the vpid exist and user has permission to access
+		var listVPid = new Array();
+		for (var i = 0; i < req.body.allItems.length; i++) {
+			// build up unique project list to check that they exist
+			if (!listVPid.find(findVP, req.body.allItems[i].vpid)){
+				listVPid.push(req.body.allItems[i].vpid)
+			}
+		};
+		debuglog(debuglevel, 9, "Check vpids if they exist %s", JSON.stringify(listVPid));
+		var queryVP = VisboProject.find({'_id': {'$in': listVPid}});
+		queryVP.select('_id name');
+		queryVP.exec(function (err, listVP) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
-					message: 'Error updating Visbo Portfolio',
+					message: 'Error getting Projects for Portfolio',
 					error: err
 				});
 			}
-			return res.status(200).send({
-				state: 'success',
-				message: 'Created Visbo Portfolio Version',
-				vpf: [onePortfolio]
+			if (listVP.length != listVPid.length) {
+				debuglog(debuglevel, 2, "Warning: Found only %d of %d Users, ignoring non existing users", listVP.length, listVPid.length);
+				return res.status(403).send({
+					state: 'failure',
+					message: 'Not all Projects exists or User has permission to',
+					list: listVP
+				});
+			}
+			// MS TODO Check that the sort lists only contain projects from the arrayList, if not return error
+
+			// Copy the items to the newPortfolio
+			for (var i = 0; i < req.body.allItems.length; i++) {
+				// get the item, overwrite Project name with correct name
+				req.body.allItems[i].name = listVP.find(findVPList, req.body.allItems[i].vpid).name;
+				newPortfolio.allItems.push(req.body.allItems[i]);
+			}
+			debuglog(debuglevel, 9, "Replaced in List (%d) correct VP Names %s", newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
+			newPortfolio.sortType = req.body.sortType;
+			newPortfolio.sortList = req.body.sortList;
+			newPortfolio.lastCustomList = req.body.lastCustomList;
+
+			newPortfolio.save(function(err, onePortfolio) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Portfolio',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Created Visbo Portfolio Version',
+					vpf: [onePortfolio]
+				});
 			});
 		});
 	})

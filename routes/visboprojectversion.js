@@ -182,7 +182,7 @@ router.route('/')
 	 * @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
 	 * @apiError Duplicate VisboProjectVersion does already exist HTTP 409
 	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
-	 * @apiPermission user must be authenticated and user must have permission to create a VP (MS Todo)
+	 * @apiPermission user must be authenticated and user must have permission to create a VP
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiExample Example usage:
 	 *   url: http://localhost:3484/vpv
@@ -424,7 +424,7 @@ router.route('/')
 				}
 			}
 		}
-		// MS TODO Improve the Check that the User can delete his variant
+		// MS TODO Improve the Check that the User can delete his variant or delete also items related to this variant (versions, portfolios)
 		if (!req.oneVPisAdmin) {
 			return res.status(403).send({
 				state: 'failure',

@@ -68,7 +68,7 @@ var debuglevel = 9;
 router.route('/user/login')
 	.post(function(req, res) {
 		debuglog(debuglevel, 8, "Try to Login %s", req.body.email);
-		debuglog(debuglevel, 9, "Try to Login %O", req.body);
+		// debuglog(debuglevel, 9, "Try to Login %O", req.body); contains password
 		if (!req.body.email || !req.body.password){
 			return res.status(400).send({
 				state: "failure",
@@ -90,6 +90,7 @@ router.route('/user/login')
 					message: "email not registered"
 				});
 			}
+
 			if (!isValidPassword(user, req.body.password)) {
 				return res.status(401).send({
 					state: "failure",
@@ -98,16 +99,19 @@ router.route('/user/login')
 			}
 			debuglog(debuglevel, 8, "Try to Login %s username&password accepted", req.body.email);
 			user.password = undefined;
-			jwt.sign(user, jwtSecret.user.secret,
+			jwt.sign(user.toJSON(), jwtSecret.user.secret,
 				{ expiresIn: jwtSecret.user.expiresIn },
 				function(err, token) {
+					debuglog(debuglevel, 8, "JWT Signing %s ", err);
 					if (err) {
+						debuglog(debuglevel, 8, "JWT Signing error %s ", err);
 						return res.status(500)({
 							state: "failure",
 							message: "token generation failed",
 							error: err
 						});
 					}
+					debuglog(debuglevel, 8, "JWT Signing Success %s ", err);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully logged in",
@@ -150,7 +154,7 @@ router.route('/user/forgottenpw')
 			}
 		user.password = undefined;		// MS Todo: clear before send wrong place
 		debuglog(debuglevel, 8, "Requested Password Reset through e-Mail %s with pw", user.email);
-		jwt.sign(user, jwtSecret.user.secret,
+		jwt.sign(user.toJSON(), jwtSecret.user.secret,
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
 				if (err) {
