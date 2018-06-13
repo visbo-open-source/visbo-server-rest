@@ -63,6 +63,8 @@ router.route('/')
 	* @apiDescription GET /vp retruns all VP the user has access permission to
 	* In case of success it delivers an array of VPs, the array contains in each element a VP
 	* the lock section is empty if no lock is set
+	* the variant section is empty if there are no variants for this Project
+	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
 	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiParam {String} vcid Deliver only projects for this Visbo Center
 	* @apiPermission user must be authenticated
@@ -85,6 +87,7 @@ router.route('/')
 	*      "name":"My new VisboProject",
 	*      "vcid": "vc5aaf992",
 	*      "vpvCount": "0",
+	*      "vpType": "1",
 	*      "users":[
 	*       {
 	*        "email":"example1@visbo.de",
@@ -193,6 +196,7 @@ router.route('/')
 	 *   "_id":"vp5aaf882",
 	 *   "vcid": "vc5aaf992",
 	 *   "vpvCount": "0",
+	 *   "vpType": "1",
 	 *   "users":[
 	 *    {
 	 *     "userID": "us5aaf992",
@@ -381,6 +385,7 @@ router.route('/:vpid')
  	*    "name":"My new Visbo Project",
 	*		 "vcid": "vc5aaf992",
 	*    "vpvCount": "0",
+	*    "vpType": "1",
  	*    "users":[
  	*     {
  	*      "email":"example1@visbo.de",
@@ -452,6 +457,7 @@ router.route('/:vpid')
 	 *   "_id":"vp5cf3da025",
 	 *   "vcid": "vc5aaf992",
 	 *   "vpvCount": "0",
+	 *   "vpType": "1",
 	 *   "users":[
 	 *    {
 	 *     "userId":"us5aaf992"
@@ -892,7 +898,8 @@ router.route('/:vpid/variant')
  	 *      "updatedAt":"2018-03-16T12:39:54.042Z",
  	 *      "createdAt":"2018-03-12T09:54:56.411Z",
  	 *      "name":"My new VisboProject",
- 	 *      "vcid": "vc5aaf992"
+ 	 *      "vcid": "vc5aaf992",
+	 *      "vpType": "1",
  	 *      "users":[
  	 *       {
  	 *        "email":"example1@visbo.de",
