@@ -266,7 +266,12 @@ router.route('/')
 				var newVP = new VisboProject;
 				newVP.name = req.body.name;
 				newVP.vcid = vcid;
-				newVP.portfolio = req.body.portfolio == undefined ? false: true;
+				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
+					newVP.vpType = 1;
+				} else {
+					newVP.vpType = req.body.vpType;
+				}
+
 				newVP.vpvCount = 0;
 				var i;
 				var vpUsers = new Array();
@@ -1145,8 +1150,7 @@ router.route('/:vpid/portfolio')
 	*      "reasonToExclude" : "Description Text"
 	*    }],
 	*   "sortType": "1",
-	*   "sortList": "internal Object",
-	*   "lastCustomList": "internal Object"
+	*   "sortList": "internal Object"
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -1170,8 +1174,7 @@ router.route('/:vpid/portfolio')
 	*        "reasonToInclude" : "Description Text"
 	*      }],
 	*      "sortType": "1",
-	*      "sortList": "internal Object",
-	*      "lastCustomList": "internal Object"
+	*      "sortList": "internal Object"
 	*    }]
 	*  }
 	*/
@@ -1206,7 +1209,7 @@ router.route('/:vpid/portfolio')
 				vp: [req.oneVP]
 			});
 		}
-		if (req.oneVP.portfolio != true) {
+		if (req.oneVP.vpType != 2) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Project is not a Portfolio Project',
@@ -1257,7 +1260,6 @@ router.route('/:vpid/portfolio')
 			debuglog(debuglevel, 9, "Replaced in List (%d) correct VP Names %s", newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
 			newPortfolio.sortType = req.body.sortType;
 			newPortfolio.sortList = req.body.sortList;
-			newPortfolio.lastCustomList = req.body.lastCustomList;
 
 			newPortfolio.save(function(err, onePortfolio) {
 				if (err) {

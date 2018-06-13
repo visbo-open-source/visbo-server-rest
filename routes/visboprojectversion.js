@@ -408,15 +408,15 @@ router.route('/')
 	*   "message":"Deleted Visbo Project Version"
 	* }
 	*/
+	// delete a Visbo Project Version
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
 
+		debuglog(debuglevel, 9, "DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVPV.name, req.oneVPV.variantName);
 		var variantExists = false;
-		if (variantName == "") {
-			variantExists = true
-		} else {
+		if (variantName != "") {
 			for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
 				if (req.oneVP.variant[variantIndex].variantName == variantName && (req.oneVP.variant[variantIndex].email != useremail || req.oneVPisAdmin == false)) {
 					variantExists = true;
@@ -424,7 +424,7 @@ router.route('/')
 				}
 			}
 		}
-		// MS TODO Improve the Check that the User can delete his variant or delete also items related to this variant (versions, portfolios)
+		// MS TODO Improve the Check that the User can delete his variant
 		if (!req.oneVPisAdmin) {
 			return res.status(403).send({
 				state: 'failure',
@@ -452,7 +452,7 @@ router.route('/')
 			}
 			if (variantName == "") {
 				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 0 : req.oneVP.vpvCount - 1;
-			} else {
+			} else if (variantExists) {
 				req.oneVP.variant[variantIndex].vpvCount -= 1;
 			}
 

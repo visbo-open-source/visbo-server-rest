@@ -8,7 +8,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 
 var logging = require('./../components/logging');
 
-var debuglevel = 9;
+var debuglevel = 1;
 
 function visboAudit(tokens, req, res) {
 	if (tokens.method(req, res) == "GET") {
