@@ -172,6 +172,7 @@ router.route('/')
 	 * {
 	 *  "name":"My first Visbo Project",
 	 *  "vcid": "vc5aaf992",
+	 *  "vpType": "1",
 	 *  "users":[
 	 *   {
 	 *    "email":"example1@visbo.de",
