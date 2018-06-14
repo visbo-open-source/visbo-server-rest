@@ -30,7 +30,11 @@ var visboProjectSchema = new mongoose.Schema({
 	},
 	vpvCount: { type: Number, reuqired: true },
 	variant: [{type: variantSchema, required: false}],
-	lock: [{type: lockSchema, required: false}]
+	lock: [{type: lockSchema, required: false}],
+	deleted: {
+		deletedAt: {type: Date, required: false },
+		byParent: {type: Boolean}
+	}
 });
 // Set Creation and modification date automatically
 visboProjectSchema.set('timestamps', true);

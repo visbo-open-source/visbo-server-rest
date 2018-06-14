@@ -74,6 +74,7 @@ router.route('/')
 	*   }]
 	* }
 	*/
+// Get Visbo Centers
 .get(function(req, res) {
 		// no need to check authentication, already done centrally
 		debuglog(debuglevel, 1, "Get Visbo Center decoded %s", JSON.stringify(req.decoded));
@@ -81,7 +82,7 @@ router.route('/')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "Get Visbo Center for user %s", useremail);
 
-		var queryVC = VisboCenter.find({'users.email': useremail});
+		var queryVC = VisboCenter.find({'users.email': useremail, deleted: {$exists: false}});
 		queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, listVC) {
 			if (err) {
@@ -294,6 +295,7 @@ router.route('/:vcid')
  	*   }]
  	* }
 	*/
+// Get a specific VC
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -358,6 +360,7 @@ router.route('/:vcid')
 	 *  }]
 	 * }
 	 */
+	 // Change Visbo Center
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -545,6 +548,7 @@ router.route('/:vcid')
   	*   "message":"Deleted Visbo Centers"
   	* }
  	  */
+	// Delete Visbo Center
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -556,9 +560,10 @@ router.route('/:vcid')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		debuglog(debuglevel, 1, "Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC._id);
-
-		req.oneVC.remove(function(err, empty) {
+		req.oneVC.deleted = {deletedAt: Date(), byParent: false }
+		debuglog(debuglevel, 1, "Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+		req.oneVC.save(function(err, oneVC) {
+		// req.oneVC.remove(function(err, empty) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -566,6 +571,7 @@ router.route('/:vcid')
 					error: err
 				});
 			}
+			req.oneVC = oneVC;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Deleted Visbo Center'
@@ -591,7 +597,7 @@ router.route('/:vcid/role')
 	* HTTP/1.1 200 OK
 	* {
 	*   "state":"success",
-	*   "message":"Returned Visbo Project Versions",
+	*   "message":"Returned Visbo Project Roles",
 	*   "vcrole":[{
 	*     "_id":"vcrole5c754feaa",
 	*     "name":"Role Name",
@@ -601,6 +607,7 @@ router.route('/:vcid/role')
 	*   }]
 	* }
 	*/
+	// Get VC Roles
 	.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
@@ -751,6 +758,7 @@ router.route('/:vcid/role/:roleid')
 	*   "message":"Visbo Center Role deleted"
 	* }
 	*/
+	// Delete Visbo Center Role
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -831,6 +839,7 @@ router.route('/:vcid/role/:roleid')
 	*   }]
 	* }
 	*/
+	// Change Role
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -906,7 +915,7 @@ router.route('/:vcid/cost')
 	* HTTP/1.1 200 OK
 	* {
 	*   "state":"success",
-	*   "message":"Returned Visbo Project Versions",
+	*   "message":"Returned Visbo Center Costs",
 	*   "vccost":[{
 	*     "_id":"vccost5c754feaa",
 	*     "name":"Cost Name",
@@ -917,6 +926,7 @@ router.route('/:vcid/cost')
 	*   }]
 	* }
 	*/
+	// get VC Costs
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1039,6 +1049,7 @@ router.route('/:vcid/cost')
 		*   "message":"Visbo Center Cost deleted"
 		* }
 		*/
+		// Delete Visbo Center Cost
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
@@ -1119,6 +1130,7 @@ router.route('/:vcid/cost')
 	*   }]
 	* }
 	*/
+	// chnage cost
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;

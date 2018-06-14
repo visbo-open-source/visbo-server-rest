@@ -72,6 +72,10 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 100},
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
 	variantName: { type: String, required: false, maxlength: 100},
+	deleted: {
+		deletedAt: {type: Date, required: false },
+		byParent: {type: Boolean}
+	},
 	variantDescription: { type: String, required: false, maxlength: 500},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},

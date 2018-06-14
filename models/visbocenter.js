@@ -8,7 +8,11 @@ var visboCenterSchema = new mongoose.Schema({
 		email: {type: String, required: true},
 		role: {type: String, required: false}
 	}],
-	vpCount: { type: Number, reuqired: false }
+	vpCount: { type: Number, reuqired: false },
+	deleted: {
+		deletedAt: {type: Date, required: false },
+		byParent: {type: Boolean}
+	}
 });
 // Set Creation and modification date automatically
 visboCenterSchema.set('timestamps', true);
