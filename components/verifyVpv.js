@@ -16,8 +16,11 @@ function verifyVpv(req, res, next) {
 	var useremail = req.decoded.email;
 
 	debuglog(debuglevel, 8, "Verify access permission for VisboProjectVersion %s to User %s ", vpvid, useremail);
+	var query = {};
+	query._id = vpvid;
+	query.deleted =  {$exists: false}};				// Not deleted
 
-	var queryVPV = VisboProjectVersion.findOne({'_id':vpvid});
+	var queryVPV = VisboProjectVersion.findOne(query);
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
 			return res.status(500).send({
@@ -34,7 +37,10 @@ function verifyVpv(req, res, next) {
 		}
 		req.oneVPV = oneVPV
 
-		var queryVP = VisboProject.findOne({'_id':oneVPV.vpid, 'users.email': useremail});
+		var query = {'users.email': useremail}		// Permission for User
+		query._id = oneVPV.vpid;									//restricted to the specific project
+		query.deleted =  {$exists: false}};				// Not deleted
+		var queryVP = VisboProject.findOne(query);
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
 				return res.status(500).send({

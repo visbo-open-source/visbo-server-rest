@@ -82,7 +82,10 @@ router.route('/')
 		var useremail = req.decoded.email;
 		debuglog(debuglevel, 1, "Get Visbo Center for user %s", useremail);
 
-		var queryVC = VisboCenter.find({'users.email': useremail, deleted: {$exists: false}});
+		var query = {'users.email': useremail};
+		query.deleted = {$exists: false};
+
+		var queryVC = VisboCenter.find(query);
 		queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, listVC) {
 			if (err) {
@@ -166,7 +169,10 @@ router.route('/')
 	 debuglog(debuglevel, 5, "Post a new Visbo Center with name %s executed by user %s ", req.body.name, useremail);
 
 	 // check that VC name is unique
-	 VisboCenter.findOne({ "name": req.body.name }, function(err, vc) {
+	 var query = {};
+	 query.name = req.body.name;								// name Duplicate check
+	 query.deleted =  {$exists: false}};				// Not deleted
+	 VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
 				return res.status(500).send({
 					state: "failure",
@@ -771,7 +777,10 @@ router.route('/:vcid/role/:roleid')
 			});
 		}
 		debuglog(debuglevel, 1, "Delete Visbo Center Role after premission check %s", req.params.vcid);
-		var queryVCRole = VCRole.findOne({'_id': req.params.roleid, 'vcid': req.params.vcid});
+		var query = {};
+		query._id = req.params.roleid;
+		query.vcid = req.params.vcid;
+		var queryVCRole = VCRole.findOne(query);
 		// queryVCRole.select('_id vcid name');
 		queryVCRole.exec(function (err, oneVCRole) {
 			if (err) {
@@ -852,7 +861,11 @@ router.route('/:vcid/role/:roleid')
 			});
 		}
 		debuglog(debuglevel, 1, "Update Visbo Center Role after premission check %s", req.params.vcid);
-		var queryVCRole = VCRole.findOne({'_id': req.params.roleid, 'vcid': req.params.vcid});
+		var query = {};
+		query._id = req.params.roleid;
+		query.vcid = req.params.vcid;
+
+		var queryVCRole = VCRole.findOne(query);
 		// queryVCRole.select('_id vcid name');
 		queryVCRole.exec(function (err, oneVCRole) {
 			if (err) {
@@ -1062,7 +1075,10 @@ router.route('/:vcid/cost')
 				});
 			}
 			debuglog(debuglevel, 1, "Delete Visbo Center Cost after premission check %s", req.params.vcid);
-			var queryVCCost = VCCost.findOne({'_id': req.params.costid, 'vcid': req.params.vcid});
+			var query = {};
+			query._id = req.params.costid;
+			query.vcid = req.params.vcid;
+			var queryVCCost = VCCost.findOne(query);
 			// queryVCCost.select('_id vcid name');
 			queryVCCost.exec(function (err, oneVCCost) {
 				if (err) {
@@ -1143,7 +1159,10 @@ router.route('/:vcid/cost')
 			});
 		}
 		debuglog(debuglevel, 1, "Update Visbo Center Cost after premission check %s", req.params.vcid);
-		var queryVCCost = VCCost.findOne({'_id': req.params.costid, 'vcid': req.params.vcid});
+		var query = {};
+		query._id =  req.params.costid;
+		query.vcid = req.params.vcid;
+		var queryVCCost = VCCost.findOne(query);
 		// queryVCCost.select('_id vcid name');
 		queryVCCost.exec(function (err, oneVCCost) {
 			if (err) {

@@ -16,7 +16,10 @@ function verifyVc(req, res, next) {
 
 	debuglog(debuglevel, 8, "Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
 	// return next();
-	var queryVC = VisboCenter.findOne({'_id':vcid, 'users.email': useremail, deleted: {$exists: false}});
+	var query = {'users.email': useremail};		// Permission for User
+	query._id = vcid;
+	query.deleted =  {$exists: false}};				// Not deleted
+	var queryVC = VisboCenter.findOne(query);
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {

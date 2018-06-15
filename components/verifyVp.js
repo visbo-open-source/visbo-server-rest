@@ -16,8 +16,11 @@ function verifyVp(req, res, next) {
 
 	debuglog(debuglevel, 8, "Verify access permission for VisboProject %s to User %s ", vpid, useremail);
 	// return next();
-	var queryVP = VisboProject.findOne({'_id':vpid, 'users.email': useremail});
-	// queryVP.select('name users updatedAt createdAt');
+	var query = {'users.email': useremail}		// Permission for User
+	query._id = vpid;
+	query.deleted =  {$exists: false}};				// Not deleted
+
+	var queryVP = VisboProject.findOne(query);
 	queryVP.exec(function (err, oneVP) {
 		if (err) {
 			return res.status(500).send({

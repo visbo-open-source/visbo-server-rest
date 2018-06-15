@@ -120,13 +120,16 @@ router.route('/')
 	*  ]
 	* }
 	*/
+	// Get Visbo projects
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		debuglog(debuglevel,  1, "Get Project with query parameters");
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'users.email': useremail};
+		var query = {'users.email': useremail}		// Permission for User
+		query.deleted =  {$exists: false}};				// Not deleted
+
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
@@ -251,9 +254,11 @@ router.route('/')
 			req.oneVC = vc;
 			debuglog(debuglevel,  9, "User has permission to create Project %s in  %s", vpname, req.oneVC.name);
 			// check duplicate Name
-			VisboProject.findOne({'vcid': vcid,
-													'name': vpname
-												}, function (err, vp) {
+			var query = {};
+			query.vcid = vcid;
+			query.name = vpname;
+			query.deleted = {$exists: false};
+			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
@@ -410,6 +415,7 @@ router.route('/:vpid')
  	*   }]
  	* }
 	*/
+	// Get a specific visbo project
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -660,6 +666,7 @@ router.route('/:vpid')
 	*   "message":"Deleted Visbo Projects"
 	* }
 	*/
+	// Delete Visbo Project
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -671,7 +678,6 @@ router.route('/:vpid')
 				message: 'No Visbo Project or no Permission'
 			});
 		}
-		debuglog(debuglevel, 9, "Delete Visbo Project after perm check success %s %O", req.params.vpid, req.oneVP);
 		if (lock.lockedVP(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -679,7 +685,9 @@ router.route('/:vpid')
 				vp: [req.oneVP]
 			});
 		}
-		req.oneVP.remove(function(err, empty) {
+		req.oneVP.deleted = {deletedAt: Date(), byParent: false }
+		debuglog(debuglevel, 1, "Delete Visbo Project after premission check %s %s", req.params.vpid, req.oneVP.name);
+		req.oneVP.save(function(err, oneVP) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -687,6 +695,7 @@ router.route('/:vpid')
 					error: err
 				});
 			}
+			req.oneVP = oneVP;
 			var updateQuery = {"_id": req.oneVP.vcid};
 			var updateUpdate = {$inc: {"vpCount": -1 }};
 			var updateOption = {upsert: false};
@@ -826,6 +835,7 @@ router.route('/:vpid/lock')
 	*   "message":"Deleted Visbo Project Lock"
 	* }
 	*/
+// Delete Lock
 .delete(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
@@ -1004,6 +1014,7 @@ router.route('/:vpid/variant/:vid')
 		*   "vp": [vpList]
 		* }
 		*/
+	// Delete Project Variant
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1102,13 +1113,16 @@ router.route('/:vpid/portfolio')
 	*   }]
   * }
 	*/
+	// Get Portfolio Versions
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		debuglog(debuglevel,  1, "Get Portfolio Versions");
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'vpid': req.oneVP._id};
+		var query = {};
+		query.vpid = req.oneVP._id;
+		query.deleted = {$exists: false};
 		// check if query string is used to restrict to a specific VC
 		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
@@ -1327,13 +1341,17 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
+	// Get specific portfolio version
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		debuglog(debuglevel,  1, "Get Portfolio Versions");
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'_id': req.params.vpfid};
+		var query = {}
+		query._id = req.params.vpfid
+		query.vpid = req.oneVP._id;
+		query.deleted = {$exists: false};
 		// check if query string is used to restrict to a specific VC
 		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
@@ -1380,6 +1398,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   "vp": [vpList]
 	* }
 	*/
+	// Delete Portfolio Version
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1394,7 +1413,11 @@ router.route('/:vpid/portfolio/:vpfid')
 			});
 		}
 		debuglog(debuglevel, 9, "DELETE Visbo Portfolio in Project %s", req.oneVP.name);
-		var queryVPF = VisboPortfolio.findOne({'_id':vpfid});
+		var query = {};
+		query._id = vpfid;
+		query.vpid = req.oneVP._id;
+		query.deleted = {$exists: false};
+		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
 				return res.status(500).send({
@@ -1417,7 +1440,8 @@ router.route('/:vpid/portfolio/:vpfid')
 					vp: [req.oneVP]
 				});
 			}
-			oneVPF.remove(function(err, empty) {
+			oneVPF.deleted = {deletedAt: Date(), byParent: false }
+			oneVPF.save(function(err, oneVPF) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
@@ -1425,6 +1449,7 @@ router.route('/:vpid/portfolio/:vpfid')
 						error: err
 					});
 				}
+				req.oneVPF = oneVPF;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Deleted Visbo Portfolio'

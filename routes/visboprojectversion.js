@@ -79,6 +79,7 @@ router.route('/')
 	*   }]
 	* }
 	*/
+	// Get Visbo Project Versions
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -88,6 +89,8 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 		queryvpv.timestamp =  {$lt: nowDate };
+		queryvp.deleted = {$exists: false};
+		queryvpv.deleted = {$exists: false};
 		if (req.query) {
 			if (req.query.vpid) {
 				queryvp._id = req.query.vpid;
@@ -375,6 +378,7 @@ router.route('/')
  	*   }]
  	* }
 	*/
+	// Get a specific Visbo Project Version
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -442,7 +446,9 @@ router.route('/')
 		}
 		debuglog(debuglevel, 2, "Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
 		var variantName = req.oneVPV.variantName;
-		req.oneVPV.remove(function(err, empty) {
+
+		req.oneVPV.deleted = {deletedAt: Date(), byParent: false }
+		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -450,6 +456,7 @@ router.route('/')
 					error: err
 				});
 			}
+			req.oneVPV = oneVPV;
 			if (variantName == "") {
 				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 0 : req.oneVP.vpvCount - 1;
 			} else if (variantExists) {
