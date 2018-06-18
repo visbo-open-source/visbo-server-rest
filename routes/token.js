@@ -20,7 +20,6 @@ var isValidPassword = function(user, password){
 var createHash = function(password){
 	return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
 };
-var debuglevel = 1;
 
 /**
  * @api {post} /token/user/login User Login
@@ -67,8 +66,8 @@ var debuglevel = 1;
  */
 router.route('/user/login')
 	.post(function(req, res) {
-		debuglog(debuglevel, 8, "Try to Login %s", req.body.email);
-		// debuglog(debuglevel, 9, "Try to Login %O", req.body); contains password
+		debuglog("USER", 8, "Try to Login %s", req.body.email);
+		// debuglog("USER", 9, "Try to Login %O", req.body); contains password
 		if (!req.body.email || !req.body.password){
 			return res.status(400).send({
 				state: "failure",
@@ -97,21 +96,21 @@ router.route('/user/login')
 					message: "email or password mismatch"
 				});
 			}
-			debuglog(debuglevel, 8, "Try to Login %s username&password accepted", req.body.email);
+			debuglog("USER", 8, "Try to Login %s username&password accepted", req.body.email);
 			user.password = undefined;
 			jwt.sign(user.toJSON(), jwtSecret.user.secret,
 				{ expiresIn: jwtSecret.user.expiresIn },
 				function(err, token) {
-					debuglog(debuglevel, 8, "JWT Signing %s ", err);
+					debuglog("USER", 8, "JWT Signing %s ", err);
 					if (err) {
-						debuglog(debuglevel, 8, "JWT Signing error %s ", err);
+						debuglog("USER", 8, "JWT Signing error %s ", err);
 						return res.status(500)({
 							state: "failure",
 							message: "token generation failed",
 							error: err
 						});
 					}
-					debuglog(debuglevel, 8, "JWT Signing Success %s ", err);
+					debuglog("USER", 8, "JWT Signing Success %s ", err);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully logged in",
@@ -137,7 +136,7 @@ router.route('/user/login')
  */
 router.route('/user/forgottenpw')
 	.post(function(req, res) {
-		debuglog(debuglevel, 8, "Requested Password Reset through e-Mail %s", req.body.email);
+		debuglog("USER", 8, "Requested Password Reset through e-Mail %s", req.body.email);
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -153,7 +152,7 @@ router.route('/user/forgottenpw')
 				});
 			}
 		user.password = undefined;		// MS Todo: clear before send wrong place
-		debuglog(debuglevel, 8, "Requested Password Reset through e-Mail %s with pw", user.email);
+		debuglog("USER", 8, "Requested Password Reset through e-Mail %s with pw", user.email);
 		jwt.sign(user.toJSON(), jwtSecret.user.secret,
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
@@ -244,7 +243,7 @@ router.route('/user/forgottenpw')
   */
 router.route('/user/signup')
 	.post(function(req, res) {
-		debuglog(debuglevel, 8, "Signup Request for e-Mail %s", req.body.email);
+		debuglog("USER", 8, "Signup Request for e-Mail %s", req.body.email);
 		visbouser.findOne({ "email": req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -260,7 +259,7 @@ router.route('/user/signup')
 				});
 			}
 			var newUser = new visbouser();
-			debuglog(debuglevel, 8, "Signup Request newUser before init %O", newUser);
+			debuglog("USER", 8, "Signup Request newUser before init %O", newUser);
 			if (req.body.profile) {
 				newUser.profile.firstName = req.body.profile.firstName;
 				newUser.profile.lastName = req.body.profile.lastName;
@@ -275,12 +274,12 @@ router.route('/user/signup')
 				}
 			}
 			newUser.email = req.body.email;
-			debuglog(debuglevel, 8, "Signup Request newUser %O", newUser);
+			debuglog("USER", 8, "Signup Request newUser %O", newUser);
 			newUser.password = createHash(req.body.password);
 			newUser._id = undefined;	// is the reset required or does it guarantee uniqueness already?
 			newUser.save(function(err, user) {
 				if (err) {
-					debuglog(debuglevel, 8, "Signup Error %O", err);
+					debuglog("USER", 8, "Signup Error %O", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",

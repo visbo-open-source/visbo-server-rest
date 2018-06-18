@@ -1,5 +1,4 @@
 var logging = require('./../components/logging');
-var debuglevel = 9;
 
 // return the variant index for a given variantName, -1 if not found
 findVariant = function(vp, variantName) {
@@ -12,7 +11,7 @@ findVariant = function(vp, variantName) {
 			}
 		}
 	}
-	debuglog(8, "findVariant Variant :%s: not found", variantName);
+	debuglog("VP", 8, "findVariant Variant :%s: not found", variantName);
 	return -1;
 };
 
@@ -27,7 +26,7 @@ findVariantId = function(vp, variantId) {
 			}
 		}
 	}
-	debuglog(8, "findVariant Variant :%s: not found", variantId);
+	debuglog("VP", 8, "findVariant Variant :%s: not found", variantId);
 	return -1;
 };
 

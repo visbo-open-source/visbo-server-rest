@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 var VisboCenter = mongoose.model('VisboCenter');
 var logging = require('./../components/logging');
-var debuglevel = 0;
 
 // Verify Visbo Center and the role of the user
 function verifyVc(req, res, next) {
@@ -14,7 +13,7 @@ function verifyVc(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
-	debuglog(debuglevel, 8, "Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
+	debuglog("VC", 8, "Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
 	// return next();
 	var query = {'users.email': useremail};		// Permission for User
 	query._id = vcid;
@@ -42,7 +41,7 @@ function verifyVc(req, res, next) {
 				req.oneVCisAdmin = true;
 			}
 		}
-		debuglog(debuglevel, 1, "Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
+		debuglog("VC", 1, "Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
 		return next();
 	});
 }

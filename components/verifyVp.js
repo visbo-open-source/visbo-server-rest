@@ -2,7 +2,6 @@ var mongoose = require('mongoose');
 var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
 var logging = require('./../components/logging');
-var debuglevel = 8;
 
 // Verify Visbo Project and the role of the user
 function verifyVp(req, res, next) {
@@ -18,7 +17,7 @@ function verifyVp(req, res, next) {
 			query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
 		}
 		query.deleted =  {$exists: false};				// Not deleted
-		debuglog(debuglevel, 9, "Verify VP: %O ", query);
+		debuglog("VP", 9, "Verify VP: %O ", query);
 
 		var queryVC = VisboCenter.find(query);
 		queryVC.select('_id');
@@ -30,7 +29,7 @@ function verifyVp(req, res, next) {
 					error: err
 				});
 			};
-			debuglog(debuglevel,  5, "Found %d Visbo Centers", listVC.length);
+			debuglog("VP",  5, "Found %d Visbo Centers", listVC.length);
 			req.listVC = [];
 			for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
 			return next();
@@ -39,7 +38,7 @@ function verifyVp(req, res, next) {
 		// Check for URLs with a :vpid
 		var vpid = req.url.split('/')[1];
 
-		debuglog(debuglevel, 7, "Verify access permission for VisboProject %s to User %s ", vpid, useremail);
+		debuglog("VP", 7, "Verify access permission for VisboProject %s to User %s ", vpid, useremail);
 		var query = {'users.email': useremail}		// Permission for User
 		// var query = { $or: [ {'users.email': useremail}, { vpPublic: true } ] }		// Permission for User
 		query._id = vpid;
@@ -62,7 +61,7 @@ function verifyVp(req, res, next) {
 						req.oneVPisAdmin = true;
 					}
 				}
-				debuglog(debuglevel, 5, "Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
+				debuglog("VP", 5, "Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
 				return next();
 			} else {
 				// Check for Public VP Access in case of GET only, because other operations reuqire admin Access
@@ -79,7 +78,7 @@ function verifyVp(req, res, next) {
 							error: err
 						});
 					}
-					debuglog(debuglevel, 7, "Verify public Access to VP %s %s ", vpid, useremail);
+					debuglog("VP", 7, "Verify public Access to VP %s %s ", vpid, useremail);
 					if (!oneVP) {
 						return res.status(403).send({
 							state: 'failure',

@@ -10,8 +10,6 @@ var User = mongoose.model('User');
 //Register the authentication middleware
 router.use('/profile', auth.verifyUser);
 
-var debuglevel = 5;
-
 /////////////////
 // Profile API
 // /profile
@@ -61,7 +59,7 @@ router.route('/profile')
 	 *}
    */
 	.get(function(req, res) {
-		debuglog(debuglevel, 1, "Get Profile ");
+		debuglog("USER", 1, "Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				return res.status(500).send({

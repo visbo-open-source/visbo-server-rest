@@ -1,6 +1,23 @@
 var moment = require('moment');
+var configDebug = undefined;
 
-debuglog = function(maxlevel, level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
+debuglog = function(deflevel, level, logstring, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
+	var maxlevel = 9;
+	var label = "All";
+	if ( configDebug == undefined ) {
+		if (process.env.DEBUG != undefined) {
+			configDebug = JSON.parse(debugstring);
+		} else {
+			configDebug = {"VC": "0", "VP": "0", "VPV": "0", "USER":"0", "OTHER": "0", "All": "0"}
+		}
+	}
+	if (typeof deflevel != "number" ) {
+		maxlevel = Number(configDebug[deflevel]);
+		label = deflevel
+		// console.log("LOGGING NEW LEVEL ".concat("newlevel "), maxlevel, typeof maxlevel );
+	} else
+		maxlevel = deflevel
+
 	if (level <= maxlevel ){
 		if (arg1 == undefined) arg1 = '';
 		if (arg2 == undefined) arg2 = '';
@@ -11,7 +28,7 @@ debuglog = function(maxlevel, level, logstring, arg1, arg2, arg3, arg4, arg5, ar
 		if (arg7 == undefined) arg7 = '';
 		if (arg8 == undefined) arg8 = '';
 		if (arg9 == undefined) arg9 = '';
-		console.log("%s: Level%d ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss:SSS'), level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+		console.log("%s: %s-Level%d ".concat(logstring), moment().format('YYYY-MM-DD HH:mm:ss:SSS'), label, level, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 	}
 };
 

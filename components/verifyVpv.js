@@ -2,7 +2,6 @@ var mongoose = require('mongoose');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var logging = require('./../components/logging');
-var debuglevel = 9;
 
 // Verify Visbo Project and the role of the user
 function verifyVpv(req, res, next) {
@@ -15,7 +14,7 @@ function verifyVpv(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
-	debuglog(debuglevel, 8, "Verify access permission for VisboProjectVersion %s to User %s ", vpvid, useremail);
+	debuglog("VPV", 8, "Verify access permission for VisboProjectVersion %s to User %s ", vpvid, useremail);
 	var query = {};
 	query._id = vpvid;
 	query.deleted =  {$exists: false};				// Not deleted
@@ -62,7 +61,7 @@ function verifyVpv(req, res, next) {
 					req.oneVPisAdmin = true;
 				}
 			}
-			debuglog(debuglevel, 1, "Found VisboProjectVersion %s Admin Access %s", vpvid, req.oneVPisAdmin);
+			debuglog("VPV", 1, "Found VisboProjectVersion %s Admin Access %s", vpvid, req.oneVPisAdmin);
 			return next();
 		});
 	});

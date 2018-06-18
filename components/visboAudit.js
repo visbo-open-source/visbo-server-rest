@@ -8,8 +8,6 @@ var VisboAudit = mongoose.model('VisboAudit');
 
 var logging = require('./../components/logging');
 
-var debuglevel = 1;
-
 function visboAudit(tokens, req, res) {
 	if (tokens.method(req, res) == "GET") {
 		return;
@@ -44,11 +42,11 @@ function visboAudit(tokens, req, res) {
 	auditEntry.result.status = tokens.status(req, res);
 	auditEntry.save(function(err, auditEntryResult) {
 		if (err) {
-			debuglog(debuglevel, 0, "VisboAudit failed to save");
+			debuglog("OTHER", 0, "VisboAudit failed to save");
 		}
 	});
 
-	debuglog(debuglevel, 8, "VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
+	debuglog("OTHER", 9, "VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
 }
 
 module.exports = {

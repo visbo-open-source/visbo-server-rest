@@ -1,5 +1,4 @@
 var logging = require('./../components/logging');
-var debuglevel = 9;
 
 // check if Visbo Project has a valid lock
 lockedVP = function(vp, useremail, variantName) {
@@ -27,12 +26,12 @@ lockedVP = function(vp, useremail, variantName) {
 lockCleanupVP = function(listLock) {
 	var listLockNew = [];
 	var dateNow = new Date();
-	debuglog(debuglevel, 9, "lock CleanUP expired locks from list %d ", listLock.length);
+	debuglog("VP", 9, "lock CleanUP expired locks from list %d ", listLock.length);
 	for (var i = 0; i < listLock.length; i++) {
 		if (listLock[i].expiresAt >=  dateNow ){			// the lock is still valid
 			listLockNew.push(listLock[i]) 							// keep the lock
 		} else {
-			debuglog(debuglevel, 9, "POST Lock check lock %O expired %s", listLock[i], dateNow);
+			debuglog("VP", 9, "POST Lock check lock %O expired %s", listLock[i], dateNow);
 		}
 	}
 	return listLockNew;
