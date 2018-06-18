@@ -1,9 +1,14 @@
 var mongoose = require('mongoose');
 var VisboCenter = mongoose.model('VisboCenter');
+
 var logging = require('./../components/logging');
+var logModule = "VC";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
 
 // Verify Visbo Center and the role of the user
 function verifyVc(req, res, next) {
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	if (req.url == '/') {
 		// no common check here, special check done in code afterwards
@@ -13,7 +18,7 @@ function verifyVc(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
-	debuglog("VC", 8, "Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
+	logger4js.debug("Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
 	// return next();
 	var query = {'users.email': useremail};		// Permission for User
 	query._id = vcid;
@@ -41,7 +46,7 @@ function verifyVc(req, res, next) {
 				req.oneVCisAdmin = true;
 			}
 		}
-		debuglog("VC", 1, "Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
+		logger4js.debug("Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
 		return next();
 	});
 }

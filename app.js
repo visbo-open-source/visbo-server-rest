@@ -8,6 +8,9 @@ var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
+var log4js = require('log4js');
+var logger4js = log4js.getLogger("OTHER");
+var logger4jsRest = log4js.getLogger("REST");
 
 //initialize mongoose schemas
 require('./models/users');
@@ -67,20 +70,20 @@ function delayString(seconds) {
   return str;
 }
 function dbConnect(dbconnection) {
-  console.log('%s: Connecting database %s', moment().format('YYYY-MM-DD HH:mm:ss:SSS'), dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+  logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
   mongoose.connect(
     // Replace CONNECTION_URI with your connection uri
     dbconnection,
     dbOptions
   ).then(function() {
     //mongoose.set('debug', true);
-    console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:ss:SSS'));
+    logger4js.mark('Server is fully functional DB Connected');
   }, function(err) {
-    console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:ss'), err);
+    logger4js.fatal('Database connection failed: %O', err);
 
     reconnectTries++;
-    console.log('%s: Reconnecting after '+delayString(trialDelay), moment().format('YYYY-MM-DD HH:mm:ss'));
-    console.log('%s: Reconnect trial: '+reconnectTries, moment().format('YYYY-MM-DD HH:mm:ss'));
+    logger4js.fatal('Reconnecting after '+delayString(trialDelay));
+    logger4js.fatal('Reconnect trial: '+reconnectTries);
     delay(trialDelay*1000).then(function() {
       trialDelay += trialDelay;
       if (trialDelay>7200) trialDelay = 7200;
@@ -103,7 +106,7 @@ var whitelist = [
 // MS Todo: check where Corsoptions is called with undefined
 var corsOptions = {
   origin: function (origin, callback) {
-    //console.log("%s Check CorsOptions %s", moment().format('YYYY-MM-DD HH:mm:ss'), origin);
+    //logger4js.fatal("Check CorsOptions %s", origin);
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
@@ -114,12 +117,35 @@ var corsOptions = {
 }
 // setup environment variables
 environment.config();
-console.log("%s: Starting in Environment %s", moment().format('YYYY-MM-DD HH:mm:ss'), process.env.NODE_ENV);
 
 // start express app
 var app = express();
+// configure log4js
+var fsLogPath = __dirname + '/logging';
+if (process.env.LOGPATH != undefined) {
+  fsLogPath = process.env.LOGPATH;
+}
 
-// console.log("Body Size Limit %d", app.Limit);		// MS Log
+log4js.configure({
+  appenders: {
+    out: { type: 'stdout' },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 1024, backups: 3 },
+    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', keepFileExt: true, daysToKeep: 30 },
+    'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
+    'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
+  },
+  categories: {
+    default: { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
+  }
+});
+logger4js.level = 'info';
+
+logger4js.warn("LogPath %s", fsLogPath)
+logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -134,10 +160,8 @@ app.use(cors(corsOptions));
 // define the log entry for processing pages
 //app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  // console.log("LOGGER");
   visboAudit.visboAudit(tokens, req, res);
-  return [
-    moment().format('YYYY-MM-DD HH:mm:ss:SSS:'),
+  var webLog = [
     tokens.method(req, res),
     // 'base url', req.baseUrl,
     //'Url', req.originalUrl,
@@ -148,7 +172,10 @@ app.use(logger(function (tokens, req, res) {
     req.ip,
     req.get('User-Agent'),
     ''
-  ].join(' ')
+  ].join(' ');
+  logger4jsRest.info(webLog);
+  webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  return webLog
 }));
 
 dbConnect(process.env.NODE_VISBODB);
@@ -175,7 +202,7 @@ app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
 // simple logger for this router's requests
 // all requests to this router will first hit this middleware
 // app.use(function(req, res, next) {
-//   console.log('%s: Method %s %s', moment().format('YYYY-MM-DD HH:mm:ss'), req.method, req.url);
+//   logger4js.trace('Method %s %s', req.method, req.url);
 //   next();
 // });
 
@@ -196,7 +223,7 @@ app.use('/vpv', vpv);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  console.log("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
+  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
   err.status = 404;
   res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
   //next(err);

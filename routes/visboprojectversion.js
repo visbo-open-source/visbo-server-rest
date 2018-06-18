@@ -7,13 +7,16 @@ var auth = require('./../components/auth');
 var lock = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
-var logging = require('./../components/logging');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
-var moment = require('moment');
+
+var logging = require('./../components/logging');
+var logModule = "VPV";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -81,6 +84,8 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
 		var queryvpv = {};
 		var latestOnly = true; 	// as default show latest only project version of all projects
@@ -100,14 +105,14 @@ router.route('/')
 				latestOnly = true;
 			}
 			if (req.query.variantName != undefined){
-				debuglog("VPV", 9, "Variant Query String :%s:", req.query.variantName);
+				logger4js.debug("Variant Query String :%s:", req.query.variantName);
 				queryvpv.variantName = req.query.variantName
 			}
 			if (req.query.longList != undefined){ // user can specify to get the long list with all details for a project version
 				longList = true;
 			}
 		}
-		debuglog("VPV", 1, "Get Project Versions for user %s with VP %s/%s, timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.variantName, queryvpv.timestamp, latestOnly);
+		logger4js.info("Get Project Versions for user %s with VP %s/%s, timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 		var queryVP = VisboProject.find(queryvp)
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
@@ -118,15 +123,15 @@ router.route('/')
 					error: err
 				});
 			};
-			debuglog("VPV", 5, "Filter ProjectVersions to %s Projects", listVP.length);
+			logger4js.debug("Filter ProjectVersions to %s Projects", listVP.length);
 			var vpArray = [];
 			var vp;
 			for (vp in listVP) {
 				vpArray.push(listVP[vp]._id);
 			}
-			debuglog("VPV", 9, "Filter Projects %O", vpArray);
+			logger4js.trace("Filter Projects %O", vpArray);
 			queryvpv.vpid = {$in: vpArray};
-			debuglog("VPV", 7, "VPV query string %s", JSON.stringify(queryvpv));
+			logger4js.debug("VPV query string %s", JSON.stringify(queryvpv));
 			var queryVPV = VisboProjectVersion.find(queryvpv);
 			if (!longList) {
 				// deliver only the short info about project versions
@@ -141,21 +146,21 @@ router.route('/')
 						error: err
 					});
 				};
-				debuglog("VPV", 2, "Found %d Project Versions", listVPV.length);
+				logger4js.debug("Found %d Project Versions", listVPV.length);
 				// if latestonly, reduce the list and deliver only the latest version of each project and variant
 				if (listVPV.length > 1 && latestOnly){
 					var listVPVfiltered = [];
 					listVPVfiltered.push(listVPV[0]);
 					for (let i = 1; i < listVPV.length; i++){
 						//compare current item with previous and ignore if it is the same vpid & variantname
-						debuglog("VPV", 9, "compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+						logger4js.debug("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
 						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
 							listVPVfiltered.push(listVPV[i])
-							debuglog("VPV", 9, "compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+							logger4js.debug("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 						}
 					}
-					debuglog("VPV", 2, "Found %d Project Versions after Filtering", listVPVfiltered.length);
+					logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Versions',
@@ -211,11 +216,13 @@ router.route('/')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		var vpid = req.body.vpid || 0;
 		var variantName = req.body.variantName || "";
 		var variantIndex = -1;
 
-		debuglog("VPV", 1, "Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);
 		var newVPV = new VisboProjectVersion();
 		// check that vpid ist set and exists and user has Admin permission
 		if (!vpid) {
@@ -270,7 +277,7 @@ router.route('/')
 					vp: [req.oneVP]
 				});
 			}
-			debuglog("VPV", 5, "User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
+			logger4js.debug("User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 
 			// keep unchangable attributes
 			newVPV.name = oneVP.name;
@@ -310,7 +317,7 @@ router.route('/')
 			newVPV.description = req.body.description;
 			newVPV.businessUnit = req.body.businessUnit;
 
-			debuglog("VPV", 5, "Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
+			logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 			newVPV.save(function(err, oneVPV) {
 				if (err) {
 					return res.status(500).send({
@@ -326,10 +333,10 @@ router.route('/')
 				} else {
 					req.oneVP.variant[variantIndex].vpvCount += 1;
 				}
-				debuglog("VPV",  5, "Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
+				logger4js.debug("Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
 				req.oneVP.save(function(err, vp) {
 					if (err) {
-						debuglog("VPV",  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
+						logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update Visbo Project",
@@ -381,8 +388,9 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		debuglog("VPV", 1, "Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
+		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Project Version',
@@ -415,9 +423,11 @@ router.route('/')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		debuglog("VPV", 1, "DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		debuglog("VPV", 9, "DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVPV.name, req.oneVPV.variantName);
+		logger4js.info("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
+
+		logger4js.debug("DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVPV.name, req.oneVPV.variantName);
 		var variantExists = false;
 		if (variantName != "") {
 			for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
@@ -443,7 +453,7 @@ router.route('/')
 				vp: [req.oneVP]
 			});
 		}
-		debuglog("VPV", 2, "Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
+		logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
 		var variantName = req.oneVPV.variantName;
 
 		req.oneVPV.deleted = {deletedAt: Date(), byParent: false }
@@ -464,7 +474,7 @@ router.route('/')
 
 			req.oneVP.save(function(err, vp) {
 				if (err) {
-					debuglog("VPV",  5, "Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
+					logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to update Visbo Project",

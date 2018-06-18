@@ -1,10 +1,16 @@
 var mongoose = require('mongoose');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
+
 var logging = require('./../components/logging');
+var logModule = "VPV";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
 
 // Verify Visbo Project and the role of the user
 function verifyVpv(req, res, next) {
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 	// get the url and ignore the query parameters
 	if (req.url.split("?")[0] == '/') {
 		// no common check here for GET & POST, special check done in code afterwards
@@ -14,7 +20,7 @@ function verifyVpv(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
-	debuglog("VPV", 8, "Verify access permission for VisboProjectVersion %s to User %s ", vpvid, useremail);
+	logger4js.debug("Verify access permission for VisboProjectVersion %s to User %s ", vpvid, useremail);
 	var query = {};
 	query._id = vpvid;
 	query.deleted =  {$exists: false};				// Not deleted
@@ -61,7 +67,7 @@ function verifyVpv(req, res, next) {
 					req.oneVPisAdmin = true;
 				}
 			}
-			debuglog("VPV", 1, "Found VisboProjectVersion %s Admin Access %s", vpvid, req.oneVPisAdmin);
+			logger4js.debug("Found VisboProjectVersion %s Admin Access %s", vpvid, req.oneVPisAdmin);
 			return next();
 		});
 	});

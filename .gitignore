@@ -1,10 +1,9 @@
 node_modules/
 bin/
 apidoc/
-npm-debug.log
 .DS_Store
 public/ui/
 .env
-.env
+logging/
 .env
 .env

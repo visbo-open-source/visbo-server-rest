@@ -4,8 +4,12 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
-var logging = require('./../components/logging');
 var User = mongoose.model('User');
+
+var logging = require('./../components/logging');
+var logModule = "USER";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware
 router.use('/profile', auth.verifyUser);
@@ -59,7 +63,9 @@ router.route('/profile')
 	 *}
    */
 	.get(function(req, res) {
-		debuglog("USER", 1, "Get Profile ");
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -129,6 +135,9 @@ router.route('/profile')
 	 * }
 	 */
 	.put(function(req, res) {
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				return res.status(500).send({

@@ -1,12 +1,18 @@
 var mongoose = require('mongoose');
 var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
+
 var logging = require('./../components/logging');
+var logModule = "VP";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
 
 // Verify Visbo Project and the role of the user
 function verifyVp(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 	// check for GET & POST and ignore the query parameters
 	if (req.url.split("?")[0] == '/') {
 		// collect the VCs the user has access to, to evaluate the publ VP Access
@@ -17,7 +23,7 @@ function verifyVp(req, res, next) {
 			query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
 		}
 		query.deleted =  {$exists: false};				// Not deleted
-		debuglog("VP", 9, "Verify VP: %O ", query);
+		logger4js.debug("Verify VP: %O ", query);
 
 		var queryVC = VisboCenter.find(query);
 		queryVC.select('_id');
@@ -29,7 +35,7 @@ function verifyVp(req, res, next) {
 					error: err
 				});
 			};
-			debuglog("VP",  5, "Found %d Visbo Centers", listVC.length);
+			logger4js.debug("Found %d Visbo Centers", listVC.length);
 			req.listVC = [];
 			for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
 			return next();
@@ -38,7 +44,7 @@ function verifyVp(req, res, next) {
 		// Check for URLs with a :vpid
 		var vpid = req.url.split('/')[1];
 
-		debuglog("VP", 7, "Verify access permission for VisboProject %s to User %s ", vpid, useremail);
+		logger4js.debug("Verify access permission for VisboProject %s to User %s ", vpid, useremail);
 		var query = {'users.email': useremail}		// Permission for User
 		// var query = { $or: [ {'users.email': useremail}, { vpPublic: true } ] }		// Permission for User
 		query._id = vpid;
@@ -61,7 +67,7 @@ function verifyVp(req, res, next) {
 						req.oneVPisAdmin = true;
 					}
 				}
-				debuglog("VP", 5, "Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
+				logger4js.debug("Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
 				return next();
 			} else {
 				// Check for Public VP Access in case of GET only, because other operations reuqire admin Access
@@ -78,7 +84,7 @@ function verifyVp(req, res, next) {
 							error: err
 						});
 					}
-					debuglog("VP", 7, "Verify public Access to VP %s %s ", vpid, useremail);
+					logger4js.debug("Verify public Access to VP %s %s ", vpid, useremail);
 					if (!oneVP) {
 						return res.status(403).send({
 							state: 'failure',

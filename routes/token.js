@@ -5,10 +5,12 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
-var logging = require('./../components/logging');
 
-// var nodemailer = require('nodemailer');
-var moment = require('moment');
+var logging = require('./../components/logging');
+var logModule = "USER";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
+
 var mail = require('./../components/mail');
 
 var visbouser = mongoose.model('User');
@@ -66,8 +68,9 @@ var createHash = function(password){
  */
 router.route('/user/login')
 	.post(function(req, res) {
-		debuglog("USER", 8, "Try to Login %s", req.body.email);
-		// debuglog("USER", 9, "Try to Login %O", req.body); contains password
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Try to Login %s", req.body.email);
 		if (!req.body.email || !req.body.password){
 			return res.status(400).send({
 				state: "failure",
@@ -96,21 +99,21 @@ router.route('/user/login')
 					message: "email or password mismatch"
 				});
 			}
-			debuglog("USER", 8, "Try to Login %s username&password accepted", req.body.email);
+			logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 			user.password = undefined;
 			jwt.sign(user.toJSON(), jwtSecret.user.secret,
 				{ expiresIn: jwtSecret.user.expiresIn },
 				function(err, token) {
-					debuglog("USER", 8, "JWT Signing %s ", err);
+					logger4js.debug("JWT Signing %s ", err);
 					if (err) {
-						debuglog("USER", 8, "JWT Signing error %s ", err);
+						logger4js.error("JWT Signing error %s ", err);
 						return res.status(500)({
 							state: "failure",
 							message: "token generation failed",
 							error: err
 						});
 					}
-					debuglog("USER", 8, "JWT Signing Success %s ", err);
+					logger4js.debug("JWT Signing Success %s ", err);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully logged in",
@@ -136,7 +139,9 @@ router.route('/user/login')
  */
 router.route('/user/forgottenpw')
 	.post(function(req, res) {
-		debuglog("USER", 8, "Requested Password Reset through e-Mail %s", req.body.email);
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -152,7 +157,7 @@ router.route('/user/forgottenpw')
 				});
 			}
 		user.password = undefined;		// MS Todo: clear before send wrong place
-		debuglog("USER", 8, "Requested Password Reset through e-Mail %s with pw", user.email);
+		logger4js.debug("Requested Password Reset through e-Mail %s with pw", user.email);
 		jwt.sign(user.toJSON(), jwtSecret.user.secret,
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
@@ -243,7 +248,9 @@ router.route('/user/forgottenpw')
   */
 router.route('/user/signup')
 	.post(function(req, res) {
-		debuglog("USER", 8, "Signup Request for e-Mail %s", req.body.email);
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Signup Request for e-Mail %s", req.body.email);
 		visbouser.findOne({ "email": req.body.email }, function(err, user) {
 			if (err) {
 				return res.status(500).send({
@@ -259,7 +266,7 @@ router.route('/user/signup')
 				});
 			}
 			var newUser = new visbouser();
-			debuglog("USER", 8, "Signup Request newUser before init %O", newUser);
+			logger4js.debug("Signup Request newUser before init %O", newUser);
 			if (req.body.profile) {
 				newUser.profile.firstName = req.body.profile.firstName;
 				newUser.profile.lastName = req.body.profile.lastName;
@@ -274,12 +281,12 @@ router.route('/user/signup')
 				}
 			}
 			newUser.email = req.body.email;
-			debuglog("USER", 8, "Signup Request newUser %O", newUser);
+			logger4js.debug("Signup Request newUser %O", newUser);
 			newUser.password = createHash(req.body.password);
 			newUser._id = undefined;	// is the reset required or does it guarantee uniqueness already?
 			newUser.save(function(err, user) {
 				if (err) {
-					debuglog("USER", 8, "Signup Error %O", err);
+					logger4js.error("Signup Error %O", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",
