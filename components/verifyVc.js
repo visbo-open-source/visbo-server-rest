@@ -18,7 +18,7 @@ function verifyVc(req, res, next) {
 	// return next();
 	var query = {'users.email': useremail};		// Permission for User
 	query._id = vcid;
-	query.deleted =  {$exists: false}};				// Not deleted
+	query.deleted =  {$exists: false};				// Not deleted
 	var queryVC = VisboCenter.findOne(query);
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {

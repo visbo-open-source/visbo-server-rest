@@ -171,7 +171,7 @@ router.route('/')
 	 // check that VC name is unique
 	 var query = {};
 	 query.name = req.body.name;								// name Duplicate check
-	 query.deleted =  {$exists: false}};				// Not deleted
+	 query.deleted =  {$exists: false}; 				// Not deleted
 	 VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
 				return res.status(500).send({
@@ -578,9 +578,26 @@ router.route('/:vcid')
 				});
 			}
 			req.oneVC = oneVC;
-			return res.status(200).send({
-				state: 'success',
-				message: 'Deleted Visbo Center'
+			debuglog(debuglevel, 5, "VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
+			var updateQuery = {}
+			updateQuery.vcid = req.oneVC._id;
+			updateQuery.deleted = {$exists: false};
+			var updateUpdate = {$set: {deleted: {deletedAt: Date(), byParent: true }}};
+			var updateOption = {upsert: false, multi: "true"};
+			VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+				if (err){
+					debuglog(debuglevel, 1, "Problem updating VP Projects for VC %s", req.oneVC._id);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Projects',
+						error: err
+					});
+				}
+				debuglog(debuglevel, 5, "VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Center'
+				});
 			});
 		});
 	});

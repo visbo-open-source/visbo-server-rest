@@ -97,7 +97,8 @@ router.route('/')
 				latestOnly = false // if project is specified show all project versions
 			}
 			if (req.query.refDate){
-				queryvpv.timestamp =  {$lt: Date(req.query.refDate)};
+				var refDate = new Date(req.query.refDate);
+				queryvpv.timestamp =  {$lt: refDate};
 				latestOnly = true;
 			}
 			if (req.query.variantName != undefined){

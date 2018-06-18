@@ -88,6 +88,7 @@ router.route('/')
 	*      "vcid": "vc5aaf992",
 	*      "vpvCount": "0",
 	*      "vpType": "1",
+	*      "vpPublic": "false",
 	*      "users":[
 	*       {
 	*        "email":"example1@visbo.de",
@@ -127,8 +128,12 @@ router.route('/')
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var query = {'users.email': useremail}		// Permission for User
-		query.deleted =  {$exists: false}};				// Not deleted
+
+		// MS TODO include vcid if specified and add special check for public VPs afterwards
+
+		// either member of the project or if project is public member of the VC
+		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
+		query.deleted =  {$exists: false};				// Not deleted
 
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
@@ -201,6 +206,7 @@ router.route('/')
 	 *   "vcid": "vc5aaf992",
 	 *   "vpvCount": "0",
 	 *   "vpType": "1",
+	 *   "vpPublic": "false",
 	 *   "users":[
 	 *    {
 	 *     "userID": "us5aaf992",
@@ -235,9 +241,21 @@ router.route('/')
 		debuglog(debuglevel,  9, "Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
-		VisboCenter.findOne({'_id': vcid,
-												'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}
-											}, function (err, vc) {
+		// Check that the user has Admin permission in the VC
+		var isAdmin = false;
+		for (var i=0; i < req.listVC.length; i++) {
+			if (vcid == req.listVC[i]) {
+				isAdmin = true;
+				break;
+			}
+		}
+		if (!isAdmin) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo Centers not found or no Admin'
+			});
+		}
+		VisboCenter.findOne({'_id': vcid}, function (err, vc) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -258,6 +276,7 @@ router.route('/')
 			query.vcid = vcid;
 			query.name = vpname;
 			query.deleted = {$exists: false};
+
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
 					return res.status(500).send({
@@ -281,12 +300,13 @@ router.route('/')
 				} else {
 					newVP.vpType = req.body.vpType;
 				}
-
 				newVP.vpvCount = 0;
-				var i;
+				if (req.body.vpPublic != undefined) {
+					newVP.vpPublic = req.body.vpPublic;
+				}
 				var vpUsers = new Array();
 				if (req.body.users) {
-					for (i = 0; i < req.body.users.length; i++) {
+					for (var i = 0; i < req.body.users.length; i++) {
 						// build up unique user list vpUsers to check that they exist
 						if (!vpUsers.find(findUser, req.body.users[i].email)){
 							vpUsers.push(req.body.users[i].email)
@@ -480,6 +500,7 @@ router.route('/:vpid')
 	 *  }]
 	 * }
 	 */
+	 // Update Visbo Project
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -506,6 +527,9 @@ router.route('/:vpid')
 		}
 		var vpvPopulate = req.oneVP.name != req.body.name ? true : false;
 		req.oneVP.name = req.body.name;
+		if (req.body.vpPublic != undefined) {
+			req.oneVP.vpPublic = req.body.vpPublic;
+		}
 		var putDate = req.body.updatedAt ? new Date(req.body.updatedAt) : new Date();
 		var origDate = new Date(req.oneVP.updatedAt);
 		if (origDate - putDate != 0 && typeof(req.body.users) != "undefined") {
@@ -1116,16 +1140,24 @@ router.route('/:vpid/portfolio')
 	// Get Portfolio Versions
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
-		debuglog(debuglevel,  1, "Get Portfolio Versions");
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var query = {};
 		query.vpid = req.oneVP._id;
+		query.timestamp =  {$lt: Date()};
 		query.deleted = {$exists: false};
-		// check if query string is used to restrict to a specific VC
-		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
-		// debuglog(debuglevel,  1, "Get Project for user %s with query parameters %O", userId, query);
+		if (req.query.refDate){
+			var refDate = new Date(req.query.refDate);
+			query.timestamp =  {$lt: refDate};
+			debuglog(debuglevel, 9, "refDate Query String :%s:", refDate);
+		}
+		if (req.query.variantName != undefined){
+			debuglog(debuglevel, 9, "Variant Query String :%s:", req.query.variantName);
+			query.variantName = req.query.variantName
+		}
+
+		debuglog(debuglevel,  1, "Get Portfolio Version for user %s with query parameters %O", userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
