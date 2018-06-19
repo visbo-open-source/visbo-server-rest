@@ -12,7 +12,8 @@ var visboCenterSchema = new mongoose.Schema({
 	deleted: {
 		deletedAt: {type: Date, required: false },
 		byParent: {type: Boolean}
-	}
+	},
+	system: {type: Boolean}
 });
 // Set Creation and modification date automatically
 visboCenterSchema.set('timestamps', true);

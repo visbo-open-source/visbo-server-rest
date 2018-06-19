@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
-var lock = require('./../components/lock');
+var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var User = mongoose.model('User');
@@ -525,7 +525,7 @@ router.route('/:vpid')
 				message: 'No Admin Permission'
 			});
 		}
-		if (lock.lockedVP(req.oneVP, useremail, undefined).locked) {
+		if (lockVP.lockedVP(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -711,7 +711,7 @@ router.route('/:vpid')
 				message: 'No Visbo Project or no Permission'
 			});
 		}
-		if (lock.lockedVP(req.oneVP, useremail, undefined).locked) {
+		if (lockVP.lockedVP(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -806,7 +806,7 @@ router.route('/:vpid/lock')
 			});
 		}
 
-		if (lock.lockedVP(req.oneVP, useremail, variantName).locked) {
+		if (lockVP.lockedVP(req.oneVP, useremail, variantName).locked) {
 			return res.status(403).send({
 				state: 'failiure',
 				message: 'Visbo Project already locked',
@@ -880,7 +880,7 @@ router.route('/:vpid/lock')
 	variantName = req.query.variantName || "";
 	logger4js.info("DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
 
-	var resultLock = lock.lockedVP(req.oneVP, useremail, variantName);
+	var resultLock = lockVP.lockedVP(req.oneVP, useremail, variantName);
 	if (resultLock.lockindex < 0) {
 		logger4js.warn("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
 		return res.status(400).send({
@@ -900,7 +900,7 @@ router.route('/:vpid/lock')
 
 	logger4js.debug("Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 	req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
-	var listLockNew = lock.lockCleanupVP(req.oneVP.lock);
+	var listLockNew = lockVP.lockCleanupVP(req.oneVP.lock);
 	req.oneVP.lock = listLockNew;
 	logger4js.debug("Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
@@ -1079,7 +1079,7 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP]
 			});
 		}
-		lockResult = lock.lockedVP(req.oneVP, useremail, variantName);
+		lockResult = lockVP.lockedVP(req.oneVP, useremail, variantName);
 		if (lockResult.locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -1488,7 +1488,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No Visbo Portfolio or no Permission'
 				});
 			}
-			lockResult = lock.lockedVP(req.oneVP, useremail, oneVPF.variantName);
+			lockResult = lockVP.lockedVP(req.oneVP, useremail, oneVPF.variantName);
 			if (lockResult.locked) {
 				return res.status(401).send({
 					state: 'failure',

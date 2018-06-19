@@ -8,9 +8,11 @@ var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
+
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
 var logger4jsRest = log4js.getLogger("REST");
+
 
 //initialize mongoose schemas
 require('./models/users');
@@ -21,6 +23,8 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcrole');
 require('./models/vccost');
+
+var systemVC = require('./components/sytemVC');
 
 // include the route modules
 var user = require('./routes/user');
@@ -180,6 +184,14 @@ app.use(logger(function (tokens, req, res) {
 
 dbConnect(process.env.NODE_VISBODB);
 
+var sysVC = systemVC.createSystemVC(
+    { users: [
+        { "email":"markus.seyfried@visbo.de", "role": "Admin" },
+        { "email":"visbotestadmin@seyfried.bayern", "role": "Admin" },
+        { "email":"ute.rittinghaus-koytek@visbo.de", "role": "Admin" },
+        { "email":"visbotest@seyfried.bayern", "role": "User" }
+     ]}
+   )
 
 var options = {
   dotfiles: 'ignore',

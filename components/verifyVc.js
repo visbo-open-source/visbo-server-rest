@@ -9,12 +9,12 @@ var logger4js = log4js.getLogger(logModule);
 // Verify Visbo Center and the role of the user
 function verifyVc(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
-	if (req.url == '/') {
+	var url = req.url.split("?")[0]
+	if (url == '/') {
 		// no common check here, special check done in code afterwards
 		return next();
 	}
-	var vcid = req.url.split('/')[1];
+	var vcid = url.split('/')[1];
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 
