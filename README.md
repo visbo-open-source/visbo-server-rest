@@ -57,11 +57,13 @@ But the modules itself are not contained in GIT
 The Node package manager (npm) offers some commands to manage the modules:<br>
 
 	npm install // to install all required modules based on the configuration
-	npm update // to update all required modules to the correct required version based on the configuration<br>
-	npm outdated // delivers a list of modules that are outdated, means newer versions of these modules are available in GIT and migth be considered for update<br><br>
+	npm update // to update all required modules to the correct required version based on the configuration
+	npm outdated // delivers a list of modules that are outdated, means newer versions of these modules are available in GIT and migth be considered for update
 
 To create your own API documentation run command in the root folder<br>
-apidoc -i routes -o public/apidoc<br>
+
+	apidoc -i routes -o public/apidoc
+
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
 
