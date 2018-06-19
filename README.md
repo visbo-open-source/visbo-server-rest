@@ -55,12 +55,13 @@ The GIT Repository contains a list of modules with version numbers that are requ
 Typically the developer updates this file with additional modules or newer versions of existing modules.
 But the modules itself are not contained in GIT
 The Node package manager (npm) offers some commands to manage the modules:<br>
-npm install // to install all required modules based on the configuration
-npm update // to update all required modules to the correct required version based on the configuration
-npm outdated // delivers a list of modules that are outdated, means newer versions of these modules are available in GIT and migth be considered for update
+npm install // to install all required modules based on the configuration<br>
+npm update // to update all required modules to the correct required version based on the configuration<br>
+npm outdated // delivers a list of modules that are outdated, means newer versions of these modules are available in GIT and migth be considered for update<br><br>
 
 
-To create your own API documentation run command in the root folder apidoc -i routes -o public/apidoc
+To create your own API documentation run command in the root folder<br>
+apidoc -i routes -o public/apidoc<br>
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
 
