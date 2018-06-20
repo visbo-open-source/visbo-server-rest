@@ -298,7 +298,7 @@ router.route('/')
 				var newVP = new VisboProject;
 				newVP.name = req.body.name;
 				newVP.vcid = vcid;
-				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
+				if (req.body.vpType == undefined || req.body.vpType <= 0 || req.body.vpType > 3) {
 					newVP.vpType = 1;
 				} else {
 					newVP.vpType = req.body.vpType;
