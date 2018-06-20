@@ -44,9 +44,15 @@ It will serve the project on default port (3484). <br><br>
 <h2>API Documentation</h2>
 
 Find the API documentation <a href="https://localdev:3484/apidoc/">here</a>.<br>
-To create your own API documentation run command in the root folder apidoc -i routes -o public/apidoc
+for addition information <a href="http://apidocjs.com/">follow this link</a>.
+<br>
+To create your own API documentation run command in the root folder<br>
+
+	apidoc -i routes -o public/apidoc
+
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
+
 
 <h2>Module Upgrades</h2>
 
@@ -60,12 +66,6 @@ The Node package manager (npm) offers some commands to manage the modules:<br>
 	npm update // to update all required modules to the correct required version based on the configuration
 	npm outdated // delivers a list of modules that are outdated, means newer versions of these modules are available in GIT and migth be considered for update
 
-To create your own API documentation run command in the root folder<br>
-
-	apidoc -i routes -o public/apidoc
-
-<br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
-<br><br>
 
 <h2>Developer Hint</h2>
 

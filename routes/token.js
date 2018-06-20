@@ -23,50 +23,52 @@ var createHash = function(password){
 	return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
 };
 
-/**
- * @api {post} /token/user/login User Login
- * @apiVersion 0.0.1
- * @apiGroup Authentication
- * @apiName UserLogin
- * @apiPermission none
- * @apiError UserNamePasswordMismatch User not found or user &password do not match HTTP 401
- * @apiError ParameterMissing required parameters email, password missing HTTP 400
- * @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
- * @apiExample Example usage:
- *   url: http://localhost:3484/token/user/login
- *   body:
- *   {
- *     "email": "example@example.com",
- *     "password": "thisIsPassword"
- *   }
- * @apiSuccessExample {json} Success-Response:
- * HTTP/1.1 200 OK
- * {
- *   "state":"success",
- *   "message":"Successfully logged in",
- *   "token":"eyJhbG...brDI",
- *   "user":{
- *     "_id":"5a96787976294c5417f0e409",
- *     "updatedAt":"2018-02-28T09:38:04.774Z",
- *     "createdAt":"2018-02-28T09:38:04.774Z",
- *     "email":"example@example.com",
- *     "profile": {
- *       "firstname": "First",
- *       "lastname": "Last",
- *       "company": "Company inc",
- *       "phone": "0151-11223344",
- *       "address" : {
- *         "street": "Street",
- *         "city": "City",
- *         "zip": "88888",
- *         "state": "State",
- *         "country": "Country",
- *       }
- *     }
- *   }
- * }
- */
 router.route('/user/login')
+
+/**
+	* @api {post} /token/user/login User Login
+	* @apiVersion 0.0.1
+	* @apiGroup Authentication
+	* @apiName UserLogin
+	* @apiPermission none
+	* @apiError UserNamePasswordMismatch User not found or user &password do not match HTTP 401
+	* @apiError ParameterMissing required parameters email, password missing HTTP 400
+	* @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/token/user/login
+	*   body:
+	*   {
+	*     "email": "example@example.com",
+	*     "password": "thisIsPassword"
+	*   }
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Successfully logged in",
+	*   "token":"eyJhbG...brDI",
+	*   "user":{
+	*     "_id":"5a96787976294c5417f0e409",
+	*     "updatedAt":"2018-02-28T09:38:04.774Z",
+	*     "createdAt":"2018-02-28T09:38:04.774Z",
+	*     "email":"example@example.com",
+	*     "profile": {
+	*       "firstname": "First",
+	*       "lastname": "Last",
+	*       "company": "Company inc",
+	*       "phone": "0151-11223344",
+	*       "address" : {
+	*         "street": "Street",
+	*         "city": "City",
+	*         "zip": "88888",
+	*         "state": "State",
+	*         "country": "Country",
+	*       }
+	*     }
+	*   }
+	* }
+	*/
+// Post Login
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
@@ -124,20 +126,22 @@ router.route('/user/login')
 			);
 		});
 	});
-// Forgot Password
-/* *
- * @api {post} /token/user/forgottenpw user request password reset
- * @apiVersion 0.0.1
- * @apiGroup Authentication
- * @apiName UserForgottenPW
- * @apiExample Example usage:
- *   url: http://localhost:3484/token/user/forgottenpw
- *   body:
- *   {
- *     "email": "example@example.com",
- *   }
- */
+
 router.route('/user/forgottenpw')
+
+/**
+	* @api {post} /token/user/forgottenpw user request password reset
+	* @apiVersion 0.0.1
+	* @apiGroup Authentication
+	* @apiName UserForgottenPW
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/token/user/forgottenpw
+	*   body:
+	*   {
+	*     "email": "example@example.com",
+	*   }
+	*/
+// Forgot Password
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
@@ -189,7 +193,9 @@ router.route('/user/forgottenpw')
 	});
 });
 
- /**
+router.route('/user/signup')
+
+/**
   * @api {post} /token/user/signup User Signup
   * @apiVersion 0.0.1
   * @apiGroup Authentication
@@ -246,7 +252,6 @@ router.route('/user/forgottenpw')
   *   }
   * }
   */
-router.route('/user/signup')
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 

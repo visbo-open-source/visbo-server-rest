@@ -30,7 +30,7 @@ router.use('/', verifyVpv.verifyVpv);
 
 router.route('/')
 
-	/**
+/**
 	* @api {get} /vpv Get Versions
 	* @apiVersion 0.0.1
 	* @apiGroup Visbo Project Version
@@ -80,7 +80,7 @@ router.route('/')
 	*   }]
 	* }
 	*/
-	// Get Visbo Project Versions
+// Get Visbo Project Versions
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -177,42 +177,43 @@ router.route('/')
 		});
 	})
 
-	/**
-	 * @api {post} /vpv Create a Version
-	 * @apiVersion 0.0.1
-	 * @apiGroup Visbo Project Version
-	 * @apiName CreateVisboProjectVersions
-	 * @apiDescription Post creates a new Visbo Project Version.
-	 * The user needs to have Admin permission in the Referenced Project.
-	 * Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
-	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	 * @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
-	 * @apiError Duplicate VisboProjectVersion does already exist HTTP 409
-	 * @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
-	 * @apiPermission user must be authenticated and user must have permission to create a VP
-	 * @apiHeader {String} access-key User authentication token.
-	 * @apiExample Example usage:
-	 *   url: http://localhost:3484/vpv
-	 * {
-	 *  "vpid": "vp5c754feaa"
-	 *  "allOthers": "all properties of visbo project version"
-	 * }
-	 * @apiSuccessExample {json} Success-Response:
-	 *     HTTP/1.1 200 OK
-	 * {
-	 *  "state":"success",
-	 *  "message":"Successfully created new VisboProjectVersion",
-	 *  "vpv":[{
-	 *   "__v":0,
-	 *   "updatedAt":"2018-03-19T11:04:12.094Z",
-	 *   "createdAt":"2018-03-19T11:04:12.094Z",
-	 *   "_id":"vpv5c754feaa",
-	 *	 "name":"My first Visbo Project Version",
-	 *   "vpid": "vp5c754feaa"
-	 *   "allOthers": "all properties of visbo project version"
-	 *  }]
-	 * }
-	 */
+/**
+	* @api {post} /vpv Create a Version
+	* @apiVersion 0.0.1
+	* @apiGroup Visbo Project Version
+	* @apiName CreateVisboProjectVersions
+	* @apiDescription Post creates a new Visbo Project Version.
+	* The user needs to have Admin permission in the Referenced Project.
+	* Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
+	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
+	* @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
+	* @apiError Duplicate VisboProjectVersion does already exist HTTP 409
+	* @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
+	* @apiPermission user must be authenticated and user must have permission to create a VP
+	* @apiHeader {String} access-key User authentication token.
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vpv
+	* {
+	*  "vpid": "vp5c754feaa"
+	*  "allOthers": "all properties of visbo project version"
+	* }
+	* @apiSuccessExample {json} Success-Response:
+	*     HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"Successfully created new VisboProjectVersion",
+	*  "vpv":[{
+	*   "__v":0,
+	*   "updatedAt":"2018-03-19T11:04:12.094Z",
+	*   "createdAt":"2018-03-19T11:04:12.094Z",
+	*   "_id":"vpv5c754feaa",
+	*	 "name":"My first Visbo Project Version",
+	*   "vpid": "vp5c754feaa"
+	*   "allOthers": "all properties of visbo project version"
+	*  }]
+	* }
+	*/
+// POST/Create a Visbo Project Version
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
@@ -354,8 +355,9 @@ router.route('/')
 		});
 	})
 
-	router.route('/:vpvid')
- /**
+router.route('/:vpvid')
+
+/**
  	* @api {get} /vpv/:vpvid Get specific Version
  	* @apiVersion 0.0.1
  	* @apiGroup Visbo Project Version
@@ -384,7 +386,7 @@ router.route('/')
  	*   }]
  	* }
 	*/
-	// Get a specific Visbo Project Version
+// Get a specific Visbo Project Version
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -419,7 +421,7 @@ router.route('/')
 	*   "message":"Deleted Visbo Project Version"
 	* }
 	*/
-	// delete a Visbo Project Version
+// delete a Visbo Project Version
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;

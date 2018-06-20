@@ -23,45 +23,45 @@ router.use('/profile', auth.verifyUser);
 //  get profile
 //  update profile
 router.route('/profile')
-	// get profile
-	/**
-	 * @api {get} /user/profile Get own profile
-	 * @apiHeader {String} access-key User authentication token.
-	 * @apiVersion 0.0.1
-	 * @apiGroup UserProfile
-	 * @apiName GetUserProfile
-	 * @apiPermission user must be authenticated
-	 * @apiError NotAuthenticated no valid token HTTP 401
-	 * @apiError ServerIssue No DB Connection HTTP 500
-	 * @apiExample Example usage:
-	 *   url: http://localhost:3484/user/profile
-	 * @apiSuccessExample {json} Success-Response:
- 	 * HTTP/1.1 200 OK
-	 * {
-	 *  "state":"success",
- 	 * "message":"Updated user profile",
- 	 * "user":{
-	 *    "_id":"5a96787976294c5417f0e409",
-	 *    "updatedAt":"2018-03-20T10:31:27.216Z",
-	 *    "createdAt":"2018-02-28T09:38:04.774Z",
-	 *    "email":"markus.seyfried@visbo.de",
-	 *    "__v":0,
-	 *    "profile": {
- 	 *      "firstname": "First",
- 	 *      "lastname": "Last",
- 	 *      "company": "Company inc",
- 	 *      "phone": "0151-11223344",
-   *      "address" : {
- 	 *        "street": "Street",
- 	 *        "city": "City",
- 	 *        "zip": "88888",
- 	 *        "state": "State",
- 	 *        "country": "Country",
- 	 *      }
- 	 *    }
-	 *  }
-	 *}
-   */
+/**
+	* @api {get} /user/profile Get own profile
+	* @apiHeader {String} access-key User authentication token.
+	* @apiVersion 0.0.1
+	* @apiGroup UserProfile
+	* @apiName GetUserProfile
+	* @apiPermission user must be authenticated
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/user/profile
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	* "message":"Updated user profile",
+	* "user":{
+	*    "_id":"5a96787976294c5417f0e409",
+	*    "updatedAt":"2018-03-20T10:31:27.216Z",
+	*    "createdAt":"2018-02-28T09:38:04.774Z",
+	*    "email":"markus.seyfried@visbo.de",
+	*    "__v":0,
+	*    "profile": {
+	*      "firstname": "First",
+	*      "lastname": "Last",
+	*      "company": "Company inc",
+	*      "phone": "0151-11223344",
+	*      "address" : {
+	*        "street": "Street",
+	*        "city": "City",
+	*        "zip": "88888",
+	*        "state": "State",
+	*        "country": "Country",
+	*      }
+	*    }
+	*  }
+	*}
+	*/
+// get profile
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
@@ -83,57 +83,57 @@ router.route('/profile')
 		});
 	})
 
-	// Update profile
-	/**
-	 * @api {put} /user/profile Update own profile
-	 * @apiHeader {String} access-key User authentication token.
-	 * @apiVersion 0.0.1
-	 * @apiGroup UserProfile
-	 * @apiName UpdateUserProfile
-	 * @apiExample Example usage:
-	 *   url: http://localhost:3484/user/profile
-	 *   body:
-	 *   {
-	 *     "profile": {
- 	 *       "firstname": "First",
- 	 *       "lastname": "Last",
- 	 *       "company": "Company inc",
- 	 *       "phone": "0151-11223344",
-   *       "address" : {
- 	 *         "street": "Street",
- 	 *         "city": "City",
- 	 *         "zip": "88888",
- 	 *         "state": "State",
- 	 *         "country": "Country",
- 	 *       }
- 	 *     }
-	 *   }
-	 * @apiSuccessExample {json} Success-Response:
- 	 * HTTP/1.1 200 OK
-	 * {
-	 *  "state":"success",
- 	 * "message":"Updated user profile",
- 	 * "user":{
-	 *    "_id":"5a96787976294c5417f0e409",
-	 *    "updatedAt":"2018-03-20T10:31:27.216Z",
-	 *    "createdAt":"2018-02-28T09:38:04.774Z",
-	 *    "email":"markus.seyfried@visbo.de",
-	 *    "profile": {
- 	 *      "firstname": "First",
- 	 *      "lastname": "Last",
- 	 *      "company": "Company inc",
- 	 *      "phone": "0151-11223344",
-   *      "address" : {
- 	 *        "street": "Street",
- 	 *        "city": "City",
- 	 *        "zip": "88888",
- 	 *        "state": "State",
- 	 *        "country": "Country",
- 	 *      }
- 	 *    }
-	 *  }
-	 * }
-	 */
+/**
+	* @api {put} /user/profile Update own profile
+	* @apiHeader {String} access-key User authentication token.
+	* @apiVersion 0.0.1
+	* @apiGroup UserProfile
+	* @apiName UpdateUserProfile
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/user/profile
+	*   body:
+	*   {
+	*     "profile": {
+	*       "firstname": "First",
+	*       "lastname": "Last",
+	*       "company": "Company inc",
+	*       "phone": "0151-11223344",
+	*       "address" : {
+	*         "street": "Street",
+	*         "city": "City",
+	*         "zip": "88888",
+	*         "state": "State",
+	*         "country": "Country",
+	*       }
+	*     }
+	*   }
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	* "message":"Updated user profile",
+	* "user":{
+	*    "_id":"5a96787976294c5417f0e409",
+	*    "updatedAt":"2018-03-20T10:31:27.216Z",
+	*    "createdAt":"2018-02-28T09:38:04.774Z",
+	*    "email":"markus.seyfried@visbo.de",
+	*    "profile": {
+	*      "firstname": "First",
+	*      "lastname": "Last",
+	*      "company": "Company inc",
+	*      "phone": "0151-11223344",
+	*      "address" : {
+	*        "street": "Street",
+	*        "city": "City",
+	*        "zip": "88888",
+	*        "state": "State",
+	*        "country": "Country",
+	*      }
+	*    }
+	*  }
+	* }
+	*/
+// Update profile
 	.put(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
