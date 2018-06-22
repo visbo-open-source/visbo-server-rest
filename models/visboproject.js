@@ -15,17 +15,20 @@ var variantSchema = new Schema({
 	vpvCount: { type: Number, reuqired: true }
 });
 
+var vpUserSchema = new Schema({
+	userId: {type: Schema.Types.ObjectId, ref: 'User'},
+	email: {type: String, required: true},
+	role: {type: String, required: false}
+});
+
 var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 100},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
 //	portfolio: { type: Boolean, reuqired: false },
 	vpType: {type: Number, required: false},					// vpType: 1 Project, 2 Portfolio, 2 ProjectTemplate
+	description: { type: String, required: false },
 	vpPublic: {type: Boolean, required: false}, 			// Public means visible for all VC Users
-	users: [{
-		userId: {type: Schema.Types.ObjectId, ref: 'userId', required: false},
-		email: {type: String, required: true},
-		role: {type: String, required: true}
-	}],
+	users: [{type: vpUserSchema, required: true }],
 	vc: {
 		name: { type: String, required: false, maxlength: 100}
 	},
