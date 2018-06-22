@@ -797,12 +797,14 @@ router.route('/:vpid/lock')
 			// set the lock date to 1 hour later
 			expiredAt.setHours(expiredAt.getHours() + 1);
 		} 
+		logger4js.info("POST Lock Visbo Project %s Check variant %s does exists  ", req.params.vpid, variantName);
 
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
-			return res.status(401).send({
+				logger4js.warn("POST Lock Visbo Project %s variant %s does not exists  ", req.params.vpid, variantName);
+				return res.status(401).send({
 				state: 'failiure',
 				message: 'Visbo Project Variant does not exist',
-				lock: req.oneVP.lock
+				vp: [req.oneVP]
 			});
 		}
 
@@ -821,7 +823,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
-		var listLockNew = lock.lockCleanupVP(req.oneVP.lock);
+		var listLockNew = lockVP.lockCleanupVP(req.oneVP.lock);
 		req.oneVP.lock = listLockNew;
 
 		var newLock = new Lock;

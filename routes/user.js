@@ -68,6 +68,7 @@ router.route('/profile')
 		logger4js.info("Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
+				logger4js.fatal("User Get Profile DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting user',
@@ -140,6 +141,7 @@ router.route('/profile')
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
+				logger4js.fatal("User update Profile DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting user',
@@ -162,6 +164,7 @@ router.route('/profile')
 
 			user.save(function(err, user) {
 				if (err) {
+					logger4js.fatal("User update Profile to DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating user',

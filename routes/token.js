@@ -68,6 +68,7 @@ router.route('/user/login')
 	*   }
 	* }
 	*/
+
 // Post Login
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
@@ -82,6 +83,7 @@ router.route('/user/login')
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
+				logger4js.fatal("Post Login DB Connection ", err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -141,6 +143,7 @@ router.route('/user/forgottenpw')
 	*     "email": "example@example.com",
 	*   }
 	*/
+
 // Forgot Password
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
@@ -148,6 +151,7 @@ router.route('/user/forgottenpw')
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
+				logger4js.fatal("Forgot Password DB Connection ", err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -166,6 +170,7 @@ router.route('/user/forgottenpw')
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
 				if (err) {
+					logger4js.fatal("forgot Password DB Connection ", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "token generation failed",
@@ -252,46 +257,51 @@ router.route('/user/signup')
   *   }
   * }
   */
+
+// Post Signup User
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 		logger4js.info("Signup Request for e-Mail %s", req.body.email);
 		visbouser.findOne({ "email": req.body.email }, function(err, user) {
 			if (err) {
+				logger4js.fatal("user Signup DB Connection ", err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
 					error: err
 				});
 			}
-			if (user) {
+			// if user exists and is registered already refuse to register again
+			if (user && user.status && user.status.registeredAt) {
 				return res.status(401).send({
 					state: "failure",
 					message: "email already registered"
 				});
 			}
-			var newUser = new visbouser();
-			logger4js.debug("Signup Request newUser before init %O", newUser);
+			if (!user) user = new visbouser();
+			logger4js.debug("Signup Request new User before init %s %s", user._id || "", user.email || "");
 			if (req.body.profile) {
-				newUser.profile.firstName = req.body.profile.firstName;
-				newUser.profile.lastName = req.body.profile.lastName;
-				newUser.profile.company = req.body.profile.company;
-				newUser.profile.phone = req.body.profile.phone;
+				user.profile.firstName = req.body.profile.firstName;
+				user.profile.lastName = req.body.profile.lastName;
+				user.profile.company = req.body.profile.company;
+				user.profile.phone = req.body.profile.phone;
 				if (req.body.profile.address) {
-					newUser.profile.address.street = req.body.profile.address.street;
-					newUser.profile.address.city = req.body.profile.address.city;
-					newUser.profile.address.zip = req.body.profile.address.zip;
-					newUser.profile.address.state = req.body.profile.address.state;
-					newUser.profile.address.country = req.body.profile.address.country;
+					user.profile.address.street = req.body.profile.address.street;
+					user.profile.address.city = req.body.profile.address.city;
+					user.profile.address.zip = req.body.profile.address.zip;
+					user.profile.address.state = req.body.profile.address.state;
+					user.profile.address.country = req.body.profile.address.country;
 				}
 			}
-			newUser.email = req.body.email;
-			logger4js.debug("Signup Request newUser %O", newUser);
-			newUser.password = createHash(req.body.password);
-			newUser._id = undefined;	// is the reset required or does it guarantee uniqueness already?
-			newUser.save(function(err, user) {
+			user.email = req.body.email;
+			user.status = {registeredAt: Date()};
+			logger4js.debug("Signup Request new User %O \n%O", user, user.status);
+			user.password = createHash(req.body.password);
+			// user._id = undefined;	// is the reset required or does it guarantee uniqueness already?
+			user.save(function(err, user) {
 				if (err) {
-					logger4js.error("Signup Error %O", err);
+					logger4js.error("Signup Error DB Connection %O", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",
