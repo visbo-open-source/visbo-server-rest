@@ -132,7 +132,7 @@ router.route('/user/login')
 router.route('/user/forgottenpw')
 
 /**
-	* @api {post} /token/user/forgottenpw user request password reset
+	* @api {post} /token/user/forgottenpw Password Reset
 	* @apiVersion 0.0.1
 	* @apiGroup Authentication
 	* @apiName UserForgottenPW
@@ -164,13 +164,13 @@ router.route('/user/forgottenpw')
 					message: "email not registered"
 				});
 			}
-		user.password = undefined;		// MS Todo: clear before send wrong place
+		user.password = undefined;		// clear before send
 		logger4js.debug("Requested Password Reset through e-Mail %s with pw", user.email);
 		jwt.sign(user.toJSON(), jwtSecret.user.secret,
 			{ expiresIn: jwtSecret.user.expiresIn },
 			function(err, token) {
 				if (err) {
-					logger4js.fatal("forgot Password DB Connection ", err);
+					logger4js.fatal("forgot Password Sign Error ", err);
 					return res.status(500).send({
 						state: "failure",
 						message: "token generation failed",

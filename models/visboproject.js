@@ -25,7 +25,7 @@ var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 100},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
 //	portfolio: { type: Boolean, reuqired: false },
-	vpType: {type: Number, required: false},					// vpType: 1 Project, 2 Portfolio, 2 ProjectTemplate
+	vpType: {type: Number, required: false},					// vpType: 1 Project, 2 Portfolio, 3 ProjectTemplate
 	description: { type: String, required: false },
 	vpPublic: {type: Boolean, required: false}, 			// Public means visible for all VC Users
 	users: [{type: vpUserSchema, required: true }],
@@ -44,6 +44,7 @@ var visboProjectSchema = new mongoose.Schema({
 visboProjectSchema.set('timestamps', true);
 
 // declare a model
+mongoose.model('VPUser', vpUserSchema);
 mongoose.model('VisboProject', visboProjectSchema);
 mongoose.model('Lock', lockSchema);
 mongoose.model('Variant', variantSchema);

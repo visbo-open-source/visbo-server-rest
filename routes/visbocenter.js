@@ -8,7 +8,6 @@ var verifyVc = require('./../components/verifyVc');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VCUser = mongoose.model('VCUser');
-var visbouser = mongoose.model('User');
 var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
@@ -430,8 +429,12 @@ router.route('/:vcid')
 		var vpPopulate = req.oneVC.name != req.body.name ? true : false;
 
 		logger4js.debug("PUT/Save Visbo Center %s Name %s Namechange: %s", req.oneVC._id, req.body.name, vpPopulate);
-		req.oneVC.name = req.body.name || req.oneVC.name;
-		req.oneVC.description = req.body.description || req.oneVC.description;
+		if (req.body.name != undefined && req.body.name != "") {
+			req.oneVC.name = req.body.name;
+		}
+		if (req.body.description != undefined) {
+			req.oneVC.description = req.body.description;
+		}
 
 
 		logger4js.debug("PUT VC: save now");
@@ -448,6 +451,8 @@ router.route('/:vcid')
 			if (vpPopulate){
 				logger4js.debug("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
 				var updateQuery = {"vcid": req.oneVC._id};
+				updateQuery.vcid = req.oneVC._id
+				updateQuery.deleted = {$exists: false};
 				var updateUpdate = {$set: {"vc": { "name": req.oneVC.name}}};
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
@@ -1218,13 +1223,13 @@ router.route('/:vcid/cost')
 		});
 	})
 
-///// Switch to Users
+// User Management for VC
 router.route('/:vcid/user')
 
 /**
 	* @api {get} /vc/:vcid/user Get Users of the VC
 	* @apiVersion 0.0.1
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Users
 	* @apiName GetVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Gets all users of the specified Visbo Center
@@ -1265,7 +1270,7 @@ router.route('/:vcid/user')
 /**
 	* @api {post} /vc/:vcid/user Add a User
 	* @apiVersion 0.0.1
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Users
 	* @apiName PostVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new user inside the Visbo Center
@@ -1345,7 +1350,7 @@ router.route('/:vcid/user')
 			}
 			if (!user) {
 				// MS TODO create the user and add it to the VC
-				user = new visbouser();
+				user = new User();
 				user.email = vcUser.email
 				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
 				user.save(function(err, user) {
@@ -1405,7 +1410,7 @@ router.route('/:vcid/user')
 	/**
 		* @api {delete} /vc/:vcid/user/:userid Delete a User from VC
 		* @apiVersion 0.0.1
-		* @apiGroup Visbo Center Properties
+		* @apiGroup Visbo Center Users
 		* @apiName DeleteVisboCenterUser
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified user in the Visbo Center
