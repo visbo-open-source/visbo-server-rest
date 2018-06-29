@@ -75,6 +75,7 @@ router.route('/user/login')
 
 		logger4js.info("Try to Login %s", req.body.email);
 		if (!req.body.email || !req.body.password){
+			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
 				state: "failure",
 				message: "email or password missing"
@@ -91,6 +92,7 @@ router.route('/user/login')
 				});
 			}
 			if (!user) {
+				logger4js.warn("User not Found", req.body.email);
 				return res.status(400).send({
 					state: "failure",
 					message: "email not registered"

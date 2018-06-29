@@ -133,7 +133,7 @@ if (process.env.LOGPATH != undefined) {
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 1024, backups: 3 },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 1024, backups: 3, daysToKeep: 3 },
     emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', keepFileExt: true, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
@@ -213,10 +213,10 @@ app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
 
 // simple logger for this router's requests
 // all requests to this router will first hit this middleware
-// app.use(function(req, res, next) {
-//   logger4js.trace('Method %s %s', req.method, req.url);
-//   next();
-// });
+app.use(function(req, res, next) {
+  logger4js.trace('Method %s %s', req.method, req.url);
+  next();
+});
 
 // Catch all routes from the ui client and return the index file
 app.get('/ui/*', (req, res) => {

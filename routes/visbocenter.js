@@ -94,7 +94,7 @@ router.route('/')
 		query.deleted = {$exists: false};
 
 		var queryVC = VisboCenter.find(query);
-		queryVC.select('name users updatedAt createdAt');
+		//queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, listVC) {
 			if (err) {
 				logger4js.fatal("VC Get DB Connection ", err);
@@ -1349,7 +1349,6 @@ router.route('/:vcid/user')
 				});
 			}
 			if (!user) {
-				// MS TODO create the user and add it to the VC
 				user = new User();
 				user.email = vcUser.email
 				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
@@ -1378,7 +1377,7 @@ router.route('/:vcid/user')
 						return res.status(200).send({
 							state: "success",
 							message: "Successfully added User to Visbo Center",
-							vc: [ vc ]
+							users: [ vcUser ]
 						});
 					})
 				});
@@ -1398,7 +1397,7 @@ router.route('/:vcid/user')
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully added User to Visbo Center",
-						vc: [ vc ]
+						users: [ vcUser ]
 					});
 				})
 			}
