@@ -12,7 +12,7 @@ function verifyUser(req, res, next) {
     // verifies secret and checks exp
     jwt.verify(token, jwtSecret.user.secret, function(err, decoded) {
       if (err) {
-        return res.status(400).send({
+        return res.status(401).send({
         	state: 'failure',
         	message: 'Token is dead'
         });
@@ -25,7 +25,7 @@ function verifyUser(req, res, next) {
   }
   else {
   	// if the user is not authenticated
-		return res.status(400).send({
+		return res.status(401).send({
 			state: 'failure',
 			message: 'No token provided'
 		});

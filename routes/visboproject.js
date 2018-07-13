@@ -243,7 +243,9 @@ router.route('/')
 		var vcid = req.body.vcid
 		var vpname = req.body.name
 		var vpdescription = req.body.description || "";
-		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s for %d Users", useremail, req.body.name, vcid, req.body.users.length);
+		var vpUsers = req.body.users || [];
+		var vpPublic = req.body.vpPublic ? true : false;
+		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
@@ -349,7 +351,7 @@ router.route('/')
 					// check that there is an Admin available, if not add the current user as Admin
 					if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
 						var admin = {userId: userId, email:useremail, role:"Admin"};
-						logger4js.warn("No Admin User found add current user as admin");
+						logger4js.info("No Admin User found add current user as admin");
 						newVP.users.push(admin);
 					};
 					// set the VC Name
@@ -1628,7 +1630,7 @@ router.route('/:vpid/portfolio/:vpfid')
 							return res.status(200).send({
 								state: "success",
 								message: "Successfully added User to Visbo Project",
-								vp: [ vp ]
+								users: [ vpUser ]
 							});
 						})
 					});
@@ -1648,7 +1650,7 @@ router.route('/:vpid/portfolio/:vpfid')
 						return res.status(200).send({
 							state: "success",
 							message: "Successfully added User to Visbo Project",
-							vp: [ vp ]
+							users: [ vpUser ]
 						});
 					})
 				}

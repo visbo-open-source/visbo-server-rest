@@ -29,6 +29,7 @@ function verifyVp(req, res, next) {
 		queryVC.select('_id');
 		queryVC.exec(function (err, listVC) {
 			if (err) {
+				logger4js.fatal("VP Verify Access Permission DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -38,6 +39,7 @@ function verifyVp(req, res, next) {
 			logger4js.debug("Found %d Visbo Centers", listVC.length);
 			req.listVC = [];
 			for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
+			logger4js.debug("VP Verify continue next");
 			return next();
 		});
 	} else {
@@ -53,6 +55,7 @@ function verifyVp(req, res, next) {
 		var queryVP = VisboProject.findOne(query);
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
+				logger4js.fatal("VP Verify Access Permission DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Projects',
@@ -78,6 +81,7 @@ function verifyVp(req, res, next) {
 				var queryVP = VisboProject.findOne(query);
 				queryVP.exec(function (err, oneVP) {
 					if (err) {
+						logger4js.fatal("VP Verify Public Access Permission DB Connection ", err);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error getting Visbo Projects',
