@@ -241,8 +241,8 @@ router.route('/')
 			});
 		}
 		var vcid = req.body.vcid
-		var vpname = req.body.name
-		var vpdescription = req.body.description || "";
+		var vpname = (req.body.name || '').trim();
+		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
 		var vpPublic = req.body.vpPublic ? true : false;
 		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
@@ -301,7 +301,7 @@ router.route('/')
 					});
 				};
 				var newVP = new VisboProject;
-				newVP.name = req.body.name;
+				newVP.name = vpname;
 				newVP.vcid = vcid;
 				newVP.description = vpdescription;
 				if (req.body.vpType == undefined || req.body.vpType <= 0 || req.body.vpType > 3) {
@@ -310,9 +310,7 @@ router.route('/')
 					newVP.vpType = req.body.vpType;
 				}
 				newVP.vpvCount = 0;
-				if (req.body.vpPublic != undefined) {
-					newVP.vpPublic = req.body.vpPublic;
-				}
+				newVP.vpPublic = vpPublic;
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (var i = 0; i < req.body.users.length; i++) {
@@ -520,7 +518,7 @@ router.route('/:vpid')
 		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 
 		if (!req.body) {
-			return res.status(409).send({
+			return res.status(400).send({
 				state: 'failure',
 				message: 'No Body provided for update'
 			});
@@ -538,100 +536,124 @@ router.route('/:vpid')
 				vp: [oneVP]
 			});
 		}
-		var vpPopulate = req.oneVP.name != req.body.name ? true : false;
+		var name = (req.body.name || '').trim();
+		if (name == '') name = req.oneVP.name;
+		var vpPopulate = req.oneVP.name != name ? true : false;
+		req.oneVP.name = name;
 
-		if (req.body.name != undefined && req.body.name != "") {
-			req.oneVP.name = req.body.name;
-		}
 		if (req.body.vpPublic != undefined) {
-			req.oneVP.vpPublic = req.body.vpPublic;
+			req.oneVP.vpPublic = req.body.vpPublic ? true : false;
 		}
 		if (req.body.description != undefined) {
-			req.oneVP.description = req.body.description;
+			req.oneVP.description = req.body.description.trim();
 		}
-		logger4js.debug("PUT VP: save now");
-		req.oneVP.save(function(err, oneVP) {
+		// check duplicate Name
+		var query = {};
+		query.vcid = req.oneVP.vcid;
+		query._id = {$ne: req.oneVP._id}
+		query.name = name;
+		query.deleted = {$exists: false};
+
+		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
+				logger4js.fatal("VP Put DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
-					message: 'Error updating Visbo Project',
+					message: 'Internal Server Error with DB Connection',
 					error: err
 				});
 			}
-			req.oneVP = oneVP;
-			// Update underlying projects if name has changed
-			if (vpPopulate) {
-				if (oneVP.vpType == 2) { // Project is a Portfolio
-					var updateQuery = {};
-					updateQuery.vpid = oneVP._id;
-					updateQuery.deleted = {$exists: false};
-
-					var updateUpdate = {$set: {"name": oneVP.name}};
-					var updateOption = {upsert: false, multi: "true"};
-
-					VisboPortfolio.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-						if (err){
-							logger4js.error("Problem updating Portfolio Name for VP %s", oneVP._id);
-							return res.status(500).send({
-								state: 'failure',
-								message: 'Error updating Visbo Project',
-								error: err
-							});
-						}
-						logger4js.debug("Update Portfolio Name found %d updated %d", result.n, result.nModified)
-						return res.status(200).send({
-							state: 'success',
-							message: 'Updated Visbo Project',
-							vp: [ oneVP ]
-						});
+			if (vp) {
+				logger4js.debug("Duplicate Name check returned duplicate VP %s", vp._id);
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Project with same name exists'
+				});
+			};
+			logger4js.debug("PUT VP: save now");
+			req.oneVP.save(function(err, oneVP) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Project',
+						error: err
 					});
-				} else {
-					logger4js.debug("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
-					var updateQuery = {};
-					updateQuery.vpid = oneVP._id;
-					updateQuery.deleted = {$exists: false};
+				}
+				req.oneVP = oneVP;
+				// Update underlying projects if name has changed
+				if (vpPopulate) {
+					if (oneVP.vpType == 2) { // Project is a Portfolio
+						var updateQuery = {};
+						updateQuery.vpid = oneVP._id;
+						updateQuery.deleted = {$exists: false};
 
-					var updateUpdate = {$set: {"name": oneVP.name}};
-					var updateOption = {upsert: false, multi: "true"};
-					VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-						if (err){
-							logger4js.error("Problem updating VP Versions for VP %s", oneVP._id);
-							return res.status(500).send({
-								state: 'failure',
-								message: 'Error updating Visbo Project',
-								error: err
-							});
-						}
-						logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
-						// update Portfolio Links to new name
-						var updatePFQuery = { allItems: {$elemMatch: {vpid: oneVP._id }}};
-						var updatePFUpdate = { $set: { "allItems.$[elem].name" : oneVP.name } };
-						var updatePFOption = {arrayFilters: [ { "elem.vpid": oneVP._id } ], upsert: false, multi: "true"};
-						VisboPortfolio.update(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
+						var updateUpdate = {$set: {"name": oneVP.name}};
+						var updateOption = {upsert: false, multi: "true"};
+
+						VisboPortfolio.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 							if (err){
-								logger4js.error("Problem updating Portfolio References for VP %s", oneVP._id);
+								logger4js.error("Problem updating Portfolio Name for VP %s", oneVP._id);
 								return res.status(500).send({
 									state: 'failure',
 									message: 'Error updating Visbo Project',
 									error: err
 								});
 							}
-							logger4js.debug("Update VP names in Portfolio References found %d updated %d", result.n, result.nModified)
+							logger4js.debug("Update Portfolio Name found %d updated %d", result.n, result.nModified)
 							return res.status(200).send({
 								state: 'success',
 								message: 'Updated Visbo Project',
 								vp: [ oneVP ]
 							});
 						});
+					} else {
+						logger4js.debug("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
+						var updateQuery = {};
+						updateQuery.vpid = oneVP._id;
+						updateQuery.deleted = {$exists: false};
+
+						var updateUpdate = {$set: {"name": oneVP.name}};
+						var updateOption = {upsert: false, multi: "true"};
+						VisboProjectVersion.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+							if (err){
+								logger4js.error("Problem updating VP Versions for VP %s", oneVP._id);
+								return res.status(500).send({
+									state: 'failure',
+									message: 'Error updating Visbo Project',
+									error: err
+								});
+							}
+							logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
+							// update Portfolio Links to new name
+							var updatePFQuery = { allItems: {$elemMatch: {vpid: oneVP._id }}};
+							var updatePFUpdate = { $set: { "allItems.$[elem].name" : oneVP.name } };
+							var updatePFOption = {arrayFilters: [ { "elem.vpid": oneVP._id } ], upsert: false, multi: "true"};
+							VisboPortfolio.update(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
+								if (err){
+									logger4js.error("Problem updating Portfolio References for VP %s", oneVP._id);
+									return res.status(500).send({
+										state: 'failure',
+										message: 'Error updating Visbo Project',
+										error: err
+									});
+								}
+								logger4js.debug("Update VP names in Portfolio References found %d updated %d", result.n, result.nModified)
+								return res.status(200).send({
+									state: 'success',
+									message: 'Updated Visbo Project',
+									vp: [ oneVP ]
+								});
+							});
+						});
+					}
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Project',
+						vp: [ oneVP ]
 					});
 				}
-			} else {
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Project',
-					vp: [ oneVP ]
-				});
-			}
+			});
 		});
 	})
 

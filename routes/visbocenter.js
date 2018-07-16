@@ -175,11 +175,18 @@ router.route('/')
 	// User is authenticated already
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
+	var name = (req.body.name || '').trim();
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-	logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, req.body.name);
-	logger4js.info("Post a new Visbo Center with name %s executed by user %s ", req.body.name, useremail);
+	logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
+	logger4js.info("Post a new Visbo Center with name %s executed by user %s ", name, useremail);
 
+	if (name == '') {
+		return res.status(400).send({
+			state: "failure",
+			message: "Empty Visbo Center Name not allowed"
+		});
+	}
 	// check that user has admin permission in system
 	var query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};;
 	query.system = true;
@@ -201,7 +208,7 @@ router.route('/')
 		}
 		// check that VC name is unique
 		query = {};
-		query.name = req.body.name;								// name Duplicate check
+		query.name = name;								// name Duplicate check
 		query.deleted =  {$exists: false}; 				// Not deleted
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
@@ -220,8 +227,8 @@ router.route('/')
 			}
 			logger4js.debug("Create Visbo Center (name is already unique) check users");
 			var newVC = new VisboCenter();
-			newVC.name = req.body.name;
-			newVC.description = req.body.description || "";
+			newVC.name = name;
+			newVC.description = req.body.description.trim() || "";
 			newVC.vpCount = 0;
 			// Check for Valid User eMail remove non existing eMails
 
@@ -359,11 +366,8 @@ router.route('/:vcid')
 	* @apiName UpdateVisboCenters
 	* @apiDescription Put updates a specific Visbo Center.
 	* the system checks if the user has access permission to it.
-	*
-	* If no user list is delivered in the body, no updates will be performed to the users.
-	* If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
-	* If not equal, the system delivers an error because the VC was updated between the read and write of the user and therefore it might lead to inconsitency.
-	 * In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
+	* Only basic properties of the Visbo Centers can be changed. The modification of users is done with special calls to add/delete users
+	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
 	*
 	* If the VC Name is changed, the VC Name is populated to the Visbo Projects.
 	* @apiHeader {String} access-key User authentication token.
@@ -426,58 +430,79 @@ router.route('/:vcid')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		var vpPopulate = req.oneVC.name != req.body.name ? true : false;
+		var name = (req.body.name || '').trim();
+		if (name == '') name = req.oneVC.name;
+		var vpPopulate = req.oneVC.name != name ? true : false;
 
-		logger4js.debug("PUT/Save Visbo Center %s Name %s Namechange: %s", req.oneVC._id, req.body.name, vpPopulate);
-		if (req.body.name != undefined && req.body.name != "") {
-			req.oneVC.name = req.body.name;
-		}
+		logger4js.debug("PUT/Save Visbo Center %s Name :%s: Namechange: %s", req.oneVC._id, name, vpPopulate);
+		req.oneVC.name = name;
 		if (req.body.description != undefined) {
-			req.oneVC.description = req.body.description;
+			req.oneVC.description = req.body.description.trim();
 		}
+		// check that VC name is unique
+		var query = {};
+		query._id = {$ne: req.oneVC._id}
+		query.name = name;								// name Duplicate check
+		query.deleted = {$exists: false}; 				// Not deleted
 
-
-		logger4js.debug("PUT VC: save now");
-		req.oneVC.save(function(err, oneVC) {
+		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
 				logger4js.fatal("VC Put DB Connection ", err);
 				return res.status(500).send({
-					state: 'failure',
-					message: 'Error updating Visbo Center',
+					state: "failure",
+					message: "database error",
 					error: err
 				});
 			}
-			// Update underlying projects if name has changed
-			if (vpPopulate){
-				logger4js.debug("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
-				var updateQuery = {"vcid": req.oneVC._id};
-				updateQuery.vcid = req.oneVC._id
-				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {"vc": { "name": req.oneVC.name}}};
-				var updateOption = {upsert: false, multi: "true"};
-				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-					if (err){
-						logger4js.fatal("VC Put DB Connection ", err);
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Projects',
-							error: err
+			if (vc) {
+				logger4js.trace("PUT VC: duplicate name check found vc %s %s compare with %s %s", vc._id, vc.name, req.oneVC._id, req.oneVC.name);
+				return res.status(409).send({
+					state: "failure",
+					message: "Visbo Center with same name already exists"
+				});
+			}
+			logger4js.debug("PUT VC: save now");
+			req.oneVC.save(function(err, oneVC) {
+				if (err) {
+					logger4js.fatal("VC Put DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Center',
+						error: err
+					});
+				}
+				// Update underlying projects if name has changed
+				if (vpPopulate){
+					logger4js.debug("VC PUT %s: Update SubProjects to %s", oneVC._id, oneVC.name);
+					var updateQuery = {"vcid": req.oneVC._id};
+					updateQuery.vcid = req.oneVC._id
+					updateQuery.deleted = {$exists: false};
+					var updateUpdate = {$set: {"vc": { "name": req.oneVC.name}}};
+					var updateOption = {upsert: false, multi: "true"};
+					VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+						if (err){
+							logger4js.fatal("VC Put DB Connection ", err);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Projects',
+								error: err
+							});
+						}
+						logger4js.debug("Update VC names in VP found %d updated %d", result.n, result.nModified)
+						return res.status(200).send({
+							state: 'success',
+							message: 'Updated Visbo Center',
+							vc: [ oneVC ]
 						});
-					}
-					logger4js.debug("Update VC names in VP found %d updated %d", result.n, result.nModified)
+					});
+				} else {
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Visbo Center',
 						vc: [ oneVC ]
 					});
-				});
-			} else {
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Center',
-					vc: [ oneVC ]
-				});
-			}
+				}
+			});
 		});
 	})
 
