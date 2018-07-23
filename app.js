@@ -103,6 +103,7 @@ function dbConnect(dbconnection) {
 var whitelist = [
   undefined, // POSTMAN Support
   'http://localhost:3484', // DEV Support
+  'http://\[2a02:810d:4140:525c:864:f4f0:ed50:b030\]:3484', // Production Support
   'http://visbo.myhome-server.de:3484', // Production Support
   'http://localhost:4200' // MS Todo UI Support DEV Support
 ]
@@ -110,10 +111,10 @@ var whitelist = [
 // MS Todo: check where Corsoptions is called with undefined
 var corsOptions = {
   origin: function (origin, callback) {
-    //logger4js.fatal("Check CorsOptions %s", origin);
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
+      logger4js.fatal("CorsOptions deny  %s", origin);
       //callback(null, true) // temporary enable cors for all sites
       callback(new Error(origin + ' is not allowed to access'))
     }
