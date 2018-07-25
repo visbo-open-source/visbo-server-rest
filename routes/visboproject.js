@@ -821,10 +821,11 @@ router.route('/:vpid/lock')
 					error: err
 				});
 			}
+			newLock = req.oneVP.lock.filter(lock => (lock.email == newLock.email && lock.expiresAt == newLock.expiresAt && lock.variantName == newLock.variantName && lock.createdAt == newLock.createdAt ))[0];
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated Visbo Project Locks',
-				lock: req.oneVP.lock
+				lock: [newLock]
 			});
 		});
 	})
@@ -1003,10 +1004,11 @@ router.route('/:vpid/variant')
 					error: err
 				});
 			}
+			newVariant = req.oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Visbo Project Variant',
-				vp: [req.oneVP]
+				variant: [newVariant]
 			});
 		});
 	})
