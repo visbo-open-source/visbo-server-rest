@@ -228,7 +228,7 @@ router.route('/')
 			logger4js.debug("Create Visbo Center (name is already unique) check users");
 			var newVC = new VisboCenter();
 			newVC.name = name;
-			newVC.description = req.body.description.trim() || "";
+			newVC.description = (req.body.description || "").trim();
 			newVC.vpCount = 0;
 			// Check for Valid User eMail remove non existing eMails
 
