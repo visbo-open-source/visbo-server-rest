@@ -104,11 +104,10 @@ var whitelist = [
   undefined, // POSTMAN Support
   'http://localhost:3484', // DEV Support
   'http://\[2a02:810d:4140:525c:864:f4f0:ed50:b030\]:3484', // Production Support
-  'http://visbo.myhome-server.de:3484', // Production Support
+  'https://my.visbo.net', // Production Support
   'http://localhost:4200' // MS Todo UI Support DEV Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
-// MS Todo: check where Corsoptions is called with undefined
 var corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
