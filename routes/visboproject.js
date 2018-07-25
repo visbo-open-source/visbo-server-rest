@@ -755,6 +755,7 @@ router.route('/:vpid/lock')
 	*  "state":"success",
 	*  "message":"Successfully locked VisboProject",
 	*  "lock":[{
+	*    "_id": "id5c754feaa",
 	*    "variantName": "",
 	*    "email": "someone@visbo.de",
 	*    "createdAt": "2018-04-26T11:04:12.094Z",
@@ -925,39 +926,13 @@ router.route('/:vpid/variant')
 	* {
 	*  "state":"success",
 	*  "message":"Successfully created Variant for Visbo Project",
-	*  "vp":[{
-	*       "_id":"vp541c754feaa",
-	*      "updatedAt":"2018-03-16T12:39:54.042Z",
-	*      "createdAt":"2018-03-12T09:54:56.411Z",
-	*      "name":"My new VisboProject",
-	*      "vcid": "vc5aaf992",
-	*      "vpType": "1",
-	*      "users":[
-	*       {
-	*        "email":"example1@visbo.de",
-	*        "role":"Admin",
-	*        "userId":"us5c754feab"
-	*       },
-	*       {
-	*        "email":"example2@visbo.de",
-	*        "role":"User",
-	*        "userId":"us5c754feac"
-	*       }
-	*     ],
-	*     "lock": [{
-	*       "variantName": "",
-	*       "email": "someone@visbo.de",
-	*       "createdAt": "2018-04-26T11:04:12.094Z",
-	*       "expiresAt": "2018-04-26T12:04:12.094Z"
-	*    }],
-	*    "variant": [{
-	*       "variantName": "V1",
-	*       "email": "someone@visbo.de",
-	*       "createdAt": "2018-04-26T11:04:12.094Z",
-	*       "vpvCount": "1"
-	*    }]
-	*   }
-	*  ]
+	*  "variant":[{
+	*    "_id": "id5c754feaa",
+	*    "variantName": "V1",
+	*    "email": "someone@visbo.de",
+	*    "createdAt": "2018-04-26T11:04:12.094Z",
+	*    "vpvCount": "1"
+	*  ]}
 	* }
 	*/
 // Create a Variant inside a Project
