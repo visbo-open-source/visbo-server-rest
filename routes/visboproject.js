@@ -70,13 +70,14 @@ router.route('/')
 	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
 	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiParam {String} vcid Deliver only projects for this Visbo Center
+	* @apiParam {String} vpType Deliver only projects of the specified Type
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiDescription Get all Visbo Projects to whom the authenticated user has access. Optional with a query parameter "vcid" in the URL to restrict the results to a specific Visbo Center
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992
+	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=2
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -136,9 +137,11 @@ router.route('/')
 		// either member of the project or if project is public member of the VC
 		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		query.deleted =  {$exists: false};				// Not deleted
-
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
+		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
+		if (req.query && req.query.vpType) query.vpType = req.query.vpType;
+
 		logger4js.info("Get Project for user %s", userId);
 		logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
 
@@ -1184,7 +1187,6 @@ router.route('/:vpid/portfolio')
 	*    "variantName": "name of the portfolio variant",
 	*    "allItems": [{
 	*      "vpid" : "VisboProject ID",
-	*      "name" : "VisboProject Name",
 	*      "variantName" : "name of the Variant of the Project",
 	*      "Start" : "2018-04-01T12:00:00.000Z",
 	*      "show" : "true",
@@ -1352,10 +1354,10 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   "timestamp": "2018-06-07T13:17:35.000Z",
 	*   "name": "VP Test01 PF",
 	*   "variantName": "",
-	*   "vpid": "5b192d7915609a50f5702a2c",
-	*   "_id": "5b19306f53eb4b516619a5ab",
+	*   "vpid": "vp50f5702a2c",
+	*   "_id": "vpf116619a5ab",
 	*   "allItems": [{
-	*     "vpid": "5b1532e8586c150506ab9633",
+	*     "vpid": "vp150506ab9633",
 	*     "name": "VisboProject Name",
 	*     "variantName": "",
 	*     "Start": "2018-04-01T12:00:00.000Z",
