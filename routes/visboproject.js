@@ -70,13 +70,14 @@ router.route('/')
 	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
 	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiParam {String} vcid Deliver only projects for this Visbo Center
+	* @apiParam {String} vpType Deliver only projects of the specified Type
 	* @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiDescription Get all Visbo Projects to whom the authenticated user has access. Optional with a query parameter "vcid" in the URL to restrict the results to a specific Visbo Center
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992
+	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=2
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -136,16 +137,18 @@ router.route('/')
 		// either member of the project or if project is public member of the VC
 		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		query.deleted =  {$exists: false};				// Not deleted
-
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
+		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
+		if (req.query && req.query.vpType) query.vpType = req.query.vpType;
+
 		logger4js.info("Get Project for user %s", userId);
 		logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
 
 		var queryVP = VisboProject.find(query);
 		queryVP.exec(function (err, listVP) {
-
 			if (err) {
+				logger4js.fatal("VP GET DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -265,6 +268,7 @@ router.route('/')
 		}
 		VisboCenter.findOne({'_id': vcid}, function (err, vc) {
 			if (err) {
+				logger4js.fatal("VP Post DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -287,6 +291,7 @@ router.route('/')
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
+					logger4js.fatal("VP Post DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -325,6 +330,7 @@ router.route('/')
 				queryUsers.select('email');
 				queryUsers.exec(function (err, listUsers) {
 					if (err) {
+						logger4js.fatal("VP Post DB Connection ", err);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error getting Users for VisboCenters',
@@ -358,8 +364,8 @@ router.route('/')
 					logger4js.debug("Save VisboProject %s  with %d Users", newVP.name, newVP.users.length);
 					newVP.save(function(err, vp) {
 						if (err) {
-									logger4js.debug("Error Save VisboProject %s  with Error %s", newVP.name, err);
-									return res.status(500).send({
+							logger4js.debug("Error Save VisboProject %s  with Error %s", newVP.name, err);
+							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to create visboproject",
 								error: err
@@ -573,6 +579,7 @@ router.route('/:vpid')
 			logger4js.debug("PUT VP: save now");
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
+					logger4js.fatal("VP PUT DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Project',
@@ -703,6 +710,7 @@ router.route('/:vpid')
 		logger4js.debug("Delete Visbo Project after premission check %s %s", req.params.vpid, req.oneVP.name);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
+				logger4js.fatal("VP DELETE DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Project',
@@ -816,6 +824,7 @@ router.route('/:vpid/lock')
 		req.oneVP.lock.push(newLock);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
+				logger4js.fatal("VP DELETE DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Locks',
@@ -891,6 +900,7 @@ router.route('/:vpid/lock')
 
 		req.oneVP.save(function(err, empty) {
 			if (err) {
+				logger4js.fatal("VP DELETE Lock DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Project',
@@ -973,6 +983,7 @@ router.route('/:vpid/variant')
 		logger4js.trace("Variant List new %O ", variantList);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
+				logger4js.fatal("VP POST Variant DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Variants',
@@ -1057,6 +1068,7 @@ router.route('/:vpid/variant/:vid')
 
 		req.oneVP.save(function(err, empty) {
 			if (err) {
+				logger4js.fatal("VP DELETE Variant DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Project Variants',
@@ -1141,6 +1153,7 @@ router.route('/:vpid/portfolio')
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
+				logger4js.fatal("VPF GET DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -1174,7 +1187,6 @@ router.route('/:vpid/portfolio')
 	*    "variantName": "name of the portfolio variant",
 	*    "allItems": [{
 	*      "vpid" : "VisboProject ID",
-	*      "name" : "VisboProject Name",
 	*      "variantName" : "name of the Variant of the Project",
 	*      "Start" : "2018-04-01T12:00:00.000Z",
 	*      "show" : "true",
@@ -1219,7 +1231,7 @@ router.route('/:vpid/portfolio')
 
 		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s Portfolio %O", userId, useremail, req.params.vpid, req.body);
 
-		logger4js.debug("Variant %s", variantName);
+		logger4js.debug("Variant %s", variantName || "None");
 
 		if (req.oneVPisAdmin != true) {
 			return res.status(403).send({
@@ -1270,6 +1282,7 @@ router.route('/:vpid/portfolio')
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
 			if (err) {
+				logger4js.fatal("VPF Post DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Projects for Portfolio',
@@ -1277,7 +1290,7 @@ router.route('/:vpid/portfolio')
 				});
 			}
 			if (listVP.length != listVPid.length) {
-				logger4js.warn("Found only %d of %d Users, ignoring non existing users", listVP.length, listVPid.length);
+				logger4js.warn("Found only %d of %d VP IDs", listVP.length, listVPid.length);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'Not all Projects exists or User has permission to',
@@ -1290,6 +1303,7 @@ router.route('/:vpid/portfolio')
 			for (var i = 0; i < req.body.allItems.length; i++) {
 				// get the item, overwrite Project name with correct name
 				req.body.allItems[i].name = listVP.find(findVPList, req.body.allItems[i].vpid).name;
+				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}
 			logger4js.debug("Replaced in List (%d) correct VP Names %s", newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
@@ -1298,6 +1312,7 @@ router.route('/:vpid/portfolio')
 
 			newPortfolio.save(function(err, onePortfolio) {
 				if (err) {
+					logger4js.fatal("VPF Post DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Portfolio',
@@ -1339,10 +1354,10 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   "timestamp": "2018-06-07T13:17:35.000Z",
 	*   "name": "VP Test01 PF",
 	*   "variantName": "",
-	*   "vpid": "5b192d7915609a50f5702a2c",
-	*   "_id": "5b19306f53eb4b516619a5ab",
+	*   "vpid": "vp50f5702a2c",
+	*   "_id": "vpf116619a5ab",
 	*   "allItems": [{
-	*     "vpid": "5b1532e8586c150506ab9633",
+	*     "vpid": "vp150506ab9633",
 	*     "name": "VisboProject Name",
 	*     "variantName": "",
 	*     "Start": "2018-04-01T12:00:00.000Z",
@@ -1373,6 +1388,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
+				logger4js.fatal("VPF GET specific DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -1436,6 +1452,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
+				logger4js.fatal("VPF DELETE DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Portfolio',
@@ -1459,6 +1476,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			oneVPF.deleted = {deletedAt: Date(), byParent: false }
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
+					logger4js.fatal("VPF Delete DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Portfolio',
