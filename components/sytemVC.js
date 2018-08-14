@@ -2,7 +2,6 @@ var mongoose = require('mongoose');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 
-var logging = require('./../components/logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);

@@ -17,7 +17,6 @@ var Variant = mongoose.model('Variant');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 
-var logging = require('./../components/logging');
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -59,7 +58,7 @@ router.route('/')
 
 /**
 	* @api {get} /vp Get Projects
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project
 	* @apiName GetVisboProjects
 	* @apiHeader {String} access-key User authentication token.
@@ -168,7 +167,7 @@ router.route('/')
 
 /**
 	* @api {post} /vp Create a Project
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project
 	* @apiName CreateVisboProjects
 	* @apiDescription Post creates a new VP
@@ -399,7 +398,7 @@ router.route('/')
 router.route('/:vpid')
 /**
  	* @api {get} /vp/:vpid Get a Project
- 	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
  	* @apiGroup Visbo Project
  	* @apiName GetVisboProject
  	* @apiHeader {String} access-key User authentication token.
@@ -466,7 +465,7 @@ router.route('/:vpid')
 
 /**
 	* @api {put} /vp/:vpid Update Project
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project
 	* @apiName UpdateVisboProjects
 	* @apiDescription Put updates a specific Visbo Project
@@ -666,7 +665,7 @@ router.route('/:vpid')
 
 /**
 	* @api {delete} /vp/:vpid Delete a Project
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project
 	* @apiName DeleteVisboProject
 	* @apiDescription Deletes a specific Visbo Project.
@@ -742,7 +741,7 @@ router.route('/:vpid')
 router.route('/:vpid/lock')
 /**
 	* @api {post} /vp/:vpid/lock Create Lock
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Properties
 	* @apiName CreateLock
 	* @apiDescription Post creates or renews a lock for a user to a specific project and variant
@@ -842,7 +841,7 @@ router.route('/:vpid/lock')
 
 /**
 	* @api {delete} /vp/:vpid/lock Delete Lock
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Properties
 	* @apiName DeleteLock
 	* @apiDescription Deletes a lock for a specific project and a specific variantName
@@ -918,7 +917,7 @@ router.route('/:vpid/lock')
 router.route('/:vpid/variant')
 /**
 	* @api {post} /vp/:vpid/variant Create a Variant
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Properties
 	* @apiName CreateVisboProjectVariant
 	* @apiDescription Post creates a new Variant for the Visbo Project
@@ -1003,7 +1002,7 @@ router.route('/:vpid/variant/:vid')
 
 /**
 	* @api {delete} /vp/:vpid/variant/:vid Delete a Variant
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Properties
 	* @apiName DeleteVisboProjectVariant
 	* @apiDescription Deletes a specific Variant for a project and also the project Versions
@@ -1087,7 +1086,7 @@ router.route('/:vpid/variant/:vid')
 router.route('/:vpid/portfolio')
 /**
 	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Portfolio
 	* @apiName GetPortfolio
 	* @apiHeader {String} access-key User authentication token.
@@ -1173,7 +1172,7 @@ router.route('/:vpid/portfolio')
 
 /**
 	* @api {post} /vp/:vpid/portfolio Create a Portfolio Version
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Portfolio
 	* @apiName CreatePortfolio
 	* @apiDescription Post creates a new Definition of a Portfolio for the Visbo Project
@@ -1331,7 +1330,7 @@ router.route('/:vpid/portfolio')
 router.route('/:vpid/portfolio/:vpfid')
 /**
 	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Portfolio
 	* @apiName GetVisboPortfolio
 	* @apiHeader {String} access-key User authentication token.
@@ -1408,7 +1407,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 /**
 	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Portfolio
 	* @apiName DeleteVisboPortfolio
 	* @apiDescription Deletes a specific Portfolio Version
@@ -1497,7 +1496,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 	/**
 		* @api {get} /vp/:vpid/user Get Users of the VP
-		* @apiVersion 0.0.1
+		* @apiVersion 1.0.0
 		* @apiGroup Visbo Project Users
 		* @apiName GetVisboProjectUser
 		* @apiHeader {String} access-key User authentication token.
@@ -1536,38 +1535,38 @@ router.route('/:vpid/portfolio/:vpfid')
 			});
 		})
 
-	/**
-		* @api {post} /vp/:vpid/user Add a User
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Project Users
-		* @apiName PostVisboProjectUser
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Post creates a new user inside the Visbo Project
-		*
-		* User must have Amdin Permission in the VP to create new users
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/user
-		*  {
-	  *    "email":"new.user@visbo.de",
-	  *    "role": "User",
-		*    "message": "Invitation message"
-	  *  }
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Returned Visbo Project User",
-		*   "users":[{
-		*     "_id":"id5c754feaa",
-		*     "userId":"userId5c754feaa",
-		*     "email":"User.email@visbo.de",
-		*     "role": "User"
-		*   }]
-		* }
-		*/
+/**
+	* @api {post} /vp/:vpid/user Add a User
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Project Users
+	* @apiName PostVisboProjectUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Post creates a new user inside the Visbo Project
+	*
+	* User must have Amdin Permission in the VP to create new users
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/:vpid/user
+	*  {
+  *    "email":"new.user@visbo.de",
+  *    "role": "User",
+	*    "message": "Invitation message"
+  *  }
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Project User",
+	*   "users":[{
+	*     "_id":"id5c754feaa",
+	*     "userId":"userId5c754feaa",
+	*     "email":"User.email@visbo.de",
+	*     "role": "User"
+	*   }]
+	* }
+	*/
 
 	// Create Visbo Project User
 		.post(function(req, res) {
@@ -1674,28 +1673,28 @@ router.route('/:vpid/portfolio/:vpfid')
 			})
 		})
 
-		router.route('/:vpid/user/:userid')
+	router.route('/:vpid/user/:userid')
 
-		/**
-			* @api {delete} /vp/:vpid/user/:userid Delete a User from VP
-			* @apiVersion 0.0.1
-			* @apiGroup Visbo Project Users
-			* @apiName DeleteVisboProjectUser
-			* @apiHeader {String} access-key User authentication token.
-			* @apiDescription Deletes the specified user in the Visbo Project
-			*
-			* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-			* @apiError NotAuthenticated no valid token HTTP 401
-			* @apiError ServerIssue No DB Connection HTTP 500
-			* @apiExample Example usage:
-			*   url: http://localhost:3484/vp/:vpid/user/:userid
-			* @apiSuccessExample {json} Success-Response:
-			* HTTP/1.1 200 OK
-			* {
-			*   "state":"success",
-			*   "message":"Visbo Project User deleted"
-			* }
-			*/
+	/**
+		* @api {delete} /vp/:vpid/user/:userid Delete a User from VP
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Users
+		* @apiName DeleteVisboProjectUser
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the specified user in the Visbo Project
+		*
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/user/:userid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Visbo Project User deleted"
+		* }
+		*/
 
 	// Delete Visbo Project User
 		.delete(function(req, res) {

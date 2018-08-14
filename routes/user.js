@@ -6,7 +6,6 @@ var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 
-var logging = require('./../components/logging');
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -25,8 +24,8 @@ router.use('/profile', auth.verifyUser);
 router.route('/profile')
 /**
 	* @api {get} /user/profile Get own profile
+	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiVersion 0.0.1
 	* @apiGroup UserProfile
 	* @apiName GetUserProfile
 	* @apiPermission user must be authenticated
@@ -86,8 +85,8 @@ router.route('/profile')
 
 /**
 	* @api {put} /user/profile Update own profile
+	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiVersion 0.0.1
 	* @apiGroup UserProfile
 	* @apiName UpdateUserProfile
 	* @apiExample Example usage:

@@ -1,4 +1,3 @@
-var logging = require('./../components/logging');
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
