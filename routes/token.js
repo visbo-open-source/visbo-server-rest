@@ -29,7 +29,7 @@ router.route('/user/login')
 
 /**
 	* @api {post} /token/user/login User Login
-	*
+	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserLogin
 	* @apiPermission none
@@ -137,7 +137,7 @@ router.route('/user/forgottenpw')
 
 /**
 	* @api {post} /token/user/forgottenpw Password Reset
-	*
+	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserForgottenPW
 	* @apiExample Example usage:
@@ -235,19 +235,19 @@ router.route('/user/forgottenpw')
 
 	router.route('/user/forgottenpwchange')
 
-	/**
-		* @api {post} /token/user/forgottenpwchange Password Reset
-		*
-		* @apiGroup Authentication
-		* @apiName UserForgottenPW
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/token/user/forgottenpwchange
-		*   body:
-		*   {
-		*     "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
-		* 		"password": "newPassword"
-		*   }
-		*/
+/**
+	* @api {post} /token/user/forgottenpwchange Password Reset
+	* @apiVersion 1.0.0
+	* @apiGroup Authentication
+	* @apiName UserForgottenPW
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/token/user/forgottenpwchange
+	*   body:
+	*   {
+	*     "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
+	* 		"password": "newPassword"
+	*   }
+	*/
 
 	// Forgot Password Change
 	.post(function(req, res) {
@@ -312,7 +312,7 @@ router.route('/user/signup')
 
 /**
   * @api {post} /token/user/signup User Signup
-  *
+  * @apiVersion 1.0.0
   * @apiGroup Authentication
   * @apiName UserSignup
   * @apiPermission none

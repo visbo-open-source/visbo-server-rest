@@ -21,6 +21,8 @@ var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+var constVPTypes = Object.freeze({"project":0, "portfolio":1, "projecttemplate":2});
+
 // find a user in a simple array of user names
 var findUser = function(currentUser) {
 		return currentUser == this;
@@ -76,7 +78,7 @@ router.route('/')
 	* @apiDescription Get all Visbo Projects to whom the authenticated user has access. Optional with a query parameter "vcid" in the URL to restrict the results to a specific Visbo Center
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=2
+	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -131,8 +133,6 @@ router.route('/')
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		// MS TODO include vcid if specified and add special check for public VPs afterwards
-
 		// either member of the project or if project is public member of the VC
 		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		query.deleted =  {$exists: false};				// Not deleted
@@ -141,7 +141,7 @@ router.route('/')
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
 		if (req.query && req.query.vpType) query.vpType = req.query.vpType;
 
-		logger4js.info("Get Project for user %s", userId);
+		logger4js.info("Get Projects for user %s", userId);
 		logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
 
 		var queryVP = VisboProject.find(query);
@@ -185,7 +185,7 @@ router.route('/')
 	* {
 	*  "name":"My first Visbo Project",
 	*  "vcid": "vc5aaf992",
-	*  "vpType": "1",
+	*  "vpType": "0",
 	*  "users":[
 	*   {
 	*    "email":"example1@visbo.de",
@@ -210,7 +210,7 @@ router.route('/')
 	*   "_id":"vp5aaf882",
 	*   "vcid": "vc5aaf992",
 	*   "vpvCount": "0",
-	*   "vpType": "1",
+	*   "vpType": "0",
 	*   "vpPublic": "false",
 	*   "users":[
 	*    {
@@ -308,8 +308,8 @@ router.route('/')
 				newVP.name = vpname;
 				newVP.vcid = vcid;
 				newVP.description = vpdescription;
-				if (req.body.vpType == undefined || req.body.vpType <= 0 || req.body.vpType > 3) {
-					newVP.vpType = 1;
+				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
+					newVP.vpType = 0;
 				} else {
 					newVP.vpType = req.body.vpType;
 				}
@@ -423,7 +423,7 @@ router.route('/:vpid')
  	*    "name":"My new Visbo Project",
 	*		 "vcid": "vc5aaf992",
 	*    "vpvCount": "0",
-	*    "vpType": "1",
+	*    "vpType": "0",
  	*    "users":[
  	*     {
  	*      "email":"example1@visbo.de",
@@ -498,7 +498,7 @@ router.route('/:vpid')
 	*   "_id":"vp5cf3da025",
 	*   "vcid": "vc5aaf992",
 	*   "vpvCount": "0",
-	*   "vpType": "1",
+	*   "vpType": "0",
 	*   "users":[
 	*    {
 	*     "userId":"us5aaf992"
@@ -588,7 +588,7 @@ router.route('/:vpid')
 				req.oneVP = oneVP;
 				// Update underlying projects if name has changed
 				if (vpPopulate) {
-					if (oneVP.vpType == 2) { // Project is a Portfolio
+					if (oneVP.vpType == constVPTypes.portfolio) {
 						var updateQuery = {};
 						updateQuery.vpid = oneVP._id;
 						updateQuery.deleted = {$exists: false};
@@ -1255,7 +1255,7 @@ router.route('/:vpid/portfolio')
 				vp: [req.oneVP]
 			});
 		}
-		if (req.oneVP.vpType != 2) {
+		if (req.oneVP.vpType != constVPTypes.portfolio) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Project is not a Portfolio Project',
@@ -1494,32 +1494,32 @@ router.route('/:vpid/portfolio/:vpfid')
 	// User Management for VP
 	router.route('/:vpid/user')
 
-	/**
-		* @api {get} /vp/:vpid/user Get Users of the VP
-		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Users
-		* @apiName GetVisboProjectUser
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets all users of the specified Visbo Project
-		*
-		* @apiPermission user must be authenticated, user must have access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/user
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Returned Visbo Project Users",
-		*   "users":[{
-		*     "_id":"id5c754feaa",
-		*     "userId":"userId5c754feaa",
-		*     "email":"User.email@visbo.de",
-		*     "role": "User"
-		*   }]
-		* }
-		*/
+/**
+	* @api {get} /vp/:vpid/user Get Users of the VP
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Project Users
+	* @apiName GetVisboProjectUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Gets all users of the specified Visbo Project
+	*
+	* @apiPermission user must be authenticated, user must have access to referenced VisboProject
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/:vpid/user
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Returned Visbo Project Users",
+	*   "users":[{
+	*     "_id":"id5c754feaa",
+	*     "userId":"userId5c754feaa",
+	*     "email":"User.email@visbo.de",
+	*     "role": "User"
+	*   }]
+	* }
+	*/
 
 	// get VP Users
 		.get(function(req, res) {
@@ -1675,26 +1675,26 @@ router.route('/:vpid/portfolio/:vpfid')
 
 	router.route('/:vpid/user/:userid')
 
-	/**
-		* @api {delete} /vp/:vpid/user/:userid Delete a User from VP
-		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Users
-		* @apiName DeleteVisboProjectUser
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified user in the Visbo Project
-		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/user/:userid
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Visbo Project User deleted"
-		* }
-		*/
+/**
+	* @api {delete} /vp/:vpid/user/:userid Delete a User from VP
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Project Users
+	* @apiName DeleteVisboProjectUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Deletes the specified user in the Visbo Project
+	*
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vp/:vpid/user/:userid
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Visbo Project User deleted"
+	* }
+	*/
 
 	// Delete Visbo Project User
 		.delete(function(req, res) {
