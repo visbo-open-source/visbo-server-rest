@@ -12,7 +12,8 @@ var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
 
-var logging = require('./../components/logging');
+var mail = require('./../components/mail');
+
 var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -39,7 +40,7 @@ router.use('/', verifyVc.verifyVc);
 router.route('/')
 	/**
 	* @api {get} /vc Get Visbo Centers
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName GetVisboCenters
 	* @apiHeader {String} access-key User authentication token.
@@ -115,7 +116,7 @@ router.route('/')
 
 	/**
 	 * @api {post} /vc Create a Visbo Center
-	 * @apiVersion 0.0.1
+	 * @apiVersion 1.0.0
 	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
 	 * @apiDescription Post creates a new VC
@@ -305,7 +306,7 @@ router.route('/')
 router.route('/:vcid')
  /**
  	* @api {get} /vc/:vcid Get a Visbo Center
- 	* @apiVersion 0.0.1
+ 	* @apiVersion 1.0.0
  	* @apiGroup Visbo Center
  	* @apiName GetVisboCenter
 	* @apiDescription Gets a specific Visbo Center
@@ -361,7 +362,7 @@ router.route('/:vcid')
 
 /**
 	* @api {put} /vc/:vcid Update Visbo Center
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName UpdateVisboCenters
 	* @apiDescription Put updates a specific Visbo Center.
@@ -508,7 +509,7 @@ router.route('/:vcid')
 
 /**
 	* @api {delete} /vc/:vcid Delete a Visbo Centers
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName DeleteVisboCenter
 	* @apiDescription Deletes a specific Visbo Center.
@@ -596,7 +597,7 @@ router.route('/:vcid/role')
 
 /**
 	* @api {get} /vc/:vcid/role Get Roles
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName GetVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -652,7 +653,7 @@ router.route('/:vcid/role')
 
 /**
 	* @api {post} /vc/:vcid/role Create a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PostVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -764,7 +765,7 @@ router.route('/:vcid/role/:roleid')
 
 /**
 	* @api {delete} /vc/:vcid/role/:roleid Delete a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName DeleteVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -839,7 +840,7 @@ router.route('/:vcid/role/:roleid')
 
 /**
 	* @api {put} /vc/:vcid/role/:roleid Update a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PutVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -942,7 +943,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {get} /vc/:vcid/cost Get Costs
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName GetVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -999,7 +1000,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {post} /vc/:vcid/cost Create a Cost Definition
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PostVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -1080,26 +1081,26 @@ router.route('/:vcid/cost')
 
 	router.route('/:vcid/cost/:costid')
 
-	/**
-		* @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Center Properties
-		* @apiName DeleteVisboCenterCost
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified cost in the Visbo Center
-		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/cost/:costid
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Visbo Center Cost deleted"
-		* }
-		*/
+/**
+  * @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
+  * @apiVersion 1.0.0
+  * @apiGroup Visbo Center Properties
+  * @apiName DeleteVisboCenterCost
+  * @apiHeader {String} access-key User authentication token.
+  * @apiDescription Deletes the specified cost in the Visbo Center
+  *
+  * @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+  * @apiError NotAuthenticated no valid token HTTP 401
+  * @apiError ServerIssue No DB Connection HTTP 500
+  * @apiExample Example usage:
+  *   url: http://localhost:3484/vc/:vcid/cost/:costid
+  * @apiSuccessExample {json} Success-Response:
+  * HTTP/1.1 200 OK
+  * {
+  *   "state":"success",
+  *   "message":"Visbo Center Cost deleted"
+  * }
+  */
 
 // Delete Visbo Center Cost
 	.delete(function(req, res) {
@@ -1157,7 +1158,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {put} /vc/:vcid/cost/:costid Update a Cost Definition
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PutVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -1253,7 +1254,7 @@ router.route('/:vcid/user')
 
 /**
 	* @api {get} /vc/:vcid/user Get Users of the VC
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Users
 	* @apiName GetVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
@@ -1294,7 +1295,7 @@ router.route('/:vcid/user')
 
 /**
 	* @api {post} /vc/:vcid/user Add a User
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Users
 	* @apiName PostVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
@@ -1375,7 +1376,7 @@ router.route('/:vcid/user')
 			}
 			if (!user) {
 				user = new User();
-				user.email = vcUser.email
+				user.email = vcUser.email;
 				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
 				user.save(function(err, user) {
 					if (err) {
@@ -1399,6 +1400,14 @@ router.route('/:vcid/user')
 							});
 						}
 						req.oneVC = vc;
+						// MS TODO now send an e-Mail to the user for registration
+						var message = {};
+						message.to = vcUser.email;
+						message.from = useremail;
+						message.subject = "You have been invited to Visbo Center " + req.oneVC.name
+						message.text = "Please follow this Link to Register https://my.visbo.net/register"
+						logger4js.info("Now send mail from %s to %s", message.from, message.to);
+						mail.VisboSendMail(message);
 						return res.status(200).send({
 							state: "success",
 							message: "Successfully added User to Visbo Center",
@@ -1419,6 +1428,7 @@ router.route('/:vcid/user')
 						});
 					}
 					req.oneVC = vc;
+					// MS TODO now send an e-Mail to the user for login
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully added User to Visbo Center",
@@ -1431,26 +1441,26 @@ router.route('/:vcid/user')
 
 	router.route('/:vcid/user/:userid')
 
-	/**
-		* @api {delete} /vc/:vcid/user/:userid Delete a User from VC
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Center Users
-		* @apiName DeleteVisboCenterUser
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified user in the Visbo Center
-		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/user/:userid
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Visbo Center User deleted"
-		* }
-		*/
+/**
+	* @api {delete} /vc/:vcid/user/:userid Delete a User from VC
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Center Users
+	* @apiName DeleteVisboCenterUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Deletes the specified user in the Visbo Center
+	*
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vc/:vcid/user/:userid
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Visbo Center User deleted"
+	* }
+	*/
 
 // Delete Visbo Center User
 	.delete(function(req, res) {

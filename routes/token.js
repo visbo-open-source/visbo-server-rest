@@ -1,17 +1,19 @@
 var express = require('express');
 var router = express.Router();
+var url = require('url') ;
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 
-var logging = require('./../components/logging');
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var mail = require('./../components/mail');
+var ejs = require('ejs');
+var read = require('fs').readFileSync;
 
 var visbouser = mongoose.model('User');
 
@@ -27,7 +29,7 @@ router.route('/user/login')
 
 /**
 	* @api {post} /token/user/login User Login
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserLogin
 	* @apiPermission none
@@ -135,7 +137,7 @@ router.route('/user/forgottenpw')
 
 /**
 	* @api {post} /token/user/forgottenpw Password Reset
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserForgottenPW
 	* @apiExample Example usage:
@@ -160,51 +162,157 @@ router.route('/user/forgottenpw')
 					error: err
 				});
 			}
+			// MS TODO should we return success to prevent eMail probing and count the request to prevent eMail spamming
 			if (!user) {
-				return res.status(401).send({
-					state: "failure",
-					message: "email not registered"
+				return res.status(200).send({
+					// state: "failure",
+					// message: "email not registered"
+					state: "success",
+					message: "Successfully Requested Password Reset through e-Mail"
 				});
 			}
-		user.password = undefined;		// clear before send
-		logger4js.debug("Requested Password Reset through e-Mail %s with pw", user.email);
-		jwt.sign(user.toJSON(), jwtSecret.user.secret,
-			{ expiresIn: jwtSecret.user.expiresIn },
-			function(err, token) {
+			user.save(function(err, user) {
 				if (err) {
-					logger4js.fatal("forgot Password Sign Error ", err);
+					logger4js.error("Forgot Password Save user Error DB Connection %O", err);
 					return res.status(500).send({
 						state: "failure",
-						message: "token generation failed",
+						message: "database error, failed to update user",
 						error: err
 					});
-				};
-				// Send e-Mail with Token to the Users
-				var message = {
-						from: 'visbo@seyfried.bayern',
-						to: user.email,
-						subject: 'Visbo Password Reset Request',
-						text: 'Password reset Token: '.concat(token, " "),
-						html: '<p>Password reset Token: '.concat(token, " </p>")
-				};
-				//
-				// //transporter.sendMail(data[, callback])
-				// transporter.sendMail(message);
-				mail.VisboSendMail(message);
-				return res.status(200).send({
-					state: "success",
-					message: "Successfully Requested Password Reset through e-Mail",
-					user: user
-				});
+				}
+				user.password = undefined;
+				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s token encoded %O", user.email, jwtSecret.register.expiresIn);
+				// logger4js.debug("Requested Password Reset Request %O", req);
+				// delete user.profile;
+				// delete user.status;
+				jwt.sign(user.toJSON(), jwtSecret.register.secret,
+					{ expiresIn: jwtSecret.register.expiresIn },
+					function(err, token) {
+						if (err) {
+							logger4js.fatal("forgot Password Sign Error ", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "token generation failed",
+								error: err
+							});
+						};
+						// Send e-Mail with Token to the Users
+						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
+						// MS TODO do we need to generate HTTPS instead of HTTP
+						var pwreseturl = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, 'change', '?token=', token);
+						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
+						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl);
+						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "E-Mail Rendering failed",
+									error: err
+								});
+							}
+							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+							var message = {
+									from: 'visbo@seyfried.bayern',
+									to: user.email,
+									subject: 'Visbo Password Reset Request',
+									// text: 'Password reset Token: '.concat(token, " "),
+									// html: '<b>Password reset Token:</b><br><p>Password reset Token: '.concat(token, " </p>")
+									html: '<p> '.concat(emailHtml, " </p>")
+									// html: ejs.renderFile(template)
+							};
+							mail.VisboSendMail(message);
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully Requested Password Reset through e-Mail"
+							});
+						});
+					}
+				);
 			});
+		});
 	});
-});
+
+	router.route('/user/forgottenpwchange')
+
+/**
+	* @api {post} /token/user/forgottenpwchange Password Reset
+	* @apiVersion 1.0.0
+	* @apiGroup Authentication
+	* @apiName UserForgottenPW
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/token/user/forgottenpwchange
+	*   body:
+	*   {
+	*     "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
+	* 		"password": "newPassword"
+	*   }
+	*/
+
+	// Forgot Password Change
+	.post(function(req, res) {
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Password Reset Change through e-Mail");
+		if (!req.body.token || !req.body.password) {
+			return res.status(400).send({
+				state: "failure",
+				message: "token or password is missing"
+			});
+		}
+		var token = req.body.token;
+		// verifies secret and checks exp
+    jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
+      if (err) {
+        return res.status(401).send({
+        	state: 'failure',
+        	message: 'Token is dead'
+        });
+      } else {
+        // if everything is good, save to request for use in other routes
+				logger4js.debug("Forgot PW Token Check for User %s and _id %s", decoded.email, decoded._id);
+				visbouser.findOne({ "email" : decoded.email, "updatedAt": decoded.updatedAt }, function(err, user) {
+					if (err) {
+						logger4js.fatal("Forgot Password Change DB Connection ", err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error",
+							error: err
+						});
+					}
+					if (!user) {
+						logger4js.debug("Forgot Password user not found or different change date");
+						return res.status(401).send({
+							state: "failure",
+							message: "invalid token"
+						});
+					}
+					user.password = createHash(req.body.password);
+					user.save(function(err, user) {
+						if (err) {
+							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "database error, failed to update user",
+								error: err
+							});
+						}
+						logger4js.debug("Forgot Password Save Successful");
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully Changed Password"
+						});
+					});
+				});
+			}
+    });
+	});
 
 router.route('/user/signup')
 
 /**
   * @api {post} /token/user/signup User Signup
-  * @apiVersion 0.0.1
+  * @apiVersion 1.0.0
   * @apiGroup Authentication
   * @apiName UserSignup
   * @apiPermission none
