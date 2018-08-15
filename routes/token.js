@@ -93,6 +93,7 @@ router.route('/user/login')
 					error: err
 				});
 			}
+			logger4js.debug("Try to Login DB Checked", req.body.email);
 			if (!user) {
 				logger4js.warn("User not Found", req.body.email);
 				return res.status(400).send({
@@ -141,11 +142,10 @@ router.route('/user/forgottenpw')
 	* @apiGroup Authentication
 	* @apiName UserForgottenPW
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/token/user/forgottenpw
-	*   body:
-	*   {
-	*     "email": "example@example.com",
-	*   }
+	*  url: http://localhost:3484/token/user/forgottenpw
+	*  body: {
+	*   "email": "example@example.com",
+	* }
 	*/
 
 // Forgot Password
@@ -236,17 +236,16 @@ router.route('/user/forgottenpw')
 	router.route('/user/forgottenpwchange')
 
 /**
-	* @api {post} /token/user/forgottenpwchange Password Reset
+	* @api {post} /token/user/forgottenpwchange Password Reset Change
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
-	* @apiName UserForgottenPW
+	* @apiName UserForgottenPWChange
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/token/user/forgottenpwchange
-	*   body:
-	*   {
-	*     "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
-	* 		"password": "newPassword"
-	*   }
+	*  url: http://localhost:3484/token/user/forgottenpwchange
+	*  body: {
+	*   "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
+	*   "password": "newPassword"
+	* }
 	*/
 
 	// Forgot Password Change
@@ -405,7 +404,7 @@ router.route('/user/signup')
 				}
 			}
 			user.email = req.body.email;
-			user.status = {registeredAt: Date()};
+			user.status = {registeredAt: new Date()};
 			logger4js.debug("Signup Request new User %O \n%O", user, user.status);
 			user.password = createHash(req.body.password);
 			// user._id = undefined;	// is the reset required or does it guarantee uniqueness already?

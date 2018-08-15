@@ -1,8 +1,6 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var vpTypeSchema = Object.freeze({"project":0, "portfolio":1, "projecttemplate":2});
-
 var lockSchema = new Schema({
 	variantName: { type: String },
 	email: { type: String, required: true },

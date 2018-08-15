@@ -556,7 +556,7 @@ router.route('/:vcid')
 					message: "No permission to delete Visbo Center"
 				});
 			}
-			req.oneVC.deleted = {deletedAt: Date(), byParent: false }
+			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
 			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
@@ -572,7 +572,7 @@ router.route('/:vcid')
 				var updateQuery = {}
 				updateQuery.vcid = req.oneVC._id;
 				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {deleted: {deletedAt: Date(), byParent: true }}};
+				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 					if (err){
@@ -741,7 +741,7 @@ router.route('/:vcid/role')
 			vcRole.kapazitaet = req.body.kapazitaet;
 			vcRole.externeKapazitaet = req.body.externeKapazitaet;
 			vcRole.startOfCal = req.body.startOfCal;
-			vcRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
+			vcRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 			vcRole.save(function(err, oneVcRole) {
 				if (err) {
 					logger4js.fatal("VC Post Role DB Connection ", err);
@@ -920,7 +920,7 @@ router.route('/:vcid/role/:roleid')
 			oneVCRole.kapazitaet = req.body.kapazitaet;
 			oneVCRole.externeKapazitaet = req.body.externeKapazitaet;
 			oneVCRole.startOfCal = req.body.startOfCal;
-			oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
+			oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 			oneVCRole.save(function(err, oneVcRole) {
 				if (err) {
 					logger4js.fatal("VC Put Role DB Connection ", err);
@@ -1061,7 +1061,7 @@ router.route('/:vcid/cost')
 		vcCost.vcid = req.params.vcid;
 		vcCost.uid = req.body.uid;
 		vcCost.farbe = req.body.farbe;
-		vcCost.timestamp = Date();
+		vcCost.timestamp = new Date();
 		vcCost.save(function(err, oneVcCost) {
 			if (err) {
 				logger4js.fatal("VC Post Role DB Connection ", err);
@@ -1231,7 +1231,7 @@ router.route('/:vcid/cost')
 			oneVCCost.name = req.body.name;
 			oneVCCost.uid = req.body.uid;
 			oneVCCost.farbe = req.body.farbe;
-			oneVCCost.timestamp = Date();
+			oneVCCost.timestamp = new Date();
 			oneVCCost.save(function(err, oneVcCost) {
 				if (err) {
 					return res.status(500).send({

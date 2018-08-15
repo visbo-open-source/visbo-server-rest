@@ -23,7 +23,7 @@ router.route('/profile')
 /* *
 	* @ api {get} /admin/profile Get admin profile
 	* @ apiHeader {String} access-key Admin authentication token.
-	* @ apiVersion 0.0.1
+	* @ apiVersion 1.0.0
 	* @ apiGroup AdminProfile
 	* @ apiName GetAdminProfile
 	* @ apiExample Example usage:
@@ -52,7 +52,7 @@ router.route('/profile')
 /**
 	* @ api {put} /admin/profile Update admin profile
 	* @ apiHeader {String} access-key Admin authentication token.
-	* @ apiVersion 0.0.1
+	* @ apiVersion 1.0.0
 	* @ apiGroup AdminProfile
 	* @ apiName UpdateAdminProfile
 	* @ apiExample Example usage:
