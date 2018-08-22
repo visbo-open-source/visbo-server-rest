@@ -134,10 +134,10 @@ router.route('/user/login')
 		});
 	});
 
-router.route('/user/forgottenpw')
+router.route('/user/pwforgotten')
 
 /**
-	* @api {post} /token/user/forgottenpw Password Reset
+	* @api {post} /token/user/pwforgotten Password Reset
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserForgottenPW
@@ -199,7 +199,11 @@ router.route('/user/forgottenpw')
 						// Send e-Mail with Token to the Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						// MS TODO do we need to generate HTTPS instead of HTTP
-						var pwreseturl = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, 'change', '?token=', token);
+						var uiUrl =  'localhost:4200'
+						if (process.env.UI_URL != undefined) {
+						  uiUrl = process.env.UI_URL;
+						}
+						var pwreseturl = 'http://'.concat(uiUrl, '/pwreset', '?token=', token);
 						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl);
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
@@ -233,22 +237,22 @@ router.route('/user/forgottenpw')
 		});
 	});
 
-	router.route('/user/forgottenpwchange')
+router.route('/user/pwreset')
 
 /**
-	* @api {post} /token/user/forgottenpwchange Password Reset Change
+	* @api {post} /token/user/pwreset Password Reset
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
-	* @apiName UserForgottenPWChange
+	* @apiName PasswordReset
 	* @apiExample Example usage:
-	*  url: http://localhost:3484/token/user/forgottenpwchange
+	*  url: http://localhost:3484/token/user/pwreset
 	*  body: {
 	*   "token": "FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0",
 	*   "password": "newPassword"
 	* }
 	*/
 
-	// Forgot Password Change
+	// Password Reset
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
