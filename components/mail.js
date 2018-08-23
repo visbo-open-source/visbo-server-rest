@@ -61,15 +61,16 @@ function VisboSendMail(message) {
 		}
 	});
 	logger4js.debug("Mail all prepared, now fire the email to %s ", message.to);
-	//transporter.sendMail(data[, callback])
+
+	message.replyTo = message.from;
 	message.from = smtpConfig.auth.user;
 	transporter.sendMail(message, function(error, response){
-        if (error) {
-            logger4js.error("Mail delivery failed %s to %s", error, message.to);;
-        } else {
-            logger4js.debug("Mail delivery finished: %s", message.to);
-        }
-		});
+    if (error) {
+      logger4js.error("Mail delivery failed %s to %s", error, message.to);;
+    } else {
+      logger4js.debug("Mail delivery finished: %s", message.to);
+    }
+	});
 };
 
 module.exports = {

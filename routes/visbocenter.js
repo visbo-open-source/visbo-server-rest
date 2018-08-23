@@ -13,6 +13,8 @@ var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
 
 var mail = require('./../components/mail');
+var ejs = require('ejs');
+var read = require('fs').readFileSync;
 
 var logModule = "VC";
 var log4js = require('log4js');
@@ -1350,6 +1352,10 @@ router.route('/:vcid/user')
 		}
 		logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
 		var vcUser = new VCUser();
+		var eMailMessage = '';
+		if (req.body && req.body.message) {
+			eMailMessage = req.body.message;
+		}
 		vcUser.email = req.body.email;
 		vcUser.role = req.body.role  != "User" &&  req.body.role  != "Admin" ? "User" : req.body.role;
 
@@ -1364,7 +1370,7 @@ router.route('/:vcid/user')
 		}
 		// check if the user exists and get the UserId or create the user
 		var queryUsers = User.findOne({'email': vcUser.email});
-		queryUsers.select('email');
+		//queryUsers.select('email');
 		queryUsers.exec(function (err, user) {
 			if (err) {
 				logger4js.fatal("Post User to VC cannot find User, DB Connection %s", err);
@@ -1400,18 +1406,39 @@ router.route('/:vcid/user')
 							});
 						}
 						req.oneVC = vc;
-						// MS TODO now send an e-Mail to the user for registration
-						var message = {};
-						message.to = vcUser.email;
-						message.from = useremail;
-						message.subject = "You have been invited to Visbo Center " + req.oneVC.name
-						message.text = "Please follow this Link to Register https://my.visbo.net/register"
-						logger4js.info("Now send mail from %s to %s", message.from, message.to);
-						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully added User to Visbo Center",
-							users: [ vcUser ]
+						// now send an e-Mail to the user for registration
+						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
+						// MS TODO do we need to generate HTTPS instead of HTTP
+						var uiUrl =  'localhost:4200'
+						if (process.env.UI_URL != undefined) {
+						  uiUrl = process.env.UI_URL;
+						}
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id);
+
+						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "E-Mail Rendering failed",
+									error: err
+								});
+							}
+							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+							var message = {
+									from: useremail,
+									to: user.email,
+									subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
+									html: '<p> '.concat(emailHtml, " </p>")
+							};
+							logger4js.info("Now send mail from %s to %s message %s", message.from, message.to, eMailMessage);
+							mail.VisboSendMail(message);
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully added User to Visbo Center",
+								users: [ vcUser ]
+							});
 						});
 					})
 				});
@@ -1428,11 +1455,48 @@ router.route('/:vcid/user')
 						});
 					}
 					req.oneVC = vc;
-					// MS TODO now send an e-Mail to the user for login
-					return res.status(200).send({
-						state: "success",
-						message: "Successfully added User to Visbo Center",
-						users: [ vcUser ]
+					// now send an e-Mail to the user for registration/login
+					var template = __dirname.concat('/../emailTemplates/');
+					// MS TODO do we need to generate HTTPS instead of HTTP
+					var uiUrl =  'localhost:4200'
+					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+					logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
+					if (user.status && user.status.registeredAt) {
+						// send e-Mail to a registered user
+						template = template.concat('inviteVCExistingUser.ejs');
+						uiUrl = 'http://'.concat(uiUrl, '/vp/', req.oneVC._id);
+					} else {
+						// send e-Mail to an existing but unregistered user
+						template = template.concat('inviteVCNewUser.ejs');
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id);
+					}
+
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %O", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						var message = {
+								from: useremail,
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from, message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully added User to Visbo Center",
+							users: [ vcUser ]
+						});
 					});
 				})
 			}
