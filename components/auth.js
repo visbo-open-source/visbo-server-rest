@@ -1,9 +1,14 @@
+var logModule = "OTHER";
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
+
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 
 // Verify User Authentication
 function verifyUser(req, res, next) {
 
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var token = req.headers['access-key'];
 
 	// decode token
@@ -18,6 +23,7 @@ function verifyUser(req, res, next) {
         });
       } else {
         // if everything is good, save to request for use in other routes
+				// console.log("Auth Check for User %s and _id %s", decoded.email, decoded._id);
 				req.decoded = decoded;
         return next();
       }

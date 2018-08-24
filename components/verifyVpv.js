@@ -2,7 +2,6 @@ var mongoose = require('mongoose');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
-var logging = require('./../components/logging');
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);

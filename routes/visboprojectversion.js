@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
-var lock = require('./../components/lock');
+var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
 var User = mongoose.model('User');
@@ -13,7 +13,6 @@ var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
-var logging = require('./../components/logging');
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -32,7 +31,7 @@ router.route('/')
 
 /**
 	* @api {get} /vpv Get Versions
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Version
 	* @apiName GetVisboProjectVersions
 	* @apiHeader {String} access-key User authentication token.
@@ -179,7 +178,7 @@ router.route('/')
 
 /**
 	* @api {post} /vpv Create a Version
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Version
 	* @apiName CreateVisboProjectVersions
 	* @apiDescription Post creates a new Visbo Project Version.
@@ -263,7 +262,7 @@ router.route('/')
 				};
 			}
 			// check if the version is locked
-			if (lock.lockedVP(oneVP, useremail, req.body.variantName).locked) {
+			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				return res.status(401).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
@@ -284,7 +283,7 @@ router.route('/')
 			newVPV.name = oneVP.name;
 			newVPV.vpid = oneVP._id;
 			newVPV.variantName = variantName;
-			newVPV.timestamp = req.body.timestamp || Date();
+			newVPV.timestamp = req.body.timestamp || new Date();
 
 			// copy all attributes
 			newVPV.variantDescription = req.body.variantDescription;
@@ -359,7 +358,7 @@ router.route('/:vpvid')
 
 /**
  	* @api {get} /vpv/:vpvid Get specific Version
- 	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
  	* @apiGroup Visbo Project Version
  	* @apiName GetVisboProjectVersion
  	* @apiHeader {String} access-key User authentication token.
@@ -402,7 +401,7 @@ router.route('/:vpvid')
 
 /**
 	* @api {delete} /vpv/:vpvid Delete specific Version
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Version
 	* @apiName DeleteVisboProjectVersion
 	* @apiDescription Deletes a specific Visbo Project Version.
@@ -448,7 +447,7 @@ router.route('/:vpvid')
 			});
 		}
 		// check if the project is locked
-		if (lock.lockedVP(req.oneVP, useremail, req.oneVPV.variantName).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, req.oneVPV.variantName).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -458,7 +457,7 @@ router.route('/:vpvid')
 		logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
 		var variantName = req.oneVPV.variantName;
 
-		req.oneVPV.deleted = {deletedAt: Date(), byParent: false }
+		req.oneVPV.deleted = {deletedAt: new Date(), byParent: false }
 		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
 				return res.status(500).send({
