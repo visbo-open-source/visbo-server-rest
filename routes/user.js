@@ -37,8 +37,8 @@ router.route('/profile')
 	* HTTP/1.1 200 OK
 	* {
 	*  "state":"success",
-	* "message":"Updated user profile",
-	* "user":{
+	*  "message":"User profile",
+	*  "user":{
 	*    "_id":"5a96787976294c5417f0e409",
 	*    "updatedAt":"2018-03-20T10:31:27.216Z",
 	*    "createdAt":"2018-02-28T09:38:04.774Z",

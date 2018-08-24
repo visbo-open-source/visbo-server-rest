@@ -17,12 +17,15 @@ var read = require('fs').readFileSync;
 
 var visbouser = mongoose.model('User');
 
+var isValidHash = function(hash, secret){
+	return bCrypt.compareSync(secret, hash);
+};
 var isValidPassword = function(user, password){
 	return bCrypt.compareSync(password, user.password);
 };
 // Generates hash using bCrypt
-var createHash = function(password){
-	return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
 
 router.route('/user/login')
@@ -375,8 +378,19 @@ router.route('/user/signup')
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		logger4js.info("Signup Request for e-Mail %s", req.body.email);
-		visbouser.findOne({ "email": req.body.email }, function(err, user) {
+		logger4js.info("Signup Request for e-Mail %s or id %s", req.body.email, req.body._id);
+		var query = {};
+		if (req.body.email) {
+			query.email = req.body.email;
+		} else if (req.body._id) {
+			query._id = req.body._id;
+		} else {
+			return res.status(400).send({
+				state: "failure",
+				message: "No e-Mail or User ID in body"
+			});
+		}
+		visbouser.findOne(query, function(err, user) {
 			if (err) {
 				logger4js.fatal("user Signup DB Connection ", err);
 				return res.status(500).send({
@@ -390,6 +404,13 @@ router.route('/user/signup')
 				return res.status(401).send({
 					state: "failure",
 					message: "email already registered"
+				});
+			}
+			// if user exists and is registered already refuse to register again
+			if (!user && req.body._id) {
+				return res.status(400).send({
+					state: "failure",
+					message: "User ID incorrect"
 				});
 			}
 			if (!user) user = new visbouser();
@@ -407,11 +428,10 @@ router.route('/user/signup')
 					user.profile.address.country = req.body.profile.address.country;
 				}
 			}
-			user.email = req.body.email;
-			user.status = {registeredAt: new Date()};
+			if (!user.email) user.email = req.body.email;
+			// user.status = {registeredAt: new Date()};
 			logger4js.debug("Signup Request new User %O \n%O", user, user.status);
 			user.password = createHash(req.body.password);
-			// user._id = undefined;	// is the reset required or does it guarantee uniqueness already?
 			user.save(function(err, user) {
 				if (err) {
 					logger4js.error("Signup Error DB Connection %O", err);
@@ -422,13 +442,185 @@ router.route('/user/signup')
 					});
 				}
 				user.password = undefined;
-				return res.status(200).send({
-					state: "success",
-					message: "Successfully signed up",
-					user: user
+				// now send the eMail for confirmation of the e-Mail address
+				var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
+				// MS TODO do we need to generate HTTPS instead of HTTP
+				var uiUrl =  'localhost:4200'
+				var eMailSubject = 'Please confirm your eMail address ';
+				if (process.env.UI_URL != undefined) {
+					uiUrl = process.env.UI_URL;
+				}
+				var secret = ''.concat(user._id, user.createdAt.getTime());
+				var hash = createHash(secret);
+				logger4js.debug("E-Mail hash calculated %s", hash);
+
+				uiUrl = 'http://'.concat(uiUrl, '/registerconfirm?id=', user._id, '&hash=', hash);
+
+				logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+				ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+					if (err) {
+						logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+						return res.status(500).send({
+							state: "failure",
+							message: "E-Mail Rendering failed",
+							error: err
+						});
+					}
+					// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+					var message = {
+							// from: useremail,
+							to: user.email,
+							subject: eMailSubject,
+							html: '<p> '.concat(emailHtml, " </p>")
+					};
+					logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
+					mail.VisboSendMail(message);
+					return res.status(200).send({
+						state: "success",
+						message: "Successfully signed up",
+						user: user
+					});
 				});
 			});
 		});
 	});
+
+	router.route('/user/confirm')
+
+	/**
+	  * @api {post} /token/user/confirm e-Mail Confirmation
+	  * @apiVersion 1.0.0
+	  * @apiGroup Authentication
+	  * @apiName UserConfirm
+	  * @apiPermission none
+		* @apiError ParameterMissing required parameters userId & hash missing HTTP 400
+	  * @apiError ServerIssue No DB Connection HTTP 500
+	  * @apiExample Example usage:
+	  *   url: http://localhost:3484/token/user/confirm
+	  *   body:
+	  *   {
+	  *     "_id": "userId5c754feaa",
+	  *     "hash": "hash5x974fdfd",
+	  *   }
+		* @apiSuccessExample {json} Success-Response:
+	  * HTTP/1.1 200 OK
+	  * {
+	  *   "state":"success",
+	  *   "message":"Successfully confirmed e-Mail",
+	  *   "user":{
+	  *    "_id":"userId5c754feaa",
+	  *    "updatedAt":"2018-02-28T09:38:04.774Z",
+	  *    "createdAt":"2018-02-28T09:38:04.774Z",
+	  *    "email":"example@example.com",
+		*     "profile": {
+		*       "firstName": "First",
+		*       "lastName": "Last",
+		*       "company": "Visbo GmbH",
+		*       "phone": "08024-112233",
+		*       "address": {
+		*         "street": "Kurt-Koch-Str.",
+		*         "zip": "83607",
+		*         "city": "Holzkirchen",
+		*         "state": "Bayern",
+		*         "country": "Germany"
+		*       }
+		*     }
+	  *    "__v":0
+	  *   }
+	  * }
+	  */
+
+	// Post Signup User
+		.post(function(req, res) {
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
+			if (!req.body._id || !req.body.hash) {
+				return res.status(400).send({
+					state: "failure",
+					message: "No User ID or hash in body"
+				});
+			}
+
+			var query = {_id: req.body._id};
+			visbouser.findOne(query, function(err, user) {
+				if (err) {
+					logger4js.fatal("e-Mail confirmation DB Connection ", err);
+					return res.status(500).send({
+						state: "failure",
+						message: "database error",
+						error: err
+					});
+				}
+				// if user exists and is registered already refuse to register again
+				if (!user || (user.status && user.status.registeredAt)) {
+					if (!user) logger4js.warn("Security: invalid e-Mail confirmation for unknown userID %s", req.body._id);
+					return res.status(401).send({
+						state: "failure",
+						message: "No e-mail address to confirm"
+					});
+				}
+				// user exists and is not registered yet
+				logger4js.debug("Confirm eMail for %s %s", user._id, user.email, user.createdAt.getTime());
+				// verify hash
+				var secret = ''.concat(user._id, user.createdAt.getTime())
+				// MS TODO Check correct hash
+				if (isValidHash(req.body.hash, secret)) {
+					logger4js.warn("Security: invalid e-Mail & hash combination", user.email);
+					// return res.status(401).send({
+					// 	state: "failure",
+					// 	message: "No e-mail address to confirm"
+					// });
+				}
+
+				// update registered status
+				user.status = {registeredAt: new Date()};
+				user.save(function(err, user) {
+					if (err) {
+						logger4js.error("Confirm eMail  DB Connection %O", err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error, failed to update user",
+							error: err
+						});
+					}
+					// now send the eMail for confirmation of the e-Mail address
+					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
+					// MS TODO do we need to generate HTTPS instead of HTTP
+					var uiUrl =  'localhost:4200'
+					var eMailSubject = 'Successful eMail confirmation';
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+
+					uiUrl = 'http://'.concat(uiUrl, '/login?email=', user.email);
+
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						var message = {
+								// from: useremail,
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully confirmed eMail",
+							user: user
+						});
+					});
+				});
+			});
+		});
 
 module.exports = router;

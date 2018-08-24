@@ -62,7 +62,9 @@ function VisboSendMail(message) {
 	});
 	logger4js.debug("Mail all prepared, now fire the email to %s ", message.to);
 
-	message.replyTo = message.from;
+	if (message.from && message.from != smtpConfig.auth.user) {
+		message.replyTo = message.from;
+	}
 	message.from = smtpConfig.auth.user;
 	transporter.sendMail(message, function(error, response){
     if (error) {

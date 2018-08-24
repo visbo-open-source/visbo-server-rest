@@ -1432,7 +1432,7 @@ router.route('/:vcid/user')
 									subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
 									html: '<p> '.concat(emailHtml, " </p>")
 							};
-							logger4js.info("Now send mail from %s to %s message %s", message.from, message.to, eMailMessage);
+							logger4js.info("Now send mail from %s to %s", message.from, message.to);
 							mail.VisboSendMail(message);
 							return res.status(200).send({
 								state: "success",
