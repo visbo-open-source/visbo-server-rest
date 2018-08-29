@@ -235,7 +235,7 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		if (req.body == undefined || req.body.vcid == undefined || req.body.name == undefined) {
+		if (req.body.vcid == undefined || req.body.name == undefined) {
 				logger4js.warn("No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
@@ -1584,7 +1584,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.trace("Post a new Visbo Project User Req Body: %O Name %s", req.body, req.body.email);
 			logger4js.info("Post a new Visbo Project User with name %s executed by user %s ", req.body.email, useremail);
 
-			if (!req.body || !req.body.email) {
+			if (!req.body.email) {
 				return res.status(404).send({
 					state: 'failure',
 					message: 'No valid user definition'

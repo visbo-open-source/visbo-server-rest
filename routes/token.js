@@ -104,6 +104,13 @@ router.route('/user/login')
 					message: "email not registered"
 				});
 			}
+			if (!user.status || !user.status.registeredAt) {
+				logger4js.warn("Login: User not Registered", req.body.email);
+				return res.status(400).send({
+					state: "failure",
+					message: "email not registered"
+				});
+			}
 
 			if (!isValidPassword(user, req.body.password)) {
 				return res.status(401).send({
@@ -317,11 +324,15 @@ router.route('/user/pwreset')
 router.route('/user/signup')
 
 /**
-  * @api {post} /token/user/signup User Signup
+  * @api {post} /token/user/signup?hash=hash5c754feaa User Signup
   * @apiVersion 1.0.0
   * @apiGroup Authentication
   * @apiName UserSignup
   * @apiPermission none
+	* @apiDescription signup a user with Profile Details and a new password.
+	* Signup can be called with an e-mail address or an _id. The system refuses the registration if an _id is specified and there is no user with this _id to be registered
+	* If called with an e-mail, the system returns an error if a user with this e-mail already exists and is registered.
+	* The hash is optional and if delivered correct, the system does not ask for e-mail confirmation.
   * @apiError UserEsists User does already exist HTTP 401
 	* @apiError ParameterMissing required parameters email, password missing HTTP 400
   * @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
@@ -330,6 +341,7 @@ router.route('/user/signup')
   *   body:
   *   {
   *     "email": "example@example.com",
+	*     "_id": "UID294c5417f0e409",
   *     "password": "thisIsPassword",
 	*     "profile": {
 	*       "firstName": "First",
@@ -352,7 +364,7 @@ router.route('/user/signup')
   *   "message":"Successfully logged in",
   *   "token":"eyJhbG...brDI",
   *   "user":{
-  *    "_id":"5a96787976294c5417f0e409",
+  *    "_id":"UID294c5417f0e409",
   *    "updatedAt":"2018-02-28T09:38:04.774Z",
   *    "createdAt":"2018-02-28T09:38:04.774Z",
   *    "email":"example@example.com",
@@ -378,7 +390,8 @@ router.route('/user/signup')
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		logger4js.info("Signup Request for e-Mail %s or id %s", req.body.email, req.body._id);
+		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
+		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
 		var query = {};
 		if (req.body.email) {
 			query.email = req.body.email;
@@ -406,7 +419,7 @@ router.route('/user/signup')
 					message: "email already registered"
 				});
 			}
-			// if user exists and is registered already refuse to register again
+			// if user does not exist already refuse to register with id
 			if (!user && req.body._id) {
 				return res.status(400).send({
 					state: "failure",
@@ -429,9 +442,22 @@ router.route('/user/signup')
 				}
 			}
 			if (!user.email) user.email = req.body.email;
-			// user.status = {registeredAt: new Date()};
-			logger4js.debug("Signup Request new User %O \n%O", user, user.status);
 			user.password = createHash(req.body.password);
+			//  if a hash is available check correctness and skip confirm e-Mail or in case the hash is incorrect deliver error
+			if (hash) {
+				var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+				if (isValidHash(hash, secret)) {
+					// set the registered flag as the hash confirms e-Mail Access
+					logger4js.debug("set the registered flag as the hash confirms e-Mail Access");
+					// update registered status
+					if (!user.status) {
+						user.status = {};
+					}
+					user.status.registeredAt = new Date();
+				} else {
+					logger4js.warn("incorrect hash during registration of User %s", user.email);
+				}
+			}
 			user.save(function(err, user) {
 				if (err) {
 					logger4js.error("Signup Error DB Connection %O", err);
@@ -443,44 +469,54 @@ router.route('/user/signup')
 				}
 				user.password = undefined;
 				// now send the eMail for confirmation of the e-Mail address
-				var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
-				// MS TODO do we need to generate HTTPS instead of HTTP
-				var uiUrl =  'localhost:4200'
-				var eMailSubject = 'Please confirm your eMail address ';
-				if (process.env.UI_URL != undefined) {
-					uiUrl = process.env.UI_URL;
-				}
-				var secret = ''.concat(user._id, user.createdAt.getTime());
-				var hash = createHash(secret);
-				logger4js.debug("E-Mail hash calculated %s", hash);
-
-				uiUrl = 'http://'.concat(uiUrl, '/registerconfirm?id=', user._id, '&hash=', hash);
-
-				logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-				ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
-					if (err) {
-						logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
-						return res.status(500).send({
-							state: "failure",
-							message: "E-Mail Rendering failed",
-							error: err
-						});
+				logger4js.trace("User Registration %s RegisteredAt %s. Confirm e-mail?", user.email, user.status.registeredAt);
+				if (!user.status.registeredAt) {
+					// send e-Mail confirmation
+					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
+					// MS TODO do we need to generate HTTPS instead of HTTP
+					var uiUrl =  'localhost:4200'
+					var eMailSubject = 'Please confirm your eMail address ';
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
 					}
-					// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
-					var message = {
-							// from: useremail,
-							to: user.email,
-							subject: eMailSubject,
-							html: '<p> '.concat(emailHtml, " </p>")
-					};
-					logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
-					mail.VisboSendMail(message);
+					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
+					var hash = createHash(secret);
+
+					uiUrl = 'http://'.concat(uiUrl, '/registerconfirm?id=', user._id, '&hash=', hash);
+
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+						var message = {
+								// from: useremail,
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully signed up",
+							user: user
+						});
+					});
+				} else {
+					logger4js.info("User Registration completed with Hash %s", user.email);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully signed up",
 						user: user
 					});
-				});
+				}
 			});
 		});
 	});
@@ -529,8 +565,7 @@ router.route('/user/signup')
 	  *   }
 	  * }
 	  */
-
-	// Post Signup User
+	// Post User Confirm
 		.post(function(req, res) {
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
@@ -563,18 +598,20 @@ router.route('/user/signup')
 				// user exists and is not registered yet
 				logger4js.debug("Confirm eMail for %s %s", user._id, user.email, user.createdAt.getTime());
 				// verify hash
-				var secret = ''.concat(user._id, user.createdAt.getTime())
-				// MS TODO Check correct hash
-				if (isValidHash(req.body.hash, secret)) {
+				var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
+				if (!isValidHash(req.body.hash, secret)) {
 					logger4js.warn("Security: invalid e-Mail & hash combination", user.email);
-					// return res.status(401).send({
-					// 	state: "failure",
-					// 	message: "No e-mail address to confirm"
-					// });
+					return res.status(401).send({
+						state: "failure",
+						message: "No e-mail address to confirm"
+					});
 				}
 
 				// update registered status
-				user.status = {registeredAt: new Date()};
+				if (!user.status) {
+					user.status = {};
+				}
+				user.status.registeredAt = new Date();
 				user.save(function(err, user) {
 					if (err) {
 						logger4js.error("Confirm eMail  DB Connection %O", err);

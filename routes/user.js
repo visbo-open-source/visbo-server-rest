@@ -147,7 +147,7 @@ router.route('/profile')
 					error: err
 				});
 			}
-			if (!req.body || !req.body.profile || !req.body.profile.firstname || !req.body.profile.lastname) {
+			if (!req.body.profile || !req.body.profile.firstname || !req.body.profile.lastname) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Body does not contain correct Profile data',
