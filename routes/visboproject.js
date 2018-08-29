@@ -235,7 +235,7 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		if (req.body == undefined || req.body.vcid == undefined || req.body.name == undefined) {
+		if (req.body.vcid == undefined || req.body.name == undefined) {
 				logger4js.warn("No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
@@ -534,7 +534,7 @@ router.route('/:vpid')
 				message: 'No Admin Permission'
 			});
 		}
-		if (lockVP.lockedVP(req.oneVP, useremail, undefined).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -698,14 +698,14 @@ router.route('/:vpid')
 				message: 'No Visbo Project or no Permission'
 			});
 		}
-		if (lockVP.lockedVP(req.oneVP, useremail, undefined).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
 			});
 		}
-		req.oneVP.deleted = {deletedAt: Date(), byParent: false }
+		req.oneVP.deleted = {deletedAt: new Date(), byParent: false }
 		logger4js.debug("Delete Visbo Project after premission check %s %s", req.params.vpid, req.oneVP.name);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
@@ -797,7 +797,7 @@ router.route('/:vpid/lock')
 			});
 		}
 
-		if (lockVP.lockedVP(req.oneVP, useremail, variantName).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
 			return res.status(403).send({
 				state: 'failiure',
 				message: 'Visbo Project already locked',
@@ -812,15 +812,21 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
-		var listLockNew = lockVP.lockCleanupVP(req.oneVP.lock);
+		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
 		req.oneVP.lock = listLockNew;
 
 		var newLock = new Lock;
 		newLock.email = useremail;
 		newLock.expiresAt = expiredAt;
 		newLock.variantName = variantName;
-		newLock.createdAt = Date();
-		req.oneVP.lock.push(newLock);
+		newLock.createdAt = new Date();
+		// insert new lock or replace existing lock
+		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
+		if (resultLock.lockindex < 0) {
+			req.oneVP.lock.push(newLock);
+		} else {
+			req.oneVP.lock[resultLock.lockindex] = newLock;
+		}
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
 				logger4js.fatal("VP DELETE DB Connection ", err);
@@ -873,7 +879,7 @@ router.route('/:vpid/lock')
 		variantName = req.query.variantName || "";
 		logger4js.info("DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
 
-		var resultLock = lockVP.lockedVP(req.oneVP, useremail, variantName);
+		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
 			logger4js.warn("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
 			return res.status(400).send({
@@ -893,7 +899,7 @@ router.route('/:vpid/lock')
 
 		logger4js.debug("Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
-		var listLockNew = lockVP.lockCleanupVP(req.oneVP.lock);
+		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
 		req.oneVP.lock = listLockNew;
 		logger4js.debug("Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
@@ -975,7 +981,7 @@ router.route('/:vpid/variant')
 		newVariant = new Variant;
 		newVariant.email = useremail;
 		newVariant.variantName = variantName;
-		newVariant.createdAt = Date();
+		newVariant.createdAt = new Date();
 		newVariant.vpvCount = 0;
 		variantList.push(newVariant);
 		req.oneVP.variant = variantList;
@@ -1049,7 +1055,7 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP]
 			});
 		}
-		lockResult = lockVP.lockedVP(req.oneVP, useremail, variantName);
+		lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (lockResult.locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -1135,7 +1141,7 @@ router.route('/:vpid/portfolio')
 
 		var query = {};
 		query.vpid = req.oneVP._id;
-		query.timestamp =  {$lt: Date()};
+		query.timestamp =  {$lt: new Date()};
 		query.deleted = {$exists: false};
 		if (req.query.refDate){
 			var refDate = new Date(req.query.refDate);
@@ -1266,7 +1272,7 @@ router.route('/:vpid/portfolio')
 		newPortfolio.vpid = req.oneVP._id;
 		newPortfolio.variantName = variantName;
 		newPortfolio.name = req.oneVP.name;
-		newPortfolio.timestamp = req.body.timestamp || Date();
+		newPortfolio.timestamp = req.body.timestamp || new Date();
 
 		// check that the vpid exist and user has permission to access
 		var listVPid = new Array();
@@ -1464,7 +1470,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No Visbo Portfolio or no Permission'
 				});
 			}
-			lockResult = lockVP.lockedVP(req.oneVP, useremail, oneVPF.variantName);
+			lockResult = lockVP.lockStatus(req.oneVP, useremail, oneVPF.variantName);
 			if (lockResult.locked) {
 				return res.status(401).send({
 					state: 'failure',
@@ -1472,7 +1478,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					vp: [req.oneVP]
 				});
 			}
-			oneVPF.deleted = {deletedAt: Date(), byParent: false }
+			oneVPF.deleted = {deletedAt: new Date(), byParent: false }
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
 					logger4js.fatal("VPF Delete DB Connection ", err);
@@ -1578,7 +1584,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.trace("Post a new Visbo Project User Req Body: %O Name %s", req.body, req.body.email);
 			logger4js.info("Post a new Visbo Project User with name %s executed by user %s ", req.body.email, useremail);
 
-			if (!req.body || !req.body.email) {
+			if (!req.body.email) {
 				return res.status(404).send({
 					state: 'failure',
 					message: 'No valid user definition'

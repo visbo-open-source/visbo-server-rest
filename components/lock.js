@@ -3,7 +3,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 // check if Visbo Project has a valid lock
-lockedVP = function(vp, useremail, variantName) {
+lockStatus = function(vp, useremail, variantName) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	// logger4js.debug("lockedVP Check Lock for VP %s for User %s and Variant :%s: Locks %O", vp._id, useremail, variantName, vp.lock);
@@ -27,7 +27,7 @@ lockedVP = function(vp, useremail, variantName) {
 };
 
 // cleanup expired locks
-lockCleanupVP = function(listLock) {
+lockCleanup = function(listLock) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	var listLockNew = [];
@@ -44,6 +44,6 @@ lockCleanupVP = function(listLock) {
 };
 
 module.exports = {
-	lockedVP: lockedVP,
-	lockCleanupVP: lockCleanupVP
+	lockStatus: lockStatus,
+	lockCleanup: lockCleanup
 };
