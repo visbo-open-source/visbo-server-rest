@@ -113,6 +113,7 @@ router.route('/user/login')
 			}
 
 			if (!isValidPassword(user, req.body.password)) {
+				// MS TODO save user and increment wrong password count
 				return res.status(401).send({
 					state: "failure",
 					message: "email or password mismatch"
@@ -133,6 +134,8 @@ router.route('/user/login')
 						});
 					}
 					logger4js.debug("JWT Signing Success %s ", err);
+					// MS TODO set the last login and reset the password retries
+
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully logged in",
@@ -147,10 +150,10 @@ router.route('/user/login')
 router.route('/user/pwforgotten')
 
 /**
-	* @api {post} /token/user/pwforgotten Password Reset
+	* @api {post} /token/user/pwforgotten Password Forgotten
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
-	* @apiName UserForgottenPW
+	* @apiName PasswordForgotten
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/forgottenpw
 	*  body: {
@@ -527,7 +530,7 @@ router.route('/user/signup')
 	  * @api {post} /token/user/confirm e-Mail Confirmation
 	  * @apiVersion 1.0.0
 	  * @apiGroup Authentication
-	  * @apiName UserConfirm
+	  * @apiName emailConfirm
 	  * @apiPermission none
 		* @apiError ParameterMissing required parameters userId & hash missing HTTP 400
 	  * @apiError ServerIssue No DB Connection HTTP 500
