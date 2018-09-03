@@ -147,21 +147,30 @@ router.route('/profile')
 					error: err
 				});
 			}
-			if (!req.body.profile || !req.body.profile.firstname || !req.body.profile.lastname) {
+			if (!req.body.profile || !req.body.profile.firstName || !req.body.profile.lastName ) {
+				logger4js.debug("Put/Update user %s body %O", req.decoded._id, req.body);
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Body does not contain correct Profile data',
-					error: err
+					message: 'Body does not contain correct Profile data'
 				});
 			}
 
-			user.profile.firstname = req.body.profile.firstname;
-			user.profile.lastname = req.body.profile.lastname;
-			user.profile.address = req.body.profile.address;
-			user.profile.company = req.body.profile.company;
-			user.profile.phone = req.body.profile.phone;
+			logger4js.debug("Put/Update Properties %O", req.body.profile);
+			if (req.body.profile.firstName != undefined) user.profile.firstName = req.body.profile.firstName;
+			if (req.body.profile.lastName != undefined) user.profile.lastName = req.body.profile.lastName;
+			if (req.body.profile.company != undefined) user.profile.company = req.body.profile.company;
+			if (req.body.profile.phone != undefined) user.profile.phone = req.body.profile.phone;
+			if (req.body.profile.address) {
+				if (req.body.profile.address.street != undefined) user.profile.address.street = req.body.profile.address.street;
+				if (req.body.profile.address.city != undefined) user.profile.address.city = req.body.profile.address.city;
+				if (req.body.profile.address.zip != undefined) user.profile.address.zip = req.body.profile.address.zip;
+				if (req.body.profile.address.state != undefined) user.profile.address.state = req.body.profile.address.state;
+				if (req.body.profile.address.country != undefined) user.profile.address.country = req.body.profile.address.country;
+			}
+			logger4js.debug("Put/Update after updating properties %O", user.profile);
 
 			user.save(function(err, user) {
+				logger4js.debug("Put/Update after Save");
 				if (err) {
 					logger4js.fatal("User update Profile to DB Connection ", err);
 					return res.status(500).send({
