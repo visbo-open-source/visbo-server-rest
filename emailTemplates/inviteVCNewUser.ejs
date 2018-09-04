@@ -11,7 +11,10 @@
   (<%= userFrom.email %>) has invited you to Visbo Center: <b><%= vc.name %></b> with <%= vc.vpCount %> Projects
 </p>
 <p>
-  Message: <br> <i> <%= message %> </i>
+  Message: <br>
+  <h4>
+    <%- message.replace(/\n/g, '<br/>')  %>
+  </h4>
 </p>
 <h3>
   To access the Visbo Center you have to register first by following this link: <a href="<%= url %>">Register</a>

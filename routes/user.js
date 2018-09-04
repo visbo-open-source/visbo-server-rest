@@ -2,7 +2,9 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var assert = require('assert');
+var bCrypt = require('bcrypt-nodejs');
+
+// var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 
@@ -10,17 +12,22 @@ var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+// Generates hash using bCrypt
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
+};
+var isValidPassword = function(user, password){
+	return bCrypt.compareSync(password, user.password);
+};
+
 //Register the authentication middleware
-router.use('/profile', auth.verifyUser);
+router.use('/', auth.verifyUser);
 
 /////////////////
 // Profile API
 // /profile
 /////////////////
 
-// API for
-//  get profile
-//  update profile
 router.route('/profile')
 /**
 	* @api {get} /user/profile Get own profile
@@ -189,5 +196,78 @@ router.route('/profile')
 		});
 	});
 
+router.route('/passwordchange')
+
+/**
+	* @api {put} /user/passwordchange Update password
+	* @apiVersion 1.0.0
+	* @apiHeader {String} access-key User authentication token.
+	* @apiGroup UserProfile
+	* @apiName PasswordChange
+	* @apiExample Example usage:
+	*  url: http://localhost:3484/user/passwordchange
+	*  body:
+	*  {
+	*    "password": "new password",
+  *    "passwordold": "old password"
+	*  }
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"You changed your password successfully"
+	* }
+	*/
+// Change Password
+	.put(function(req, res) {
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+		logger4js.info("Put/Update user password %s", req.decoded._id);
+		User.findById(req.decoded._id, function(err, user) {
+			if (err) {
+				logger4js.fatal("User update Password DB Connection ", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting user',
+					error: err
+				});
+			}
+			if (!req.body.password || !req.body.oldpassword ) {
+				logger4js.debug("Put/Update user %s body incomplete", req.decoded._id);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Body does not contain correct required fields'
+				});
+			}
+
+			logger4js.debug("Put/Update Password Check Old Password");
+			if (!isValidPassword(user, req.body.oldpassword)) {
+				logger4js.info("Change Password: Wrong password", user.email);
+				return res.status(401).send({
+					state: "failure",
+					message: "password mismatch"
+				});
+			} else {
+				logger4js.debug("Try to Change Password %s username&password accepted", user.email);
+				user.password = createHash(req.body.password);
+				if (!user.status) user.status = {};
+				user.status.loginRetries = 0;
+				user.save(function(err, user) {
+					if (err) {
+						logger4js.error("Change Password Update DB Connection %O", err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error, failed to update user",
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: "success",
+						message: "You changed your password successfully"
+					});
+				});
+			}
+		});
+	})
 
 module.exports = router;

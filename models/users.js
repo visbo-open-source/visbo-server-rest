@@ -23,6 +23,7 @@ var userSchema = new mongoose.Schema({
 		registeredAt: {type: Date, required: false},
 		lockedUntil: {type: Date, required: false},
 		lastLoginAt: {type: Date},
+		lastLoginFailedAt: {type: Date},
 		loginRetries: {type: Number, required: false}
 	}
 });

@@ -76,6 +76,7 @@ router.route('/user/login')
 
 // Post Login
 	.post(function(req, res) {
+		var currentDate = new Date();
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 		logger4js.info("Try to Login %s", req.body.email);
@@ -96,7 +97,6 @@ router.route('/user/login')
 					error: err
 				});
 			}
-			logger4js.debug("Try to Login DB Checked", req.body.email);
 			if (!user) {
 				logger4js.warn("User not Found", req.body.email);
 				return res.status(400).send({
@@ -104,46 +104,96 @@ router.route('/user/login')
 					message: "email not registered"
 				});
 			}
-			if (!user.status || !user.status.registeredAt) {
-				logger4js.warn("Login: User not Registered", req.body.email);
+			logger4js.debug("Try to Login User Found %O", req.body.email, user);
+
+			if (!user.status || !user.status.registeredAt || !user.password) {
+				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
 				return res.status(400).send({
 					state: "failure",
 					message: "email not registered"
 				});
 			}
-
-			if (!isValidPassword(user, req.body.password)) {
-				// MS TODO save user and increment wrong password count
-				return res.status(401).send({
-					state: "failure",
-					message: "email or password mismatch"
-				});
+			logger4js.debug("Login: Check Login Retries", req.body.email);
+			if (!user.status || user.status.loginRetries > 5) {
+				// if the lastLoginFailedAt was in the last 15 Minutes than ignore login
+				if ((currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60 <= 15) {
+					logger4js.warn("Login: Retry Count for %s too high %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
+					return res.status(401).send({
+						state: "failure",
+						message: "email or password mismatch"
+					});
+				}
 			}
-			logger4js.debug("Try to Login %s username&password accepted", req.body.email);
-			user.password = undefined;
-			jwt.sign(user.toJSON(), jwtSecret.user.secret,
-				{ expiresIn: jwtSecret.user.expiresIn },
-				function(err, token) {
-					logger4js.debug("JWT Signing %s ", err);
+
+			logger4js.debug("Login: Check password for %s user %O", req.body.email, user);
+			if (!isValidPassword(user, req.body.password)) {
+				// save user and increment wrong password count and timestamp
+				logger4js.debug("Login: Wrong password", req.body.email);
+				if (!user.status) user.status = {};
+				if (!user.status.loginRetries) user.status.loginRetries = 0
+				// count the login failed only if the last failed one was in the last 4 hours
+				if (!user.status.lastLoginFailedAt || (currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60/60 < 4 )
+					user.status.loginRetries += 1;
+				user.status.lastLoginFailedAt = currentDate;
+				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("JWT Signing error %s ", err);
-						return res.status(500)({
+						logger4js.error("Login User Update DB Connection %O", err);
+						return res.status(500).send({
 							state: "failure",
-							message: "token generation failed",
+							message: "database error, failed to update user",
 							error: err
 						});
 					}
-					logger4js.debug("JWT Signing Success %s ", err);
-					// MS TODO set the last login and reset the password retries
-
-					return res.status(200).send({
-						state: "success",
-						message: "Successfully logged in",
-						token: token,
-						user: user
+					logger4js.debug("Login: Retry Count for %s incremented %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
+					return res.status(401).send({
+						state: "failure",
+						message: "email or password mismatch"
 					});
-				}
-			);
+				});
+			} else {
+				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
+				var passwordCopy = user.password;
+				user.password = undefined;
+				jwt.sign(user.toJSON(), jwtSecret.user.secret,
+					{ expiresIn: jwtSecret.user.expiresIn },
+					function(err, token) {
+						logger4js.debug("JWT Signing %s ", err);
+						if (err) {
+							logger4js.error("JWT Signing error %s ", err);
+							return res.status(500)({
+								state: "failure",
+								message: "token generation failed",
+								error: err
+							});
+						}
+						logger4js.debug("JWT Signing Success %s ", err);
+						// set the last login and reset the password retries
+
+						if (!user.status) user.status = {};
+						if (!user.status.loginRetries) user.status.loginRetries = 0
+						user.status.lastLoginAt = currentDate;
+						user.status.loginRetries = 0;
+						user.password = passwordCopy;
+						user.save(function(err, user) {
+							if (err) {
+								logger4js.error("Login User Update DB Connection %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "database error, failed to update user",
+									error: err
+								});
+							}
+							user.password = undefined;
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully logged in",
+								token: token,
+								user: user
+							});
+						});
+					}
+				);
+			}
 		});
 	});
 
@@ -209,6 +259,7 @@ router.route('/user/pwforgotten')
 								error: err
 							});
 						};
+						// MS TODO send mail to register if user is not registered
 						// Send e-Mail with Token to the Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						// MS TODO do we need to generate HTTPS instead of HTTP
@@ -304,6 +355,9 @@ router.route('/user/pwreset')
 						});
 					}
 					user.password = createHash(req.body.password);
+					if (user.status) {
+						user.status.loginRetries = 0;
+					}
 					user.save(function(err, user) {
 						if (err) {
 							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
