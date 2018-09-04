@@ -225,7 +225,7 @@ router.route('/user/pwforgotten')
 					error: err
 				});
 			}
-			// MS TODO should we return success to prevent eMail probing and count the request to prevent eMail spamming
+			// we return success to prevent eMail probing and count the request to prevent eMail spamming
 			if (!user) {
 				return res.status(200).send({
 					// state: "failure",
@@ -234,6 +234,26 @@ router.route('/user/pwforgotten')
 					message: "Successfully Requested Password Reset through e-Mail"
 				});
 			}
+			if (!user.status || !user.status.registeredAt) {
+				logger4js.info("Password Reset: User not registered %s ", user._id);
+				return res.status(200).send({
+					// state: "failure",
+					// message: "email not registered"
+					state: "success",
+					message: "Successfully Requested Password Reset through e-Mail"
+				});
+			}
+			var currentDate = new Date();
+			if ((currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
+				logger4js.warn("Multiple Password Resets for User %s ", user._id);
+				return res.status(200).send({
+					// state: "failure",
+					// message: "email not registered"
+					state: "success",
+					message: "Successfully Requested Password Reset through e-Mail"
+				});
+			}
+			user.status.lastPWResetAt = currentDate;
 			user.save(function(err, user) {
 				if (err) {
 					logger4js.error("Forgot Password Save user Error DB Connection %O", err);
@@ -262,12 +282,11 @@ router.route('/user/pwforgotten')
 						// MS TODO send mail to register if user is not registered
 						// Send e-Mail with Token to the Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
-						// MS TODO do we need to generate HTTPS instead of HTTP
-						var uiUrl =  'localhost:4200'
+						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
 						  uiUrl = process.env.UI_URL;
 						}
-						var pwreseturl = 'http://'.concat(uiUrl, '/pwreset', '?token=', token);
+						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl);
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
@@ -355,9 +374,8 @@ router.route('/user/pwreset')
 						});
 					}
 					user.password = createHash(req.body.password);
-					if (user.status) {
-						user.status.loginRetries = 0;
-					}
+					if (user.status) user.status = {};
+					user.status.loginRetries = 0;
 					user.save(function(err, user) {
 						if (err) {
 							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
@@ -530,8 +548,7 @@ router.route('/user/signup')
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
 					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
-					// MS TODO do we need to generate HTTPS instead of HTTP
-					var uiUrl =  'localhost:4200'
+					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'Please confirm your eMail address ';
 					if (process.env.UI_URL != undefined) {
 						uiUrl = process.env.UI_URL;
@@ -539,7 +556,7 @@ router.route('/user/signup')
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
-					uiUrl = 'http://'.concat(uiUrl, '/registerconfirm?id=', user._id, '&hash=', hash);
+					uiUrl = uiUrl.concat('/registerconfirm?id=', user._id, '&hash=', hash);
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -680,14 +697,13 @@ router.route('/user/signup')
 					}
 					// now send the eMail for confirmation of the e-Mail address
 					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
-					// MS TODO do we need to generate HTTPS instead of HTTP
-					var uiUrl =  'localhost:4200'
+					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'Successful eMail confirmation';
 					if (process.env.UI_URL != undefined) {
 						uiUrl = process.env.UI_URL;
 					}
 
-					uiUrl = 'http://'.concat(uiUrl, '/login?email=', user.email);
+					uiUrl = uiUrl.concat('/login?email=', user.email);
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {

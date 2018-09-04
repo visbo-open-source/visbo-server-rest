@@ -24,7 +24,8 @@ var userSchema = new mongoose.Schema({
 		lockedUntil: {type: Date, required: false},
 		lastLoginAt: {type: Date},
 		lastLoginFailedAt: {type: Date},
-		loginRetries: {type: Number, required: false}
+		loginRetries: {type: Number, required: false},
+		lastPWResetAt: {type: Date}
 	}
 });
 // Set Creation and modification date automatically

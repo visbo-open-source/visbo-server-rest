@@ -233,7 +233,7 @@ router.route('/passwordchange')
 				});
 			}
 			if (!req.body.password || !req.body.oldpassword ) {
-				logger4js.debug("Put/Update user %s body incomplete", req.decoded._id);
+				logger4js.debug("Put/Update user %s body incomplete %O", req.decoded._id, req.body);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Body does not contain correct required fields'
@@ -243,7 +243,7 @@ router.route('/passwordchange')
 			logger4js.debug("Put/Update Password Check Old Password");
 			if (!isValidPassword(user, req.body.oldpassword)) {
 				logger4js.info("Change Password: Wrong password", user.email);
-				return res.status(401).send({
+				return res.status(403).send({
 					state: "failure",
 					message: "password mismatch"
 				});
@@ -261,9 +261,11 @@ router.route('/passwordchange')
 							error: err
 						});
 					}
+					user.password = undefined;
 					return res.status(200).send({
 						state: "success",
-						message: "You changed your password successfully"
+						message: "You changed your password successfully",
+						user: user
 					});
 				});
 			}
