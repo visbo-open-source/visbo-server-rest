@@ -17,6 +17,10 @@ var Variant = mongoose.model('Variant');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 
+var mail = require('./../components/mail');
+var ejs = require('ejs');
+var read = require('fs').readFileSync;
+
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -546,8 +550,9 @@ router.route('/:vpid')
 		var vpPopulate = req.oneVP.name != name ? true : false;
 		req.oneVP.name = name;
 
+		// change only if present
 		if (req.body.vpPublic != undefined) {
-			req.oneVP.vpPublic = req.body.vpPublic ? true : false;
+			req.oneVP.vpPublic = req.body.vpPublic == true ? true : false;
 		}
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
@@ -1598,6 +1603,10 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 			logger4js.debug("Post User to VP %s Permission is ok", req.params.vpid);
 			var vpUser = new VPUser();
+			var eMailMessage = '';
+			if (req.body.message) {
+				eMailMessage = req.body.message;
+			}
 			vpUser.email = req.body.email;
 			vpUser.role = req.body.role  != "User" &&  req.body.role  != "Admin" ? "User" : req.body.role;
 
@@ -1612,7 +1621,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 			// check if the user exists and get the UserId or create the user
 			var queryUsers = User.findOne({'email': vpUser.email});
-			queryUsers.select('email');
+			// queryUsers.select('email');
 			queryUsers.exec(function (err, user) {
 				if (err) {
 					logger4js.fatal("Post User to VP cannot find User, DB Connection %s", err);
@@ -1649,10 +1658,41 @@ router.route('/:vpid/portfolio/:vpfid')
 								});
 							}
 							req.oneVP = vp;
-							return res.status(200).send({
-								state: "success",
-								message: "Successfully added User to Visbo Project",
-								users: [ vpUser ]
+							// now send an e-Mail to the user for registration
+							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs')
+							var uiUrl =  'http://localhost:4200'
+							if (process.env.UI_URL != undefined) {
+							  uiUrl = process.env.UI_URL;
+							}
+
+							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+							var hash = createHash(secret);
+							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
+
+							logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vp: req.oneVP, message: eMailMessage}, function(err, emailHtml) {
+								if (err) {
+									logger4js.fatal("E-Mail Rendering failed %O", err);
+									return res.status(500).send({
+										state: "failure",
+										message: "E-Mail Rendering failed",
+										error: err
+									});
+								}
+								// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+								var message = {
+										from: useremail,
+										to: user.email,
+										subject: 'You have been invited to a Visbo Project ' + req.oneVP.name,
+										html: '<p> '.concat(emailHtml, " </p>")
+								};
+								logger4js.info("Now send mail from %s to %s", message.from, message.to);
+								mail.VisboSendMail(message);
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully added User to Visbo Project",
+									users: [ vcUser ]
+								});
 							});
 						})
 					});
@@ -1669,10 +1709,49 @@ router.route('/:vpid/portfolio/:vpfid')
 							});
 						}
 						req.oneVP = vp;
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully added User to Visbo Project",
-							users: [ vpUser ]
+						// now send an e-Mail to the user for registration/login
+						var template = __dirname.concat('/../emailTemplates/');
+						var uiUrl =  'http://localhost:4200'
+						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name
+						if (process.env.UI_URL != undefined) {
+							uiUrl = process.env.UI_URL;
+						}
+						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
+						if (user.status && user.status.registeredAt) {
+							// send e-Mail to a registered user
+							template = template.concat('inviteVPExistingUser.ejs');
+							uiUrl = uiUrl.concat('/vpv/', req.oneVP._id);
+						} else {
+							// send e-Mail to an existing but unregistered user
+							template = template.concat('inviteVPNewUser.ejs');
+							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+							var hash = createHash(secret);
+							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+						}
+
+						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vp: req.oneVP, message: eMailMessage}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "E-Mail Rendering failed",
+									error: err
+								});
+							}
+							var message = {
+									from: useremail,
+									to: user.email,
+									subject: eMailSubject,
+									html: '<p> '.concat(emailHtml, " </p>")
+							};
+							logger4js.info("Now send mail from %s to %s", message.from, message.to);
+							mail.VisboSendMail(message);
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully added User to Visbo Center",
+								users: [ vpUser ]
+							});
 						});
 					})
 				}

@@ -1,9 +1,24 @@
 <h1>
-  Password Reset Request
+  You have been invited to a Visbo Project
 </h1>
+<p>
+  <%if (userFrom.profile && userFrom.profile.firstname ) { %>
+    <%= userFrom.profile.firstName %>
+  <% } %>
+  <%if (userFrom.profile && userFrom.profile.lastname ) { %>
+    <%= userFrom.profile.lastname %>
+  <% } %>
+  (<%= userFrom.email %>) has invited you to Visbo Project: <b><%= vp.name %></b> with <%= vp.vpvCount %> Versions
+</p>
+<p>
+  Message: <br>
+  <h4>
+    <%- message.replace(/\n/g, '<br/>')  %>
+  </h4>
+</p>
 <h3>
-  for <%= user.profile.firstName %> <%= user.profile.firstName %> <%= user.email %>
+  To access the Visbo Project you have to register first by following this link: <a href="<%= url %>">Register</a>
 </h3>
 <p>
-  Please confirm your e-Mail address by following this link: <a href="<%= url %>">Reset Visbo Password</a>
+  Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
