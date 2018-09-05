@@ -1416,7 +1416,6 @@ router.route('/:vcid/user')
 						req.oneVC = vc;
 						// now send an e-Mail to the user for registration
 						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
-						// MS TODO do we need to generate HTTPS instead of HTTP
 						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
 						  uiUrl = process.env.UI_URL;
@@ -1468,7 +1467,6 @@ router.route('/:vcid/user')
 					req.oneVC = vc;
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
-					// MS TODO do we need to generate HTTPS instead of HTTP
 					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
 					if (process.env.UI_URL != undefined) {

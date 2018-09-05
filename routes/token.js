@@ -125,7 +125,7 @@ router.route('/user/login')
 				}
 			}
 
-			logger4js.debug("Login: Check password for %s user %O", req.body.email, user);
+			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
