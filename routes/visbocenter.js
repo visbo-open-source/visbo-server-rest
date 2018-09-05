@@ -1417,15 +1417,14 @@ router.route('/:vcid/user')
 						// now send an e-Mail to the user for registration
 						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
 						// MS TODO do we need to generate HTTPS instead of HTTP
-						var uiUrl =  'localhost:4200'
+						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
 						  uiUrl = process.env.UI_URL;
 						}
 
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 						var hash = createHash(secret);
-						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
-
+						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
@@ -1470,7 +1469,7 @@ router.route('/:vcid/user')
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
 					// MS TODO do we need to generate HTTPS instead of HTTP
-					var uiUrl =  'localhost:4200'
+					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
 					if (process.env.UI_URL != undefined) {
 						uiUrl = process.env.UI_URL;
@@ -1479,11 +1478,13 @@ router.route('/:vcid/user')
 					if (user.status && user.status.registeredAt) {
 						// send e-Mail to a registered user
 						template = template.concat('inviteVCExistingUser.ejs');
-						uiUrl = 'http://'.concat(uiUrl, '/vp/', req.oneVC._id);
+						uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
 					} else {
 						// send e-Mail to an existing but unregistered user
 						template = template.concat('inviteVCNewUser.ejs');
-						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id);
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
 					}
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
