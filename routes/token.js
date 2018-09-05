@@ -80,6 +80,7 @@ router.route('/user/login')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 		logger4js.info("Try to Login %s", req.body.email);
+		logger4js.debug("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
@@ -104,7 +105,7 @@ router.route('/user/login')
 					message: "email not registered"
 				});
 			}
-			logger4js.debug("Try to Login User Found %O", req.body.email, user);
+			logger4js.debug("Try to Login User Found %s", user.email);
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);

@@ -250,7 +250,7 @@ router.route('/')
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
-		var vpPublic = req.body.vpPublic ? true : false;
+		var vpPublic = req.body.vpPublic == true ? true : false;
 		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
@@ -552,7 +552,7 @@ router.route('/:vpid')
 
 		// change only if present
 		if (req.body.vpPublic != undefined) {
-			req.oneVP.vpPublic = req.body.vpPublic == true ? true : false;
+			req.oneVP.vpPublic = (req.body.vpPublic == true || req.body.vpPublic == 'true') ? true : false;
 		}
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
