@@ -98,8 +98,12 @@ router.route('/')
 
 		logger4js.info("Get Visbo Center for user %s", useremail);
 
-		var query = {'users.email': useremail};
-		logger4js.info("Check for System query %O", req.query);
+		var query = {};
+		// MS TODO Check that user is SysAdmin
+		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+			query = {'users.email': useremail};	// search for VC where user is member of
+		}
+		logger4js.trace("Check for System query %O", req.query);
 		query.system = req.query.systemVC ? {$eq: true} : {$ne: true};						// do not show System VC
 		if (!req.query.systemVC) query.system = {$ne: true};						// do not show System VC
 		query.deleted = {$exists: false};
@@ -560,7 +564,7 @@ router.route('/:vcid')
 					error: err
 				});
 			}
-			if (!vc) {
+			if (!vc || vc.system == true) {
 				return res.status(403).send({
 					state: "failure",
 					message: "No permission to delete Visbo Center"

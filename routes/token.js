@@ -6,6 +6,8 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
+var authSysAdmin = require('./../components/authSysAdmin');
+var auth = require('./../components/auth');
 
 var logModule = "USER";
 var log4js = require('log4js');
@@ -27,6 +29,9 @@ var isValidPassword = function(user, password){
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
+
+//Register the sysadmin permission middleware for login url
+router.use('/user/login', authSysAdmin.verifySysAdmin);
 
 router.route('/user/login')
 
@@ -155,6 +160,9 @@ router.route('/user/login')
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
 				user.password = undefined;
+				if (!user.status) user.status = {};
+				user.status.sysAdminRole = req.sysAdminRole;
+				logger4js.debug("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
@@ -245,7 +253,7 @@ router.route('/user/pwforgotten')
 				});
 			}
 			var currentDate = new Date();
-			if ((currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
+			if (user.status.lastPWResetAt && (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
 				logger4js.warn("Multiple Password Resets for User %s ", user._id);
 				return res.status(200).send({
 					// state: "failure",
@@ -375,7 +383,7 @@ router.route('/user/pwreset')
 						});
 					}
 					user.password = createHash(req.body.password);
-					if (user.status) user.status = {};
+					if (!user.status) user.status = {};
 					user.status.loginRetries = 0;
 					user.save(function(err, user) {
 						if (err) {
