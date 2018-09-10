@@ -14,31 +14,36 @@ function visboAudit(tokens, req, res) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	if (tokens.method(req, res) == "GET") {
-		return;
+		// return;
 	}
 	var auditEntry = new VisboAudit();
+	auditEntry.action = tokens.method(req, res);
+	auditEntry.url = tokens.url(req, res);
+
 	auditEntry.user = {};
 	if (req.decoded && req.decoded._id) {
 		auditEntry.user.userId = req.decoded._id;
 		auditEntry.user.email = req.decoded.email;
+	} else if (req.body && req.body.email) {
+		auditEntry.user.email = req.body.email
 	}
 	auditEntry.vc = {};
 	if (req.oneVC) {
 			auditEntry.vc.vcid = req.oneVC._id;
 			auditEntry.vc.name = req.oneVC.name;
+			if (auditEntry.action != 'GET') auditEntry.vc.vcjson = JSON.stringify(req.oneVC);
 	}
 	auditEntry.vp = {};
 	if (req.oneVP) {
 			auditEntry.vp.vpid = req.oneVP._id;
 			auditEntry.vp.name = req.oneVP.name;
+			if (auditEntry.action != 'GET') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
 	}
 	auditEntry.vpv = {};
 	if (req.oneVPV) {
 			auditEntry.vpv.vpvid = req.oneVPV._id;
 			auditEntry.vpv.name = req.oneVPV.name;
 	}
-	auditEntry.action = tokens.method(req, res);
-	auditEntry.url = tokens.url(req, res);
 	// set the correct ip in case of NGINX Reverse Proxy
 	auditEntry.ip = req.headers["x-real-ip"] || req.headers["X-Real-IP"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');

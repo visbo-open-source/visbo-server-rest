@@ -31,7 +31,7 @@ var createHash = function(secret){
 };
 
 //Register the sysadmin permission middleware for login url
-router.use('/user/login', authSysAdmin.verifySysAdmin);
+router.use('/user/login', authSysAdmin.calculateSysAdmin);
 
 router.route('/user/login')
 
@@ -496,6 +496,7 @@ router.route('/user/signup')
 					error: err
 				});
 			}
+			if (user) req.body.email = user.email;
 			// if user exists and is registered already refuse to register again
 			if (user && user.status && user.status.registeredAt) {
 				return res.status(401).send({

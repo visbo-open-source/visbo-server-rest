@@ -17,7 +17,7 @@ var logger4js = log4js.getLogger(logModule);
 // }
 
 // Verify Visbo Center and the role of the user
-function verifySysAdmin(req, res, next) {
+function calculateSysAdmin(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	var useremail = undefined;
@@ -55,5 +55,5 @@ function verifySysAdmin(req, res, next) {
 }
 
 module.exports = {
-	verifySysAdmin: verifySysAdmin
+	calculateSysAdmin: calculateSysAdmin
 };

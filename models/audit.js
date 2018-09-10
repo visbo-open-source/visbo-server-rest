@@ -8,11 +8,13 @@ var visboAuditSchema = new mongoose.Schema({
 	},
 	vc: {
 		vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter'},
-		name: {type: String, required: false}
+		name: {type: String, required: false},
+		vcjson: {type: String, required: false}
 	},
 	vp: {
 		vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject'},
-		name: {type: String, required: false}
+		name: {type: String, required: false},
+		vpjson: {type: String, required: false}
 	},
 	vpv: {
 		vpvid: {type: Schema.Types.ObjectId, ref: 'VisboProjectVersion'},

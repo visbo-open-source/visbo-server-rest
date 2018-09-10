@@ -1,4 +1,4 @@
-var logModule = "OTHER";
+var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -38,6 +38,46 @@ function verifyUser(req, res, next) {
   }
 };
 
+// Verify System Admin Authentication
+function verifySysAdmin(req, res, next) {
+
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var token = req.headers['access-key'];
+
+	// decode token
+  if (token) {
+
+    // verifies secret and checks exp
+    jwt.verify(token, jwtSecret.user.secret, function(err, decoded) {
+      if (err) {
+        return res.status(401).send({
+        	state: 'failure',
+        	message: 'Token is dead'
+        });
+      } else {
+				logger4js.debug("Check SysAdmin Permission", decoded.status || decoded.status.sysAdminRole);
+
+				if (!decoded.status || !decoded.status.sysAdminRole) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No permission for SysAdmin'
+					});
+				}
+				req.decoded = decoded;
+        return next();
+      }
+    });
+  }
+  else {
+  	// if the user is not authenticated
+		return res.status(401).send({
+			state: 'failure',
+			message: 'No token provided'
+		});
+  }
+};
+
 module.exports = {
-	verifyUser: verifyUser
+	verifyUser: verifyUser,
+	verifySysAdmin: verifySysAdmin
 };

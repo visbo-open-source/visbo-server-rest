@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var bCrypt = require('bcrypt-nodejs');
+
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lockVP = require('./../components/lock');
@@ -48,6 +50,11 @@ var findVPList = function(vp) {
 		//console.log("compare %s %s result %s", vp._id.toString(), this.toString(), vp._id.toString() == this.toString());
 		return vp._id.toString() == this.toString();
 }
+
+// Generates hash using bCrypt
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
+};
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -810,7 +817,7 @@ router.route('/:vpid/lock')
 			});
 		}
 		if (expiredAt <= dateNow) {
-			logger4js.warn("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
+			logger4js.info("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
 			return res.status(401).send({
 				state: 'failiure',
 				message: 'New Lock already expired',

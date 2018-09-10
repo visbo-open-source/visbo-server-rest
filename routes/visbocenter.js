@@ -13,6 +13,7 @@ var VCUser = mongoose.model('VCUser');
 var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
+var VisboAudit = mongoose.model('VisboAudit');
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -35,7 +36,6 @@ var findUserList = function(currentUser) {
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
-
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -548,64 +548,119 @@ router.route('/:vcid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var vcIsSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Sys Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, vcIsSysAdmin);
+		// user is sysAdmin
+		if (!req.decoded.status || req.decoded.status.sysAdminRole != 'Admin') {
+			return res.status(403).send({
+				state: "failure",
+				message: "No permission to delete Visbo Center"
+			});
+		}
 
-		var query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};;
-		query.system = true;
-		query.deleted =  {$exists: false}; 				// Not deleted
-		VisboCenter.findOne(query, function(err, vc) {
+		req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
+		logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+		req.oneVC.save(function(err, oneVC) {
 			if (err) {
 				logger4js.fatal("VC Delete DB Connection ", err);
 				return res.status(500).send({
-					state: "failure",
-					message: "database error",
+					state: 'failure',
+					message: 'Error deleting Visbo Center',
 					error: err
 				});
 			}
-			if (!vc || vc.system == true) {
-				return res.status(403).send({
-					state: "failure",
-					message: "No permission to delete Visbo Center"
-				});
-			}
-			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
-			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
-			req.oneVC.save(function(err, oneVC) {
-				if (err) {
+			req.oneVC = oneVC;
+			logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
+			var updateQuery = {}
+			updateQuery.vcid = req.oneVC._id;
+			updateQuery.deleted = {$exists: false};
+			var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
+			var updateOption = {upsert: false, multi: "true"};
+			VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+				if (err){
 					logger4js.fatal("VC Delete DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error deleting Visbo Center',
+						message: 'Error updating Visbo Projects',
 						error: err
 					});
 				}
-				req.oneVC = oneVC;
-				logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
-				var updateQuery = {}
-				updateQuery.vcid = req.oneVC._id;
-				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
-				var updateOption = {upsert: false, multi: "true"};
-				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-					if (err){
-						logger4js.fatal("VC Delete DB Connection ", err);
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Projects',
-							error: err
-						});
-					}
-					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Center'
-					});
+				logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Center'
 				});
 			});
 		});
 	})
+
+router.route('/:vcid/audit')
+ /**
+ 	* @api {get} /vc/:vcid/audit Get Visbo Center Audit Trail
+ 	* @apiVersion 1.0.0
+ 	* @apiGroup Visbo Center
+ 	* @apiName GetVisboCenterAudit
+	* @apiDescription Get Audit Trail for a specific Visbo Center
+	* the system checks if the user has access permission to it.
+	* In case of success, the system delivers an array of Audit Trail Activities
+ 	* @apiHeader {String} access-key User authentication token.
+ 	* @apiPermission user must be authenticated and user must have admin permission in the VisboCenter
+ 	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboCenter HTTP 403
+ 	* @apiError ServerIssue No DB Connection HTTP 500
+ 	* @apiExample Example usage:
+ 	* url: http://localhost:3484/vc/vc5aada025/audit
+ 	* @apiSuccessExample {json} Success-Response:
+ 	* HTTP/1.1 200 OK
+ 	* {
+ 	*   "state":"success",
+ 	*   "message":"Audit Trail delivered",
+ 	*   "audit": [{
+ 	*     "_id":"vc541c754feaa",
+ 	*     "updatedAt":"2018-03-16T12:39:54.042Z",
+ 	*     "createdAt":"2018-03-12T09:54:56.411Z",
+	*			"XXXXXXXX": "XXXXXXXX"
+ 	*   }]
+ 	* }
+	*/
+// Get audit trail for a specific VC
+.get(function(req, res) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+	logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+	if (!req.oneVCisAdmin) {
+		return res.status(403).send({
+				state: 'failure',
+				message: 'You need to have Admin permission to get audit trail'
+			});
+	}
+
+	// now fetch all entries related to this vc
+	var query = {'vc.vcid': req.oneVC._id};
+	VisboAudit.find(query)
+	.limit(500)
+	.sort({createdAt: -1})
+	.exec(function (err, listVCAudit) {
+		if (err) {
+			logger4js.fatal("VC Audit Get DB Connection ", err);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Error getting VisboCenter Audit',
+				error: err
+			});
+		}
+		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned Visbo Center Audit',
+			audit: listVCAudit
+		});
+	});
+})
 
 router.route('/:vcid/role')
 
@@ -717,7 +772,7 @@ router.route('/:vcid/role')
 			});
 		}
 		if (!req.body.name ) { //|| req.body.uid == undefined) {
-			logger4js.warn("Body is inconsistent %O", req.body);
+			logger4js.debug("Body is inconsistent %O", req.body);
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid role definition'
