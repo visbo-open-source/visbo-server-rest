@@ -53,6 +53,8 @@ router.route('/')
 	var useremail = req.decoded.email;
 	var sysAdminRole = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	req.auditDescription = 'Visbo Audit';
+	req.auditInfo = 'System';
 
 	logger4js.info("Get Audit Trail for userid %s email %s Admin %s", userId, useremail, sysAdminRole);
 
@@ -71,6 +73,16 @@ router.route('/')
 			});
 		}
 		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
+		for(var i = 0; i < listVCAudit.length; i++) {
+			if (!listVCAudit[i].user || !listVCAudit[i].user.email) {
+				listVCAudit[i].user = {"email": "unknown"};
+			}
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vpv && listVCAudit[i].vpv.name) listVCAudit[i].actionInfo = listVCAudit[i].vpv.name
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vp && listVCAudit[i].vp.name) listVCAudit[i].actionInfo = listVCAudit[i].vp.name
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vc && listVCAudit[i].vc.name) listVCAudit[i].actionInfo = listVCAudit[i].vc.name
+			if (!listVCAudit[i].actionDescription) listVCAudit[i].actionDescription = listVCAudit[i].action
+
+		}
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned System Audit',
