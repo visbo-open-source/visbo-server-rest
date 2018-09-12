@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var bCrypt = require('bcrypt-nodejs');
+
 var assert = require('assert');
 var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
@@ -28,6 +30,12 @@ var findUserList = function(currentUser) {
 		//console.log("compare %s %s", currentUser.email, this);
 		return currentUser.email == this;
 }
+
+// Generates hash using bCrypt
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
+};
+
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -90,8 +98,12 @@ router.route('/')
 
 		logger4js.info("Get Visbo Center for user %s", useremail);
 
-		var query = {'users.email': useremail};
-		logger4js.info("Check for System query %O", req.query);
+		var query = {};
+		// MS TODO Check that user is SysAdmin
+		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+			query = {'users.email': useremail};	// search for VC where user is member of
+		}
+		logger4js.trace("Check for System query %O", req.query);
 		query.system = req.query.systemVC ? {$eq: true} : {$ne: true};						// do not show System VC
 		if (!req.query.systemVC) query.system = {$ne: true};						// do not show System VC
 		query.deleted = {$exists: false};
@@ -552,7 +564,7 @@ router.route('/:vcid')
 					error: err
 				});
 			}
-			if (!vc) {
+			if (!vc || vc.system == true) {
 				return res.status(403).send({
 					state: "failure",
 					message: "No permission to delete Visbo Center"
@@ -704,7 +716,7 @@ router.route('/:vcid/role')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		if (req.body == undefined || req.body.name == undefined ) { //|| req.body.uid == undefined) {
+		if (!req.body.name ) { //|| req.body.uid == undefined) {
 			logger4js.warn("Body is inconsistent %O", req.body);
 			return res.status(404).send({
 				state: 'failure',
@@ -1045,7 +1057,7 @@ router.route('/:vcid/cost')
 		logger4js.trace("Post a new Visbo Center Cost Req Body: %O Name %s", req.body, req.body.name);
 		logger4js.info("Post a new Visbo Center Cost with name %s executed by user %s ", req.body.name, useremail);
 
-		if (!req.body || !req.body.name) {
+		if (!req.body.name) {
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid cost definition'
@@ -1338,7 +1350,7 @@ router.route('/:vcid/user')
 		logger4js.trace("Post a new Visbo Center User Req Body: %O Name %s", req.body, req.body.email);
 		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
 
-		if (!req.body || !req.body.email) {
+		if (!req.body.email) {
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid user definition'
@@ -1353,7 +1365,7 @@ router.route('/:vcid/user')
 		logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
 		var vcUser = new VCUser();
 		var eMailMessage = '';
-		if (req.body && req.body.message) {
+		if (req.body.message) {
 			eMailMessage = req.body.message;
 		}
 		vcUser.email = req.body.email;
@@ -1408,12 +1420,14 @@ router.route('/:vcid/user')
 						req.oneVC = vc;
 						// now send an e-Mail to the user for registration
 						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
-						// MS TODO do we need to generate HTTPS instead of HTTP
-						var uiUrl =  'localhost:4200'
+						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
 						  uiUrl = process.env.UI_URL;
 						}
-						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id);
+
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
@@ -1432,7 +1446,7 @@ router.route('/:vcid/user')
 									subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
 									html: '<p> '.concat(emailHtml, " </p>")
 							};
-							logger4js.info("Now send mail from %s to %s message %s", message.from, message.to, eMailMessage);
+							logger4js.info("Now send mail from %s to %s", message.from, message.to);
 							mail.VisboSendMail(message);
 							return res.status(200).send({
 								state: "success",
@@ -1457,8 +1471,7 @@ router.route('/:vcid/user')
 					req.oneVC = vc;
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
-					// MS TODO do we need to generate HTTPS instead of HTTP
-					var uiUrl =  'localhost:4200'
+					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
 					if (process.env.UI_URL != undefined) {
 						uiUrl = process.env.UI_URL;
@@ -1467,11 +1480,13 @@ router.route('/:vcid/user')
 					if (user.status && user.status.registeredAt) {
 						// send e-Mail to a registered user
 						template = template.concat('inviteVCExistingUser.ejs');
-						uiUrl = 'http://'.concat(uiUrl, '/vp/', req.oneVC._id);
+						uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
 					} else {
 						// send e-Mail to an existing but unregistered user
 						template = template.concat('inviteVCNewUser.ejs');
-						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id);
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
 					}
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);

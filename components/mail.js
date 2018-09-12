@@ -5,70 +5,61 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var transporter;
+var mailUser;
 var initialised = false;
 var debug = false;
 
 // Send Mail to User
 function VisboSendMail(message) {
 
-	// MS Todo: move parameters to config later
-	var smtpConfig = {
-		pool: true,
-		host: 'smtp.strato.de',
-		port: 465,
-		secure: true,
-  	requireTLS: true,
-		connectionTimeout: 500,
-		greetingTimeout: 300,
-		// logger: true,
-		// debug: true,
-		auth: {
-				user: 'visbo@seyfried.bayern',
-				pass: 'visbo123'
-		},
-		// tls: {
-		// 		// do not fail on invalid certs
-		// 		rejectUnauthorized: false
-		// }
-	};
-	// var smtpConfig = {
-	// 	service: 'gmail',
-	// 	host: "smtp.gmail.com",
-	// 	auth: {
-	// 			user: 'xxx@gmail.com',
-	// 			pass: 'xxx'
-	// 	}
-	// };
-	logger4js.debug("Send Mail to :%s:", message.to);
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var smtpConfig = undefined;
+	logger4js.debug("MAIL Send Mail to :%s:", message.to);
 
 	// MS Todo: move mail inititialisation make only once or refresh if closed later
 	if (!initialised) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		logger4js.debug("Initialise e-Mail sending connection for %s", smtpConfig.auth.user);
-		transporter = nodemailer.createTransport(smtpConfig)
-		if (!transporter) logger4js.error("Initialise e-Mail sending failed");
-		else logger4js.info("Initialise e-Mail sending success");
+		logger4js.debug("MAIL Evaluate SMTP Config");
+		if (process.env.SMTP != undefined) {
+			smtpConfig = JSON.parse(process.env.SMTP);
+		}
+		if (!smtpConfig) {
+			logger4js.fatal("MAIL SMTP Configuration Missing in Environment");
+			return;
+		} else {
+			logger4js.debug("MAIL SMTP gateway %s with user %s", smtpConfig.host, smtpConfig.auth.user);
+			mailUser = smtpConfig.auth.user;
+		}
+		logger4js.debug("MAIL Initialise e-Mail sending connection for %s", smtpConfig.auth.user);
 
-		initialised = true;
+		transporter = nodemailer.createTransport(smtpConfig)
+		if (!transporter) {
+			logger4js.error("MAIL Initialise e-Mail sending failed");
+			return;
+		} else {
+			logger4js.info("MAIL Initialise e-Mail sending success");
+			initialised = true;
+		}
 	}
 	// verify connection configuration
 	// logger4js.debug("Mail all prepared, now verify the eMail");
 	transporter.verify(function(error, success) {
 		if (error) {
-			logger4js.error("Error sending Mail %s", error);
+			logger4js.error("MAIL Error sending Mail %s", error);
 		} else {
-			logger4js.info("Mail Server is ready to take our messages");
+			logger4js.warn("MAIL Mail Server is ready to take our messages");
 		}
 	});
-	logger4js.debug("Mail all prepared, now fire the email to %s ", message.to);
+	logger4js.warn("MAIL Mail all prepared, now fire the email to %s ", message.to);
 
-	message.replyTo = message.from;
-	message.from = smtpConfig.auth.user;
+	if (message.from && message.from != mailUser) {
+		message.replyTo = message.from;
+	}
+	message.from = mailUser;
 	transporter.sendMail(message, function(error, response){
     if (error) {
-      logger4js.error("Mail delivery failed %s to %s", error, message.to);;
+      logger4js.error("MAIL Mail delivery failed %s to %s", error, message.to);;
     } else {
-      logger4js.debug("Mail delivery finished: %s", message.to);
+      logger4js.debug("MAIL Mail delivery finished: %s", message.to);
     }
 	});
 };

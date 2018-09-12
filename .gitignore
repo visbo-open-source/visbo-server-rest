@@ -7,3 +7,6 @@ public/ui/
 logging/
 .env
 .env
+.env2
+env-dev
+env-prod

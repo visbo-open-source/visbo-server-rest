@@ -1,0 +1,10 @@
+PORT=3484
+NODE_ENV=production
+
+# PRODUCTION
+  # Atlas  itprojekte2018_new
+  NODE_VISBODB="mongodb://markus:XXXXXXXXXXX!@cluster0-shard-00-00-jdbf2.mongodb.net:27017,cluster0-shard-00-01-jdbf2.mongodb.net:27017,cluster0-shard-00-02-jdbf2.mongodb.net:27017/itprojekte2018_new?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin"
+  UI_URL="https://my.visbo.net"
+  SMTP = { "host": "smtp.1und1.de", "auth": { "user": "service@visbo.de", "pass": "XXXXXXXXX" }, "pool": true, "port": 465, "secure": true, "requireTLS": true, "connectionTimeout": 500, "greetingTimeout": 300, "logger": false, "debug": false}
+
+  DEBUG={"VC": "debug", "VP": "debug", "VPV": "debug", "USER":"debug", "OTHER": "debug", "Mail": "debug", "All": "debug"}
