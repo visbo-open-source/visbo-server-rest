@@ -1,4 +1,4 @@
-var logModule = "USER";
+var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 

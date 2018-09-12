@@ -33,7 +33,7 @@ router.route('/')
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	* url: http://localhost:3484/audit
-	* url: http://localhost:3484/audit?
+	* url: http://localhost:3484/audit?from="2018-09-01"&to="2018-09-15"
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -60,8 +60,26 @@ router.route('/')
 
 	// now fetch all entries system wide
 	var query = {};
+	var from, to;
+	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
+	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
+	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+	// no date is set to set to to current Date and recalculate from afterwards
+	if (!from && !to) to = new Date();
+	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+	if (!from) {
+		from = new Date(to);
+		from.setDate(from.getDate()-1)
+	}
+	if (!to) {
+		to = new Date(from);
+		to.setDate(to.getDate()+1)
+	}
+	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
+	query = {"createdAt": {"$gte": from, "$lt": to}};
+
 	VisboAudit.find(query)
-	.limit(100)
+	// .limit(200)
 	.sort({createdAt: -1})
 	.exec(function (err, listVCAudit) {
 		if (err) {
