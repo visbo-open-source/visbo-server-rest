@@ -38,7 +38,6 @@ debugLogLevel = function(logCategory) {
 // 	if (typeof logCategory != "number" ) {
 // 		maxlevel = Number(configDebug[logCategory]);
 // 		label = logCategory
-// 		// console.log("LOGGING NEW LEVEL ".concat("newlevel "), maxlevel, typeof maxlevel );
 // 	} else
 // 		maxlevel = logCategory
 //

@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var bCrypt = require('bcrypt-nodejs');
+
 var assert = require('assert');
 var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
@@ -12,7 +14,10 @@ var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
 
-var logging = require('./../components/logging');
+var mail = require('./../components/mail');
+var ejs = require('ejs');
+var read = require('fs').readFileSync;
+
 var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -25,6 +30,12 @@ var findUserList = function(currentUser) {
 		//console.log("compare %s %s", currentUser.email, this);
 		return currentUser.email == this;
 }
+
+// Generates hash using bCrypt
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
+};
+
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -39,7 +50,7 @@ router.use('/', verifyVc.verifyVc);
 router.route('/')
 	/**
 	* @api {get} /vc Get Visbo Centers
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName GetVisboCenters
 	* @apiHeader {String} access-key User authentication token.
@@ -115,7 +126,7 @@ router.route('/')
 
 	/**
 	 * @api {post} /vc Create a Visbo Center
-	 * @apiVersion 0.0.1
+	 * @apiVersion 1.0.0
 	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
 	 * @apiDescription Post creates a new VC
@@ -305,7 +316,7 @@ router.route('/')
 router.route('/:vcid')
  /**
  	* @api {get} /vc/:vcid Get a Visbo Center
- 	* @apiVersion 0.0.1
+ 	* @apiVersion 1.0.0
  	* @apiGroup Visbo Center
  	* @apiName GetVisboCenter
 	* @apiDescription Gets a specific Visbo Center
@@ -361,7 +372,7 @@ router.route('/:vcid')
 
 /**
 	* @api {put} /vc/:vcid Update Visbo Center
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName UpdateVisboCenters
 	* @apiDescription Put updates a specific Visbo Center.
@@ -508,7 +519,7 @@ router.route('/:vcid')
 
 /**
 	* @api {delete} /vc/:vcid Delete a Visbo Centers
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center
 	* @apiName DeleteVisboCenter
 	* @apiDescription Deletes a specific Visbo Center.
@@ -555,7 +566,7 @@ router.route('/:vcid')
 					message: "No permission to delete Visbo Center"
 				});
 			}
-			req.oneVC.deleted = {deletedAt: Date(), byParent: false }
+			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
 			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
@@ -571,7 +582,7 @@ router.route('/:vcid')
 				var updateQuery = {}
 				updateQuery.vcid = req.oneVC._id;
 				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {deleted: {deletedAt: Date(), byParent: true }}};
+				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
 					if (err){
@@ -596,7 +607,7 @@ router.route('/:vcid/role')
 
 /**
 	* @api {get} /vc/:vcid/role Get Roles
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName GetVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -652,7 +663,7 @@ router.route('/:vcid/role')
 
 /**
 	* @api {post} /vc/:vcid/role Create a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PostVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -701,7 +712,7 @@ router.route('/:vcid/role')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		if (req.body == undefined || req.body.name == undefined ) { //|| req.body.uid == undefined) {
+		if (!req.body.name ) { //|| req.body.uid == undefined) {
 			logger4js.warn("Body is inconsistent %O", req.body);
 			return res.status(404).send({
 				state: 'failure',
@@ -740,7 +751,7 @@ router.route('/:vcid/role')
 			vcRole.kapazitaet = req.body.kapazitaet;
 			vcRole.externeKapazitaet = req.body.externeKapazitaet;
 			vcRole.startOfCal = req.body.startOfCal;
-			vcRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
+			vcRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 			vcRole.save(function(err, oneVcRole) {
 				if (err) {
 					logger4js.fatal("VC Post Role DB Connection ", err);
@@ -764,7 +775,7 @@ router.route('/:vcid/role/:roleid')
 
 /**
 	* @api {delete} /vc/:vcid/role/:roleid Delete a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName DeleteVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -839,7 +850,7 @@ router.route('/:vcid/role/:roleid')
 
 /**
 	* @api {put} /vc/:vcid/role/:roleid Update a Role
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PutVisboCenterRole
 	* @apiHeader {String} access-key User authentication token.
@@ -919,7 +930,7 @@ router.route('/:vcid/role/:roleid')
 			oneVCRole.kapazitaet = req.body.kapazitaet;
 			oneVCRole.externeKapazitaet = req.body.externeKapazitaet;
 			oneVCRole.startOfCal = req.body.startOfCal;
-			oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : Date();
+			oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 			oneVCRole.save(function(err, oneVcRole) {
 				if (err) {
 					logger4js.fatal("VC Put Role DB Connection ", err);
@@ -942,7 +953,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {get} /vc/:vcid/cost Get Costs
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName GetVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -999,7 +1010,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {post} /vc/:vcid/cost Create a Cost Definition
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PostVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -1042,7 +1053,7 @@ router.route('/:vcid/cost')
 		logger4js.trace("Post a new Visbo Center Cost Req Body: %O Name %s", req.body, req.body.name);
 		logger4js.info("Post a new Visbo Center Cost with name %s executed by user %s ", req.body.name, useremail);
 
-		if (!req.body || !req.body.name) {
+		if (!req.body.name) {
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid cost definition'
@@ -1060,7 +1071,7 @@ router.route('/:vcid/cost')
 		vcCost.vcid = req.params.vcid;
 		vcCost.uid = req.body.uid;
 		vcCost.farbe = req.body.farbe;
-		vcCost.timestamp = Date();
+		vcCost.timestamp = new Date();
 		vcCost.save(function(err, oneVcCost) {
 			if (err) {
 				logger4js.fatal("VC Post Role DB Connection ", err);
@@ -1080,26 +1091,26 @@ router.route('/:vcid/cost')
 
 	router.route('/:vcid/cost/:costid')
 
-	/**
-		* @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Center Properties
-		* @apiName DeleteVisboCenterCost
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified cost in the Visbo Center
-		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/cost/:costid
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Visbo Center Cost deleted"
-		* }
-		*/
+/**
+  * @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
+  * @apiVersion 1.0.0
+  * @apiGroup Visbo Center Properties
+  * @apiName DeleteVisboCenterCost
+  * @apiHeader {String} access-key User authentication token.
+  * @apiDescription Deletes the specified cost in the Visbo Center
+  *
+  * @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+  * @apiError NotAuthenticated no valid token HTTP 401
+  * @apiError ServerIssue No DB Connection HTTP 500
+  * @apiExample Example usage:
+  *   url: http://localhost:3484/vc/:vcid/cost/:costid
+  * @apiSuccessExample {json} Success-Response:
+  * HTTP/1.1 200 OK
+  * {
+  *   "state":"success",
+  *   "message":"Visbo Center Cost deleted"
+  * }
+  */
 
 // Delete Visbo Center Cost
 	.delete(function(req, res) {
@@ -1157,7 +1168,7 @@ router.route('/:vcid/cost')
 
 /**
 	* @api {put} /vc/:vcid/cost/:costid Update a Cost Definition
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PutVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
@@ -1230,7 +1241,7 @@ router.route('/:vcid/cost')
 			oneVCCost.name = req.body.name;
 			oneVCCost.uid = req.body.uid;
 			oneVCCost.farbe = req.body.farbe;
-			oneVCCost.timestamp = Date();
+			oneVCCost.timestamp = new Date();
 			oneVCCost.save(function(err, oneVcCost) {
 				if (err) {
 					return res.status(500).send({
@@ -1253,7 +1264,7 @@ router.route('/:vcid/user')
 
 /**
 	* @api {get} /vc/:vcid/user Get Users of the VC
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Users
 	* @apiName GetVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
@@ -1294,7 +1305,7 @@ router.route('/:vcid/user')
 
 /**
 	* @api {post} /vc/:vcid/user Add a User
-	* @apiVersion 0.0.1
+	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Users
 	* @apiName PostVisboCenterUser
 	* @apiHeader {String} access-key User authentication token.
@@ -1335,7 +1346,7 @@ router.route('/:vcid/user')
 		logger4js.trace("Post a new Visbo Center User Req Body: %O Name %s", req.body, req.body.email);
 		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
 
-		if (!req.body || !req.body.email) {
+		if (!req.body.email) {
 			return res.status(404).send({
 				state: 'failure',
 				message: 'No valid user definition'
@@ -1349,6 +1360,10 @@ router.route('/:vcid/user')
 		}
 		logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
 		var vcUser = new VCUser();
+		var eMailMessage = '';
+		if (req.body.message) {
+			eMailMessage = req.body.message;
+		}
 		vcUser.email = req.body.email;
 		vcUser.role = req.body.role  != "User" &&  req.body.role  != "Admin" ? "User" : req.body.role;
 
@@ -1363,7 +1378,7 @@ router.route('/:vcid/user')
 		}
 		// check if the user exists and get the UserId or create the user
 		var queryUsers = User.findOne({'email': vcUser.email});
-		queryUsers.select('email');
+		//queryUsers.select('email');
 		queryUsers.exec(function (err, user) {
 			if (err) {
 				logger4js.fatal("Post User to VC cannot find User, DB Connection %s", err);
@@ -1375,7 +1390,7 @@ router.route('/:vcid/user')
 			}
 			if (!user) {
 				user = new User();
-				user.email = vcUser.email
+				user.email = vcUser.email;
 				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
 				user.save(function(err, user) {
 					if (err) {
@@ -1399,10 +1414,42 @@ router.route('/:vcid/user')
 							});
 						}
 						req.oneVC = vc;
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully added User to Visbo Center",
-							users: [ vcUser ]
+						// now send an e-Mail to the user for registration
+						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
+						// MS TODO do we need to generate HTTPS instead of HTTP
+						var uiUrl =  'http://localhost:4200'
+						if (process.env.UI_URL != undefined) {
+						  uiUrl = process.env.UI_URL;
+						}
+
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
+
+						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "E-Mail Rendering failed",
+									error: err
+								});
+							}
+							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+							var message = {
+									from: useremail,
+									to: user.email,
+									subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
+									html: '<p> '.concat(emailHtml, " </p>")
+							};
+							logger4js.info("Now send mail from %s to %s", message.from, message.to);
+							mail.VisboSendMail(message);
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully added User to Visbo Center",
+								users: [ vcUser ]
+							});
 						});
 					})
 				});
@@ -1419,10 +1466,50 @@ router.route('/:vcid/user')
 						});
 					}
 					req.oneVC = vc;
-					return res.status(200).send({
-						state: "success",
-						message: "Successfully added User to Visbo Center",
-						users: [ vcUser ]
+					// now send an e-Mail to the user for registration/login
+					var template = __dirname.concat('/../emailTemplates/');
+					// MS TODO do we need to generate HTTPS instead of HTTP
+					var uiUrl =  'http://localhost:4200'
+					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+					logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
+					if (user.status && user.status.registeredAt) {
+						// send e-Mail to a registered user
+						template = template.concat('inviteVCExistingUser.ejs');
+						uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
+					} else {
+						// send e-Mail to an existing but unregistered user
+						template = template.concat('inviteVCNewUser.ejs');
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+					}
+
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %O", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						var message = {
+								from: useremail,
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from, message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully added User to Visbo Center",
+							users: [ vcUser ]
+						});
 					});
 				})
 			}
@@ -1431,26 +1518,26 @@ router.route('/:vcid/user')
 
 	router.route('/:vcid/user/:userid')
 
-	/**
-		* @api {delete} /vc/:vcid/user/:userid Delete a User from VC
-		* @apiVersion 0.0.1
-		* @apiGroup Visbo Center Users
-		* @apiName DeleteVisboCenterUser
-		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified user in the Visbo Center
-		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
-		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/user/:userid
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*   "state":"success",
-		*   "message":"Visbo Center User deleted"
-		* }
-		*/
+/**
+	* @api {delete} /vc/:vcid/user/:userid Delete a User from VC
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Center Users
+	* @apiName DeleteVisboCenterUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Deletes the specified user in the Visbo Center
+	*
+	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
+	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vc/:vcid/user/:userid
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   "state":"success",
+	*   "message":"Visbo Center User deleted"
+	* }
+	*/
 
 // Delete Visbo Center User
 	.delete(function(req, res) {

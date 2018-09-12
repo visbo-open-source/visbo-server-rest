@@ -1,0 +1,10 @@
+PORT=3484
+# NODE_ENV=production
+NODE_ENV=development
+
+# PRODUCTION
+  # Atlas  itprojekte2018_new
+  NODE_VISBODB="mongodb://markus:MONGOPASSWORD!@cluster0-shard-00-00-jdbf2.mongodb.net:27017,cluster0-shard-00-01-jdbf2.mongodb.net:27017,cluster0-shard-00-02-jdbf2.mongodb.net:27017/itprojekte2018_new?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin"
+  DEBUG={"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "Mail": "info", "All": "info"}
+  UI_URL="my.visbo.net"
+  SMTP = { "host": "smtp.strato.de", "auth": { "user": "visbo@seyfried.bayern", "pass": "XXXX" }, "pool": true, "port": 465, "secure": true, "requireTLS": true, "connectionTimeout": 500, "greetingTimeout": "300"}

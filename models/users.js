@@ -5,7 +5,6 @@ var userSchema = new mongoose.Schema({
 	email: {type: String, required: true},
 	name: {type: String, required: false, maxlength: 100},
 	password: {type: String, required: false},
-	lastLogin: {type: Date},
 	profile: {
 		// address: {type: String, maxlength: 100, minlength: 5, default: 'not set'},
 		firstName: {type: String, required: false, maxlength: 100},
@@ -23,7 +22,10 @@ var userSchema = new mongoose.Schema({
 	status: {
 		registeredAt: {type: Date, required: false},
 		lockedUntil: {type: Date, required: false},
-		loginRetries: {type: Number, required: false}
+		lastLoginAt: {type: Date},
+		lastLoginFailedAt: {type: Date},
+		loginRetries: {type: Number, required: false},
+		lastPWResetAt: {type: Date}
 	}
 });
 // Set Creation and modification date automatically

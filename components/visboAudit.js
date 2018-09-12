@@ -6,7 +6,6 @@ var moment = require('moment');
 var audit = require('./../components/visboAudit');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var logging = require('./../components/logging');
 var logModule = "AUDIT";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -40,7 +39,8 @@ function visboAudit(tokens, req, res) {
 	}
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
-	auditEntry.ip = req.ip;
+	// set the correct ip in case of NGINX Reverse Proxy
+	auditEntry.ip = req.headers["x-real-ip"] || req.headers["X-Real-IP"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
 	auditEntry.result.time = Math.round(tokens['response-time'](req, res))
