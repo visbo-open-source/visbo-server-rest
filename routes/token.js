@@ -86,7 +86,7 @@ router.route('/user/login')
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
-		logger4js.debug("Login Headers %O", req.headers);
+		logger4js.trace("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
