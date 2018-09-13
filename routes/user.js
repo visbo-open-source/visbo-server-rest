@@ -70,6 +70,7 @@ router.route('/profile')
 // get profile
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Profile (Read)';
 
 		logger4js.info("Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
@@ -143,6 +144,7 @@ router.route('/profile')
 // Update profile
 	.put(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Profile (Update)';
 
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
@@ -221,6 +223,7 @@ router.route('/passwordchange')
 // Change Password
 	.put(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Password (Change)';
 
 		logger4js.info("Put/Update user password %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {

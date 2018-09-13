@@ -14,10 +14,11 @@ function VisboSendMail(message) {
 
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var smtpConfig = undefined;
-	logger4js.debug("MAIL Send Mail to :%s: Logger %s", message.to, debugLogLevel(logModule));
+	logger4js.debug("MAIL Send Mail to :%s:", message.to);
 
 	// MS Todo: move mail inititialisation make only once or refresh if closed later
 	if (!initialised) {
+		logger4js.debug("MAIL Evaluate SMTP Config");
 		if (process.env.SMTP != undefined) {
 			smtpConfig = JSON.parse(process.env.SMTP);
 		}
@@ -45,7 +46,7 @@ function VisboSendMail(message) {
 		if (error) {
 			logger4js.error("MAIL Error sending Mail %s", error);
 		} else {
-			logger4js.warn("MAIL Mail Server is ready to take our messages");
+			logger4js.debug("MAIL Mail Server is ready to take our messages");
 		}
 	});
 	logger4js.warn("MAIL Mail all prepared, now fire the email to %s ", message.to);
