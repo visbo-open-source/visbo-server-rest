@@ -6,6 +6,8 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
+var authSysAdmin = require('./../components/authSysAdmin');
+var auth = require('./../components/auth');
 
 var logModule = "USER";
 var log4js = require('log4js');
@@ -27,6 +29,9 @@ var isValidPassword = function(user, password){
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
+
+//Register the sysadmin permission middleware for login url
+router.use('/user/login', authSysAdmin.calculateSysAdmin);
 
 router.route('/user/login')
 
@@ -78,8 +83,10 @@ router.route('/user/login')
 	.post(function(req, res) {
 		var currentDate = new Date();
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
+		logger4js.debug("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
@@ -104,7 +111,7 @@ router.route('/user/login')
 					message: "email not registered"
 				});
 			}
-			logger4js.debug("Try to Login User Found %O", req.body.email, user);
+			logger4js.debug("Try to Login User Found %s", user.email);
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
@@ -125,7 +132,7 @@ router.route('/user/login')
 				}
 			}
 
-			logger4js.debug("Login: Check password for %s user %O", req.body.email, user);
+			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
@@ -154,6 +161,9 @@ router.route('/user/login')
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
 				user.password = undefined;
+				if (!user.status) user.status = {};
+				user.status.sysAdminRole = req.sysAdminRole;
+				logger4js.debug("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
@@ -214,6 +224,7 @@ router.route('/user/pwforgotten')
 // Forgot Password
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
@@ -244,7 +255,7 @@ router.route('/user/pwforgotten')
 				});
 			}
 			var currentDate = new Date();
-			if ((currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
+			if (user.status.lastPWResetAt && (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
 				logger4js.warn("Multiple Password Resets for User %s ", user._id);
 				return res.status(200).send({
 					// state: "failure",
@@ -338,6 +349,7 @@ router.route('/user/pwreset')
 	// Password Reset
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Password Reset';
 
 		logger4js.info("Password Reset Change through e-Mail");
 		if (!req.body.token || !req.body.password) {
@@ -374,7 +386,7 @@ router.route('/user/pwreset')
 						});
 					}
 					user.password = createHash(req.body.password);
-					if (user.status) user.status = {};
+					if (!user.status) user.status = {};
 					user.status.loginRetries = 0;
 					user.save(function(err, user) {
 						if (err) {
@@ -464,6 +476,7 @@ router.route('/user/signup')
 // Post Signup User
 	.post(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
@@ -487,6 +500,7 @@ router.route('/user/signup')
 					error: err
 				});
 			}
+			if (user) req.body.email = user.email;
 			// if user exists and is registered already refuse to register again
 			if (user && user.status && user.status.registeredAt) {
 				return res.status(401).send({
@@ -642,6 +656,7 @@ router.route('/user/signup')
 	// Post User Confirm
 		.post(function(req, res) {
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
 			if (!req.body._id || !req.body.hash) {

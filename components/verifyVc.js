@@ -18,8 +18,11 @@ function verifyVc(req, res, next) {
 	var useremail = req.decoded.email;
 
 	logger4js.debug("Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
-	// return next();
-	var query = {'users.email': useremail};		// Permission for User
+
+	var query = {}
+	if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+		query = {'users.email': useremail};	// search for VC where user is member of
+	}
 	query._id = vcid;
 	query.deleted =  {$exists: false};				// Not deleted
 	var queryVC = VisboCenter.findOne(query);

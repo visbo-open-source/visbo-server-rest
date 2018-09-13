@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var bCrypt = require('bcrypt-nodejs');
+
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lockVP = require('./../components/lock');
@@ -38,6 +40,12 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 
+// find a user in an array of users by userId
+var findUserById = function(currentUser) {
+	// logger4js.info("FIND User by ID %s with %s result %s", this, currentUser.userId, currentUser.userId.toString() == this.toString());
+	return currentUser.userId.toString() == this.toString();
+}
+
 // find a user in a simple array of user names
 var findVP = function(vpid) {
 		return vpid == this;
@@ -48,6 +56,11 @@ var findVPList = function(vp) {
 		//console.log("compare %s %s result %s", vp._id.toString(), this.toString(), vp._id.toString() == this.toString());
 		return vp._id.toString() == this.toString();
 }
+
+// Generates hash using bCrypt
+var createHash = function(secret){
+	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
+};
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -136,6 +149,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project (Read)';
 
 		// either member of the project or if project is public member of the VC
 		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
@@ -182,7 +196,7 @@ router.route('/')
 	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	* @apiError NoPermission No permission to create a VisboProject HTTP 403
 	* @apiError Duplicate VisboProject does already exist HTTP 409
-	* @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project
+	* @apiError HTTP-400 VisboProject does not exist or user does not have permission to create project
 	* @apiPermission user must be authenticated and user must have permission to create a VP
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
@@ -238,6 +252,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project (Create)';
 
 		if (req.body.vcid == undefined || req.body.name == undefined) {
 				logger4js.warn("No VCID or Name in Body");
@@ -250,7 +265,7 @@ router.route('/')
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
-		var vpPublic = req.body.vpPublic ? true : false;
+		var vpPublic = req.body.vpPublic == true ? true : false;
 		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
@@ -456,6 +471,7 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project (Read)';
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
 
@@ -523,6 +539,7 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project (Update)';
 
 		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 
@@ -552,7 +569,7 @@ router.route('/:vpid')
 
 		// change only if present
 		if (req.body.vpPublic != undefined) {
-			req.oneVP.vpPublic = req.body.vpPublic == true ? true : false;
+			req.oneVP.vpPublic = (req.body.vpPublic == true || req.body.vpPublic == 'true') ? true : false;
 		}
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
@@ -678,7 +695,7 @@ router.route('/:vpid')
 	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 404
+	* @apiError NotFound VisboProject does not exist HTTP 400
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025
@@ -694,6 +711,7 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project (Delete)';
 
 		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s is Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
 
@@ -780,6 +798,7 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Lock (Create)';
 
 		logger4js.info("POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 		var variantName = req.body.variantName || "";
@@ -810,7 +829,7 @@ router.route('/:vpid/lock')
 			});
 		}
 		if (expiredAt <= dateNow) {
-			logger4js.warn("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
+			logger4js.info("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
 			return res.status(401).send({
 				state: 'failiure',
 				message: 'New Lock already expired',
@@ -862,7 +881,7 @@ router.route('/:vpid/lock')
 	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 404
+	* @apiError NotFound VisboProject does not exist HTTP 400
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/lock
@@ -879,6 +898,7 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Lock (Delete)';
 
 		var variantName = "";
 		variantName = req.query.variantName || "";
@@ -960,6 +980,7 @@ router.route('/:vpid/variant')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Variant (Create)';
 
 		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O", userId, useremail, req.params.vpid, req.body);
 
@@ -1022,7 +1043,7 @@ router.route('/:vpid/variant/:vid')
 	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 404
+	* @apiError NotFound VisboProject does not exist HTTP 400
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/variant/variant5aada
@@ -1040,6 +1061,8 @@ router.route('/:vpid/variant/:vid')
 		var useremail = req.decoded.email;
 		var variantId = req.params.vid;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Variant (Delete)';
+		req.auditInfo = req.body.variantId;
 
 		logger4js.info("DELETE Visbo Project Variant for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vid);
 
@@ -1052,6 +1075,7 @@ router.route('/:vpid/variant/:vid')
 			});
 		}
 		var variantName = req.oneVP.variant[variantIndex].variantName;
+		req.auditInfo = variantName;
 		//variant belongs to a different user and curr. user is not an Admin
 		if (req.oneVP.variant[variantIndex].email != useremail && req.oneVPisAdmin == false) {
 			return res.status(403).send({
@@ -1143,6 +1167,7 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Portfolio List (Read)';
 
 		var query = {};
 		query.vpid = req.oneVP._id;
@@ -1238,6 +1263,7 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Portfolio List (Create)';
 
 		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s Portfolio %O", userId, useremail, req.params.vpid, req.body);
 
@@ -1385,6 +1411,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Portfolio List (Read)';
 
 		logger4js.trace("Get Portfolio Versions");
 		var query = {}
@@ -1444,6 +1471,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Portfolio List (Delete)';
 
 		logger4js.info("DELETE Visbo Portfolio for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vpfid);
 
@@ -1537,6 +1565,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project User (Read)';
 
 			logger4js.info("Get Visbo Project Users for userid %s email %s and vp %s Found %d", userId, useremail, req.params.vpid, req.oneVP.users.length);
 			return res.status(200).send({
@@ -1585,16 +1614,18 @@ router.route('/:vpid/portfolio/:vpfid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project User (Add)';
 
 			logger4js.trace("Post a new Visbo Project User Req Body: %O Name %s", req.body, req.body.email);
 			logger4js.info("Post a new Visbo Project User with name %s executed by user %s ", req.body.email, useremail);
 
 			if (!req.body.email) {
-				return res.status(404).send({
+				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid user definition'
 				});
 			}
+			req.auditInfo = req.body.email;
 			if (!req.oneVPisAdmin) {
 				return res.status(403).send({
 					state: 'failure',
@@ -1613,7 +1644,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			// check if the user is not member of the group already
 			if (req.oneVP.users.filter(users => (users.role == vpUser.role && users.email == vpUser.email)).length != 0) {
 				logger4js.debug("Post User to VP %s User is already a member");
-				return res.status(404).send({
+				return res.status(400).send({
 					state: 'failure',
 					message: 'User is already member',
 					vp: [req.oneVP]
@@ -1786,9 +1817,14 @@ router.route('/:vpid/portfolio/:vpfid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project User (Delete)';
+			req.auditInfo = req.params.userid;
 
 			var userRole = req.query.role || "";
 			logger4js.info("DELETE Visbo Project User by userid %s email %s for user %s role %s ", userId, useremail, req.params.userid, userRole);
+
+			var delUser = req.oneVP.users.find(findUserById, req.params.userid)
+			if (delUser) req.auditInfo = delUser.email;
 
 			if (!req.oneVPisAdmin) {
 				return res.status(403).send({
