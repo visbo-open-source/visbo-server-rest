@@ -12,7 +12,7 @@ router.use('/profile', auth.verifyAdmin);
 
 
 /////////////////
-// Profile API
+// Profile API change
 // /profile
 /////////////////
 
