@@ -62,7 +62,7 @@ function visboAudit(tokens, req, res) {
 	}
 
 	// set the correct ip in case of NGINX Reverse Proxy
-	auditEntry.ip = req.headers["x-real-ip"] || req.headers["X-Real-IP"] || req.ip;
+	auditEntry.ip = req.headers["x-real-ip"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
 	auditEntry.result.time = Math.round(tokens['response-time'](req, res))
