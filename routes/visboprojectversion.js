@@ -84,6 +84,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Versions (Read)';
 
 		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
 		var queryvpv = {};
@@ -187,7 +188,7 @@ router.route('/')
 	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	* @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
 	* @apiError Duplicate VisboProjectVersion does already exist HTTP 409
-	* @apiError HTTP-404 VisboCenter does not exist or user does not have permission to create project Version
+	* @apiError HTTP-400 VisboProject does not exist or user does not have permission to create project Version
 	* @apiPermission user must be authenticated and user must have permission to create a VP
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
@@ -217,6 +218,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Versions (Create)';
 
 		var vpid = req.body.vpid || 0;
 		var variantName = req.body.variantName || "";
@@ -390,6 +392,7 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Version (Read)';
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
@@ -409,7 +412,7 @@ router.route('/:vpvid')
 	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError NoPermission user does not have access to the VisboProjectVersion as Admin HTTP 403
-	* @apiError NotFound VisboProjectVersion does not exist HTTP 404
+	* @apiError NotFound VisboProjectVersion does not exist HTTP 400
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vpv/vpv5c754feaa
@@ -425,6 +428,7 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Version (Delete)';
 
 		logger4js.info("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
 

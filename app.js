@@ -16,7 +16,7 @@ var logger4jsRest = log4js.getLogger("REST");
 
 //initialize mongoose schemas
 require('./models/users');
-require('./models/audit');
+require('./models/visboaudit');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
@@ -32,6 +32,9 @@ var token = require('./routes/token');
 var vc = require('./routes/visbocenter');
 var vp = require('./routes/visboproject');
 var vpv = require('./routes/visboprojectversion');
+var audit = require('./routes/audit');
+
+// call the audit module at the end of the requests
 var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
@@ -230,6 +233,7 @@ app.use('/token', token);
 app.use('/vc', vc);
 app.use('/vp', vp);
 app.use('/vpv', vpv);
+app.use('/audit', audit);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
