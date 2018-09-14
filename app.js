@@ -9,12 +9,22 @@ var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
 
+var log4js = require('log4js');
+var logger4js = log4js.getLogger("OTHER");
+var logger4jsRest = log4js.getLogger("REST");
+
+
 //initialize mongoose schemas
 require('./models/users');
-require('./models/logs');
+require('./models/visboaudit');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
+require('./models/visboportfolio');
+require('./models/vcrole');
+require('./models/vccost');
+
+var systemVC = require('./components/sytemVC');
 
 // include the route modules
 var user = require('./routes/user');
@@ -22,14 +32,16 @@ var token = require('./routes/token');
 var vc = require('./routes/visbocenter');
 var vp = require('./routes/visboproject');
 var vpv = require('./routes/visboprojectversion');
+var audit = require('./routes/audit');
+
+var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
 var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
   autoReconnect: true,
-  reconnectInterval: 3000,
-  useMongoClient: true
+  reconnectInterval: 3000
 };
 
 var reconnectTries = 0;
@@ -64,26 +76,32 @@ function delayString(seconds) {
   return str;
 }
 function dbConnect(dbconnection) {
-  console.log('%s: Connecting database %s', moment().format('YYYY-MM-DD HH:mm:ss'), dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
-  mongoose.connect(
-    // Replace CONNECTION_URI with your connection uri
-    dbconnection,
-    dbOptions
-  ).then(function() {
-    console.log('%s: Server is fully functional DB Connected', moment().format('YYYY-MM-DD HH:mm:SS'));
-  }, function(err) {
-    console.log('%s: Database connection failed: %O', moment().format('YYYY-MM-DD HH:mm:SS'), err);
+  if (!dbconnection) {
+    logger4js.fatal('Connecting string missing in .env');
+    // exit();
+  } else {
+    logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+    mongoose.connect(
+      // Replace CONNECTION_URI with your connection uri
+      dbconnection,
+      dbOptions
+    ).then(function() {
+      //mongoose.set('debug', true);
+      logger4js.mark('Server is fully functional DB Connected');
+    }, function(err) {
+      logger4js.fatal('Database connection failed: %O', err);
 
-    reconnectTries++;
-    console.log('%s: Reconnecting after '+delayString(trialDelay), moment().format('YYYY-MM-DD HH:mm:SS'));
-    console.log('%s: Reconnect trial: '+reconnectTries, moment().format('YYYY-MM-DD HH:mm:SS'));
-    delay(trialDelay*1000).then(function() {
-      trialDelay += trialDelay;
-      if (trialDelay>7200) trialDelay = 7200;
-      // enable recurtion
-      dbConnect();
+      reconnectTries++;
+      logger4js.fatal('Reconnecting after '+delayString(trialDelay));
+      logger4js.fatal('Reconnect trial: '+reconnectTries);
+      delay(trialDelay*1000).then(function() {
+        trialDelay += trialDelay;
+        if (trialDelay>7200) trialDelay = 7200;
+        // enable recurtion
+        dbConnect();
+      });
     });
-  });
+  }
 }
 
 // dbConnect();
@@ -92,17 +110,16 @@ function dbConnect(dbconnection) {
 var whitelist = [
   undefined, // POSTMAN Support
   'http://localhost:3484', // DEV Support
-  'http://visbo.myhome-server.de:3484', // Production Support
+  'https://my.visbo.net', // Production Support
   'http://localhost:4200' // MS Todo UI Support DEV Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
-// MS Todo: check where Corsoptions is called with undefined
 var corsOptions = {
   origin: function (origin, callback) {
-    //console.log("%s Check CorsOptions %s", moment().format('YYYY-MM-DD HH:mm:ss'), origin);
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
+      logger4js.fatal("CorsOptions deny  %s", origin);
       //callback(null, true) // temporary enable cors for all sites
       callback(new Error(origin + ' is not allowed to access'))
     }
@@ -110,10 +127,35 @@ var corsOptions = {
 }
 // setup environment variables
 environment.config();
-console.log("%s: Starting in Environment %s", moment().format('YYYY-MM-DD HH:mm:ss'), process.env.NODE_ENV);
 
 // start express app
 var app = express();
+// configure log4js
+var fsLogPath = __dirname + '/logging';
+if (process.env.LOGPATH != undefined) {
+  fsLogPath = process.env.LOGPATH;
+}
+
+log4js.configure({
+  appenders: {
+    out: { type: 'stdout' },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 1024, backups: 3, daysToKeep: 3 },
+    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', keepFileExt: true, daysToKeep: 30 },
+    'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
+    'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
+  },
+  categories: {
+    default: { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
+  }
+});
+logger4js.level = 'info';
+
+logger4js.warn("LogPath %s", fsLogPath)
+logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -128,9 +170,8 @@ app.use(cors(corsOptions));
 // define the log entry for processing pages
 //app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  // console.log("%s: Request %O", moment().format('YYYY-MM-DD HH:mm:ss'), req.get('User-Agent'));
-  return [
-    moment().format('YYYY-MM-DD HH:mm:ss')+':',
+  visboAudit.visboAudit(tokens, req, res);
+  var webLog = [
     tokens.method(req, res),
     // 'base url', req.baseUrl,
     //'Url', req.originalUrl,
@@ -141,11 +182,22 @@ app.use(logger(function (tokens, req, res) {
     req.ip,
     req.get('User-Agent'),
     ''
-  ].join(' ')
+  ].join(' ');
+  logger4jsRest.info(webLog);
+  webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  return webLog
 }));
 
 dbConnect(process.env.NODE_VISBODB);
 
+var sysVC = systemVC.createSystemVC(
+    { users: [
+        { "email":"markus.seyfried@visbo.de", "role": "Admin" },
+        { "email":"visbotestadmin@seyfried.bayern", "role": "Admin" },
+        { "email":"ute.rittinghaus-koytek@visbo.de", "role": "Admin" },
+        { "email":"visbotest@seyfried.bayern", "role": "User" }
+     ]}
+   )
 
 var options = {
   dotfiles: 'ignore',
@@ -163,20 +215,20 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
 
 // simple logger for this router's requests
 // all requests to this router will first hit this middleware
 app.use(function(req, res, next) {
-  console.log('%s: Method %s %s', moment().format('YYYY-MM-DD HH:mm:ss'), req.method, req.url);
+  logger4js.trace('Method %s %s', req.method, req.url);
   next();
 });
 
-// Catch all routes from the ui client and return the index file
-app.get('/ui/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/ui/index.html'));
-});
-
+// // Catch all routes from the ui client and return the index file
+// app.get('/ui/*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public/ui/index.html'));
+// });
+//
 
 // Register the main routes
 app.use('/user', user);
@@ -185,11 +237,12 @@ app.use('/token', token);
 app.use('/vc', vc);
 app.use('/vp', vp);
 app.use('/vpv', vpv);
+app.use('/audit', audit);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  console.log("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
+  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
   err.status = 404;
   res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
   //next(err);

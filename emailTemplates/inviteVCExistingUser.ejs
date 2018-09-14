@@ -1,0 +1,24 @@
+<h1>
+  You have been invited to a Visbo Center
+</h1>
+<p>
+  <%if (userFrom.profile && userFrom.profile.firstname ) { %>
+    <%= userFrom.profile.firstName %>
+  <% } %>
+  <%if (userFrom.profile && userFrom.profile.lastname ) { %>
+    <%= userFrom.profile.lastname %>
+  <% } %>
+  (<%= userFrom.email %>) has invited you to Visbo Center: <b><%= vc.name %></b> with <%= vc.vpCount %> Projects
+</p>
+<p>
+  Message: <br>
+  <h4>
+    <%- message.replace(/\n/g, '<br/>')  %>
+  </h4>
+</p>
+<h3>
+  To access the Visbo Center follow this link: <a href="<%= url %>">Login Visbo</a>
+</h3>
+<p>
+  Your e-Mail address <%= userTo.email %> was used for the invitation.
+</p>
