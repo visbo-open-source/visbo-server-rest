@@ -13,6 +13,7 @@ var VCUser = mongoose.model('VCUser');
 var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
+var VisboAudit = mongoose.model('VisboAudit');
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -31,11 +32,15 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 
+var findUserById = function(currentUser) {
+	// logger4js.info("FIND User by ID %s with %s result %s", this, currentUser.userId, currentUser.userId.toString() == this.toString());
+	return currentUser.userId.toString() == this.toString();
+}
+
 // Generates hash using bCrypt
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
-
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -95,11 +100,16 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center (Read)';
 
 		logger4js.info("Get Visbo Center for user %s", useremail);
 
-		var query = {'users.email': useremail};
-		logger4js.info("Check for System query %O", req.query);
+		var query = {};
+		// MS TODO Check that user is SysAdmin
+		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+			query = {'users.email': useremail};	// search for VC where user is member of
+		}
+		logger4js.trace("Check for System query %O", req.query);
 		query.system = req.query.systemVC ? {$eq: true} : {$ne: true};						// do not show System VC
 		if (!req.query.systemVC) query.system = {$ne: true};						// do not show System VC
 		query.deleted = {$exists: false};
@@ -188,6 +198,7 @@ router.route('/')
 	var useremail = req.decoded.email;
 	var name = (req.body.name || '').trim();
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	req.auditDescription = 'Visbo Center (Create)';
 
 	logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
 	logger4js.info("Post a new Visbo Center with name %s executed by user %s ", name, useremail);
@@ -360,6 +371,7 @@ router.route('/:vcid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center (Read)';
 
 		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
 		// we have found the VC already in middleware
@@ -426,6 +438,7 @@ router.route('/:vcid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center (Update)';
 
 		logger4js.info("PUT/Save Visbo Center for userid %s vc %s oneVC %s is Admin %s ", userId, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
 
@@ -528,7 +541,7 @@ router.route('/:vcid')
 	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboCenter
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError NoPermission user does not have access to the VisboCenter as Admin HTTP 403
-	* @apiError NotFound VisboCenter does not exist HTTP 404
+	* @apiError NotFound VisboCenter does not exist HTTP 400
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	* url: http://localhost:3484/vc/vc5aada025
@@ -544,64 +557,121 @@ router.route('/:vcid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var vcIsSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center (Delete)';
 
-		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Sys Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, vcIsSysAdmin);
+		// user is sysAdmin
+		if (!req.decoded.status || req.decoded.status.sysAdminRole != 'Admin') {
+			return res.status(403).send({
+				state: "failure",
+				message: "No permission to delete Visbo Center"
+			});
+		}
 
-		var query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};;
-		query.system = true;
-		query.deleted =  {$exists: false}; 				// Not deleted
-		VisboCenter.findOne(query, function(err, vc) {
+		req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
+		logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+		req.oneVC.save(function(err, oneVC) {
 			if (err) {
 				logger4js.fatal("VC Delete DB Connection ", err);
 				return res.status(500).send({
-					state: "failure",
-					message: "database error",
+					state: 'failure',
+					message: 'Error deleting Visbo Center',
 					error: err
 				});
 			}
-			if (!vc) {
-				return res.status(403).send({
-					state: "failure",
-					message: "No permission to delete Visbo Center"
-				});
-			}
-			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
-			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
-			req.oneVC.save(function(err, oneVC) {
-				if (err) {
+			req.oneVC = oneVC;
+			logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
+			var updateQuery = {}
+			updateQuery.vcid = req.oneVC._id;
+			updateQuery.deleted = {$exists: false};
+			var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
+			var updateOption = {upsert: false, multi: "true"};
+			VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+				if (err){
 					logger4js.fatal("VC Delete DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error deleting Visbo Center',
+						message: 'Error updating Visbo Projects',
 						error: err
 					});
 				}
-				req.oneVC = oneVC;
-				logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
-				var updateQuery = {}
-				updateQuery.vcid = req.oneVC._id;
-				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
-				var updateOption = {upsert: false, multi: "true"};
-				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-					if (err){
-						logger4js.fatal("VC Delete DB Connection ", err);
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Projects',
-							error: err
-						});
-					}
-					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Center'
-					});
+				logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Center'
 				});
 			});
 		});
 	})
+
+router.route('/:vcid/audit')
+ /**
+ 	* @api {get} /vc/:vcid/audit Get Visbo Center Audit Trail
+ 	* @apiVersion 1.0.0
+ 	* @apiGroup Visbo Center
+ 	* @apiName GetVisboCenterAudit
+	* @apiDescription Get Audit Trail for a specific Visbo Center
+	* the system checks if the user has access permission to it.
+	* In case of success, the system delivers an array of Audit Trail Activities
+ 	* @apiHeader {String} access-key User authentication token.
+ 	* @apiPermission user must be authenticated and user must have admin permission in the VisboCenter
+ 	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboCenter HTTP 403
+ 	* @apiError ServerIssue No DB Connection HTTP 500
+ 	* @apiExample Example usage:
+ 	* url: http://localhost:3484/vc/vc5aada025/audit
+ 	* @apiSuccessExample {json} Success-Response:
+ 	* HTTP/1.1 200 OK
+ 	* {
+ 	*   "state":"success",
+ 	*   "message":"Audit Trail delivered",
+ 	*   "audit": [{
+ 	*     "_id":"vc541c754feaa",
+ 	*     "updatedAt":"2018-03-16T12:39:54.042Z",
+ 	*     "createdAt":"2018-03-12T09:54:56.411Z",
+	*			"XXXXXXXX": "XXXXXXXX"
+ 	*   }]
+ 	* }
+	*/
+// Get audit trail for a specific VC
+.get(function(req, res) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	req.auditDescription = 'Visbo Center Audit (Read)';
+
+	logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+	if (!req.oneVCisAdmin) {
+		return res.status(403).send({
+				state: 'failure',
+				message: 'You need to have Admin permission to get audit trail'
+			});
+	}
+
+	// now fetch all entries related to this vc
+	var query = {'vc.vcid': req.oneVC._id};
+	VisboAudit.find(query)
+	.limit(500)
+	.sort({createdAt: -1})
+	.exec(function (err, listVCAudit) {
+		if (err) {
+			logger4js.fatal("VC Audit Get DB Connection ", err);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Error getting VisboCenter Audit',
+				error: err
+			});
+		}
+		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned Visbo Center Audit',
+			audit: listVCAudit
+		});
+	});
+})
 
 router.route('/:vcid/role')
 
@@ -638,6 +708,7 @@ router.route('/:vcid/role')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Role (Read)';
 
 		logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
 
@@ -702,6 +773,7 @@ router.route('/:vcid/role')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Role (Create)';
 
 		logger4js.trace("Post a new Visbo Center Role Req Body: %O Name %s", req.body, req.body.name);
 		logger4js.info("Post a new Visbo Center Role with name %s executed by user %s ", req.body.name, useremail);
@@ -713,8 +785,8 @@ router.route('/:vcid/role')
 			});
 		}
 		if (!req.body.name ) { //|| req.body.uid == undefined) {
-			logger4js.warn("Body is inconsistent %O", req.body);
-			return res.status(404).send({
+			logger4js.debug("Body is inconsistent %O", req.body);
+			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid role definition'
 			});
@@ -799,6 +871,7 @@ router.route('/:vcid/role/:roleid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Role (Delete)';
 
 		logger4js.info("DELETE Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);
 
@@ -888,6 +961,7 @@ router.route('/:vcid/role/:roleid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Role (Update)';
 
 		logger4js.info("PUT Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);
 
@@ -985,6 +1059,7 @@ router.route('/:vcid/cost')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Cost (Read)';
 
 		logger4js.info("Get Visbo Center Cost for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
@@ -1049,12 +1124,13 @@ router.route('/:vcid/cost')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Cost (Create)';
 
 		logger4js.trace("Post a new Visbo Center Cost Req Body: %O Name %s", req.body, req.body.name);
 		logger4js.info("Post a new Visbo Center Cost with name %s executed by user %s ", req.body.name, useremail);
 
 		if (!req.body.name) {
-			return res.status(404).send({
+			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid cost definition'
 			});
@@ -1117,6 +1193,7 @@ router.route('/:vcid/cost')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Cost (Delete)';
 
 		logger4js.info("DELETE Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);
 
@@ -1206,6 +1283,7 @@ router.route('/:vcid/cost')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Cost (Update)';
 
 		logger4js.info("PUT Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);
 
@@ -1294,6 +1372,7 @@ router.route('/:vcid/user')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center User (Read)';
 
 		logger4js.info("Get Visbo Center Users for userid %s email %s and vc %s Found %d", userId, useremail, req.params.vcid, req.oneVC.users.length);
 		return res.status(200).send({
@@ -1342,16 +1421,17 @@ router.route('/:vcid/user')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
+		req.auditDescription = 'Visbo Center User (Add)';
 
 		logger4js.trace("Post a new Visbo Center User Req Body: %O Name %s", req.body, req.body.email);
-		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
-
 		if (!req.body.email) {
-			return res.status(404).send({
+			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid user definition'
 			});
 		}
+		req.auditInfo = req.body.email;
 		if (!req.oneVCisAdmin) {
 			return res.status(403).send({
 				state: 'failure',
@@ -1370,7 +1450,7 @@ router.route('/:vcid/user')
 		// check if the user is not member of the group already
 		if (req.oneVC.users.filter(users => (users.role == vcUser.role && users.email == vcUser.email)).length != 0) {
 			logger4js.debug("Post User to VC %s User is already a member");
-			return res.status(404).send({
+			return res.status(400).send({
 				state: 'failure',
 				message: 'User is already member',
 				vc: [req.oneVC]
@@ -1416,7 +1496,6 @@ router.route('/:vcid/user')
 						req.oneVC = vc;
 						// now send an e-Mail to the user for registration
 						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
-						// MS TODO do we need to generate HTTPS instead of HTTP
 						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
 						  uiUrl = process.env.UI_URL;
@@ -1468,7 +1547,6 @@ router.route('/:vcid/user')
 					req.oneVC = vc;
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
-					// MS TODO do we need to generate HTTPS instead of HTTP
 					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
 					if (process.env.UI_URL != undefined) {
@@ -1544,9 +1622,15 @@ router.route('/:vcid/user')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		logger4js.info("DELETE Visbo Center User by userid %s email %s for user %s role %s ", userId, useremail, req.params.userid, userRole);
+
+		req.auditDescription = 'Visbo Center User (Delete)';
+		req.auditInfo = req.params.userid;
+
+		var delUser = req.oneVC.users.find(findUserById, req.params.userid)
+		if (delUser) req.auditInfo = delUser.email;
 
 		var userRole = req.query.role || "";
-		logger4js.info("DELETE Visbo Center User by userid %s email %s for user %s role %s ", userId, useremail, req.params.userid, userRole);
 
 		if (!req.oneVCisAdmin) {
 			return res.status(403).send({
