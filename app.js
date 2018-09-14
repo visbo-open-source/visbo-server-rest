@@ -32,6 +32,8 @@ var token = require('./routes/token');
 var vc = require('./routes/visbocenter');
 var vp = require('./routes/visboproject');
 var vpv = require('./routes/visboprojectversion');
+var audit = require('./routes/audit');
+
 var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
@@ -74,27 +76,32 @@ function delayString(seconds) {
   return str;
 }
 function dbConnect(dbconnection) {
-  logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
-  mongoose.connect(
-    // Replace CONNECTION_URI with your connection uri
-    dbconnection,
-    dbOptions
-  ).then(function() {
-    //mongoose.set('debug', true);
-    logger4js.mark('Server is fully functional DB Connected');
-  }, function(err) {
-    logger4js.fatal('Database connection failed: %O', err);
+  if (!dbconnection) {
+    logger4js.fatal('Connecting string missing in .env');
+    // exit();
+  } else {
+    logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+    mongoose.connect(
+      // Replace CONNECTION_URI with your connection uri
+      dbconnection,
+      dbOptions
+    ).then(function() {
+      //mongoose.set('debug', true);
+      logger4js.mark('Server is fully functional DB Connected');
+    }, function(err) {
+      logger4js.fatal('Database connection failed: %O', err);
 
-    reconnectTries++;
-    logger4js.fatal('Reconnecting after '+delayString(trialDelay));
-    logger4js.fatal('Reconnect trial: '+reconnectTries);
-    delay(trialDelay*1000).then(function() {
-      trialDelay += trialDelay;
-      if (trialDelay>7200) trialDelay = 7200;
-      // enable recurtion
-      dbConnect();
+      reconnectTries++;
+      logger4js.fatal('Reconnecting after '+delayString(trialDelay));
+      logger4js.fatal('Reconnect trial: '+reconnectTries);
+      delay(trialDelay*1000).then(function() {
+        trialDelay += trialDelay;
+        if (trialDelay>7200) trialDelay = 7200;
+        // enable recurtion
+        dbConnect();
+      });
     });
-  });
+  }
 }
 
 // dbConnect();
@@ -230,6 +237,7 @@ app.use('/token', token);
 app.use('/vc', vc);
 app.use('/vp', vp);
 app.use('/vpv', vpv);
+app.use('/audit', audit);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
