@@ -16,7 +16,7 @@ var logger4jsRest = log4js.getLogger("REST");
 
 //initialize mongoose schemas
 require('./models/users');
-require('./models/audit');
+require('./models/visboaudit');
 require('./models/visbocenter');
 require('./models/visboproject');
 require('./models/visboprojectversion');
