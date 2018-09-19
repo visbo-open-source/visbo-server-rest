@@ -56,7 +56,7 @@ function verifySysAdmin(req, res, next) {
         	message: 'Token is dead'
         });
       } else {
-				logger4js.debug("Check SysAdmin Permission", decoded.status || decoded.status.sysAdminRole);
+				logger4js.debug("Check SysAdmin Permission", decoded.status ? decoded.status.sysAdminRole : undefined);
 
 				if (!decoded.status || !decoded.status.sysAdminRole) {
 					return res.status(403).send({
