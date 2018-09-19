@@ -266,12 +266,14 @@ router.route('/')
 		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
 		var vpPublic = req.body.vpPublic == true ? true : false;
-		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
+		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s/%s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
 		// Check that the user has Admin permission in the VC
 		var isAdmin = false;
+		logger4js.trace("Check VC Permission %O", req.listVC);
+
 		for (var i=0; i < req.listVC.length; i++) {
 			if (vcid == req.listVC[i]) {
 				isAdmin = true;
@@ -1293,7 +1295,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (req.oneVP.vpType != constVPTypes.portfolio) {
-			return res.status(403).send({
+			return res.status(400).send({
 				state: 'failure',
 				message: 'Visbo Project is not a Portfolio Project',
 				vp: [req.oneVP]
