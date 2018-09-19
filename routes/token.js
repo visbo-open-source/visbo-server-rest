@@ -163,7 +163,7 @@ router.route('/user/login')
 				user.password = undefined;
 				if (!user.status) user.status = {};
 				user.status.sysAdminRole = req.sysAdminRole;
-				logger4js.debug("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
+				logger4js.trace("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
