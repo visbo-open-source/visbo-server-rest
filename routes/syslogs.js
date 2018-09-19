@@ -108,11 +108,11 @@ router.route('/:filename')
 				});
 	    } else {
 	        //specify Content will be an attachment
-					logger4js.info("Get Logfile Result %O ", res);
+					// res.type('text/plain');
 
-					res.type('text/plain');
 	        res.setHeader('Content-disposition', 'attachment; filename='+req.params.filename);
-	        res.end(content);
+					res.setHeader('Content-Type', 'text/plain');
+					res.end(content);
 	    }
 		});
 		// res.download(dir, fileName);
