@@ -155,7 +155,7 @@ log4js.configure({
 });
 logger4js.level = 'info';
 
-logger4js.warn("LogPath %s", fsLogPath)
+logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 
 // view engine setup
