@@ -11,15 +11,24 @@ function verifyVp(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var sysAdmin = req.query && req.query.sysadmin ? true : false;
+	if (req.decoded.status && req.decoded.status.sysAdminRole) {
+		sysAdmin = true;
+	} else {
+		sysAdmin = false;
+	}
+	logger4js.debug("Verify VP: sysAdminRole %s ", sysAdmin);
 
 	// check for GET & POST and ignore the query parameters
 	if (req.url.split("?")[0] == '/') {
 		// collect the VCs the user has access to, to evaluate the publ VP Access
-		var query;
-		if (req.method == 'GET') {
-			query = {'users.email': useremail};								// Permission for User
-		} else {
-			query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
+		var query = {};
+		if (!sysAdmin) {
+			if (req.method == 'GET') {
+				query = {'users.email': useremail};								// Permission for User
+			} else {
+				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
+			}
 		}
 		query.deleted =  {$exists: false};				// Not deleted
 		logger4js.debug("Verify VP: %O ", query);
@@ -46,8 +55,11 @@ function verifyVp(req, res, next) {
 		var vpid = req.url.split('/')[1];
 
 		logger4js.debug("Verify access permission for VisboProject %s to User %s ", vpid, useremail);
-		var query = {'users.email': useremail}		// Permission for User
-		// var query = { $or: [ {'users.email': useremail}, { vpPublic: true } ] }		// Permission for User
+		var query = {};
+		if (!sysAdmin) {
+			query = {'users.email': useremail}		// Permission for User
+			// var query = { $or: [ {'users.email': useremail}, { vpPublic: true } ] }		// Permission for User
+		}
 		query._id = vpid;
 		query.deleted =  {$exists: false};				// Not deleted
 
