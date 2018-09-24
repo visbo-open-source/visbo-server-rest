@@ -163,11 +163,10 @@ router.route('/user/login')
 				user.password = undefined;
 				if (!user.status) user.status = {};
 				user.status.sysAdminRole = req.sysAdminRole;
-				logger4js.debug("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
+				logger4js.trace("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
-						logger4js.debug("JWT Signing %s ", err);
 						if (err) {
 							logger4js.error("JWT Signing error %s ", err);
 							return res.status(500)({
@@ -176,7 +175,7 @@ router.route('/user/login')
 								error: err
 							});
 						}
-						logger4js.debug("JWT Signing Success %s ", err);
+						logger4js.trace("JWT Signing Success %s ", err);
 						// set the last login and reset the password retries
 
 						if (!user.status) user.status = {};

@@ -60,10 +60,11 @@ router.route('/')
 
 	// now fetch all entries system wide
 	var query = {};
-	var from, to;
+	var from, to, maxcount = 1000;
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
 	// no date is set to set to to current Date and recalculate from afterwards
 	if (!from && !to) to = new Date();
 	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
@@ -79,7 +80,7 @@ router.route('/')
 	query = {"createdAt": {"$gte": from, "$lt": to}};
 
 	VisboAudit.find(query)
-	// .limit(200)
+	.limit(maxcount)
 	.sort({createdAt: -1})
 	.exec(function (err, listVCAudit) {
 		if (err) {

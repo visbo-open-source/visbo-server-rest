@@ -183,7 +183,7 @@ router.route('/')
 	* @apiGroup Visbo Project Version
 	* @apiName CreateVisboProjectVersions
 	* @apiDescription Post creates a new Visbo Project Version.
-	* The user needs to have Admin permission in the Referenced Project.
+	* The user needs to have Admin permission in the Referenced Project or is the owner of the Variant.
 	* Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
 	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
 	* @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
@@ -235,6 +235,7 @@ router.route('/')
 		}
 		VisboProject.findOne({'_id': vpid, 'users.email': useremail}, function (err, oneVP) {
 			if (err) {
+				logger4js.fatal("VPV Post DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -242,12 +243,19 @@ router.route('/')
 				});
 			}
 			if (!oneVP) {
+				logger4js.warn("VPV Post VP not found or no permission %s", vpid);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'Visbo Project not found or no Permission'
 				});
 			}
 			req.oneVP = oneVP;
+			req.oneVPisAdmin = false
+			for (var i = 0; i < oneVP.users.length; i++){
+				if (oneVP.users[i].email == useremail && oneVP.users[i].role == 'Admin' ) {
+					req.oneVPisAdmin = true;
+				}
+			}
 			var allowPost = false
 			var variantExists = true;
 
@@ -256,6 +264,7 @@ router.route('/')
 				variantExists = false;
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
+					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
 					return res.status(401).send({
 						state: 'failure',
 						message: 'Visbo Project variant does not exist',
@@ -265,6 +274,7 @@ router.route('/')
 			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
+				logger4js.warn("VPV Post VP locked %s %s", vpid, variantName);
 				return res.status(401).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
@@ -272,10 +282,17 @@ router.route('/')
 				});
 			}
 			// user does not have admin permission and does not own the variant
-			if (req.oneVPisAdmin == false && variantName != "" && req.oneVP.variant[variantIndex].email != useremail) {
+			var hasPerm = false;
+			if (req.oneVPisAdmin) {
+				hasPerm = true;
+			} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
+				hasPerm = true;
+			}
+			if (!hasPerm) {
+				logger4js.warn("VPV Post no Permission %s %s", vpid, variantName);
 				return res.status(403).send({
 					state: 'failure',
-					message: 'Visbo Project Version no permission to update',
+					message: 'Visbo Project Version no permission to create new Version',
 					vp: [req.oneVP]
 				});
 			}
@@ -434,27 +451,41 @@ router.route('/:vpvid')
 
 		logger4js.debug("DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVPV.name, req.oneVPV.variantName);
 		var variantExists = false;
+		var variantIndex;
+		var variantName = req.oneVPV.variantName
 		if (variantName != "") {
-			for (var variantIndex = 0; variantIndex < req.oneVP.variant.length; variantIndex++) {
-				if (req.oneVP.variant[variantIndex].variantName == variantName && (req.oneVP.variant[variantIndex].email != useremail || req.oneVPisAdmin == false)) {
-					variantExists = true;
-					break;
-				}
-			}
-		}
-		// MS TODO Improve the Check that the User can delete his variant
-		if (!req.oneVPisAdmin) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Admin Permission',
-				vp: [req.oneVP]
-			});
+			// check that the Variant exists
+			variantExists = false;
+			variantIndex = variant.findVariant(req.oneVP, variantName)
+			if (variantIndex < 0) {
+				logger4js.warn("VPV Delete Variant does not exist %s %s", req.params.vpvid, variantName);
+				return res.status(401).send({
+					state: 'failure',
+					message: 'Visbo Project variant does not exist',
+					vp: [req.oneVP]
+				});
+			};
 		}
 		// check if the project is locked
 		if (lockVP.lockStatus(req.oneVP, useremail, req.oneVPV.variantName).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
+				vp: [req.oneVP]
+			});
+		}
+		// user does not have admin permission and does not own the variant
+		var hasPerm = false;
+		if (req.oneVPisAdmin) {
+			hasPerm = true;
+		} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
+			hasPerm = true;
+		}
+		if (!hasPerm) {
+			logger4js.warn("VPV Delete no Permission %s %s", req.params.vpvid, variantName);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo Project Version no permission to delete Version',
 				vp: [req.oneVP]
 			});
 		}
