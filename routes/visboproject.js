@@ -1737,7 +1737,7 @@ router.route('/:vpid/portfolio/:vpfid')
 								return res.status(200).send({
 									state: "success",
 									message: "Successfully added User to Visbo Project",
-									users: [ vcUser ]
+									users: [ vpUser ]
 								});
 							});
 						})
