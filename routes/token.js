@@ -310,7 +310,7 @@ router.route('/user/pwforgotten')
 							}
 							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 							var message = {
-									from: 'visbo@seyfried.bayern',
+									// from: 'visbo@seyfried.bayern',
 									to: user.email,
 									subject: 'Visbo Password Reset Request',
 									// text: 'Password reset Token: '.concat(token, " "),

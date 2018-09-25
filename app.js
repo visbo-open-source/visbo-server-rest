@@ -34,6 +34,7 @@ var vp = require('./routes/visboproject');
 var vpv = require('./routes/visboprojectversion');
 var audit = require('./routes/audit');
 var sysLogs = require('./routes/syslogs');
+var sysUsers = require('./routes/sysusers');
 
 var visboAudit = require('./components/visboAudit');
 
@@ -239,6 +240,7 @@ app.use('/vc', vc);
 app.use('/vp', vp);
 app.use('/vpv', vpv);
 app.use('/audit', audit);
+app.use('/sysusers', sysUsers);
 app.use('/syslogs', sysLogs);
 
 // catch 404 and forward to error handler
