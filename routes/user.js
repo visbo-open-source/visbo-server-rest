@@ -46,10 +46,10 @@ router.route('/profile')
 	*  "state":"success",
 	*  "message":"User profile",
 	*  "user":{
-	*    "_id":"5a96787976294c5417f0e409",
+	*    "_id":"us5c754feac",
 	*    "updatedAt":"2018-03-20T10:31:27.216Z",
 	*    "createdAt":"2018-02-28T09:38:04.774Z",
-	*    "email":"markus.seyfried@visbo.de",
+	*    "email":"first.last@visbo.de",
 	*    "__v":0,
 	*    "profile": {
 	*      "firstname": "First",
