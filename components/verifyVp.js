@@ -11,8 +11,10 @@ function verifyVp(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	// check if user request sysAdmin View in URL
 	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	if (req.decoded.status && req.decoded.status.sysAdminRole) {
+	// if SysAdmin View in URL check if the User has sysAdminRole in token
+	if (sysAdmin && req.decoded.status && req.decoded.status.sysAdminRole) {
 		sysAdmin = true;
 	} else {
 		sysAdmin = false;
@@ -25,9 +27,9 @@ function verifyVp(req, res, next) {
 		var query = {};
 		if (!sysAdmin) {
 			if (req.method == 'GET') {
-				query = {'users.email': useremail};								// Permission for User
+				query = {'users.email': useremail};								// Any Access for read operation
 			} else {
-				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
+				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// admin access for modification
 			}
 		}
 		query.deleted =  {$exists: false};				// Not deleted
