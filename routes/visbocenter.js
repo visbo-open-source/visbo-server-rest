@@ -102,7 +102,7 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
 
-		logger4js.info("Get Visbo Center for user %s", useremail);
+		logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
 
 		var query = {};
 		// MS TODO Check that user is SysAdmin
@@ -1420,6 +1420,7 @@ router.route('/:vcid/user')
 		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var isSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
 		req.auditDescription = 'Visbo Center User (Add)';
@@ -1432,7 +1433,7 @@ router.route('/:vcid/user')
 			});
 		}
 		req.auditInfo = req.body.email;
-		if (!req.oneVCisAdmin) {
+		if (!req.oneVCisAdmin && !isSysAdmin != 'Admin') {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'

@@ -151,8 +151,14 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Read)';
 
-		// either member of the project or if project is public member of the VC
-		var query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
+		var query = {};
+		// if user is not sysadmin check for user permission
+		logger4js.debug("Get Project for user %s check sysAdmin %s status %s", userId, req.query.sysadmin, !req.decoded.status || req.decoded.status.sysAdminRole);
+		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+			// either member of the project or if project is public member of the VC
+			logger4js.debug("Get Project Public VC %O", req.listVC);
+			query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
+		}
 		query.deleted =  {$exists: false};				// Not deleted
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
@@ -1094,6 +1100,13 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP]
 			});
 		}
+		if (req.oneVP.variant[variantIndex].vpvCount > 0) {
+			return res.status(401).send({
+				state: 'failure',
+				message: 'Visbo Project Variant has Versions',
+				vp: [req.oneVP]
+			});
+		}
 		req.oneVP.variant.splice(variantIndex, 1);
 		if (lockResult.lockindex >= 0) {
 			req.oneVP.lock.splice(lockResult.lockindex, 1);
@@ -1615,6 +1628,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			// User is authenticated already
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var isSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project User (Add)';
 
@@ -1628,7 +1642,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			}
 			req.auditInfo = req.body.email;
-			if (!req.oneVPisAdmin) {
+			if (!req.oneVPisAdmin || isSysAdmin != 'Admin') {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
@@ -1724,7 +1738,7 @@ router.route('/:vpid/portfolio/:vpfid')
 								return res.status(200).send({
 									state: "success",
 									message: "Successfully added User to Visbo Project",
-									users: [ vcUser ]
+									users: [ vpUser ]
 								});
 							});
 						})
@@ -1759,7 +1773,7 @@ router.route('/:vpid/portfolio/:vpfid')
 							template = template.concat('inviteVPNewUser.ejs');
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
-							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 						}
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);

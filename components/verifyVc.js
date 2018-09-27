@@ -16,13 +16,17 @@ function verifyVc(req, res, next) {
 	var vcid = url.split('/')[1];
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
+	var sysAdmin = req.query && req.query.sysadmin ? true : false;
+	if (req.decoded.status && req.decoded.status.sysAdminRole) {
+		sysAdmin = true;
+	} else {
+		sysAdmin = false;
+	}
 
 	logger4js.debug("Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
-
-	var query = {}
-	if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
-		query = {'users.email': useremail};	// search for VC where user is member of
-	}
+	// return next();
+	var query = {};
+	if (!sysAdmin) query = {'users.email': useremail};		// Permission for User
 	query._id = vcid;
 	query.deleted =  {$exists: false};				// Not deleted
 	var queryVC = VisboCenter.findOne(query);
