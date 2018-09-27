@@ -156,6 +156,7 @@ router.route('/')
 		logger4js.debug("Get Project for user %s check sysAdmin %s status %s", userId, req.query.sysadmin, !req.decoded.status || req.decoded.status.sysAdminRole);
 		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
 			// either member of the project or if project is public member of the VC
+			logger4js.debug("Get Project Public VC %O", req.listVC);
 			query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		}
 		query.deleted =  {$exists: false};				// Not deleted
@@ -1772,7 +1773,7 @@ router.route('/:vpid/portfolio/:vpfid')
 							template = template.concat('inviteVPNewUser.ejs');
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
-							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 						}
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);

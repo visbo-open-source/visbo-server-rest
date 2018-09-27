@@ -43,7 +43,8 @@ var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
   autoReconnect: true,
-  reconnectInterval: 3000
+  reconnectInterval: 3000,
+  useNewUrlParser: true
 };
 
 var reconnectTries = 0;
