@@ -51,6 +51,7 @@ router.route('/')
 	* to query only the main version of a project, use variantName= in the query string.
 	*
 	* @apiParam {Date} refDate Deliver only the latest Version of the project before the reference date
+	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
 	* @apiParam {String} variantName Deliver only versions for the specified variant
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
@@ -98,6 +99,9 @@ router.route('/')
 			if (req.query.vpid) {
 				queryvp._id = req.query.vpid;
 				latestOnly = false // if project is specified show all project versions
+			}
+			if (req.query.vcid) {
+				queryvp.vcid = req.query.vcid;
 			}
 			if (req.query.refDate){
 				var refDate = new Date(req.query.refDate);
