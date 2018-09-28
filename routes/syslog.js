@@ -19,15 +19,15 @@ router.use('/', auth.verifySysAdmin);
 
 router.route('/')
 /**
-	* @api {get} /syslogs Get log file list
+	* @api {get} /syslog Get log file list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLogs
+	* @apiGroup SysLog
 	* @apiName GetSysLogs
 	* @apiPermission user must be authenticated and sysadmin
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/syslogs
+	*   url: http://localhost:3484/syslog
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -43,7 +43,7 @@ router.route('/')
 // get syslog file list
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		req.auditDescription = 'SysLogs (Read)';
+		req.auditDescription = 'SysLog (Read)';
 
 		logger4js.info("Get Log File List ");
 
@@ -58,7 +58,7 @@ router.route('/')
       fileList.push({name: files[i], size: stats.size, updatedAt: stats.mtime});
     }
 
-		logger4js.info("Get SysLogs ");
+		logger4js.info("Get SysLog ");
 		return res.status(200).send({
 			state: 'success',
 			message: 'Available Log Files',
@@ -68,15 +68,15 @@ router.route('/')
 
 router.route('/:filename')
 /**
-	* @api {get} /syslogs/filename Get log file
+	* @api {get} /syslog/filename Get log file
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLogs
+	* @apiGroup SysLog
 	* @apiName GetSysLogFile
 	* @apiPermission user must be authenticated and sysadmin
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/syslogs/all-the-logs.log
+	*   url: http://localhost:3484/syslog/all-the-logs.log
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {

@@ -22,7 +22,7 @@ router.use('/', auth.verifySysAdmin);
 
 router.route('/')
 /**
-	* @api {get} /sysusers Get users list
+	* @api {get} /sysuser Get users list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup SysUsers
@@ -30,14 +30,14 @@ router.route('/')
 	* @apiPermission user must be authenticated and sysadmin
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/sysusers
-	*   url: http://localhost:3484/sysusers?email='visbo'&userid=us5c754feac&maxcount=100
+	*   url: http://localhost:3484/sysuser
+	*   url: http://localhost:3484/sysuser?email='visbo'&userid=us5c754feac&maxcount=100
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
 	*  "state":"success",
 	*  "message":"User List",
-	*  "users":[{
+	*  "user":[{
 	*    "_id":"us5c754feac",
 	*    "updatedAt":"2018-03-20T10:31:27.216Z",
 	*    "createdAt":"2018-02-28T09:38:04.774Z",
@@ -64,7 +64,7 @@ router.route('/')
 	*  }]
 	*}
 	*/
-// get sysusers list
+// get sysuser list
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysUsers (Read)';
@@ -97,7 +97,7 @@ router.route('/')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Users',
-				users: listUsers
+				user: listUsers
 			});
 		});
 	})
