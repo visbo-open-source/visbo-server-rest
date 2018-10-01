@@ -161,7 +161,7 @@ router.route('/')
 			logger4js.debug("Get Project Public VC %O", req.listVC);
 			query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		}
-		query.deleted =  {$exists: false};				// Not deleted
+		query.deleted = {$exists: false};				// Not deleted
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)

@@ -13,7 +13,7 @@ function generateVcList(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// check if user request sysAdmin View in URL
 	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	// if SysAdmin View in URL check if the User has sysAdminRole in token
+	// if SysAdmin View in URL, check if the User has sysAdminRole in token
 	if (sysAdmin && req.decoded.status && req.decoded.status.sysAdminRole) {
 		sysAdmin = true;
 	} else {
@@ -22,11 +22,12 @@ function generateVcList(req, res, next) {
 	logger4js.debug("Generate VC List: sysAdminRole %s Method: %s", sysAdmin, req.method);
 
 	var query = {};
-	// if not sysAdmin and either a general GET or POST to the Root (create VP) generate the accessible VCList for check of public VPs
-	if (!sysAdmin &&
-		(req.method == 'GET' || (req.method == 'POST' && req.url.split("?")[0] == '/'))) {
+	// if not sysAdmin generate VC List read Access or for Creating VP with Admin access.
+	if (!sysAdmin) {
+		var readAccess = true;
+		if (req.method == 'POST' && req.url.split("?")[0] == '/') readAccess = false;
 			// GET the VC List to check for public VP access
-			if (req.method == 'GET')
+			if (readAccess)
 				query = {'users.email': useremail};				// Any Access for read operation
 			else
 				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};	 // Admin access for Modification
@@ -69,11 +70,8 @@ function verifyVp(req, res, next) {
 		sysAdmin = false;
 	}
 
-	// no special check for get VP
-	if (req.method == "GET" && req.url.split("?")[0] == '/')
-		return next();
-	// no special check for Create VP
-	if (req.method == "POST" && req.url.split("?")[0] == '/')
+	// no special check for get VP && create VP
+	if (req.url.split("?")[0] == '/')
 		return next();
 
 	var urlComponent = req.url.split("/")
@@ -88,16 +86,16 @@ function verifyVp(req, res, next) {
 	if (req.method == "GET") readAccess = true;
 	if (urlComponent.length >= 3) {
 		// special checks done inside the functions so read access is enough
-		if (req.method in ["DELETE", "POST"] && urlComponent[2]== 'variant') readAccess = true;
-		if (req.method in ["DELETE", "POST"] && urlComponent[2]== 'lock') readAccess = true;
+		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'variant') readAccess = true;
+		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'lock') readAccess = true;
 	}
-	logger4js.debug("Verify VP: %s %s readAccess %s sysAdminRole %s VCList %s", readAccess, req.url, req.method, sysAdmin, req.listVC && req.listVC.length);
+	logger4js.debug("Verify VP: %s %s readAccess %s sysAdminRole %s VCList %s", req.url, req.method, readAccess, sysAdmin, req.listVC && req.listVC.length);
 
 	var query = {};
 	// Check for URLs with a :vpid
 	var vpid = req.url.split('/')[1];
 
-	logger4js.debug("Verify access permission for VisboProject %s to User %s ", vpid, useremail);
+	logger4js.debug("Verify access permission for VisboProject %s to User %s with VC %O ", vpid, useremail, req.listVC);
 	var query = {};
 	if (!sysAdmin) {
 		if (readAccess)
@@ -107,7 +105,7 @@ function verifyVp(req, res, next) {
 	}
 	query._id = vpid;
 	query.deleted =  {$exists: false};				// Not deleted
-	logger4js.trace("VP Verify Access Permission Query: %O", query);
+	logger4js.debug("VP Verify Access Permission Query: %O", query);
 
 	var queryVP = VisboProject.findOne(query);
 	queryVP.exec(function (err, oneVP) {
