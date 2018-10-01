@@ -19,6 +19,8 @@ var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+// register the VPV middleware to generate the VC List to check for public VPs
+router.use('/', verifyVpv.generateVcList);
 // register the VPV middleware to check that the user has access to the VPV
 router.use('/', verifyVpv.verifyVpv);
 
@@ -87,13 +89,14 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 
-		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
 		var queryvpv = {};
 		var latestOnly = true; 	// as default show latest only project version of all projects
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
-		queryvpv.timestamp =  {$lt: nowDate };
+		var queryvp = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] };		// Permission for User
+
 		queryvp.deleted = {$exists: false};
+		queryvpv.timestamp =  {$lt: nowDate };
 		queryvpv.deleted = {$exists: false};
 		if (req.query) {
 			if (req.query.vpid) {
@@ -237,7 +240,10 @@ router.route('/')
 				message: 'No Visbo Project ID defined'
 			});
 		}
-		VisboProject.findOne({'_id': vpid, 'users.email': useremail}, function (err, oneVP) {
+		var queryVp = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] };
+		queryVp._id = vpid;
+		queryVp.deleted = {$exists: false};				// Not deleted
+		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
 				logger4js.fatal("VPV Post DB Connection ", err);
 				return res.status(500).send({
@@ -463,15 +469,12 @@ router.route('/:vpvid')
 			variantIndex = variant.findVariant(req.oneVP, variantName)
 			if (variantIndex < 0) {
 				logger4js.warn("VPV Delete Variant does not exist %s %s", req.params.vpvid, variantName);
-				return res.status(401).send({
-					state: 'failure',
-					message: 'Visbo Project variant does not exist',
-					vp: [req.oneVP]
-				});
+				// Allow Deleting of a version where Variant does not exists for Admins
+				variantName = ""
 			};
 		}
 		// check if the project is locked
-		if (lockVP.lockStatus(req.oneVP, useremail, req.oneVPV.variantName).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
