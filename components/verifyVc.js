@@ -24,7 +24,6 @@ function verifyVc(req, res, next) {
 	}
 
 	logger4js.debug("Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
-	// return next();
 	var query = {};
 	if (!sysAdmin) query = {'users.email': useremail};		// Permission for User
 	query._id = vcid;

@@ -64,6 +64,8 @@ var createHash = function(secret){
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+// register the VP middleware to generate the VC List to check for public VPs
+router.use('/', verifyVp.generateVcList);
 // register the VP middleware to check that the user has access to the VP
 router.use('/', verifyVp.verifyVp);
 
@@ -557,12 +559,6 @@ router.route('/:vpid')
 				message: 'No Body provided for update'
 			});
 		}
-		if (!req.oneVPisAdmin) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Admin Permission'
-			});
-		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -723,12 +719,6 @@ router.route('/:vpid')
 
 		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s is Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
 
-		if (!req.oneVPisAdmin) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Visbo Project or no Permission'
-			});
-		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(401).send({
 				state: 'failure',
@@ -1284,13 +1274,6 @@ router.route('/:vpid/portfolio')
 
 		logger4js.debug("Variant %s", variantName || "None");
 
-		if (req.oneVPisAdmin != true) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Permission to Change Portfolio',
-				vp: [req.oneVP]
-			});
-		}
 		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
 		var variantIndex = variantName == "" ? 0 : variant.findVariant(req.oneVP, variantName);
 		if (variantIndex < 0) {
@@ -1488,15 +1471,6 @@ router.route('/:vpid/portfolio/:vpfid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Delete)';
 
-		logger4js.info("DELETE Visbo Portfolio for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, req.params.vpfid);
-
-		if (!req.oneVPisAdmin) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'Visbo no Permission to delete Portfolio',
-				vp: [req.oneVP]
-			});
-		}
 		logger4js.debug("DELETE Visbo Portfolio in Project %s", req.oneVP.name);
 		var query = {};
 		query._id = vpfid;
@@ -1642,7 +1616,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			}
 			req.auditInfo = req.body.email;
-			if (!req.oneVPisAdmin || isSysAdmin != 'Admin') {
+			if (isSysAdmin != 'Admin') {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
@@ -1842,12 +1816,6 @@ router.route('/:vpid/portfolio/:vpfid')
 			var delUser = req.oneVP.users.find(findUserById, req.params.userid)
 			if (delUser) req.auditInfo = delUser.email;
 
-			if (!req.oneVPisAdmin) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Visbo Project or no Permission'
-				});
-			}
 			var newUserList = req.oneVP.users.filter(users => (!(users.userId == req.params.userid && (users.role == userRole || userRole == "" ))))
 			logger4js.debug("DELETE Visbo Project User List Length new %d old %d", newUserList.length, req.oneVP.users.length);
 			logger4js.trace("DELETE Visbo Project Filtered User List %O ", newUserList);
