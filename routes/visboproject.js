@@ -182,7 +182,7 @@ router.route('/')
 			};
 			logger4js.debug("Found %d Projects", listVP.length);
 			logger4js.trace("Found Projects/n", listVP);
-
+			req.auditInfo = listVP.length;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Projects',
@@ -1615,7 +1615,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No valid user definition'
 				});
 			}
-			req.auditInfo = req.body.email;
+			req.auditInfo = req.body.email + '(' + req.body.role + ')';
 			if (isSysAdmin != 'Admin') {
 				return res.status(403).send({
 					state: 'failure',

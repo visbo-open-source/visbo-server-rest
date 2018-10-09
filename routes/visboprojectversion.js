@@ -168,12 +168,14 @@ router.route('/')
 						}
 					}
 					logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
+					req.auditInfo = listVPVfiltered.length;
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Versions',
 						vpv: listVPVfiltered
 					});
 				} else {
+					req.auditInfo = listVPV.length;
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Versions',
