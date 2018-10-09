@@ -126,6 +126,7 @@ router.route('/')
 				});
 			}
 			logger4js.debug("Found VCs %d", listVC.length);
+			req.auditInfo = listVC.length;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',
