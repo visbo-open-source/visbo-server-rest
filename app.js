@@ -152,6 +152,9 @@ log4js.configure({
     "VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "USER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+    "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
   }
 });
@@ -182,7 +185,7 @@ app.use(logger(function (tokens, req, res) {
     tokens.status(req, res),
     tokens.res(req, res, 'content-length')||0+' Bytes',
     Math.round(tokens['response-time'](req, res))+'ms',
-    req.ip,
+    req.headers["x-real-ip"] || req.ip,
     req.get('User-Agent'),
     ''
   ].join(' ');
