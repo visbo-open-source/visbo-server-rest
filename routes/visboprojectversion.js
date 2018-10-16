@@ -138,7 +138,7 @@ router.route('/')
 			}
 			logger4js.trace("Filter Projects %O", vpArray);
 			queryvpv.vpid = {$in: vpArray};
-			logger4js.debug("VPV query string %s", JSON.stringify(queryvpv));
+			logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
 			var queryVPV = VisboProjectVersion.find(queryvpv);
 			if (!longList) {
 				// deliver only the short info about project versions
@@ -160,11 +160,11 @@ router.route('/')
 					listVPVfiltered.push(listVPV[0]);
 					for (let i = 1; i < listVPV.length; i++){
 						//compare current item with previous and ignore if it is the same vpid & variantname
-						logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+						// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
 						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
 							listVPVfiltered.push(listVPV[i])
-							logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+							// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 						}
 					}
 					logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);

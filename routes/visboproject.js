@@ -1270,9 +1270,9 @@ router.route('/:vpid/portfolio')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Create)';
 
-		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s Portfolio %O", userId, useremail, req.params.vpid, req.body);
+		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s", userId, useremail, req.params.vpid);
 
-		logger4js.debug("Variant %s", variantName || "None");
+		logger4js.debug("Variant %s Portfolio %O", variantName || "None", req.body);
 
 		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
 		var variantIndex = variantName == "" ? 0 : variant.findVariant(req.oneVP, variantName);
@@ -1707,7 +1707,7 @@ router.route('/:vpid/portfolio/:vpfid')
 										subject: 'You have been invited to a Visbo Project ' + req.oneVP.name,
 										html: '<p> '.concat(emailHtml, " </p>")
 								};
-								logger4js.info("Now send mail from %s to %s", message.from, message.to);
+								logger4js.debug("Now send mail from %s to %s", message.from, message.to);
 								mail.VisboSendMail(message);
 								return res.status(200).send({
 									state: "success",
@@ -1766,7 +1766,7 @@ router.route('/:vpid/portfolio/:vpfid')
 									subject: eMailSubject,
 									html: '<p> '.concat(emailHtml, " </p>")
 							};
-							logger4js.info("Now send mail from %s to %s", message.from, message.to);
+							logger4js.debug("Now send mail from %s to %s", message.from, message.to);
 							mail.VisboSendMail(message);
 							return res.status(200).send({
 								state: "success",
