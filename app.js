@@ -35,6 +35,7 @@ var vpv = require('./routes/visboprojectversion');
 var audit = require('./routes/audit');
 var sysLog = require('./routes/syslog');
 var sysUser = require('./routes/sysuser');
+var status = require('./routes/status');
 
 var visboAudit = require('./components/visboAudit');
 
@@ -142,8 +143,8 @@ if (process.env.LOGPATH != undefined) {
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 1024, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', keepFileExt: true, daysToKeep: 30 },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -162,6 +163,7 @@ logger4js.level = 'info';
 
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
+logger4js.warn("Starting Version %s", process.env.VERSION_REST);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -198,10 +200,7 @@ dbConnect(process.env.NODE_VISBODB);
 
 var sysVC = systemVC.createSystemVC(
     { users: [
-        { "email":"markus.seyfried@visbo.de", "role": "Admin" },
-        { "email":"visbotestadmin@seyfried.bayern", "role": "Admin" },
-        { "email":"ute.rittinghaus-koytek@visbo.de", "role": "Admin" },
-        { "email":"visbotest@seyfried.bayern", "role": "User" }
+        { "email":"support@visbo.de", "role": "Admin" }
      ]}
    )
 
@@ -246,14 +245,14 @@ app.use('/vpv', vpv);
 app.use('/audit', audit);
 app.use('/sysuser', sysUser);
 app.use('/syslog', sysLog);
+app.use('/status', status);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);		// MS Log
+  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
   err.status = 404;
   res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
-  //next(err);
 });
 
 
