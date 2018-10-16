@@ -7,4 +7,4 @@ NODE_ENV=production
   UI_URL="https://my.visbo.net"
   SMTP = { "host": "smtp.1und1.de", "auth": { "user": "service@visbo.de", "pass": "XXXXXXXXX" }, "pool": true, "port": 465, "secure": true, "requireTLS": true, "connectionTimeout": 500, "greetingTimeout": 300, "logger": false, "debug": false}
 
-  DEBUG={"VC": "debug", "VP": "debug", "VPV": "debug", "USER":"debug", "OTHER": "debug", "Mail": "debug", "All": "debug"}
+  DEBUG={"VC": "debug", "VP": "debug", "VPV": "debug", "USER":"debug", "OTHER": "debug", "MAIL": "debug", "All": "debug"}

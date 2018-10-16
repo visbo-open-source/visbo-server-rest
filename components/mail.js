@@ -1,6 +1,6 @@
 var nodemailer = require('nodemailer');
 
-var logModule = "OTHER";
+var logModule = "MAIL";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 

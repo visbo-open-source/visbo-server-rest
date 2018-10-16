@@ -6,7 +6,7 @@ var moment = require('moment');
 var audit = require('./../components/visboAudit');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var logModule = "AUDIT";
+var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 

@@ -61,6 +61,7 @@ function verifyVp(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	logger4js.debug("Verify VP: %s %s %O", req.url, req.method, req.query);
 	// check if user request sysAdmin View in URL
 	var sysAdmin = req.query && req.query.sysadmin ? true : false;
 	// if SysAdmin View in URL check if the User has sysAdminRole in token
@@ -71,16 +72,16 @@ function verifyVp(req, res, next) {
 	}
 
 	// no special check for get VP && create VP
-	if (req.url.split("?")[0] == '/')
+	var baseUrl = req.url.split("?")[0];
+	if (baseUrl == '/'){
+		logger4js.debug("Verify VP: skip GET & POST for /");
 		return next();
-
-	var urlComponent = req.url.split("/")
-	if (sysAdmin) {
-		if (req.method == "GET") return next();
-		if (req.method == "DELETE" && req.url.split("?")[0] == '/') return next();
-		if (req.method == "POST" && urlComponent.length >= 3 && urlComponent[2]== 'user') return next();
 	}
 
+	logger4js.debug("Verify VP: inbetween 1");
+	var urlComponent = baseUrl.split("/")
+
+	logger4js.debug("Verify VP: inbetween");
 	var readAccess = false;
 	// read access for all GET Operations
 	if (req.method == "GET") readAccess = true;
@@ -89,13 +90,13 @@ function verifyVp(req, res, next) {
 		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'variant') readAccess = true;
 		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'lock') readAccess = true;
 	}
-	logger4js.debug("Verify VP: %s %s readAccess %s sysAdminRole %s VCList %s", req.url, req.method, readAccess, sysAdmin, req.listVC && req.listVC.length);
+	logger4js.debug("Verify VP: %s %s readAccess %s sysAdminRole %s VCList %s", req.url, req.method, readAccess, sysAdmin, req.listVC ? req.listVC.length : 0);
 
 	var query = {};
 	// Check for URLs with a :vpid
-	var vpid = req.url.split('/')[1];
+	var vpid = urlComponent[1];
 
-	logger4js.debug("Verify access permission for VisboProject %s to User %s with VC %O ", vpid, useremail, req.listVC);
+	// logger4js.debug("Verify access permission for VisboProject %s to User %s with VC %O ", vpid, useremail, req.listVC);
 	var query = {};
 	if (!sysAdmin) {
 		if (readAccess)
@@ -126,9 +127,22 @@ function verifyVp(req, res, next) {
 				}
 			}
 			logger4js.debug("Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
+			if (sysAdmin) {
+				var validSysAdminOperation = false;
+				if (req.method == "GET") validSysAdminOperation = true;
+				if (req.method == "DELETE" && baseUrl == '/') validSysAdminOperation = true;
+				if (req.method == "POST" && urlComponent.length >= 3 && urlComponent[2]== 'user') validSysAdminOperation = true;
+				if (!validSysAdminOperation) {
+					logger4js.debug("SysAdmin: No Permission or VP does not exists for url %s", req.url);
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
+			}
 			return next();
 		} else {
-			logger4js.debug("No Permission for %s", req.url);
+			logger4js.debug("No Permission or VP does not exists for url %s", req.url);
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Project or no Permission'
