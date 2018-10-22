@@ -1,3 +1,9 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
 <h1>
   You have been invited to a Visbo Project
 </h1>
@@ -12,13 +18,16 @@
 </p>
 <p>
   Message: <br>
-  <h4>
+  <h5>
     <%- message.replace(/\n/g, '<br/>')  %>
-  </h4>
+  </h5>
 </p>
-<h3>
+<h4>
   To access the Visbo Project follow this link: <a href="<%= url %>">Login Visbo</a>
-</h3>
+</h4>
 <p>
   Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

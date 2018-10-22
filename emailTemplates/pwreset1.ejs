@@ -1,11 +1,22 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
 <h1>
   Password Reset Request
 </h1>
-<h3>
-  for <%= user.profile.firstName %> <%= user.profile.lastName %> <%= user.email %>
-</h3>
 <p>
+  for <%= user.profile.firstName %> <%= user.profile.lastName %> <%= user.email %>
+</p>
+<h4>
   Please confirm your e-Mail address by following this link: <a href="<%= url %>">Reset Visbo Password</a>
-  <br><br>
+</h4>
+<p>
+  <br>
   If the Password Request was not initiated by yourself, please delete the e-Mail.
 </p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>
