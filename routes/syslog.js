@@ -152,7 +152,7 @@ router.route('/config')
 		req.auditDescription = 'SysLog Config (Read)';
 
 		var sysLogConfig = getLogLevelConfig();
-		logger4js.info("Get Log Config %O ", sysLogConfig);
+		logger4js.info("Get Log Config ");
 
 		return res.status(200).send({
 			state: 'success',
@@ -192,7 +192,7 @@ router.route('/config')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLog Config (Change)';
 
-		logger4js.info("PutSysLogConfig Log Config ");
+		logger4js.info("Put SysLogConfig Log Config ");
 		var sysLogConfig = getLogLevelConfig();
 		if (req.body.VC) sysLogConfig.VC = req.body.VC
 		if (req.body.VP) sysLogConfig.VP = req.body.VP
@@ -200,7 +200,7 @@ router.route('/config')
 		if (req.body.USER) sysLogConfig.USER = req.body.USER
 		if (req.body.MAIL) sysLogConfig.MAIL = req.body.MAIL
 		if (req.body.OTHER) sysLogConfig.OTHER = req.body.OTHER
-		logger4js.info("PutSysLogConfig Log Config %O ", req.body);
+		logger4js.debug("PutSysLogConfig Log Config %O ", req.body);
 		setLogLevelConfig(sysLogConfig)
 
 		return res.status(200).send({
