@@ -94,7 +94,8 @@ router.route('/user/login')
 				message: "email or password missing"
 			});
 		}
-
+		req.body.email = req.body.email.toLowerCase();
+		
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Post Login DB Connection ", err);
@@ -484,6 +485,7 @@ router.route('/user/signup')
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
+		if (req.body.email) req.body.email = req.body.email.toLowerCase();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
 		var query = {};
 		if (req.body.email) {
@@ -505,10 +507,10 @@ router.route('/user/signup')
 					error: err
 				});
 			}
-			if (user) req.body.email = user.email;
+			if (user) req.body.email = user.email.toLowerCase();
 			// if user exists and is registered already refuse to register again
 			if (user && user.status && user.status.registeredAt) {
-				return res.status(401).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "email already registered"
 				});

@@ -63,6 +63,7 @@ router.route('/')
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vpv
+	*   url: http://localhost:3484/vpv?vcid=vc5c754feaa&refDate=2018-01-01
 	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
@@ -105,6 +106,7 @@ router.route('/')
 			}
 			if (req.query.vcid) {
 				queryvp.vcid = req.query.vcid;
+				latestOnly = false // if vc is specified show all project versions of this vc
 			}
 			if (req.query.refDate){
 				var refDate = new Date(req.query.refDate);
