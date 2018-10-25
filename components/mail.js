@@ -45,7 +45,7 @@ function VisboSendMail(message) {
 			    }
 				}
 				catch (e) {
-					logger4js.debug("MAIL SMTP Config Access to DKIM Key File %s failed %O", dkimPrivKeyFile, e);
+					logger4js.debug("MAIL SMTP Config Access to DKIM Key File %s failed %O", dkimPrivKeyFile);
 				}
 				if (keyStatusOk) {
 					logger4js.debug("MAIL SMTP Config has DKIM key in %s", dkimPrivKeyFile);

@@ -8,11 +8,11 @@
   You have been invited to a Visbo Center
 </h1>
 <p>
-  <%if (userFrom.profile && userFrom.profile.firstname ) { %>
+  <%if (userFrom.profile && userFrom.profile.firstName ) { %>
     <%= userFrom.profile.firstName %>
   <% } %>
-  <%if (userFrom.profile && userFrom.profile.lastname ) { %>
-    <%= userFrom.profile.lastname %>
+  <%if (userFrom.profile && userFrom.profile.lastName ) { %>
+    <%= userFrom.profile.lastName %>
   <% } %>
   (<%= userFrom.email %>) has invited you to Visbo Center: <b><%= vc.name %></b> with <%= vc.vpCount %> Projects
 </p>

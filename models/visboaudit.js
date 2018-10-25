@@ -28,7 +28,8 @@ var visboAuditSchema = new mongoose.Schema({
 	userAgent: {type: String, required: false},
 	result: {
 		time: {type: Number, required: true},
-		status: {type: String, required: true}
+		status: {type: String, required: true},
+		size: {type: Number, required: false}
 	}
 });
 // Set Creation and modification date automatically

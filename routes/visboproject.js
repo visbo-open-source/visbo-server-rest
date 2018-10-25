@@ -347,6 +347,7 @@ router.route('/')
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (var i = 0; i < req.body.users.length; i++) {
+						req.body.users[i].email = req.body.users[i].email.toLowerCase();
 						// build up unique user list vpUsers to check that they exist
 						if (!vpUsers.find(findUser, req.body.users[i].email)){
 							vpUsers.push(req.body.users[i].email)
@@ -1615,6 +1616,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No valid user definition'
 				});
 			}
+			req.body.email = req.body.email.toLowerCase();
 			req.auditInfo = req.body.email + '(' + req.body.role + ')';
 			if (isSysAdmin != 'Admin') {
 				return res.status(403).send({
@@ -1629,7 +1631,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				eMailMessage = req.body.message;
 			}
 			vpUser.email = req.body.email;
-			vpUser.role = req.body.role  != "User" &&  req.body.role  != "Admin" ? "User" : req.body.role;
+			vpUser.role = (req.body.role != "User" && req.body.role != "Admin") ? "User" : req.body.role;
 
 			// check if the user is not member of the group already
 			if (req.oneVP.users.filter(users => (users.role == vpUser.role && users.email == vpUser.email)).length != 0) {

@@ -260,6 +260,7 @@ router.route('/')
 			var vcUsers = new Array();
 			if (req.body.users) {
 				for (i = 0; i < req.body.users.length; i++) {
+					req.body.users[i].email = req.body.users[i].email.toLowerCase();
 					// build up unique user list vcUsers to check that they exist
 					if (!vcUsers.find(findUser, req.body.users[i].email)){
 						vcUsers.push(req.body.users[i].email)
@@ -1433,6 +1434,7 @@ router.route('/:vcid/user')
 				message: 'No valid user definition'
 			});
 		}
+		req.body.email = req.body.email.toLowerCase();
 		req.auditInfo = req.body.email;
 		if (!req.oneVCisAdmin && !isSysAdmin != 'Admin') {
 			return res.status(403).send({
