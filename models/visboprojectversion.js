@@ -36,7 +36,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
-	bewertungen:{type: Schema.Types.Mixed},
+	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
