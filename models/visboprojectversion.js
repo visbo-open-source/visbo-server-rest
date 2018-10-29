@@ -9,6 +9,14 @@ var clsHierarchyNode = new Schema({
 	childNodeKeys: [{ type: String }]
 });
 
+var clsBewertung = new Schema({
+	color: { type: Number },
+	description: { type: String },
+	deliverables: { type: String },
+	bewerterName: { type: String },
+	datum: { type: String }
+});
+
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
 	name: { type: String },
@@ -28,7 +36,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
-	bewertungen:{type: Schema.Types.Mixed},
+	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
@@ -44,8 +52,7 @@ var clsPhase = new Schema({
 	AllRoles: [{ type: clsRole }],
 	AllCosts: [{ type: clsKostenart }],
 	AllResults: [{ type: clsResult }],
-	AllBewertungen: {type: Schema.Types.Mixed},
-
+	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
 	percentDone: { type: Number },
 	responsible: { type: String },
 	deliverables: [{ type: String }],
@@ -79,9 +86,9 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	variantDescription: { type: String, required: false, maxlength: 500},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},
-  customDblFields: {type: Schema.Types.Mixed},
-	customStringFields: {type: Schema.Types.Mixed},
-	customBoolFields: {type: Schema.Types.Mixed},
+  customDblFields: [{str: {type: String, required: true}, bool: {type: Boolean, required: true}}],
+	customStringFields: [{strkey: {type: String, required: true}, strValue: {type: String, required: true}}],
+	customBoolFields: [{str: {type: String, required: true}, dbl: {type: Boolean, required: true}}],
 	Erloes: { type: Number, required: false},
 	leadPerson: { type: String, required: false, maxlength: 100},
 	tfSpalte: { type: Number, required: false},
@@ -102,7 +109,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Dauer: { type: Number, required: false},
 	AllPhases: [{ type: clsPhase, required: false}],
 	hierarchy: {
-		allNodes: {type: Schema.Types.Mixed}
+		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode}} ]
 	},
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},

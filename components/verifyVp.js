@@ -78,10 +78,7 @@ function verifyVp(req, res, next) {
 		return next();
 	}
 
-	logger4js.debug("Verify VP: inbetween 1");
 	var urlComponent = baseUrl.split("/")
-
-	logger4js.debug("Verify VP: inbetween");
 	var readAccess = false;
 	// read access for all GET Operations
 	if (req.method == "GET") readAccess = true;

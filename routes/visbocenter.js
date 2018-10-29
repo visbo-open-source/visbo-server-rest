@@ -652,10 +652,28 @@ router.route('/:vcid/audit')
 			});
 	}
 
+	var from, to, maxcount = 1000;
+	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
+	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
+	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
+	// no date is set to set to to current Date and recalculate from afterwards
+	if (!from && !to) to = new Date();
+	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+	if (!from) {
+		from = new Date(to);
+		from.setDate(from.getDate()-1)
+	}
+	if (!to) {
+		to = new Date(from);
+		to.setDate(to.getDate()+1)
+	}
+	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
+
+	var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
 	// now fetch all entries related to this vc
-	var query = {'vc.vcid': req.oneVC._id};
 	VisboAudit.find(query)
-	.limit(500)
+	.limit(maxcount)
 	.sort({createdAt: -1})
 	.exec(function (err, listVCAudit) {
 		if (err) {
@@ -1417,14 +1435,14 @@ router.route('/:vcid/user')
 	* }
 	*/
 
-// Create Visbo Center User
+// Add Visbo Center User
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		logger4js.info("Post a new Visbo Center User with name %s executed by user %s ", req.body.email, useremail);
+		logger4js.info("Post a new Visbo Center User with name %s executed by user %s with perm %s ", req.body.email, useremail, isSysAdmin);
 		req.auditDescription = 'Visbo Center User (Add)';
 
 		logger4js.trace("Post a new Visbo Center User Req Body: %O Name %s", req.body, req.body.email);
@@ -1436,7 +1454,7 @@ router.route('/:vcid/user')
 		}
 		req.body.email = req.body.email.toLowerCase();
 		req.auditInfo = req.body.email;
-		if (!req.oneVCisAdmin && !isSysAdmin != 'Admin') {
+		if (!(req.oneVCisAdmin || isSysAdmin == 'Admin')) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
