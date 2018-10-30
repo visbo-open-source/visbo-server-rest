@@ -62,12 +62,15 @@ router.route('/')
 	* @apiDescription Get retruns all VC where the user has access permission to
 	* In case of success it delivers an array of VCs, the array contains in each element a VC
 	* if systemVC is specified only the systemVC is retrieved if the user has permission to see it
-	* @apiPermission user must be authenticated
+	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VCs
+	* @apiParam (Parameter AppAdmin) {Boolean} [systemVC=false]  Optional Request System VC
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
+  * @apiPermission user must be authenticated
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	* url: http://localhost:3484/vc
-	* url: http://localhost:3484/vc?systemVC=true
+	* url: http://localhost:3484/vc?systemVC=true&deleted=true
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -99,20 +102,29 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var isSysAdmin = false
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
 
-		logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
+		if (req.query.sysadmin && req.decoded.status && req.decoded.status.sysAdminRole)
+			isSysAdmin = true;
+
+		logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, isSysAdmin);
 
 		var query = {};
-		// MS TODO Check that user is SysAdmin
-		if (!req.query.sysadmin || !req.decoded.status || !req.decoded.status.sysAdminRole) {
+		// Member Check if User is not SysAdmin
+		if (!isSysAdmin) {
 			query = {'users.email': useremail};	// search for VC where user is member of
+		}
+		// check for deleted only for sysAdmins
+		if (isSysAdmin && req.query.deleted) {
+			query.deleted = {$exists: true}
+		} else {
+			query.deleted = {$exists: false};
 		}
 		logger4js.trace("Check for System query %O", req.query);
 		query.system = req.query.systemVC ? {$eq: true} : {$ne: true};						// do not show System VC
 		if (!req.query.systemVC) query.system = {$ne: true};						// do not show System VC
-		query.deleted = {$exists: false};
 
 		var queryVC = VisboCenter.find(query);
 		//queryVC.select('name users updatedAt createdAt');
@@ -559,53 +571,65 @@ router.route('/:vcid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var vcIsSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
+		var sysAdminRole = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Delete)';
 
-		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Sys Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, vcIsSysAdmin);
+		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is Sys Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, sysAdminRole);
 		// user is sysAdmin
-		if (!req.decoded.status || req.decoded.status.sysAdminRole != 'Admin') {
+		if (sysAdminRole != 'Admin') {
 			return res.status(403).send({
 				state: "failure",
 				message: "No permission to delete Visbo Center"
 			});
 		}
-
-		req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
-		logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
-		req.oneVC.save(function(err, oneVC) {
-			if (err) {
-				logger4js.fatal("VC Delete DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error deleting Visbo Center',
-					error: err
-				});
-			}
-			req.oneVC = oneVC;
-			logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
-			var updateQuery = {}
-			updateQuery.vcid = req.oneVC._id;
-			updateQuery.deleted = {$exists: false};
-			var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
-			var updateOption = {upsert: false, multi: "true"};
-			VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
-				if (err){
+		// if the VC is not deleted up to now, mark it as deleted only
+		if (!req.oneVC.deleted) {
+			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
+			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+			req.oneVC.save(function(err, oneVC) {
+				if (err) {
 					logger4js.fatal("VC Delete DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error updating Visbo Projects',
+						message: 'Error deleting Visbo Center',
 						error: err
 					});
 				}
-				logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-				return res.status(200).send({
-					state: 'success',
-					message: 'Deleted Visbo Center'
+				req.oneVC = oneVC;
+				logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
+				var updateQuery = {}
+				updateQuery.vcid = req.oneVC._id;
+				updateQuery.deleted = {$exists: false};
+				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
+				var updateOption = {upsert: false, multi: "true"};
+				VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+					if (err){
+						logger4js.fatal("VC Delete DB Connection ", err);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Projects',
+							error: err
+						});
+					}
+					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
+					return res.status(200).send({
+						state: 'success',
+						message: 'Deleted Visbo Center'
+					});
 				});
 			});
-		});
+		} else {
+			// VC is already marked as deleted, now destory it including VP and VPV
+			// MS TODO:
+			// Collect all ProjectIDs of this VC
+			// Delete all VPVs relating these ProjectIDs
+			// Delete all VPs regarding these ProjectIDs
+			// Delete all VCCosts
+			// Delete all VCRoles
+			// Do not Delete Audit Trail
+			// Delete the VC  itself
+		}
 	})
 
 router.route('/:vcid/audit')
