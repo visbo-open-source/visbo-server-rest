@@ -76,9 +76,9 @@ var clsPhase = new Schema({
 
 var visboProjectVersionSchema = new mongoose.Schema({
 //	_id: { type: String },												//MS is required as the ID was originally created manually and has self generated ids
-	name: { type: String, required: true, maxlength: 100},
+	name: { type: String, required: true, maxlength: 256},
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
-	variantName: { type: String, required: false, maxlength: 100},
+	variantName: { type: String, required: false, maxlength: 256},
 	deleted: {
 		deletedAt: {type: Date, required: false },
 		byParent: {type: Boolean}
@@ -90,7 +90,8 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	customStringFields: [{strkey: {type: String, required: true}, strvalue: {type: String, required: true}}],
 	customBoolFields: [{str: {type: String, required: true}, bool: {type: Boolean, required: true}}],
 	Erloes: { type: Number, required: false},
-	leadPerson: { type: String, required: false, maxlength: 100},
+	actualDataUntil: { type: Date, required: false},
+	leadPerson: { type: String, required: false, maxlength: 256},
 	tfSpalte: { type: Number, required: false},
 	tfZeile: { type: Number, required: false},
 	startDate: { type: Date, required: false},
@@ -99,13 +100,13 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	earliestStartDate: { type: Date, required: false},
 	latestStart: { type: Number, required: false},
 	latestStartDate: { type: Date, required: false},
-	status: { type: String, required: false, maxlength: 100},
+	status: { type: String, required: false, maxlength: 256},
 	ampelStatus: { type: Number, required: false},
 	ampelErlaeuterung: { type: String, required: false, maxlength: 500},
 	farbe: { type: Number, required: false},
 	Schrift: { type: Number, required: false},
 	Schriftfarbe: { type: Number, required: false},
-	VorlagenName: { type: String, required: false, maxlength: 100},
+	VorlagenName: { type: String, required: false, maxlength: 256},
 	Dauer: { type: Number, required: false},
 	AllPhases: [{ type: clsPhase, required: false}],
 	hierarchy: {
@@ -115,7 +116,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	volumen: { type: Number, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 500},
-	businessUnit: { type: String, required: false, maxlength: 100}
+	businessUnit: { type: String, required: false, maxlength: 256}
 });
 // Set Creation and modification date automatically
 visboProjectVersionSchema.set('timestamps', true);

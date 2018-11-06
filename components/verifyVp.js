@@ -24,10 +24,10 @@ function generateVcList(req, res, next) {
 	var query = {};
 	// if not sysAdmin generate VC List read Access or for Creating VP with Admin access.
 	if (!sysAdmin) {
-		var readAccess = true;
-		if (req.method == 'POST' && req.url.split("?")[0] == '/') readAccess = false;
+		var userAccess = true;
+		if (req.method == 'POST' && req.url.split("?")[0] == '/') userAccess = false;
 			// GET the VC List to check for public VP access
-			if (readAccess)
+			if (userAccess)
 				query = {'users.email': useremail};				// Any Access for read operation
 			else
 				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};	 // Admin access for Modification
@@ -79,15 +79,20 @@ function verifyVp(req, res, next) {
 	}
 
 	var urlComponent = baseUrl.split("/")
-	var readAccess = false;
+	var userAccess = false;
+	var checkDeletedVP = false;
 	// read access for all GET Operations
-	if (req.method == "GET") readAccess = true;
+	if (req.method == "GET") userAccess = true;
 	if (urlComponent.length >= 3) {
 		// special checks done inside the functions so read access is enough
-		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'variant') readAccess = true;
-		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'lock') readAccess = true;
+		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'variant') userAccess = true;
+		if ((req.method == "DELETE" || req.method == "POST") && urlComponent[2]== 'lock') userAccess = true;
 	}
-	logger4js.debug("Verify VP: %s %s readAccess %s sysAdminRole %s VCList %s", req.url, req.method, readAccess, sysAdmin, req.listVC ? req.listVC.length : 0);
+	if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
+		// ignore deleted flag to allow destroy (DELETE) and undelete (PUT)
+		checkDeletedVP = req.query.deleted != undefined;
+	}
+	logger4js.debug("Verify VP: %s %s userAccess %s sysAdminRole %s VCList %s reqQuery %s", req.url, req.method, userAccess, sysAdmin, req.listVC ? req.listVC.length : 0, req.query);
 
 	var query = {};
 	// Check for URLs with a :vpid
@@ -96,13 +101,14 @@ function verifyVp(req, res, next) {
 	// logger4js.debug("Verify access permission for VisboProject %s to User %s with VC %O ", vpid, useremail, req.listVC);
 	var query = {};
 	if (!sysAdmin) {
-		if (readAccess)
+		if (userAccess)
 			query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
 		else
 			query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};	 // Admin access for Modification
 	}
 	query._id = vpid;
-	query.deleted =  {$exists: false};				// Not deleted
+	// object['property']
+	query['deleted.deletedAt'] =  {$exists: checkDeletedVP};				
 	logger4js.debug("VP Verify Access Permission Query: %O", query);
 
 	var queryVP = VisboProject.findOne(query);
