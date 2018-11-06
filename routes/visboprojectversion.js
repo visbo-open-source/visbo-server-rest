@@ -325,6 +325,7 @@ router.route('/')
 			newVPV.customDblFields = req.body.customDblFields;
 			newVPV.customStringFields = req.body.customStringFields;
 			newVPV.customBoolFields = req.body.customBoolFields;
+			newVPV.actualDataUntil = req.body.actualDataUntil;
 			newVPV.Erloes = req.body.Erloes;
 			newVPV.leadPerson = req.body.leadPerson;
 			newVPV.tfSpalte = req.body.tfSpalte;

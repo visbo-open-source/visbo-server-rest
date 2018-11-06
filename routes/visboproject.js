@@ -248,6 +248,7 @@ router.route('/')
 	*   "vcid": "vc5aaf992",
 	*   "vpvCount": "0",
 	*   "vpType": "0",
+	*   "kundennummer": "customer project identifier"
 	*   "vpPublic": "false",
 	*   "users":[
 	*    {
@@ -285,6 +286,7 @@ router.route('/')
 		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
 		var vpPublic = req.body.vpPublic == true ? true : false;
+		var vpCustomerID = (req.body.kundennummer != undefined) ? req.body.kundennummer.trim() : undefined;
 		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s/%s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
@@ -348,6 +350,7 @@ router.route('/')
 				newVP.name = vpname;
 				newVP.vcid = vcid;
 				newVP.description = vpdescription;
+				if (vpCustomerID) newVP.kundennummer = vpCustomerID;
 				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
 					newVP.vpType = 0;
 				} else {
@@ -526,6 +529,9 @@ router.route('/:vpid')
 	*   url: http://localhost:3484/vp/vp5cf3da025
 	* {
 	*  "name":"My first Visbo Project Renamed",
+	*  "description": "New Description for VP",
+	*  "vpPublic": true,
+	*  "kundennummer": "Customer Project Identifier"
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -538,6 +544,7 @@ router.route('/:vpid')
 	*   "createdAt":"2018-03-19T11:04:12.094Z",
 	*   "name":"My first Visbo Project Renamed",
 	*   "_id":"vp5cf3da025",
+	*   "kundennummer": "Customer Project Identifier"
 	*   "vcid": "vc5aaf992",
 	*   "vpvCount": "0",
 	*   "vpType": "0",
@@ -590,6 +597,9 @@ router.route('/:vpid')
 		}
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
+		}
+		if (req.body.kundennummer != undefined) {
+			req.oneVP.kundennummer = req.body.kundennummer.trim();
 		}
 		// undelete the VP in case of change
 		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
