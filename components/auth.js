@@ -44,6 +44,7 @@ function verifySysAdmin(req, res, next) {
 
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var token = req.headers['access-key'];
+	logger4js.debug("Check SysAdmin Permission");
 
 	// decode token
   if (token) {

@@ -21,7 +21,7 @@ function calculateSysAdmin(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	var useremail = undefined;
-	if (req.body && req.body.email) useremail = req.body.email
+	if (req.body && req.body.email) useremail = req.body.email.toLowerCase();
 	logger4js.info("Check Permission in System Visbo Center for user %s", useremail);
 
 	var query = {'users.email': useremail};		// Permission for User

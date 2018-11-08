@@ -1,9 +1,18 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
 <h1>
   eMail Confirmation
 </h1>
-<h3>
-  for <%= userTo.profile.firstName %> <%= userTo.profile.lastName %> <%= userTo.email %>
-</h3>
 <p>
-  Please confirm your e-Mail address by following this link: <a href="<%= url %>">Confirm e-Mail address</a>
+  for <%= userTo.profile.firstName %> <%= userTo.profile.lastName %> <%= userTo.email %>
 </p>
+<h4>
+  Please confirm your e-Mail address by following this link: <a href="<%= url %>">Confirm e-Mail address</a>
+</h4>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

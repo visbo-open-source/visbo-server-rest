@@ -94,7 +94,8 @@ router.route('/user/login')
 				message: "email or password missing"
 			});
 		}
-
+		req.body.email = req.body.email.toLowerCase();
+		
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Post Login DB Connection ", err);
@@ -213,6 +214,10 @@ router.route('/user/pwforgotten')
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName PasswordForgotten
+	* @apiDescription Post pwforgotten initiates the setting of a new password. To avoid user & password probing, this function delivers always success
+	* but send a Mail with the Reset Link only if the user was found and the last Reset Password was not done in the last 15 minutes.
+	* in case the user does a successful login, the timer is ignored
+	* @apiError InternalServerError If the Dtabase is not reachable or delivers an error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/forgottenpw
 	*  body: {
@@ -254,7 +259,9 @@ router.route('/user/pwforgotten')
 				});
 			}
 			var currentDate = new Date();
-			if (user.status.lastPWResetAt && (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60/60 < 1) {
+			if (user.status.lastPWResetAt
+			&& user.status.lastPWResetAt > user.status.lastLoginAt
+			&& (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60 < 15) {
 				logger4js.warn("Multiple Password Resets for User %s ", user._id);
 				return res.status(200).send({
 					// state: "failure",
@@ -361,7 +368,7 @@ router.route('/user/pwreset')
 		// verifies secret and checks exp
     jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
       if (err) {
-        return res.status(401).send({
+        return res.status(409).send({
         	state: 'failure',
         	message: 'Token is dead'
         });
@@ -379,7 +386,7 @@ router.route('/user/pwreset')
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
-						return res.status(401).send({
+						return res.status(409).send({
 							state: "failure",
 							message: "invalid token"
 						});
@@ -478,6 +485,7 @@ router.route('/user/signup')
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
+		if (req.body.email) req.body.email = req.body.email.toLowerCase();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
 		var query = {};
 		if (req.body.email) {
@@ -499,10 +507,10 @@ router.route('/user/signup')
 					error: err
 				});
 			}
-			if (user) req.body.email = user.email;
+			if (user) req.body.email = user.email.toLowerCase();
 			// if user exists and is registered already refuse to register again
 			if (user && user.status && user.status.registeredAt) {
-				return res.status(401).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "email already registered"
 				});
