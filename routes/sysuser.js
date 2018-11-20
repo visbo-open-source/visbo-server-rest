@@ -10,15 +10,16 @@ var VisboAudit = mongoose.model('VisboAudit');
 
 // var assert = require('assert');
 var auth = require('./../components/auth');
+var verifyVc = require('./../components/verifyVc');
 
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-
-//Register the authentication middleware
-router.use('/', auth.verifySysAdmin);
-
+//Register the authentication middleware for all URLs under this module
+router.use('/', auth.verifyUser);
+// Register the VC middleware to check that the user has access to the System Admin
+router.use('/', verifyVc.getSystemGroups);
 
 router.route('/')
 /**

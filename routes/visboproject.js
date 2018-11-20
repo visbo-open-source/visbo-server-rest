@@ -12,12 +12,19 @@ var verifyVp = require('./../components/verifyVp');
 
 var VPUser = mongoose.model('VPUser');
 var User = mongoose.model('User');
+var VisboGroup = mongoose.model('VisboGroup');
+var VisboGroupUser = mongoose.model('VisboGroupUser');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var Variant = mongoose.model('Variant');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
+
+var Const = require('../models/constants')
+var permVC = Const.permVC
+var permVP = Const.permVP
+var permSystem = Const.permSystem
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -62,12 +69,26 @@ var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
 
+// updates the VP Count in the VC after create/delete/undelete Visbo Project
+var updateVPCount = function(vcid, increment){
+	var updateQuery = {_id: vcid};
+	var updateUpdate = {$inc: {vpCount: increment}};
+	var updateOption = {upsert: false};
+
+	VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating VC %s vpCount: %s", vcid, err);
+		}
+		logger4js.trace("Updated VC %s vpCount inc %d changed %d %d", vcid, increment, result.n, result.nModified)
+	})
+}
+
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // register the VP middleware to generate the VC List to check for public VPs
-router.use('/', verifyVp.generateVcList);
+router.use('/', verifyVp.getAllVPGroups);
 // register the VP middleware to check that the user has access to the VP
-router.use('/', verifyVp.verifyVp);
+router.param('vpid', verifyVp.getVpidGroups);
 
 /////////////////
 // Visbo Projects API
@@ -152,26 +173,37 @@ router.route('/')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var isSysAdmin = false
+		var isSysAdmin = req.query.sysadmin ? true : false;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Read)';
 
+		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
 		var query = {};
-		if (req.query.sysadmin && req.decoded.status && req.decoded.status.sysAdminRole)
-			isSysAdmin = true;
-
-		logger4js.debug("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
-		// if user is not sysadmin check for user permission
+		// Get all VCs there the user Group is assigned to
 		if (!isSysAdmin) {
-			// either member of the project or if project is public member of the VC
-			logger4js.debug("Get Project Public VC %s", JSON.stringify(req.listVC));
-			query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
+			var vpidList = [];
+			for (var i=0; i < req.permVPGroups.length; i++) {
+				if (req.permVPGroups[i].vpids) {
+					vpidList = vpidList.concat(req.permVPGroups[i].vpids)
+				}
+			}
+			logger4js.debug("Get Visbo Project with %d Group VPIDs", vpidList.length);
+			query._id = {$in: vpidList};
 		}
+
+		// if user is not sysadmin check for user permission
+		// if (!isSysAdmin) {
+		// 	// either member of the project or if project is public member of the VC
+		// 	logger4js.debug("Get Project Public VC %s", JSON.stringify(req.listVC));
+		// 	query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
+		// }
 		// check for deleted VPs?
 		if (req.query.deleted) {
-			query['deleted.deletedAt'] = {$exists: true}				// Not deleted
+			// query['deleted.deletedAt'] = {$exists: true}				// Not deleted
+			query.deleted = {$exists: true}				// Not deleted
 		} else {
-			query['deleted.deletedAt'] = {$exists: false};
+			// query['deleted.deletedAt'] = {$exists: false};
+			query.deleted = {$exists: false};
 		}
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
@@ -191,12 +223,13 @@ router.route('/')
 					error: err
 				});
 			};
+			logger4js.trace("Found Projects\n%O", listVP);
 			logger4js.debug("Found %d Projects", listVP.length);
-			logger4js.trace("Found Projects/n", listVP);
 			req.auditInfo = listVP.length;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Projects',
+				count: listVP.length,
 				vp: listVP
 			});
 		});
@@ -293,15 +326,9 @@ router.route('/')
 
 		// Check that the user has Admin permission in the VC
 		var isAdmin = false;
-		logger4js.trace("Check VC Permission %O", req.listVC);
+		logger4js.debug("Check VC Permission %s", req.combinedVCPerm);
 
-		for (var i=0; i < req.listVC.length; i++) {
-			if (vcid == req.listVC[i]) {
-				isAdmin = true;
-				break;
-			}
-		}
-		if (!isAdmin) {
+		if (!(req.combinedVCPerm & (permVC.View + permVC.CreateVP))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Centers not found or no Admin'
@@ -328,7 +355,8 @@ router.route('/')
 			var query = {};
 			query.vcid = vcid;
 			query.name = vpname;
-			query['deleted.deletedAt'] = {$exists: false};
+			// query['deleted.deletedAt'] = {$exists: false};
+			query.deleted = {$exists: false};
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
@@ -348,7 +376,7 @@ router.route('/')
 				};
 				var newVP = new VisboProject;
 				newVP.name = vpname;
-				newVP.vcid = vcid;
+				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
 				if (vpCustomerID) newVP.kundennummer = vpCustomerID;
 				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
@@ -357,7 +385,7 @@ router.route('/')
 					newVP.vpType = req.body.vpType;
 				}
 				newVP.vpvCount = 0;
-				newVP.vpPublic = vpPublic;
+				// newVP.vpPublic = vpPublic;
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (var i = 0; i < req.body.users.length; i++) {
@@ -382,10 +410,76 @@ router.route('/')
 					}
 					if (listUsers.length != vpUsers.length)
 						logger4js.warn("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vpUsers.length);
+
+					// Create new VP Group and add all existing Admin Users to the new Group
+					var newVG = new VisboGroup();
+					newVG.name = 'Visbo Project Admin'
+					newVG.groupType = 'VP';
+					newVG.internal = true;
+					newVG.permission = {vp: Const.permVPAll }
+					newVG.vcid = req.oneVC._id;
+					newVG.global = false;
+					newVG.vpids.push(newVP._id);
+					newVG.users = [];
+					if (req.body.users) {
+						for (i = 0; i < req.body.users.length; i++) {
+							// build up user list for newVG and a unique list of admins
+							if (req.body.users[i].role == 'Admin') {
+								vpUser = listUsers.find(findUserList, req.body.users[i].email);
+								// if user does not exist, ignore the user
+								if (vpUser){
+									req.body.users[i].userId = vpUser._id;
+									delete req.body.users[i]._id;
+									newVG.users.push({email: vpUser.email, userId: vpUser._id});
+								}
+							}
+						};
+					};
+					// no admin defined, add current user as admin
+					if (newVG.users.length == 0)
+						newVG.users.push({email: useremail, userId: userId});
+
+					logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
+					newVG.save(function(err, vg) {
+						if (err) {
+							logger4js.fatal("VP Post Create 1. Group for vp %s DB Connection ", newVP._id, err);
+						}
+					});
+					var newVGRead = new VisboGroup();
+					newVGRead.name = 'Read Access'
+					newVGRead.groupType = 'VP Custom'
+					newVGRead.global = false;
+					newVGRead.internal = false;
+					newVGRead.permission = {vp: permVP.View}
+					newVGRead.vcid = req.oneVC._id;
+					newVGRead.vpids.push(newVP._id);
+					newVGRead.users = [];
+					if (req.body.users) {
+						for (i = 0; i < req.body.users.length; i++) {
+							// build up user list for newVG and a unique list of admins
+							if (req.body.users[i].role == 'User') {
+								vpUser = listUsers.find(findUserList, req.body.users[i].email);
+								// if user does not exist, ignore the user
+								if (vpUser){
+									req.body.users[i].userId = vpUser._id;
+									delete req.body.users[i]._id;
+									newVGRead.users.push({email: vpUser.email, userId: vpUser._id});
+								}
+							}
+						};
+					};
+					// save asynchronous
+					logger4js.debug("VP Post Create 2. Group for vp %s group %O ", newVP._id, newVG);
+					newVGRead.save(function(err, vg) {
+						if (err) {
+							logger4js.fatal("VP Post Create 2. Group for vp %s DB Connection ", newVP._id, err);
+						}
+					});
+
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
 						for (i = 0; i < req.body.users.length; i++) {
-							// build up user list for newVC and a unique list of vpUsers
+							// build up user list for newVP and a unique list of vpUsers
 							vpUser = listUsers.find(findUserList, req.body.users[i].email);
 							// if user does not exist, ignore the user
 							if (vpUser){
@@ -401,9 +495,9 @@ router.route('/')
 						logger4js.info("No Admin User found add current user as admin");
 						newVP.users.push(admin);
 					};
-					// set the VC Name
+					// set the VP Name
 					newVP.vc.name = vc.name;
-					logger4js.trace("VP Create add VC Name %s %O", vc.name, newVP);
+					logger4js.trace("VP Create add VP Name %s %O", vc.name, newVP);
 					logger4js.debug("Save VisboProject %s  with %d Users", newVP.name, newVP.users.length);
 					newVP.save(function(err, vp) {
 						if (err) {
@@ -416,23 +510,12 @@ router.route('/')
 						}
 						req.oneVP = vp;
 						logger4js.debug("Update VC %s with %d Projects ", req.oneVC.name, req.oneVC.vpCount);
-						req.oneVC.vpCount = req.oneVC.vpCount == undefined ? 1 : req.oneVC.vpCount + 1;
-						req.oneVC.save(function(err, vc) {
-							if (err) {
-								logger4js.error("Error Update VisboCenter %s  with Error %s", req.oneVC.name, err);
-								return res.status(500).send({
-									state: "failure",
-									message: "database error, failed to update Visbo Center",
-									error: err
-								});
-							}
-							req.oneVC = vc;
-							return res.status(200).send({
-								state: "success",
-								message: "Successfully created new Project",
-								vp: [ vp ]
-							});
-						})
+						updateVPCount(req.oneVP.vcid, 1); // async
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully created new Project",
+							vp: [ vp ]
+						});
 					});
 				});
 			});
@@ -495,16 +578,21 @@ router.route('/:vpid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Read)';
 
-		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
+		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
+		var perm = {vc: req.oneVCPerm}
+		perm.vp = req.oneVPPerm;
+		if (isSysAdmin) perm.system = req.oneSystemPerm
 		// we have found the VP already in middleware
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Projects',
-			vp: [req.oneVP]
+			vp: [req.oneVP],
+			perm: perm
 		});
 	})
 
@@ -570,7 +658,7 @@ router.route('/:vpid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Update)';
 
-		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
+		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %s", userId, useremail, req.params.vpid, req.oneVPPerm);
 
 		if (!req.body) {
 			return res.status(400).send({
@@ -578,8 +666,25 @@ router.route('/:vpid')
 				message: 'No Body provided for update'
 			});
 		}
+		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
+			logger4js.debug("Undelete Visbo Project %s perm %s Delete Perm %s Modify Perm %s", req.oneVP._id, req.oneVPPerm, req.oneVPPerm & permVP.Delete, req.oneVPPerm & permVP.Modify);
+
+			if (!(req.oneVPPerm & permVP.Delete)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Project or no Permission'
+				});
+			}
+		} else {
+			if (!(req.oneVPPerm & permVP.Modify)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Project or no Permission'
+				});
+			}
+		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
-			return res.status(401).send({
+			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
@@ -592,9 +697,9 @@ router.route('/:vpid')
 		req.oneVP.name = name;
 
 		// change only if present
-		if (req.body.vpPublic != undefined) {
-			req.oneVP.vpPublic = (req.body.vpPublic == true || req.body.vpPublic == 'true') ? true : false;
-		}
+		// if (req.body.vpPublic != undefined) {
+		// 	req.oneVP.vpPublic = (req.body.vpPublic == true || req.body.vpPublic == 'true') ? true : false;
+		// }
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
 		}
@@ -602,9 +707,9 @@ router.route('/:vpid')
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
 		}
 		// undelete the VP in case of change
-		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
-			req.oneVP.deleted = {};
-			delete req.oneVP.deleted;
+		// if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
+		if (req.oneVP.deleted) {
+			req.oneVP.deleted = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
 		}
@@ -613,7 +718,8 @@ router.route('/:vpid')
 		query.vcid = req.oneVP.vcid;
 		query._id = {$ne: req.oneVP._id}
 		query.name = name;
-		query['deleted.deletedAt'] = {$exists: false};
+		// query['deleted.deletedAt'] = {$exists: false};
+		query.deleted = {$exists: false};
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
@@ -648,7 +754,8 @@ router.route('/:vpid')
 					if (oneVP.vpType == constVPTypes.portfolio) {
 						var updateQuery = {};
 						updateQuery.vpid = oneVP._id;
-						updateQuery['deleted.deletedAt'] = {$exists: false};
+						// updateQuery['deleted.deletedAt'] = {$exists: false};
+						updateQuery.deleted = {$exists: false};
 
 						var updateUpdate = {$set: {"name": oneVP.name}};
 						var updateOption = {upsert: false, multi: "true"};
@@ -671,24 +778,11 @@ router.route('/:vpid')
 									vp: [ oneVP ]
 								});
 							} else {
-								var updateQuery = {"_id": req.oneVP.vcid};
-								var updateUpdate = {$inc: {"vpCount": +1 }};
-								var updateOption = {upsert: false};
-								VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-									if (err){
-										logger4js.error("Problem updating Visbo Centersfor VP %s", req.oneVP._id);
-										return res.status(500).send({
-											state: 'failure',
-											message: 'Error updating Visbo Center',
-											error: err
-										});
-									}
-									logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
-									return res.status(200).send({
-										state: "success",
-										message: 'Updated Visbo Project',
-										vp: [ oneVP ]
-									});
+								updateVPCount(req.oneVP.vcid, 1); // async
+								return res.status(200).send({
+									state: "success",
+									message: 'Updated Visbo Project',
+									vp: [ oneVP ]
 								});
 							}
 						});
@@ -696,7 +790,8 @@ router.route('/:vpid')
 						logger4js.debug("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
 						var updateQuery = {};
 						updateQuery.vpid = oneVP._id;
-						updateQuery['deleted.deletedAt'] = {$exists: false};
+						// updateQuery['deleted.deletedAt'] = {$exists: false};
+						updateQuery.deleted = {$exists: false};
 
 						var updateUpdate = {$set: {"name": oneVP.name}};
 						var updateOption = {upsert: false, multi: "true"};
@@ -731,24 +826,11 @@ router.route('/:vpid')
 										vp: [ oneVP ]
 									});
 								} else {
-									var updateQuery = {"_id": req.oneVP.vcid};
-									var updateUpdate = {$inc: {"vpCount": +1 }};
-									var updateOption = {upsert: false};
-									VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-										if (err){
-											logger4js.error("Problem updating Visbo Centersfor VP %s", req.oneVP._id);
-											return res.status(500).send({
-												state: 'failure',
-												message: 'Error updating Visbo Center',
-												error: err
-											});
-										}
-										logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
-										return res.status(200).send({
-											state: "success",
-											message: 'Updated Visbo Project',
-											vp: [ oneVP ]
-										});
+									updateVPCount(req.oneVP.vcid, 1); // async
+									return res.status(200).send({
+										state: "success",
+										message: 'Updated Visbo Project',
+										vp: [ oneVP ]
 									});
 								}
 							});
@@ -762,24 +844,11 @@ router.route('/:vpid')
 							vp: [ oneVP ]
 						});
 					} else {
-						var updateQuery = {"_id": req.oneVP.vcid};
-						var updateUpdate = {$inc: {"vpCount": +1 }};
-						var updateOption = {upsert: false};
-						VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-							if (err){
-								logger4js.error("Problem updating Visbo Centersfor VP %s", req.oneVP._id);
-								return res.status(500).send({
-									state: 'failure',
-									message: 'Error updating Visbo Center',
-									error: err
-								});
-							}
-							logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
-							return res.status(200).send({
-								state: "success",
-								message: 'Updated Visbo Project',
-								vp: [ oneVP ]
-							});
+						updateVPCount(req.oneVP.vcid, 1); // async
+						return res.status(200).send({
+							state: "success",
+							message: 'Updated Visbo Project',
+							vp: [ oneVP ]
 						});
 					}
 				}
@@ -815,16 +884,23 @@ router.route('/:vpid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Delete)';
 
-		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s is Admin %s", userId, useremail, req.params.vpid, req.oneVP.name, req.oneVPisAdmin);
+		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s  ", userId, useremail, req.params.vpid, req.oneVP.name);
 
+		if (!(req.oneVPPerm & permVP.Delete)) {
+			return res.status(403).send({
+				state: "failure",
+				message: "No permission to delete Visbo Project"
+			});
+		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
-			return res.status(401).send({
+			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
 			});
 		}
-		var destroyVP = req.oneVP.deleted && req.oneVP.deleted.deletedAt != undefined
+		// var destroyVP = req.oneVP.deleted && req.oneVP.deleted.deletedAt != undefined
+		var destroyVP = req.oneVP.deleted && req.oneVP.deleted.deletedAt
 		logger4js.debug("Delete Visbo Project %s %s after premission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
@@ -839,23 +915,10 @@ router.route('/:vpid')
 					});
 				}
 				req.oneVP = oneVP;
-				var updateQuery = {"_id": req.oneVP.vcid};
-				var updateUpdate = {$inc: {"vpCount": -1 }};
-				var updateOption = {upsert: false};
-				VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-					if (err){
-						logger4js.error("Problem updating Visbo Centersfor VP %s", req.oneVP._id);
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error updating Visbo Center',
-							error: err
-						});
-					}
-					logger4js.debug("Update VP names in VPV found %d updated %d", result.n, result.nModified)
-					return res.status(200).send({
-						state: "success",
-						message: "Deleted Visbo Project"
-					});
+				updateVPCount(req.oneVP.vcid, -1); // async
+				return res.status(200).send({
+					state: "success",
+					message: "Deleted Visbo Project"
 				});
 			});
 		} else {
@@ -1048,7 +1111,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
-		if (resultLock.locked && req.oneVPisAdmin == false) {	// lock from a different user and no Admin, deny to delete
+		if (resultLock.locked && !(req.oneVPPerm & permVP.Modify)) {	// lock from a different user and no Admin, deny to delete
 			logger4js.warn("Delete Lock for VP :%s: Project is locked by another user Locks \n %O", req.oneVP.name, req.oneVP.lock);
 			return res.status(403).send({
 				state: 'failure',
@@ -1212,7 +1275,7 @@ router.route('/:vpid/variant/:vid')
 		var variantName = req.oneVP.variant[variantIndex].variantName;
 		req.auditInfo = variantName;
 		//variant belongs to a different user and curr. user is not an Admin
-		if (req.oneVP.variant[variantIndex].email != useremail && req.oneVPisAdmin == false) {
+		if (req.oneVP.variant[variantIndex].email != useremail && !(req.oneVPPerm & permVP.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete',
@@ -1314,7 +1377,8 @@ router.route('/:vpid/portfolio')
 		var query = {};
 		query.vpid = req.oneVP._id;
 		query.timestamp =  {$lt: new Date()};
-		query['deleted.deletedAt'] = {$exists: false};
+		// query['deleted.deletedAt'] = {$exists: false};
+		query.deleted = {$exists: false};
 		if (req.query.refDate){
 			var refDate = new Date(req.query.refDate);
 			query.timestamp =  {$lt: refDate};
@@ -1552,7 +1616,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		var query = {}
 		query._id = req.params.vpfid
 		query.vpid = req.oneVP._id;
-		query['deleted.deletedAt'] = {$exists: false};
+		// query['deleted.deletedAt'] = {$exists: false};
+		query.deleted = {$exists: false};
 		// check if query string is used to restrict to a specific VC
 		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
@@ -1612,7 +1677,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		var query = {};
 		query._id = vpfid;
 		query.vpid = req.oneVP._id;
-		query['deleted.deletedAt'] = {$exists: false};
+		// query['deleted.deletedAt'] = {$exists: false};
+		query.deleted = {$exists: false};
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
@@ -1739,7 +1805,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			// User is authenticated already
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var isSysAdmin = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
+			var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project User (Add)';
 

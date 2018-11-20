@@ -1,71 +1,236 @@
 var mongoose = require('mongoose');
+var Const = require('../models/constants')
+var permSystem = Const.permSystem
+var permVC = Const.permVC
+
 var VisboCenter = mongoose.model('VisboCenter');
+var VisboGroup = mongoose.model('VisboGroup');
 
 var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-// Verify Visbo Center and the role of the user
-function verifyVc(req, res, next) {
+// Generate the Groups where the user is member of System / VC depending on the case
+function getAllGroups(req, res, next) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
 	if (baseUrl == '/') {
-		// no common check here, special check done in code afterwards
+		// get the VC Groups the user is member of
+		// handle sysadmin and systemvc case
+		logger4js.trace("Generate VC Groups for user %s for url %s", req.decoded.email, req.url);
+		var query = {};
+		var acceptEmpty = true;
+		query = {'users.userId': userId};	// search for VC groups where user is member
+		// Permission check for GET & POST
+		if (req.method == "GET") {
+			if (req.query.systemvc) {
+				query.groupType = 'System';						// search for System Groups only
+				query['permission.system'] = { $bitsAllSet: permSystem.View }
+				// req.query.sysadmin = false; // no special option to get all VCs
+			} else if (req.query.sysadmin) {
+				query.groupType = 'System';						// search for System Groups only
+				query['permission.system'] = { $bitsAllSet: permSystem.ViewVC }
+				acceptEmpty = false;
+			} else {
+				query.groupType = 'VC';				// search for VC Groups only
+				query['permission.vc'] = { $bitsAllSet: permVC.View }
+			}
+		}
+		if (req.method == "POST") {
+			query.groupType = 'System';						// search for System permission to create a VC
+			acceptEmpty = false;
+			query['permission.system'] = { $bitsAllSet: permSystem.View }
+			// query['permission.system'] = { $bitsAllSet: permSystem.CreateVC }
+		}
+
+		var queryVG = VisboGroup.find(query);
+		queryVG.select('name permission vcid')
+		queryVG.exec(function (err, listVG) {
+			if (err) {
+				logger4js.fatal("VC Groups Get DB Connection %O", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting VisboCenters',
+					error: err
+				});
+			}
+			logger4js.trace("Found VGs %d", listVG.length);
+			// Convert the result to request
+			req.permVCGroups = listVG;
+			if (!acceptEmpty && listVG.length == 0) {
+				// do not accept requests without a group assignement especially to System Group
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			var combinedSystemPerm = 0;
+			if (req.query.sysadmin) {
+				for (var i=0; i < req.permVCGroups.length; i++) {
+					combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+				}
+				logger4js.debug("VC Group All System Perm %s", combinedSystemPerm);
+				req.oneSystemPerm = combinedSystemPerm;
+			}
+
+			return next();
+		});
+	} else {
+		// not the baseUrl "/" do nothing
 		return next();
 	}
+}
 
-	var urlComponent = baseUrl.split("/")
-	var vcid = urlComponent[1];
-
+// Generate the Groups where the user is member of System / VC depending on the case
+function getVcidGroups(req, res, next, vcid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	var sysAdmin = (req.query && req.query.sysadmin) ? true : false;
-	if (sysAdmin && req.decoded.status && req.decoded.status.sysAdminRole) {
-		sysAdmin = true;
-	} else {
-		sysAdmin = false;
-	}
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-	logger4js.debug("Verify access permission for VisboCenter %s to User %s ", vcid, useremail);
-	var checkDeletedVC = false;
+	var baseUrl = req.url.split("?")[0]
+	var urlComponent = baseUrl.split("/")
+	var sysAdmin = req.query.sysadmin ? true : false;
 
-	// allow access to GET, PUT & DELETE for VC of deleted VCs if user is sysadmin
-	if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
-		if (sysAdmin && req.query.deleted != undefined) checkDeletedVC = true;
-	}
-	logger4js.debug("Verify access permission for VisboCenter %s to User %s checkDeleted %s", vcid, useremail, checkDeletedVC);
+	// get the VC Groups of this VC where the user is member of
+	// handle sysadmin case by getting the system groups
+	logger4js.debug("Generate VC Groups for vcid %s user %s for url %s sysAdmin %s", vcid, req.decoded.email, req.url, sysAdmin);
 	var query = {};
-	if (!sysAdmin) query = {'users.email': useremail};		// Permission for User
-	query._id = vcid;
-	query['deleted.deletedAt'] =  {$exists: checkDeletedVC};
-	var queryVC = VisboCenter.findOne(query);
-	// queryVC.select('name users updatedAt createdAt');
-	queryVC.exec(function (err, oneVC) {
+	query = {'users.userId': userId};	// search for VC groups where user is member
+	if (sysAdmin) {
+		query.groupType = 'System';						// search for System Groups only
+		query['permission.system'] = { $bitsAllSet: permSystem.View }
+		acceptEmpty = false;
+	} else {
+		query.groupType = 'VC';				// search for VC Groups only
+		query['permission.vc'] = { $bitsAllSet: permVC.View }
+		query.vcid = vcid;
+	}
+	// if (req.query.systemvc) {
+	// 	query.groupType = 'System';						// search for System Groups only
+	// 	query['permission.system'] = { $bitsAllSet: permSystem.View }
+	// 	req.query.sysadmin = false; // no special option to get all VCs
+	// }
+	logger4js.debug("Search VGs %O", query);
+
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vcid')
+	queryVG.exec(function (err, listVG) {
 		if (err) {
+			logger4js.fatal("VC Groups Get DB Connection %O", err);
 			return res.status(500).send({
 				state: 'failure',
-				message: 'Error getting Visbo Centers',
+				message: 'Error getting VisboCenters',
 				error: err
 			});
 		}
-		if (!oneVC) {
+		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
+		// Convert the result to request
+		req.permVCGroups = listVG;
+		if (listVG.length == 0) {
+			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		req.oneVC = oneVC
-		req.oneVCisAdmin = false
-		for (var i = 0; i < oneVC.users.length; i++){
-			if (oneVC.users[i].email == useremail && oneVC.users[i].role == 'Admin' ) {
-				req.oneVCisAdmin = true;
-			}
+		var checkDeletedVC = false;
+		// allow access to GET, PUT & DELETE for VC of deleted VCs if user is sysadmin
+		if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
+			if (sysAdmin && req.query.deleted) checkDeletedVC = true;
 		}
-		logger4js.debug("Found VisboCenter %s Admin Access %s", vcid, req.oneVCisAdmin);
+		var query = {};
+		// check against the groups
+		var vcidList = [];
+		var combinedVCPerm = 0;
+		var combinedSystemPerm = 0;
+		for (var i=0; i < req.permVCGroups.length; i++) {
+			vcidList.push(req.permVCGroups[i].vcid);
+			combinedVCPerm = combinedVCPerm | (req.permVCGroups[i].permission.vc || 0);
+			combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+		}
+		logger4js.debug("Get Visbo Center with %d Group VCIDs VC %d System %d", vcidList.length, combinedVCPerm, combinedSystemPerm);
+		query._id = vcid;
+		// query['deleted.deletedAt'] =  {$exists: checkDeletedVC};
+		query.deleted =  {$exists: checkDeletedVC};
+		var queryVC = VisboCenter.findOne(query);
+		// queryVC.select('name users updatedAt createdAt');
+		queryVC.exec(function (err, oneVC) {
+			if (err) {
+				logger4js.fatal("VC Get with ID DB Connection %O", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Centers',
+					error: err
+				});
+			}
+			if (!oneVC) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			req.oneVC = oneVC
+			req.oneVCPerm = combinedVCPerm;
+			req.oneSystemPerm = combinedSystemPerm;
+
+			logger4js.debug("Found VisboCenter %s Access Permission VC %d System %d", vcid, req.oneVCPerm, req.oneSystemPerm);
+			return next();
+		});
+	});
+}
+
+// Generate the Groups where the user is member of System / VC depending on the case
+function getSystemGroups(req, res, next) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+	// get the System Groups the user is member of
+	logger4js.trace("Generate System Groups for user %s for url %s", req.decoded.email, req.url);
+	var query = {};
+
+	query = {'users.userId': userId};	// search for VC groups where user is member
+	query.groupType = 'System';						// search for System Groups only
+	query['permission.system'] = { $bitsAllSet: permSystem.View }
+
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vcid')
+	queryVG.exec(function (err, listVG) {
+		if (err) {
+			logger4js.fatal("VC Groups Get DB Connection %O", err);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Error getting VisboCenters',
+				error: err
+			});
+		}
+		logger4js.debug("Found System VGs %d", listVG.length);
+		req.permVCGroups = listVG;
+		var combinedVCPerm = 0;
+		var combinedSystemPerm = 0;
+		for (var i=0; i < req.permVCGroups.length; i++) {
+			combinedVCPerm = combinedVCPerm | (req.permVCGroups[i].permission.vc || 0);
+			combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+		}
+		// Convert the result to request
+		if (listVG.length == 0) {
+			// do not accept requests without a group assignement especially to System Group
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to Access System Admin'
+			});
+		}
+		req.oneVCPerm = combinedVCPerm;
+		req.oneSystemPerm = combinedSystemPerm;
 		return next();
 	});
 }
 
 module.exports = {
-	verifyVc: verifyVc
+	// verifyVc: verifyVc,
+	getAllGroups: getAllGroups,
+	getVcidGroups: getVcidGroups,
+	getSystemGroups: getSystemGroups
 };

@@ -6,7 +6,6 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
-var authSysAdmin = require('./../components/authSysAdmin');
 var auth = require('./../components/auth');
 
 var logModule = "USER";
@@ -29,9 +28,6 @@ var isValidPassword = function(user, password){
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
-
-//Register the sysadmin permission middleware for login url
-router.use('/user/login', authSysAdmin.calculateSysAdmin);
 
 router.route('/user/login')
 
@@ -95,7 +91,7 @@ router.route('/user/login')
 			});
 		}
 		req.body.email = req.body.email.toLowerCase();
-		
+
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Post Login DB Connection ", err);
@@ -163,8 +159,7 @@ router.route('/user/login')
 				var passwordCopy = user.password;
 				user.password = undefined;
 				if (!user.status) user.status = {};
-				user.status.sysAdminRole = req.sysAdminRole;
-				logger4js.trace("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
+				logger4js.trace("User accepted User: %O", user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {

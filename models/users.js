@@ -25,8 +25,7 @@ var userSchema = new mongoose.Schema({
 		lastLoginAt: {type: Date},
 		lastLoginFailedAt: {type: Date},
 		loginRetries: {type: Number, required: false},
-		lastPWResetAt: {type: Date},
-		sysAdminRole: {type: String}
+		lastPWResetAt: {type: Date}
 	}
 });
 // Set Creation and modification date automatically

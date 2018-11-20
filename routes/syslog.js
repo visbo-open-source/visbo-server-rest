@@ -7,16 +7,17 @@ var path = require('path');
 
 // var assert = require('assert');
 var auth = require('./../components/auth');
+var verifyVc = require('./../components/verifyVc');
 
 var logging = require('./../components/logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-
-//Register the authentication middleware
-router.use('/', auth.verifySysAdmin);
-
+//Register the authentication middleware for all URLs under this module
+router.use('/', auth.verifyUser);
+// Register the VC middleware to check that the user has access to the System Admin
+router.use('/', verifyVc.getSystemGroups);
 
 router.route('/')
 /**
@@ -51,6 +52,13 @@ router.route('/')
 		var dir = path.join(__dirname, '../logging');
 		var fileList = [];
 
+		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+			logger4js.debug("No Permission to View System Log for user %s", userId);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to View System Log'
+			});
+		}
 		var files = fs.readdirSync(dir);
 		var stats = {}
     for (var i in files){
@@ -92,6 +100,13 @@ router.route('/file/:filename')
 		req.auditDescription = 'SysLogs (Read)';
 
 		logger4js.info("Get Logfile %s ", req.params.filename);
+		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+			logger4js.debug("No Permission to View System Log for user %s", userId);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to View System Log'
+			});
+		}
 		var dir = path.join(__dirname, '../logging');
 		var fileName = path.join(dir, req.params.filename);
 		stats = fs.statSync(fileName)
@@ -154,6 +169,13 @@ router.route('/config')
 		var sysLogConfig = getLogLevelConfig();
 		logger4js.info("Get Log Config ");
 
+		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+			logger4js.debug("No Permission to View System Log for user %s", userId);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to View System Log'
+			});
+		}
 		return res.status(200).send({
 			state: 'success',
 			message: 'Log Level Configuration',
@@ -193,6 +215,13 @@ router.route('/config')
 		req.auditDescription = 'SysLog Config (Change)';
 
 		logger4js.info("Put SysLogConfig Log Config ");
+		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+			logger4js.debug("No Permission to View System Log for user %s", userId);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to View System Log'
+			});
+		}
 		var sysLogConfig = getLogLevelConfig();
 		if (req.body.VC) sysLogConfig.VC = req.body.VC
 		if (req.body.VP) sysLogConfig.VP = req.body.VP

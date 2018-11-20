@@ -14,13 +14,7 @@ function generateVcList(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// check if user request sysAdmin View in URL
 	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	// if SysAdmin View in URL, check if the User has sysAdminRole in token
-	if (sysAdmin && req.decoded.status && req.decoded.status.sysAdminRole) {
-		sysAdmin = true;
-	} else {
-		sysAdmin = false;
-	}
-	logger4js.debug("VPV Generate VC List: sysAdminRole %s Method: %s", sysAdmin, req.method);
+	logger4js.debug("VPV Generate VC List: sysAdmin %s Method: %s", sysAdmin, req.method);
 
 	var query = {};
 	// if not sysAdmin generate VC List read Access or for Creating VP with Admin access.

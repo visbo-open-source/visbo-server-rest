@@ -26,7 +26,7 @@ function visboAudit(tokens, req, res) {
 		auditEntry.actionDescription = auditEntry.action
 		var command = auditEntry.url.slice(0, auditEntry.url.indexOf("/", 1));
 		command = command.slice(0, command.indexOf("?", 0));
-		logger4js.debug("VisboAudit Description %s %s", auditEntry.url, command);
+		logger4js.trace("VisboAudit Description %s %s", auditEntry.url, command);
 	}
 	if (req.auditInfo) {
 		auditEntry.actionInfo = req.auditInfo
@@ -74,7 +74,7 @@ function visboAudit(tokens, req, res) {
 		}
 	});
 
-	logger4js.debug("VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
+	logger4js.trace("VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
 }
 
 module.exports = {
