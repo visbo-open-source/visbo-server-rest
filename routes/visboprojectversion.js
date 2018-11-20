@@ -43,21 +43,17 @@ router.route('/')
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
 	* has to specify the query parameter longList.
 	*
-	* With an additional parameter refDate only the latest version before the reference date for each selected project is delivered,
-	* in case refDate ist not specified the current date&time is used.
-	*
-	* With an additional query paramteter vpid=vp5aaf992 the system restricts the list of versions to the specified VP,
-	* if no refDate is specified the system delivers all versions of this project.
-	*
-	* With an additional query paramteter variantName the system restricts the list of versions to the specified VariantName,
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, refDate, varianName, status. 
 	* to query only the main version of a project, use variantName= in the query string.
 	*
-	* @apiParam {Date} refDate Deliver only the latest Version of the project before the reference date
+	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
+	* Date Format is in the form: 2018-10-30T10:00:00Z
+	* @apiParam {Boolean} refNext If refNext is true the system delivers not the version before refDate instead it delivers the version after refDate
 	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
-	* @apiParam {String} variantName Deliver only versions for the specified variant
+	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
-	* In case a refDate is specified the full blown project version is delivered otherwise a reduced list only
 	* @apiPermission user must be authenticated, user must have access to related VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
@@ -78,6 +74,7 @@ router.route('/')
 	*     "Erloes": "100",
 	*     "startDate": "2018-01-01",
 	*     "endDate": "2018-12-31",
+	*     "status": "beauftragt",
 	*     "ampelStatus": "2",
 	*     "variantName": ""
 	*   }]
@@ -90,27 +87,29 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 
+		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
 		var queryvpv = {};
-		var latestOnly = true; 	// as default show latest only project version of all projects
+		var latestOnly = false; 	// as default show latest only project version of all projects
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 		var queryvp = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] };		// Permission for User
 
 		queryvp.deleted = {$exists: false};
-		queryvpv.timestamp =  {$lt: nowDate };
+		// queryvpv.timestamp =  {$lt: nowDate };
 		queryvpv.deleted = {$exists: false};
 		if (req.query) {
 			if (req.query.vpid) {
 				queryvp._id = req.query.vpid;
-				latestOnly = false // if project is specified show all project versions
 			}
 			if (req.query.vcid) {
 				queryvp.vcid = req.query.vcid;
-				latestOnly = false // if vc is specified show all project versions of this vc
+			}
+			if (req.query.status) {
+				queryvpv.status = req.query.status;
 			}
 			if (req.query.refDate){
 				var refDate = new Date(req.query.refDate);
-				queryvpv.timestamp =  {$lt: refDate};
+				queryvpv.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				latestOnly = true;
 			}
 			if (req.query.variantName != undefined){
@@ -122,6 +121,7 @@ router.route('/')
 			}
 		}
 		logger4js.info("Get Project Versions for user %s with VP %s/%s, timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.variantName, queryvpv.timestamp, latestOnly);
+		logger4js.info("Get Project Versions Search VPV %O", queryvpv);
 		var queryVP = VisboProject.find(queryvp)
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
@@ -146,7 +146,10 @@ router.route('/')
 				// deliver only the short info about project versions
 				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
 			}
-			queryVPV.sort('vpid name variantName -timestamp')
+			if (req.query.refNext)
+				queryVPV.sort('vpid name variantName +timestamp')
+			else
+				queryVPV.sort('vpid name variantName -timestamp')
 			queryVPV.exec(function (err, listVPV) {
 				if (err) {
 					return res.status(500).send({
