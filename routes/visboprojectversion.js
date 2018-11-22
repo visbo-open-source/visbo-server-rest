@@ -19,8 +19,6 @@ var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
-// register the VPV middleware to generate the VC List to check for public VPs
-router.use('/', verifyVpv.generateVcList);
 // register the VPV middleware to check that the user has access to the VPV
 router.use('/', verifyVpv.verifyVpv);
 

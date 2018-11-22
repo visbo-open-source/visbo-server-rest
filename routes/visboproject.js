@@ -22,9 +22,9 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 
 var Const = require('../models/constants')
-var permVC = Const.permVC
-var permVP = Const.permVP
-var permSystem = Const.permSystem
+var constPermVC = Const.constPermVC
+var constPermVP = Const.constPermVP
+var constPermSystem = Const.constPermSystem
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -182,9 +182,9 @@ router.route('/')
 		// Get all VCs there the user Group is assigned to
 		if (!isSysAdmin) {
 			var vpidList = [];
-			for (var i=0; i < req.permVPGroups.length; i++) {
-				if (req.permVPGroups[i].vpids) {
-					vpidList = vpidList.concat(req.permVPGroups[i].vpids)
+			for (var i=0; i < req.permGroups.length; i++) {
+				if (req.permGroups[i].vpids) {
+					vpidList = vpidList.concat(req.permGroups[i].vpids)
 				}
 			}
 			logger4js.debug("Get Visbo Project with %d Group VPIDs", vpidList.length);
@@ -326,9 +326,9 @@ router.route('/')
 
 		// Check that the user has Admin permission in the VC
 		var isAdmin = false;
-		logger4js.debug("Check VC Permission %s", req.combinedVCPerm);
+		logger4js.debug("Check VC Permission %O", req.combinedPerm);
 
-		if (!(req.combinedVCPerm & (permVC.View + permVC.CreateVP))) {
+		if (!(req.combinedPerm.vc & (constPermVC.View + constPermVC.CreateVP))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Centers not found or no Admin'
@@ -416,7 +416,7 @@ router.route('/')
 					newVG.name = 'Visbo Project Admin'
 					newVG.groupType = 'VP';
 					newVG.internal = true;
-					newVG.permission = {vp: Const.permVPAll }
+					newVG.permission = {vp: Const.constPermVPAll }
 					newVG.vcid = req.oneVC._id;
 					newVG.global = false;
 					newVG.vpids.push(newVP._id);
@@ -450,7 +450,7 @@ router.route('/')
 					newVGRead.groupType = 'VP Custom'
 					newVGRead.global = false;
 					newVGRead.internal = false;
-					newVGRead.permission = {vp: permVP.View}
+					newVGRead.permission = {vp: constPermVP.View}
 					newVGRead.vcid = req.oneVC._id;
 					newVGRead.vpids.push(newVP._id);
 					newVGRead.users = [];
@@ -584,15 +584,12 @@ router.route('/:vpid')
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
-		var perm = {vc: req.oneVCPerm}
-		perm.vp = req.oneVPPerm;
-		if (isSysAdmin) perm.system = req.oneSystemPerm
 		// we have found the VP already in middleware
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Projects',
 			vp: [req.oneVP],
-			perm: perm
+			perm: req.combinedPerm
 		});
 	})
 
@@ -658,7 +655,7 @@ router.route('/:vpid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Update)';
 
-		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %s", userId, useremail, req.params.vpid, req.oneVPPerm);
+		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
 
 		if (!req.body) {
 			return res.status(400).send({
@@ -667,16 +664,16 @@ router.route('/:vpid')
 			});
 		}
 		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
-			logger4js.debug("Undelete Visbo Project %s perm %s Delete Perm %s Modify Perm %s", req.oneVP._id, req.oneVPPerm, req.oneVPPerm & permVP.Delete, req.oneVPPerm & permVP.Modify);
+			logger4js.debug("Undelete Visbo Project %s perm %O", req.oneVP._id, req.combinedPerm);
 
-			if (!(req.oneVPPerm & permVP.Delete)) {
+			if (!(req.combinedPerm.vp & constPermVP.Delete)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
 				});
 			}
 		} else {
-			if (!(req.oneVPPerm & permVP.Modify)) {
+			if (!(req.combinedPerm.vp & constPermVP.Modify)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
@@ -886,7 +883,7 @@ router.route('/:vpid')
 
 		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s  ", userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (!(req.oneVPPerm & permVP.Delete)) {
+		if (!(req.combinedPerm.vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: "failure",
 				message: "No permission to delete Visbo Project"
@@ -1111,7 +1108,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
-		if (resultLock.locked && !(req.oneVPPerm & permVP.Modify)) {	// lock from a different user and no Admin, deny to delete
+		if (resultLock.locked && !(req.combinedPerm.vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
 			logger4js.warn("Delete Lock for VP :%s: Project is locked by another user Locks \n %O", req.oneVP.name, req.oneVP.lock);
 			return res.status(403).send({
 				state: 'failure',
@@ -1275,7 +1272,7 @@ router.route('/:vpid/variant/:vid')
 		var variantName = req.oneVP.variant[variantIndex].variantName;
 		req.auditInfo = variantName;
 		//variant belongs to a different user and curr. user is not an Admin
-		if (req.oneVP.variant[variantIndex].email != useremail && !(req.oneVPPerm & permVP.Modify)) {
+		if (req.oneVP.variant[variantIndex].email != useremail && !(req.combinedPerm.vp & constPermVP.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete',

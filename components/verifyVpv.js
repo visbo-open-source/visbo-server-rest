@@ -7,45 +7,6 @@ var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-// Generate VP List for permission check of public VPs
-function generateVcList(req, res, next) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	// check if user request sysAdmin View in URL
-	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	logger4js.debug("VPV Generate VC List: sysAdmin %s Method: %s", sysAdmin, req.method);
-
-	var query = {};
-	// if not sysAdmin generate VC List read Access or for Creating VP with Admin access.
-	if (!sysAdmin) {
-			// GET the VC List Read Access to check for public VP access
-			query = {'users.email': useremail};				// Any Access for read operation
-			query.deleted =  {$exists: false};				// Not deleted
-			var queryVC = VisboCenter.find(query);
-			queryVC.select('_id');
-			queryVC.exec(function (err, listVC) {
-				if (err) {
-					logger4js.fatal("VP Verify Access Permission DB Connection ", err);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
-				};
-				logger4js.debug("VPV Generate VC List: Found %d Visbo Centers", listVC.length);
-				req.listVC = [];
-				for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
-
-				logger4js.debug("VPV Generate VC List: continue next");
-				return next();
-			});
-	} else {
-		logger4js.debug("VPV Generate VC List: skip VP List Generation");
-		return next();
-	}
-}
-
 // Verify Visbo Project and the role of the user
 function verifyVpv(req, res, next) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
@@ -115,6 +76,5 @@ function verifyVpv(req, res, next) {
 }
 
 module.exports = {
-	verifyVpv: verifyVpv,
-	generateVcList: generateVcList
+	verifyVpv: verifyVpv
 };

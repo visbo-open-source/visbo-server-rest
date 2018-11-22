@@ -1,8 +1,8 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants')
-var permSystem = Const.permSystem
-var permVC = Const.permVC
-var permVP = Const.permVP
+var constPermSystem = Const.constPermSystem
+var constPermVC = Const.constPermVC
+var constPermVP = Const.constPermVP
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
@@ -11,50 +11,6 @@ var VisboGroup = mongoose.model('VisboGroup');
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-
-// Generate VC List for permission check of public VPs
-function generateVcList(req, res, next) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	// check if user request sysAdmin View in URL
-	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	logger4js.debug("Generate VC List: sysAdmin %s Method: %s", sysAdmin, req.method);
-
-	var query = {};
-	// if not sysAdmin generate VC List read Access or for Creating VP with Admin access.
-	if (!sysAdmin) {
-		var userAccess = true;
-		if (req.method == 'POST' && req.url.split("?")[0] == '/') userAccess = false;
-			// GET the VC List to check for public VP access
-			if (userAccess)
-				query = {'users.email': useremail};				// Any Access for read operation
-			else
-				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};	 // Admin access for Modification
-
-			query.deleted =  {$exists: false};				// Not deleted
-			var queryVC = VisboCenter.find(query);
-			queryVC.select('_id');
-			queryVC.exec(function (err, listVC) {
-				if (err) {
-					logger4js.fatal("VP Verify Access Permission DB Connection ", err);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
-				};
-				logger4js.debug("Generate VC List: Found %d Visbo Centers", listVC.length);
-				req.listVC = [];
-				for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
-				logger4js.debug("Generate VC List: continue next");
-				return next();
-			});
-	} else {
-		logger4js.debug("Generate VC List: skip VC List Generation");
-		return next();
-	}
-}
 
 // Verify Visbo Project and the role of the user
 function verifyVp(req, res, next) {
@@ -74,8 +30,7 @@ function verifyVp(req, res, next) {
 
 	var urlComponent = baseUrl.split("/")
 	var userAccess = false;
-	var check432
-	dVP = false;
+	var checkDeletedVP = false;
 	// read access for all GET Operations
 	if (req.method == "GET") userAccess = true;
 	if (urlComponent.length >= 3) {
@@ -167,12 +122,12 @@ function getAllVPGroups(req, res, next) {
 		if (req.method == "GET") {
 			if (req.query.sysadmin) {
 				query.groupType = 'System';						// search for System Groups only
-				query['permission.vp'] = { $bitsAllSet: permVP.View }
+				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
 				if (req.query.vcid) query.vcid = req.query.vcid;
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
-				query['permission.vp'] = { $bitsAllSet: permVP.View }
+				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 			}
 		}
 		if (req.method == "POST") {
@@ -181,7 +136,7 @@ function getAllVPGroups(req, res, next) {
 			query.groupType = 'VC';						// search for VC permission to create a VP
 			query.vcid = req.body && req.body.vcid
 			acceptEmpty = false;
-			query['permission.vc'] = { $bitsAnySet: permVC.View + permVC.CreateVP }
+			query['permission.vc'] = { $bitsAnySet: constPermVC.View + constPermVC.CreateVP }
 		}
 
 		logger4js.debug("Query VGs %s", JSON.stringify(query));
@@ -198,16 +153,7 @@ function getAllVPGroups(req, res, next) {
 			}
 			logger4js.debug("Found VGs %d", listVG.length);
 			// Convert the result to request
-			var combinedVCPerm = 0;
-
-			req.permVCGroups = listVG;
-			for (var i=0; i < req.permVCGroups.length; i++) {
-				combinedVCPerm = combinedVCPerm | (req.permVCGroups[i].permission.vc || 0);
-			}
-			req.combinedVCPerm = combinedVCPerm
-
-			req.permVPGroups = listVG;
-
+			req.permGroups = listVG;
 			logger4js.trace("Found VPGroups %s", JSON.stringify(listVG));
 			if (!acceptEmpty && listVG.length == 0) {
 				// do not accept requests without a group assignement especially to System Group
@@ -215,6 +161,16 @@ function getAllVPGroups(req, res, next) {
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
 				});
+			}
+
+			if (req.query.sysadmin) {
+				// combined permission only applicable if it does not combine diffeent VCIDs
+				for (var i=0; i < req.permGroups.length; i++) {
+					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+					combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+					combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
+				}
+				req.combinedPerm = combinedPerm;
 			}
 			return next();
 		});
@@ -241,11 +197,11 @@ function getVpidGroups(req, res, next, vpid) {
 	query = {'users.userId': userId};	// search for VP groups where user is member
 	if (sysAdmin) {
 		query.groupType = 'System';						// search for System Groups only
-		query['permission.vp'] = { $bitsAllSet: permVP.View }
+		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 		acceptEmpty = false;
 	} else {
 		query.groupType = {$in: ['VC', 'VP']};				// search for VC/VP Groups only
-		query['permission.vp'] = { $bitsAllSet: permVP.View }
+		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 		// check that vpid is in the group list
 		query.vpids = vpid;
 	}
@@ -264,7 +220,7 @@ function getVpidGroups(req, res, next, vpid) {
 		}
 		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
-		req.permVPGroups = listVG;
+		req.permGroups = listVG;
 		if (listVG.length == 0) {
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({
@@ -279,17 +235,16 @@ function getVpidGroups(req, res, next, vpid) {
 		// }
 		// check against the groups
 		var vpidList = [];
-		var combinedVPPerm = 0;
-		var combinedVCPerm = 0;
-		var combinedSystemPerm = 0;
-		for (var i=0; i < req.permVPGroups.length; i++) {
+		var combinedPerm = {system: 0, vc: 0, vp: 0};
+		for (var i=0; i < req.permGroups.length; i++) {
 			// TODO build the correct vpid list from vpids
-			// vpidList.push(req.permVPGroups[i].vpid);
-			combinedVPPerm = combinedVPPerm | (req.permVPGroups[i].permission.vp || 0);
-			combinedVCPerm = combinedVCPerm | (req.permVPGroups[i].permission.vc || 0);
-			combinedSystemPerm = combinedSystemPerm | (req.permVPGroups[i].permission.system || 0);
+			// vpidList.push(req.permGroups[i].vpid);
+			combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+			combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+			combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
 		}
-		logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm VP %d VC %d System %d", vpid, req.permVPGroups.length, combinedVPPerm, combinedVCPerm, combinedSystemPerm);
+		if (!sysAdmin) delete combinedPerm.system
+		logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", vpid, req.permGroups.length, combinedPerm);
 		var query = {};
 		query._id = vpid;
 		query.deleted =  {$exists: checkDeletedVP};
@@ -316,11 +271,9 @@ function getVpidGroups(req, res, next, vpid) {
 				});
 			}
 			req.oneVP = oneVP
-			req.oneVPPerm = combinedVPPerm;
-			req.oneVCPerm = combinedVCPerm;
-			req.oneSystemPerm = combinedSystemPerm;
+			req.combinedPerm = combinedPerm;
 
-			logger4js.debug("Found Visbo Project %s Access Permission VP %d System %d", vpid, req.oneVPPerm, req.oneSystemPerm);
+			logger4js.debug("Found Visbo Project %s Access Permission %O", vpid, req.combinedPerm);
 			return next();
 		});
 	});
@@ -328,7 +281,6 @@ function getVpidGroups(req, res, next, vpid) {
 
 module.exports = {
 	verifyVp: verifyVp,
-	generateVcList: generateVcList,
 	getAllVPGroups: getAllVPGroups,
 	getVpidGroups: getVpidGroups
 };

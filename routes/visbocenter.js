@@ -19,9 +19,9 @@ var VCCost = mongoose.model('VCCost');
 var VisboAudit = mongoose.model('VisboAudit');
 
 var Const = require('../models/constants')
-var permVC = Const.permVC
-var permVP = Const.permVP
-var permSystem = Const.permSystem
+var constPermVC = Const.constPermVC
+var constPermVP = Const.constPermVP
+var constPermSystem = Const.constPermSystem
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -112,74 +112,72 @@ router.route('/')
 	*   }]
 	* }
 	*/
-// Get Visbo Centers
-.get(function(req, res) {
-		// no need to check authentication, already done centrally
-		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
-		var isSysAdmin = req.query.sysadmin ? true : false;
+	// Get Visbo Centers
+	.get(function(req, res) {
+			// no need to check authentication, already done centrally
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var isSysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		req.auditDescription = 'Visbo Center (Read)';
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Center (Read)';
 
-		logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
+			logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
 
-		var query = {};
-		// Get all VCs there the user Group is assigned to
-		if (!isSysAdmin) {
-			var vcidList = [];
-			for (var i=0; i < req.permVCGroups.length; i++) {
-				vcidList.push(req.permVCGroups[i].vcid)
+			var query = {};
+			// Get all VCs there the user Group is assigned to
+			if (!isSysAdmin) {
+				var vcidList = [];
+				for (var i=0; i < req.permGroups.length; i++) {
+					vcidList.push(req.permGroups[i].vcid)
+				}
+				logger4js.debug("Get Visbo Center with %d Group VCIDs", vcidList.length);
+				query._id = {$in: vcidList};
 			}
-			logger4js.debug("Get Visbo Center with %d Group VCIDs", vcidList.length);
-			query._id = {$in: vcidList};
-		}
 
-		// check for deleted only for sysAdmins
-		if (isSysAdmin && req.query.deleted) {
-			// query['deleted.deletedAt'] = {$exists: true}				//  deleted
-			query.deleted = {$exists: true}				//  deleted
-		} else {
-			// query['deleted.deletedAt'] = {$exists: false}				// Not deleted
-			query.deleted = {$exists: false}				// Not deleted
-		}
-		query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
-		logger4js.debug("Check for VC query %O", query);
-
-		var queryVC = VisboCenter.find(query);
-		//queryVC.select('name users updatedAt createdAt');
-		queryVC.exec(function (err, listVC) {
-			if (err) {
-				logger4js.fatal("VC Get DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting VisboCenters',
-					error: err
-				});
-			}
-			logger4js.debug("Found VCs %d", listVC.length);
-			req.auditInfo = listVC.length;
-
-			if (isSysAdmin) {
-				var perm = {}
-				perm.system = req.oneSystemPerm
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Centers',
-					count: listVC.length,
-					vc: listVC,
-					perm: perm
-				});
+			// check for deleted only for sysAdmins
+			if (isSysAdmin && req.query.deleted) {
+				// query['deleted.deletedAt'] = {$exists: true}				//  deleted
+				query.deleted = {$exists: true}				//  deleted
 			} else {
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Centers',
-					count: listVC.length,
-					vc: listVC
-				});
+				// query['deleted.deletedAt'] = {$exists: false}				// Not deleted
+				query.deleted = {$exists: false}				// Not deleted
 			}
-		});
-	})
+			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
+			logger4js.debug("Check for VC query %O", query);
+
+			var queryVC = VisboCenter.find(query);
+			//queryVC.select('name users updatedAt createdAt');
+			queryVC.exec(function (err, listVC) {
+				if (err) {
+					logger4js.fatal("VC Get DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenters',
+						error: err
+					});
+				}
+				logger4js.debug("Found VCs %d", listVC.length);
+				req.auditInfo = listVC.length;
+
+				if (isSysAdmin) {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Centers',
+						count: listVC.length,
+						vc: listVC,
+						perm: req.combinedPerm
+					});
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Centers',
+						count: listVC.length,
+						vc: listVC
+					});
+				}
+			});
+		})
 
 	/**
 	 * @api {post} /vc Create a Visbo Center
@@ -239,45 +237,31 @@ router.route('/')
 	 * }
 	 */
 // Create a Visbo Center
-.post(function(req, res) {
-	// User is authenticated already
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	var name = (req.body.name || '').trim();
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	req.auditDescription = 'Visbo Center (Create)';
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var name = (req.body.name || '').trim();
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center (Create)';
 
-	logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
-	logger4js.info("Post a new Visbo Center with name %s executed by user %s ", name, useremail);
+		logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
+		logger4js.info("Post a new Visbo Center with name %s executed by user %s Perm %O ", name, useremail, req.combinedPerm);
 
-	if (name == '') {
-		return res.status(400).send({
-			state: "failure",
-			message: "Empty Visbo Center Name not allowed"
-		});
-	}
-	// check that user has admin permission in system
-	var query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};;
-	query.system = true;
-	// query['deleted.deletedAt'] = {$exists: false};
-	query.deleted = {$exists: false};
-	VisboCenter.findOne(query, function(err, vc) {
-		if (err) {
-			logger4js.fatal("VC Post DB Connection ", err);
-			return res.status(500).send({
+		if (name == '') {
+			return res.status(400).send({
 				state: "failure",
-				message: "database error",
-				error: err
+				message: "Empty Visbo Center Name not allowed"
 			});
 		}
-		if (!vc) {
+		if (!(req.combinedPerm.system & constPermSystem.CreateVC)) {
 			return res.status(403).send({
 				state: "failure",
-				message: "No permission to create Visbo Center"
+				message: "No permission to delete Visbo Center"
 			});
 		}
 		// check that VC name is unique
-		query = {};
+		var query = {};
 		query.name = name;								// name Duplicate check
 		// query['deleted.deletedAt'] = {$exists: false};
 		query.deleted = {$exists: false};
@@ -304,10 +288,9 @@ router.route('/')
 			// Check for Valid User eMail remove non existing eMails
 
 			// check the users that they exist already, if not ignore the non existing users
-			var i;
 			var vcUsers = new Array();
 			if (req.body.users) {
-				for (i = 0; i < req.body.users.length; i++) {
+				for (var i=0; i < req.body.users.length; i++) {
 					req.body.users[i].email = req.body.users[i].email.toLowerCase();
 					// build up unique user list vcUsers to check that they exist
 					if (!vcUsers.find(findUser, req.body.users[i].email)){
@@ -336,7 +319,7 @@ router.route('/')
 				newVG.groupType = 'VC';
 				newVG.internal = true;
 				newVG.global = true;
-				newVG.permission = {vc: Const.permVCAll }
+				newVG.permission = {vc: Const.constPermVCAll }
 				newVG.vcid = newVC._id;
 				newVG.users = [];
 				if (req.body.users) {
@@ -369,7 +352,7 @@ router.route('/')
 				newVGRead.groupType = 'VC'
 				newVGRead.internal = false;
 				newVGRead.global = false;
-				newVGRead.permission = {vc: permVC.View}
+				newVGRead.permission = {vc: constPermVC.View}
 				newVGRead.vcid = newVC._id;
 				newVGRead.users = [];
 				if (req.body.users) {
@@ -437,8 +420,7 @@ router.route('/')
 				});
 			});
 		});
-	});
-})
+	})
 
 router.route('/:vcid')
  /**
@@ -494,13 +476,11 @@ router.route('/:vcid')
 
 		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
 		// we have found the VC already in middleware
-		var perm = {vc: req.oneVCPerm}
-		if (isSysAdmin) perm.system = req.oneSystemPerm
 		return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',
 				vc: [req.oneVC],
-				perm: perm
+				perm: req.combinedPerm
 			});
 	})
 
@@ -562,7 +542,7 @@ router.route('/:vcid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Update)';
 
-		logger4js.info("PUT/Save Visbo Center for userid %s vc %s oneVC %s Perm %s ", userId, req.params.vcid, req.oneVC.name, req.oneVCPerm);
+		logger4js.info("PUT/Save Visbo Center for userid %s vc %s oneVC %s Perm %O ", userId, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
 		if (!req.body) {
 			return res.status(400).send({
@@ -570,20 +550,11 @@ router.route('/:vcid')
 				message: 'No Body provided for update'
 			});
 		}
-		if (req.query && req.query.sysadmin) {
-			if (!(req.oneSystemPerm & permSystem.ManageVC)) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Visbo Center or no Permission'
-				});
-			}
-		} else {
-			if (!(req.oneVCPerm & permVC.Modify)) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Visbo Center or no Permission'
-				});
-			}
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Center or no Permission'
+			});
 		}
 		var name = (req.body.name || '').trim();
 		if (name == '') name = req.oneVC.name;
@@ -735,9 +706,9 @@ router.route('/:vcid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Delete)';
 
-		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is SysAdminPerm %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneSystemPerm);
+		logger4js.info("DELETE Visbo Center for userid %s email %s and vc %s oneVC %s is SysAdminPerm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 		// user is sysAdmin
-		if (!(req.oneSystemPerm & permSystem.DeleteVC) || req.oneVC.system) {
+		if (!(req.combinedPerm.system & constPermSystem.DeleteVC) || req.oneVC.system) {
 			return res.status(403).send({
 				state: "failure",
 				message: "No permission to delete Visbo Center"
@@ -828,60 +799,60 @@ router.route('/:vcid/audit')
  	* }
 	*/
 // Get audit trail for a specific VC
-.get(function(req, res) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	req.auditDescription = 'Visbo Center Audit (Read)';
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Audit (Read)';
 
-	logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
-	if (!(req.oneVCPerm & permVC.ViewAudit)) {
-		return res.status(403).send({
-				state: 'failure',
-				message: 'You need to have Admin permission to get audit trail'
-			});
-	}
-
-	var from, to, maxcount = 1000;
-	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
-	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
-	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
-	// no date is set to set to to current Date and recalculate from afterwards
-	if (!from && !to) to = new Date();
-	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
-	if (!from) {
-		from = new Date(to);
-		from.setDate(from.getDate()-1)
-	}
-	if (!to) {
-		to = new Date(from);
-		to.setDate(to.getDate()+1)
-	}
-	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
-
-	var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
-	// now fetch all entries related to this vc
-	VisboAudit.find(query)
-	.limit(maxcount)
-	.sort({createdAt: -1})
-	.exec(function (err, listVCAudit) {
-		if (err) {
-			logger4js.fatal("VC Audit Get DB Connection ", err);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboCenter Audit',
-				error: err
-			});
+		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
+			return res.status(403).send({
+					state: 'failure',
+					message: 'You need to have Admin permission to get audit trail'
+				});
 		}
-		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
-		return res.status(200).send({
-			state: 'success',
-			message: 'Returned Visbo Center Audit',
-			audit: listVCAudit
+
+		var from, to, maxcount = 1000;
+		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
+		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
+		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
+		// no date is set to set to to current Date and recalculate from afterwards
+		if (!from && !to) to = new Date();
+		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+		if (!from) {
+			from = new Date(to);
+			from.setDate(from.getDate()-1)
+		}
+		if (!to) {
+			to = new Date(from);
+			to.setDate(to.getDate()+1)
+		}
+		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
+
+		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
+		// now fetch all entries related to this vc
+		VisboAudit.find(query)
+		.limit(maxcount)
+		.sort({createdAt: -1})
+		.exec(function (err, listVCAudit) {
+			if (err) {
+				logger4js.fatal("VC Audit Get DB Connection ", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting VisboCenter Audit',
+					error: err
+				});
+			}
+			logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Center Audit',
+				audit: listVCAudit
+			});
 		});
-	});
-})
+	})
 
 router.route('/:vcid/group')
 
@@ -928,7 +899,7 @@ router.route('/:vcid/group')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Group (Read)';
 
-		logger4js.info("Get Visbo Center Group for userid %s email %s and vc %s oneVC %s Perm %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCPerm);
+		logger4js.info("Get Visbo Center Group for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
 		var query = {};
 		query.vcid = req.oneVC._id;
@@ -1014,32 +985,43 @@ router.route('/:vcid/group')
 		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+		var groupType;
 
 		var vgName = req.body.name ? req.body.name.trim() : '';
-		var vgVCPerm = 0;
-		var vgVPPerm = 0;
+		var newPerm = {};
 		var vgGlobal = req.body.global == true;
-		if ( req.body.permission && req.body.permission.vc) {
-			vgVCPerm = Number(req.body.permission.vc) & Const.permVCAll
-		}
-		if ( vgGlobal && req.body.permission && req.body.permission.vp) {
-			vgVPPerm = Number(req.body.permission.vp) & Const.permVPAll
+		// TODO Do we still need this?????
+		groupType = req.oneVC.system ? 'System' : 'VC';
+		if ( req.body.permission ) {
+			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
+			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 		}
 		if (req.body.name) req.body.name = req.body.name.trim();
 
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Group (Create)';
 
-		logger4js.debug("Post a new Visbo Center Group Req Body: %O Name %s Perm %d", req.body, vgName, vgVCPerm);
 		logger4js.info("Post a new Visbo Center Group with name %s executed by user %s ", req.body.name, useremail);
+		logger4js.debug("Post a new Visbo Center Group Req Body: %O Name %s Perm %O", req.body, vgName, req.combinedPerm);
 
-		if (!(req.oneVCPerm & permVC.ManagePerm)) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Visbo Center or no Permission'
-			});
+		if (groupType == 'VC') {
+			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+		} else {
+			if (!(req.combinedPerm.system & constPermSystem.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
 		}
-		if (!req.body.name || !(vgVCPerm > 0)) {
+		if (!req.body.name) {
 			logger4js.info("Body is inconsistent VC %s Body %O", req.oneVC._id, req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -1071,10 +1053,8 @@ router.route('/:vcid/group')
 			vcGroup.name = req.body.name;
 			vcGroup.vcid = req.params.vcid;
 			vcGroup.global = vgGlobal;
-			vcGroup.permission = {};
-			vcGroup.permission.vc = vgVCPerm;
-			if (vgVPPerm > 0) vcGroup.permission.vp = vgVPPerm;
-			vcGroup.groupType = "VC";
+			vcGroup.permission = newPerm;
+			vcGroup.groupType = groupType;
 			vcGroup.internal = false;
 			vcGroup.save(function(err, oneVcGroup) {
 				if (err) {
@@ -1136,7 +1116,7 @@ router.route('/:vcid/group/:groupid')
 		req.auditInfo = req.oneGroup.name;
 		logger4js.info("DELETE Visbo Center Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vcid, req.params.groupid);
 
-		if (!(req.oneVCPerm & permVC.Modify)) {
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -1211,36 +1191,52 @@ router.route('/:vcid/group/:groupid')
 		req.auditDescription = 'Visbo Center Group (Update)';
 
 		var vgName = req.body.name ? req.body.name.trim() : '';
-		var vgVCPerm = undefined;
-		var vgVPPerm = undefined;
-		var vgGlobal = undefined;
+		var newPerm = {};
+		var vgGlobal = req.oneGroup.global == true;
 		if (req.body.global != undefined)
 			vgGlobal = req.body.global == true;
 		logger4js.debug("Get Global Flag %s process %s", req.body.global, vgGlobal);
-		// TODO Check what happens if it is not a number
-		if ( req.body.permission && req.body.permission.vc) {
-			vgVCPerm = Number(req.body.permission.vc) & Const.permVCAll
-		}
-		if ( vgGlobal && req.body.permission && req.body.permission.vp) {
-			vgVPPerm = Number(req.body.permission.vp) & Const.permVPAll
+		if ( req.body.permission ) {
+			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
+			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 		}
 
-		logger4js.info("PUT Visbo Center Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vcid, req.params.groupid);
+		logger4js.info("PUT Visbo Center Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vcid, req.params.groupid, req.combinedPerm);
 
-		if (!(req.oneVCPerm & permVC.ManagePerm)) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Visbo Center or no Permission'
-			});
+		if (groupType == 'VC') {
+			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+		} else {
+			if (!(req.combinedPerm.system & constPermSystem.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
 		}
 		logger4js.debug("Update Visbo Center Group after premission check vcid %s groupName %s", req.params.vcid, req.oneGroup.name);
 
-		var minimalPerm = permVC.View | permVC.ManagePerm;
-		if (req.oneGroup.groupType == 'VC' && vgVCPerm && (vgVCPerm & minimalPerm) != minimalPerm  ) {
-			return res.status(400).send({
-				state: 'failure',
-				message: 'No Valid Permission'
-			});
+		if (req.oneGroup.groupType == 'VC') {
+			var minimalPerm = constPermVC.View | constPermVC.ManagePerm;
+			if (req.oneGroup.internal == true && (newPerm.vc & minimalPerm) != minimalPerm  ) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Valid Permission for internal group'
+				});
+			}
+		} else {
+			var minimalPerm = constPermSystem.View | constPermSystem.ManagePerm;
+			if (req.oneGroup.internal == true && (newPerm.system & minimalPerm) != minimalPerm  ) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Valid Permission for internal group'
+				});
+			}
 		}
 		// query vpids to fill in if group is global
 		var query = {};
@@ -1258,14 +1254,12 @@ router.route('/:vcid/group/:groupid')
 				});
 			};
 			logger4js.debug("Found %d Projects", listVP.length);
-			logger4js.debug("Found Projects/n", listVP);
+			// logger4js.debug("Found Projects/n", listVP);
 
 			// fill in the required fields
 			if (vgName) req.oneGroup.name = vgName;
-			if (vgVCPerm != undefined) req.oneGroup.permission.vc = vgVCPerm;
-			if (vgVPPerm != undefined) req.oneGroup.permission.vp = vgVPPerm;
-			logger4js.debug("Switch Global Flag? %s", vgGlobal);
-			if (vgGlobal != undefined) {
+			req.oneGroup.permission = newPerm;
+			if (vgGlobal != req.oneGroup.global) {
 				// switch global group setting, handle vpids
 				logger4js.debug("Switch Global Flag %s", vgGlobal);
 				req.oneGroup.vpids = [];
@@ -1279,6 +1273,7 @@ router.route('/:vcid/group/:groupid')
 				}
 				req.oneGroup.global = vgGlobal;
 			}
+			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 			req.oneGroup.save(function(err, oneVcGroup) {
 				if (err) {
 					logger4js.fatal("VC Put Group DB Connection ", err);
@@ -1342,137 +1337,77 @@ router.route('/:vcid/group/:groupid')
 		*/
 
 	// Add User to Visbo Center Group
-		.post(function(req, res) {
-			// User is authenticated already
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-			logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, useremail, req.permVC);
-			req.auditDescription = 'Visbo Center User (Add)';
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, useremail, req.constPermVC);
+		req.auditDescription = 'Visbo Center User (Add)';
 
-			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
-			if (!req.body.email) {
-				return res.status(400).send({
+		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
+		if (!req.body.email) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid user definition'
+			});
+		}
+
+		req.auditInfo = req.body.email;
+		// TODO: verify check for System VC & SysAdmin
+		if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Center or no Permission'
+			});
+		}
+		logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
+
+		var vcUser = new VCGroupUser();
+		var eMailMessage = undefined;
+		if (req.body.message) {
+			eMailMessage = req.body.message;
+		}
+		vcUser.email = req.body.email;
+
+		// check if the user is not member of the group already
+		if (req.oneGroup.users.filter(users => (users.email == vcUser.email)).length != 0) {
+			logger4js.debug("Post User %s to VC Group %s User is already a member", vcUser.email, req.oneGroup._id);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'User is already member',
+				groups: [req.oneGroup]
+			});
+		}
+		// check if the user exists and get the UserId or create the user
+		var queryUsers = User.findOne({'email': vcUser.email});
+		//queryUsers.select('email');
+		queryUsers.exec(function (err, user) {
+			if (err) {
+				logger4js.fatal("Post User to Group cannot find User, DB Connection %s", err);
+				return res.status(500).send({
 					state: 'failure',
-					message: 'No valid user definition'
+					message: 'Error getting Users for VisboCenters',
+					error: err
 				});
 			}
-
-			req.auditInfo = req.body.email;
-			// TODO: verify check for System VC & SysAdmin
-			if (!((req.oneVCPerm & permVC.ManagePerm) || (req.oneSystemPerm & permSystem.ManageVC))) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Visbo Center or no Permission'
-				});
-			}
-			logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
-
-			var vcUser = new VCGroupUser();
-			var eMailMessage = undefined;
-			if (req.body.message) {
-				eMailMessage = req.body.message;
-			}
-			vcUser.email = req.body.email;
-
-			// check if the user is not member of the group already
-			if (req.oneGroup.users.filter(users => (users.email == vcUser.email)).length != 0) {
-				logger4js.debug("Post User %s to VC Group %s User is already a member", vcUser.email, req.oneGroup._id);
-				return res.status(400).send({
-					state: 'failure',
-					message: 'User is already member',
-					groups: [req.oneGroup]
-				});
-			}
-			// check if the user exists and get the UserId or create the user
-			var queryUsers = User.findOne({'email': vcUser.email});
-			//queryUsers.select('email');
-			queryUsers.exec(function (err, user) {
-				if (err) {
-					logger4js.fatal("Post User to Group cannot find User, DB Connection %s", err);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error getting Users for VisboCenters',
-						error: err
-					});
-				}
-				if (!user) {
-					user = new User();
-					user.email = vcUser.email;
-					logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
-					user.save(function(err, user) {
-						if (err) {
-							logger4js.error("Add User to VC: Error DB Connection %O", err);
-							return res.status(500).send({
-								state: "failure",
-								message: "database error, failed to create user",
-								error: err
-							});
-						}
-						// user exists now, now the VC can be updated
-						vcUser.userId = user._id;
-
-						req.oneGroup.users.push(vcUser)
-						req.oneGroup.save(function(err, vcGroup) {
-							if (err) {
-								logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
-								return res.status(500).send({
-									state: "failure",
-									message: "database error, failed to update Visbo Group",
-									error: err
-								});
-							}
-							req.oneGroup = vcGroup;
-							// now send an e-Mail to the user for registration
-							var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
-							var uiUrl =  'http://localhost:4200'
-							if (process.env.UI_URL != undefined) {
-								uiUrl = process.env.UI_URL;
-							}
-
-							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
-							var hash = createHash(secret);
-							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
-
-							logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-							if (eMailMessage === undefined) {
-									// do not send invitation mail if no message is specified
-									return res.status(200).send({
-										state: "success",
-										message: "Successfully added User to Visbo Group",
-										groups: [ vcGroup ]
-									});
-							} else {
-								ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
-									if (err) {
-										logger4js.fatal("E-Mail Rendering failed %O", err);
-										return res.status(500).send({
-											state: "failure",
-											message: "E-Mail Rendering failed",
-											error: err
-										});
-									}
-									// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
-									var message = {
-											from: useremail,
-											to: user.email,
-											subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
-											html: '<p> '.concat(emailHtml, " </p>")
-									};
-									logger4js.info("Now send mail from %s to %s", message.from, message.to);
-									mail.VisboSendMail(message);
-									return res.status(200).send({
-										state: "success",
-										message: "Successfully added User to Visbo Center",
-										groups: [ vcGroup ]
-									});
-								});
-							}
-						})
-					});
-				} else {
+			if (!user) {
+				user = new User();
+				user.email = vcUser.email;
+				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
+				user.save(function(err, user) {
+					if (err) {
+						logger4js.error("Add User to VC: Error DB Connection %O", err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error, failed to create user",
+							error: err
+						});
+					}
+					// user exists now, now the VC can be updated
 					vcUser.userId = user._id;
+
 					req.oneGroup.users.push(vcUser)
 					req.oneGroup.save(function(err, vcGroup) {
 						if (err) {
@@ -1484,25 +1419,16 @@ router.route('/:vcid/group/:groupid')
 							});
 						}
 						req.oneGroup = vcGroup;
-						// now send an e-Mail to the user for registration/login
-						var template = __dirname.concat('/../emailTemplates/');
+						// now send an e-Mail to the user for registration
+						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
 						var uiUrl =  'http://localhost:4200'
-						var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
 						if (process.env.UI_URL != undefined) {
 							uiUrl = process.env.UI_URL;
 						}
-						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
-						if (user.status && user.status.registeredAt) {
-							// send e-Mail to a registered user
-							template = template.concat('inviteVCExistingUser.ejs');
-							uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
-						} else {
-							// send e-Mail to an existing but unregistered user
-							template = template.concat('inviteVCNewUser.ejs');
-							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
-							var hash = createHash(secret);
-							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
-						}
+
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 						if (eMailMessage === undefined) {
@@ -1522,10 +1448,11 @@ router.route('/:vcid/group/:groupid')
 										error: err
 									});
 								}
+								// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 								var message = {
 										from: useremail,
 										to: user.email,
-										subject: eMailSubject,
+										subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
 										html: '<p> '.concat(emailHtml, " </p>")
 								};
 								logger4js.info("Now send mail from %s to %s", message.from, message.to);
@@ -1533,14 +1460,82 @@ router.route('/:vcid/group/:groupid')
 								return res.status(200).send({
 									state: "success",
 									message: "Successfully added User to Visbo Center",
-									users: [ vcUser ]
+									groups: [ vcGroup ]
 								});
 							});
 						}
 					})
-				}
-			})
+				});
+			} else {
+				vcUser.userId = user._id;
+				req.oneGroup.users.push(vcUser)
+				req.oneGroup.save(function(err, vcGroup) {
+					if (err) {
+						logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+						return res.status(500).send({
+							state: "failure",
+							message: "database error, failed to update Visbo Group",
+							error: err
+						});
+					}
+					req.oneGroup = vcGroup;
+					// now send an e-Mail to the user for registration/login
+					var template = __dirname.concat('/../emailTemplates/');
+					var uiUrl =  'http://localhost:4200'
+					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+					logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
+					if (user.status && user.status.registeredAt) {
+						// send e-Mail to a registered user
+						template = template.concat('inviteVCExistingUser.ejs');
+						uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
+					} else {
+						// send e-Mail to an existing but unregistered user
+						template = template.concat('inviteVCNewUser.ejs');
+						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+						var hash = createHash(secret);
+						uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+					}
+
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					if (eMailMessage === undefined) {
+							// do not send invitation mail if no message is specified
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully added User to Visbo Group",
+								groups: [ vcGroup ]
+							});
+					} else {
+						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+								return res.status(500).send({
+									state: "failure",
+									message: "E-Mail Rendering failed",
+									error: err
+								});
+							}
+							var message = {
+									from: useremail,
+									to: user.email,
+									subject: eMailSubject,
+									html: '<p> '.concat(emailHtml, " </p>")
+							};
+							logger4js.info("Now send mail from %s to %s", message.from, message.to);
+							mail.VisboSendMail(message);
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully added User to Visbo Center",
+								users: [ vcUser ]
+							});
+						});
+					}
+				})
+			}
 		})
+	})
 
 	router.route('/:vcid/group/:groupid/user/:userid')
 
@@ -1578,7 +1573,7 @@ router.route('/:vcid/group/:groupid')
 		var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
 		if (delUser) req.auditInfo = delUser.email  + ' from ' + req.oneGroup.name;
 
-		if (!((req.oneVCPerm & permVC.ManagePerm) || (req.oneSystemPerm & permSystem.ManageVC))) {
+		if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -1728,7 +1723,7 @@ router.route('/:vcid/group/:groupid')
 			logger4js.trace("Post a new Visbo Center Role Req Body: %O Name %s", req.body, req.body.name);
 			logger4js.info("Post a new Visbo Center Role with name %s executed by user %s ", req.body.name, useremail);
 
-			if (!(req.oneVCPerm & permVC.Modify)) {
+			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
@@ -1826,7 +1821,7 @@ router.route('/:vcid/group/:groupid')
 
 			logger4js.info("DELETE Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);
 
-			if (!(req.oneVCPerm & permVC.Modify)) {
+			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
@@ -1917,7 +1912,7 @@ router.route('/:vcid/group/:groupid')
 
 			logger4js.info("PUT Visbo Center Role for userid %s email %s and vc %s role %s ", userId, useremail, req.params.vcid, req.params.roleid);
 
-			if (!(req.oneVCPerm & permVC.Modify)) {
+			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
@@ -2087,7 +2082,7 @@ router.route('/:vcid/cost')
 				message: 'No valid cost definition'
 			});
 		}
-		if (!(req.oneVCPerm & permVC.Modify)) {
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -2150,7 +2145,7 @@ router.route('/:vcid/cost')
 
 		logger4js.info("DELETE Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);
 
-		if (!(req.oneVCPerm & permVC.Modify)) {
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -2241,7 +2236,7 @@ router.route('/:vcid/cost')
 
 		logger4js.info("PUT Visbo Center Cost for userid %s email %s and vc %s cost %s ", userId, useremail, req.params.vcid, req.params.costid);
 
-		if (!(req.oneVCPerm & permVC.Modify)) {
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -2391,7 +2386,7 @@ router.route('/:vcid/user')
 		req.body.email = req.body.email.toLowerCase();
 		req.auditInfo = req.body.email;
 		// TODO: verify check for SysAdmin
-		if (!((req.oneVCPerm & permVC.ManagePerm) || (req.oneSystemPerm & permSystem.ManageVC))) {
+		if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -2591,7 +2586,7 @@ router.route('/:vcid/user')
 
 		var userRole = req.query.role || "";
 
-		if (!((req.oneVCPerm & permVC.ManagePerm) || (req.oneSystemPerm & permSystem.ManageVC))) {
+		if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'

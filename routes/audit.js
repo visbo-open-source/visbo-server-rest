@@ -9,8 +9,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
 
 var Const = require('../models/constants')
-var permVC = Const.permVC
-var permSystem = Const.permSystem
+var constPermSystem = Const.constPermSystem
 
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -64,7 +63,7 @@ router.route('/')
 
 	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
-	if (!(req.oneSystemPerm & permSystem.ViewAudit)) {
+	if (!(req.combinedPerm.system & constPermSystem.ViewAudit)) {
 		logger4js.debug("No Permission to View System Audit for user %s", userId);
 		return res.status(403).send({
 			state: 'failure',

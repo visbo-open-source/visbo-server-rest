@@ -26,6 +26,3 @@ visboGroupSchema.set('timestamps', true);
 // declare a model
 mongoose.model('VisboGroup', visboGroupSchema);
 mongoose.model('VisboGroupUser', groupUserSchema);
-// mongoose.model('VisboPermSystem', systemPerm);
-// mongoose.model('VisboPermVC', vcPerm);
-// mongoose.model('VisboPermVP', vpPerm);

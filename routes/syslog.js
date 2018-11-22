@@ -9,6 +9,10 @@ var path = require('path');
 var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
 
+var Const = require('../models/constants')
+var constPermVC = Const.constPermVC
+var constPermSystem = Const.constPermSystem
+
 var logging = require('./../components/logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -44,15 +48,18 @@ router.route('/')
 	*/
 // get syslog file list
 	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLog (Read)';
 
-		logger4js.info("Get Log File List ");
+		logger4js.info("Get Log File List Perm system: %O ", req.combinedPerm);
 
 		var dir = path.join(__dirname, '../logging');
 		var fileList = [];
 
-		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',
@@ -100,7 +107,7 @@ router.route('/file/:filename')
 		req.auditDescription = 'SysLogs (Read)';
 
 		logger4js.info("Get Logfile %s ", req.params.filename);
-		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',
@@ -169,7 +176,7 @@ router.route('/config')
 		var sysLogConfig = getLogLevelConfig();
 		logger4js.info("Get Log Config ");
 
-		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',
@@ -215,7 +222,7 @@ router.route('/config')
 		req.auditDescription = 'SysLog Config (Change)';
 
 		logger4js.info("Put SysLogConfig Log Config ");
-		if (!(req.oneSystemPerm & permSystem.ViewLog)) {
+		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',

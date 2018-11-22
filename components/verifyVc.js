@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants')
-var permSystem = Const.permSystem
-var permVC = Const.permVC
+var constPermSystem = Const.constPermSystem
+var constPermVC = Const.constPermVC
 
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -27,22 +27,22 @@ function getAllGroups(req, res, next) {
 		if (req.method == "GET") {
 			if (req.query.systemvc) {
 				query.groupType = 'System';						// search for System Groups only
-				query['permission.system'] = { $bitsAllSet: permSystem.View }
+				query['permission.system'] = { $bitsAllSet: constPermSystem.View }
 				// req.query.sysadmin = false; // no special option to get all VCs
 			} else if (req.query.sysadmin) {
 				query.groupType = 'System';						// search for System Groups only
-				query['permission.system'] = { $bitsAllSet: permSystem.ViewVC }
+				query['permission.vc'] = { $bitsAllSet: constPermVC.View }
 				acceptEmpty = false;
 			} else {
 				query.groupType = 'VC';				// search for VC Groups only
-				query['permission.vc'] = { $bitsAllSet: permVC.View }
+				query['permission.vc'] = { $bitsAllSet: constPermVC.View }
 			}
 		}
 		if (req.method == "POST") {
 			query.groupType = 'System';						// search for System permission to create a VC
 			acceptEmpty = false;
-			query['permission.system'] = { $bitsAllSet: permSystem.View }
-			// query['permission.system'] = { $bitsAllSet: permSystem.CreateVC }
+			query['permission.system'] = { $bitsAllSet: constPermSystem.View }
+			// query['permission.system'] = { $bitsAllSet: constPermSystem.CreateVC }
 		}
 
 		var queryVG = VisboGroup.find(query);
@@ -58,7 +58,7 @@ function getAllGroups(req, res, next) {
 			}
 			logger4js.trace("Found VGs %d", listVG.length);
 			// Convert the result to request
-			req.permVCGroups = listVG;
+			req.permGroups = listVG;
 			if (!acceptEmpty && listVG.length == 0) {
 				// do not accept requests without a group assignement especially to System Group
 				return res.status(403).send({
@@ -66,13 +66,15 @@ function getAllGroups(req, res, next) {
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			var combinedSystemPerm = 0;
 			if (req.query.sysadmin) {
-				for (var i=0; i < req.permVCGroups.length; i++) {
-					combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+				var combinedPerm = {system: 0, vc: 0, vp: 0};
+				for (var i=0; i < req.permGroups.length; i++) {
+					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+					combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+					combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
 				}
-				logger4js.debug("VC Group All System Perm %s", combinedSystemPerm);
-				req.oneSystemPerm = combinedSystemPerm;
+				logger4js.debug("VC Group combined Perm %O", combinedPerm);
+				req.combinedPerm = combinedPerm;
 			}
 
 			return next();
@@ -100,16 +102,16 @@ function getVcidGroups(req, res, next, vcid) {
 	query = {'users.userId': userId};	// search for VC groups where user is member
 	if (sysAdmin) {
 		query.groupType = 'System';						// search for System Groups only
-		query['permission.system'] = { $bitsAllSet: permSystem.View }
+		query['permission.system'] = { $bitsAllSet: constPermSystem.View }
 		acceptEmpty = false;
 	} else {
 		query.groupType = 'VC';				// search for VC Groups only
-		query['permission.vc'] = { $bitsAllSet: permVC.View }
+		query['permission.vc'] = { $bitsAllSet: constPermVC.View }
 		query.vcid = vcid;
 	}
 	// if (req.query.systemvc) {
 	// 	query.groupType = 'System';						// search for System Groups only
-	// 	query['permission.system'] = { $bitsAllSet: permSystem.View }
+	// 	query['permission.system'] = { $bitsAllSet: constPermSystem.View }
 	// 	req.query.sysadmin = false; // no special option to get all VCs
 	// }
 	logger4js.debug("Search VGs %O", query);
@@ -127,7 +129,7 @@ function getVcidGroups(req, res, next, vcid) {
 		}
 		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
-		req.permVCGroups = listVG;
+		req.permGroups = listVG;
 		if (listVG.length == 0) {
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({
@@ -143,14 +145,15 @@ function getVcidGroups(req, res, next, vcid) {
 		var query = {};
 		// check against the groups
 		var vcidList = [];
-		var combinedVCPerm = 0;
-		var combinedSystemPerm = 0;
-		for (var i=0; i < req.permVCGroups.length; i++) {
-			vcidList.push(req.permVCGroups[i].vcid);
-			combinedVCPerm = combinedVCPerm | (req.permVCGroups[i].permission.vc || 0);
-			combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+		var combinedPerm = {system: 0, vc: 0, vp: 0};
+		for (var i=0; i < req.permGroups.length; i++) {
+			vcidList.push(req.permGroups[i].vcid);
+			combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+			combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+			combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
 		}
-		logger4js.debug("Get Visbo Center with %d Group VCIDs VC %d System %d", vcidList.length, combinedVCPerm, combinedSystemPerm);
+		if (!sysAdmin) delete combinedPerm.system
+		logger4js.debug("Get Visbo Center with %d VC Groups Perm Combined %O", vcidList.length, combinedPerm);
 		query._id = vcid;
 		// query['deleted.deletedAt'] =  {$exists: checkDeletedVC};
 		query.deleted =  {$exists: checkDeletedVC};
@@ -172,10 +175,9 @@ function getVcidGroups(req, res, next, vcid) {
 				});
 			}
 			req.oneVC = oneVC
-			req.oneVCPerm = combinedVCPerm;
-			req.oneSystemPerm = combinedSystemPerm;
+			req.combinedPerm = combinedPerm;
 
-			logger4js.debug("Found VisboCenter %s Access Permission VC %d System %d", vcid, req.oneVCPerm, req.oneSystemPerm);
+			logger4js.debug("Found VisboCenter %s Access Permission %O", vcid, req.combinedPerm);
 			return next();
 		});
 	});
@@ -193,7 +195,7 @@ function getSystemGroups(req, res, next) {
 
 	query = {'users.userId': userId};	// search for VC groups where user is member
 	query.groupType = 'System';						// search for System Groups only
-	query['permission.system'] = { $bitsAllSet: permSystem.View }
+	query['permission.system'] = { $bitsAllSet: constPermSystem.View }
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid')
@@ -207,13 +209,14 @@ function getSystemGroups(req, res, next) {
 			});
 		}
 		logger4js.debug("Found System VGs %d", listVG.length);
-		req.permVCGroups = listVG;
-		var combinedVCPerm = 0;
-		var combinedSystemPerm = 0;
-		for (var i=0; i < req.permVCGroups.length; i++) {
-			combinedVCPerm = combinedVCPerm | (req.permVCGroups[i].permission.vc || 0);
-			combinedSystemPerm = combinedSystemPerm | (req.permVCGroups[i].permission.system || 0);
+		req.permGroups = listVG;
+		var combinedPerm = {system: 0, vc: 0, vp: 0};
+		for (var i=0; i < req.permGroups.length; i++) {
+			combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+			combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+			combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
 		}
+		logger4js.debug("Get Visbo System Groups Perm Combined %O", combinedPerm);
 		// Convert the result to request
 		if (listVG.length == 0) {
 			// do not accept requests without a group assignement especially to System Group
@@ -222,8 +225,7 @@ function getSystemGroups(req, res, next) {
 				message: 'No Permission to Access System Admin'
 			});
 		}
-		req.oneVCPerm = combinedVCPerm;
-		req.oneSystemPerm = combinedSystemPerm;
+		req.combinedPerm = combinedPerm;
 		return next();
 	});
 }

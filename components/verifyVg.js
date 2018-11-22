@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants')
-var permSystem = Const.permSystem
-var permVC = Const.permVC
+var constPermSystem = Const.constPermSystem
+var constPermVC = Const.constPermVC
 
 var VisboGroup = mongoose.model('VisboGroup');
 
