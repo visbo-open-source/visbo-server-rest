@@ -1204,7 +1204,7 @@ router.route('/:vcid/group/:groupid')
 
 		logger4js.info("PUT Visbo Center Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vcid, req.params.groupid, req.combinedPerm);
 
-		if (groupType == 'VC') {
+		if (req.oneGroup.groupType == 'VC') {
 			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',

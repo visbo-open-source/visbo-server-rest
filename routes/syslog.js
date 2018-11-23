@@ -10,7 +10,6 @@ var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
 
 var Const = require('../models/constants')
-var constPermVC = Const.constPermVC
 var constPermSystem = Const.constPermSystem
 
 var logging = require('./../components/logging');

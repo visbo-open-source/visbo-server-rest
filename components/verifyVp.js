@@ -165,6 +165,7 @@ function getAllVPGroups(req, res, next) {
 
 			if (req.query.sysadmin) {
 				// combined permission only applicable if it does not combine diffeent VCIDs
+				var combinedPerm = {system: 0, vc: 0, vp: 0};
 				for (var i=0; i < req.permGroups.length; i++) {
 					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
 					combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
