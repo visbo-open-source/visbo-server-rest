@@ -10,7 +10,7 @@ var constPermVC = Object.freeze({
 });
 const constPermVCAll = 307;
 var constPermVP = Object.freeze({
-	"View":1, "ViewAudit":2, "Modify":16, "ManagePerm":32, "CreateVPV":256, "Delete":1024
+	"View":1, "ViewAudit":2, "Modify":16, "ManagePerm":32, "CreateVariant":256, "Delete":1024
 })
 const constPermVPAll = 1331;
 

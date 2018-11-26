@@ -114,7 +114,7 @@ function getVcidGroups(req, res, next, vcid) {
 	// 	query['permission.system'] = { $bitsAllSet: constPermSystem.View }
 	// 	req.query.sysadmin = false; // no special option to get all VCs
 	// }
-	logger4js.debug("Search VGs %O", query);
+	logger4js.trace("Search VGs %O", query);
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid')

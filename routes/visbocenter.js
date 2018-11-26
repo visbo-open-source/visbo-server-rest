@@ -474,7 +474,7 @@ router.route('/:vcid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
 
-		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 		// we have found the VC already in middleware
 		return res.status(200).send({
 				state: 'success',
@@ -805,7 +805,7 @@ router.route('/:vcid/audit')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Audit (Read)';
 
-		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
@@ -994,8 +994,8 @@ router.route('/:vcid/group')
 		// TODO Do we still need this?????
 		groupType = req.oneVC.system ? 'System' : 'VC';
 		if ( req.body.permission ) {
-			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
-			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
+			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
+			if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
 			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 		}
 		if (req.body.name) req.body.name = req.body.name.trim();
@@ -1655,7 +1655,7 @@ router.route('/:vcid/group/:groupid')
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Role (Read)';
 
-			logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Admin %s", userId, useremail, req.params.vcid, req.oneVC.name, req.oneVCisAdmin);
+			logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
 			var queryVCRole = VCRole.find({'vcid': req.oneVC._id});
 			// queryVCRole.select('_id vcid name');

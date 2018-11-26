@@ -320,7 +320,7 @@ router.route('/')
 		var vpUsers = req.body.users || [];
 		var vpPublic = req.body.vpPublic == true ? true : false;
 		var vpCustomerID = (req.body.kundennummer != undefined) ? req.body.kundennummer.trim() : undefined;
-		logger4js.info("Post a new Visbo Project for user %s with name %s as Public %s in VisboCenter %s/%s with %d Users", useremail, req.body.name, vpPublic, vcid, vpUsers.length);
+		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s with %d Users. Perm: %O", useremail, req.body.name, vcid, vpUsers.length, req.combinedPerm);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
