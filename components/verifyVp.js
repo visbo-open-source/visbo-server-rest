@@ -1,120 +1,196 @@
 var mongoose = require('mongoose');
+var Const = require('../models/constants')
+var constPermSystem = Const.constPermSystem
+var constPermVC = Const.constPermVC
+var constPermVP = Const.constPermVP
+
 var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
+var VisboGroup = mongoose.model('VisboGroup');
 
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-// Verify Visbo Project and the role of the user
-function verifyVp(req, res, next) {
+// Generate the Groups where the user is member of and has VP Permission
+function getAllVPGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	var sysAdmin = req.query && req.query.sysadmin ? true : false;
-	if (req.decoded.status && req.decoded.status.sysAdminRole) {
-		sysAdmin = true;
-	} else {
-		sysAdmin = false;
-	}
-	logger4js.debug("Verify VP: sysAdminRole %s ", sysAdmin);
-
-	// check for GET & POST and ignore the query parameters
-	if (req.url.split("?")[0] == '/') {
-		// collect the VCs the user has access to, to evaluate the publ VP Access
+	var baseUrl = req.url.split("?")[0]
+	if (baseUrl == '/') {
+		// get the VP Groups the user is member of
+		// handle sysadmin case
+		logger4js.debug("Generate VP Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
-		if (!sysAdmin) {
-			if (req.method == 'GET') {
-				query = {'users.email': useremail};								// Permission for User
+		var acceptEmpty = true;
+		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC
+		query = {'users.userId': userId};	// search for VP groups where user is member
+		// Permission check for GET & POST
+		if (req.method == "GET") {
+			if (req.query.sysadmin) {
+				query.groupType = 'System';						// search for System Groups only
+				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				acceptEmpty = false;
 			} else {
-				query = {'users':{ $elemMatch: {'email': useremail, 'role': 'Admin'}}};								// Permission for Admin
+				if (req.query.vcid) query.vcid = req.query.vcid;
+				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
+				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 			}
 		}
-		query.deleted =  {$exists: false};				// Not deleted
-		logger4js.debug("Verify VP: %O ", query);
+		if (req.method == "POST") {
+			// Only Create VP Request, check vcid from Body
+			// Check VC Permission insead of system
+			combinedPermStatus = true;
+			query.groupType = 'VC';						// search for VC permission to create a VP
+			query.vcid = req.body && req.body.vcid
+			acceptEmpty = false;
+			query['permission.vc'] = { $bitsAnySet: constPermVC.View + constPermVC.CreateVP }
+		}
 
-		var queryVC = VisboCenter.find(query);
-		queryVC.select('_id');
-		queryVC.exec(function (err, listVC) {
+		logger4js.debug("Query VGs %s", JSON.stringify(query));
+		var queryVG = VisboGroup.find(query);
+		queryVG.select('name permission vcid vpids')
+		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Verify Access Permission DB Connection ", err);
+				logger4js.fatal("VP Groups Get DB Connection %O", err);
 				return res.status(500).send({
 					state: 'failure',
-					message: 'Internal Server Error with DB Connection',
+					message: 'Error getting VisboCenters',
 					error: err
 				});
-			};
-			logger4js.debug("Found %d Visbo Centers", listVC.length);
-			req.listVC = [];
-			for (var i=0; i<listVC.length; i++) req.listVC.push(listVC[i]._id)
-			logger4js.debug("VP Verify continue next");
+			}
+			logger4js.debug("Found VGs %d", listVG.length);
+			// Convert the result to request
+			req.permGroups = listVG;
+			logger4js.trace("Found VPGroups %s", JSON.stringify(listVG));
+			if (!acceptEmpty && listVG.length == 0) {
+				// do not accept requests without a group assignement especially to System Group
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+
+			if (combinedPermStatus) {
+				// combined permission only applicable if it does not combine diffeent VCIDs
+				var combinedPerm = {system: 0, vc: 0, vp: 0};
+				for (var i=0; i < req.permGroups.length; i++) {
+					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+					combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+					combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
+				}
+				req.combinedPerm = combinedPerm;
+			}
 			return next();
 		});
 	} else {
-		// Check for URLs with a :vpid
-		var vpid = req.url.split('/')[1];
-
-		logger4js.debug("Verify access permission for VisboProject %s to User %s ", vpid, useremail);
-		var query = {};
-		if (!sysAdmin) {
-			query = {'users.email': useremail}		// Permission for User
-			// var query = { $or: [ {'users.email': useremail}, { vpPublic: true } ] }		// Permission for User
-		}
-		query._id = vpid;
-		query.deleted =  {$exists: false};				// Not deleted
-
-		var queryVP = VisboProject.findOne(query);
-		queryVP.exec(function (err, oneVP) {
-			if (err) {
-				logger4js.fatal("VP Verify Access Permission DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting Visbo Projects',
-					error: err
-				});
-			}
-			if (oneVP) {
-				req.oneVP = oneVP
-				req.oneVPisAdmin = false
-				for (var i = 0; i < oneVP.users.length; i++){
-					if (oneVP.users[i].email == useremail && oneVP.users[i].role == 'Admin' ) {
-						req.oneVPisAdmin = true;
-					}
-				}
-				logger4js.debug("Found VisboProject %s Admin Access %s", vpid, req.oneVPisAdmin);
-				return next();
-			} else {
-				// Check for Public VP Access in case of GET only, because other operations reuqire admin Access
-				query = {}		// No Permission for User
-				query.vpPublic = true;
-				query._id = vpid;
-				query.deleted =  {$exists: false};				// Not deleted
-				var queryVP = VisboProject.findOne(query);
-				queryVP.exec(function (err, oneVP) {
-					if (err) {
-						logger4js.fatal("VP Verify Public Access Permission DB Connection ", err);
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Error getting Visbo Projects',
-							error: err
-						});
-					}
-					logger4js.debug("Verify public Access to VP %s %s ", vpid, useremail);
-					if (!oneVP) {
-						return res.status(403).send({
-							state: 'failure',
-							message: 'No Visbo Project or no Permission'
-						});
-					}
-					req.oneVP = oneVP;
-					req.oneVPisAdmin = false;
-					return next();
-				});
-			}
-		});
+		// not the baseUrl "/" do nothing
+		return next();
 	}
 }
 
+// Generate the Groups where the user is member of System / VP depending on the case
+function getVpidGroups(req, res, next, vpid) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+	var baseUrl = req.url.split("?")[0]
+	var urlComponent = baseUrl.split("/")
+	var sysAdmin = req.query.sysadmin ? true : false;
+
+	// get the VP Groups of this VP if the user is member of
+	// handle sysadmin case by getting the system groups
+	logger4js.debug("Generate VP Groups for vpid %s user %s for url %s sysAdmin %s", vpid, req.decoded.email, req.url, sysAdmin);
+	var query = {};
+	query = {'users.userId': userId};	// search for VP groups where user is member
+	if (sysAdmin) {
+		query.groupType = 'System';						// search for System Groups only
+		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+		acceptEmpty = false;
+	} else {
+		query.groupType = {$in: ['VC', 'VP']};				// search for VC/VP Groups only
+		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+		// check that vpid is in the group list
+		query.vpids = vpid;
+	}
+	logger4js.trace("Search VGs %O", query);
+
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vpid')
+	queryVG.exec(function (err, listVG) {
+		if (err) {
+			logger4js.fatal("VP Groups Get DB Connection %O", err);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Error getting VisboCenters',
+				error: err
+			});
+		}
+		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
+		// Convert the result to request
+		req.permGroups = listVG;
+		if (listVG.length == 0) {
+			// do not accept requests without a group assignement especially to System Group
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Center or no Permission'
+			});
+		}
+		var checkDeletedVP = req.query.deleted;
+		// allow access to GET, PUT & DELETE for VP of deleted VPs if user is sysadmin
+		// if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
+		// 	if (sysAdmin && req.query.deleted) checkDeletedVP = true;
+		// }
+		// check against the groups
+		var vpidList = [];
+		var combinedPerm = {system: 0, vc: 0, vp: 0};
+		for (var i=0; i < req.permGroups.length; i++) {
+			// TODO build the correct vpid list from vpids
+			// vpidList.push(req.permGroups[i].vpid);
+			combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
+			combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
+			combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
+		}
+		logger4js.debug("Get %d groups combinedPerm %O", req.permGroups.length, combinedPerm);
+		if (!sysAdmin) delete combinedPerm.system
+		logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", vpid, req.permGroups.length, combinedPerm);
+		var query = {};
+		query._id = vpid;
+		query.deleted =  {$exists: checkDeletedVP};
+		if (checkDeletedVP) {
+			query['deleted.byParent'] = false;			// to guarantee that the user can not see a vp that is deleted by VC
+		}
+		// TODO prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
+		logger4js.trace("Get Visbo Project Query %O", query);
+		var queryVP = VisboProject.findOne(query);
+		// queryVP.select('name users updatedAt createdAt');
+		queryVP.exec(function (err, oneVP) {
+			if (err) {
+				logger4js.fatal("VP Get with ID DB Connection %O", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting Visbo Centers',
+					error: err
+				});
+			}
+			if (!oneVP) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			req.oneVP = oneVP
+			req.combinedPerm = combinedPerm;
+
+			logger4js.debug("Found Visbo Project %s Access Permission %O", vpid, req.combinedPerm);
+			return next();
+		});
+	});
+}
+
 module.exports = {
-	verifyVp: verifyVp
+	getAllVPGroups: getAllVPGroups,
+	getVpidGroups: getVpidGroups
 };

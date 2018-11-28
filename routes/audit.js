@@ -6,13 +6,19 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
+var verifyVc = require('./../components/verifyVc');
+
+var Const = require('../models/constants')
+var constPermSystem = Const.constPermSystem
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
-router.use('/', auth.verifySysAdmin);
+router.use('/', auth.verifyUser);
+// Register the VC middleware to check that the user has access to the System Admin
+router.use('/', verifyVc.getSystemGroups);
 
 /////////////////
 // Audit API
@@ -51,13 +57,19 @@ router.route('/')
 .get(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	var sysAdminRole = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
 	req.auditInfo = 'System';
 
-	logger4js.info("Get Audit Trail for userid %s email %s Admin %s", userId, useremail, sysAdminRole);
+	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
+	if (!(req.combinedPerm.system & constPermSystem.ViewAudit)) {
+		logger4js.debug("No Permission to View System Audit for user %s", userId);
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to View System Audit'
+		});
+	}
 	// now fetch all entries system wide
 	var query = {};
 	var from, to, maxcount = 1000;
