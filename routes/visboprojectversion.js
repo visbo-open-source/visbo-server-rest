@@ -8,10 +8,17 @@ var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
 var User = mongoose.model('User');
+var VisboGroup = mongoose.model('VisboGroup');
+var VisboGroupUser = mongoose.model('VisboGroupUser');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
+
+var Const = require('../models/constants')
+var constPermVC = Const.constPermVC
+var constPermVP = Const.constPermVP
+var constPermSystem = Const.constPermSystem
 
 var logModule = "VPV";
 var log4js = require('log4js');
@@ -19,8 +26,12 @@ var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+// register the VPV middleware to generate the Group List to check permission
+router.use('/', verifyVpv.getAllVPVGroups);
 // register the VPV middleware to check that the user has access to the VPV
-router.use('/', verifyVpv.verifyVpv);
+router.param('vpvid', verifyVpv.getVpvidGroups);
+// register the VPV middleware to check that the user has access to the VPV
+// router.use('/', verifyVpv.verifyVpv);
 
 /////////////////
 // Visbo Project Versions API
@@ -41,25 +52,23 @@ router.route('/')
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
 	* has to specify the query parameter longList.
 	*
-	* With an additional parameter refDate only the latest version before the reference date for each selected project is delivered,
-	* in case refDate ist not specified the current date&time is used.
-	*
-	* With an additional query paramteter vpid=vp5aaf992 the system restricts the list of versions to the specified VP,
-	* if no refDate is specified the system delivers all versions of this project.
-	*
-	* With an additional query paramteter variantName the system restricts the list of versions to the specified VariantName,
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, refDate, varianName, status.
 	* to query only the main version of a project, use variantName= in the query string.
 	*
-	* @apiParam {Date} refDate Deliver only the latest Version of the project before the reference date
+	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
+	* Date Format is in the form: 2018-10-30T10:00:00Z
+	* @apiParam {Boolean} refNext If refNext is true the system delivers not the version before refDate instead it delivers the version after refDate
+	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
-	* @apiParam {String} variantName Deliver only versions for the specified variant
+	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
-	* In case a refDate is specified the full blown project version is delivered otherwise a reduced list only
 	* @apiPermission user must be authenticated, user must have access to related VisboProject
 	* @apiError NotAuthenticated no valid token HTTP 401
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vpv
+	*   url: http://localhost:3484/vpv?vcid=vc5c754feaa&refDate=2018-01-01
 	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
@@ -74,6 +83,7 @@ router.route('/')
 	*     "Erloes": "100",
 	*     "startDate": "2018-01-01",
 	*     "endDate": "2018-12-31",
+	*     "status": "beauftragt",
 	*     "ampelStatus": "2",
 	*     "variantName": ""
 	*   }]
@@ -86,22 +96,28 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 
-		var queryvp = {'users':{ $elemMatch:{'email': useremail, 'role': {$in:['Admin','User']}}}};
+		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
 		var queryvpv = {};
-		var latestOnly = true; 	// as default show latest only project version of all projects
+		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
-		queryvpv.timestamp =  {$lt: nowDate };
-		queryvp.deleted = {$exists: false};
+
+		// collect the VPIDs where the user has View permission to
+		var vpidList = [];
+		for ( var i=0; i<req.permGroups.length; i++) {
+			vpidList = vpidList.concat(req.permGroups[i].vpids)
+		}
+
+		logger4js.debug("Get VPV vpid List %O ", vpidList);
+
 		queryvpv.deleted = {$exists: false};
 		if (req.query) {
-			if (req.query.vpid) {
-				queryvp._id = req.query.vpid;
-				latestOnly = false // if project is specified show all project versions
+			if (req.query.status) {
+				queryvpv.status = req.query.status;
 			}
 			if (req.query.refDate){
 				var refDate = new Date(req.query.refDate);
-				queryvpv.timestamp =  {$lt: refDate};
+				queryvpv.timestamp =  req.query.refNext == true ? {$gt: refDate} : {$lt: refDate};
 				latestOnly = true;
 			}
 			if (req.query.variantName != undefined){
@@ -112,10 +128,21 @@ router.route('/')
 				longList = true;
 			}
 		}
-		logger4js.info("Get Project Versions for user %s with VP %s/%s, timestamp %O latestOnly %s", userId, queryvp._id, queryvpv.variantName, queryvpv.timestamp, latestOnly);
-		var queryVP = VisboProject.find(queryvp)
-		queryVP.select('_id name');
-		queryVP.exec(function (err, listVP) {
+		logger4js.info("Get Project Versions for user %s for VPs %O Variant %s, timestamp %O latestOnly %s", userId, vpidList, queryvpv.variantName, queryvpv.timestamp, latestOnly);
+		logger4js.info("Get Project Versions Search VPV %O", queryvpv);
+
+		queryvpv.vpid = {$in: vpidList};
+		logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
+		var queryVPV = VisboProjectVersion.find(queryvpv);
+		if (!longList) {
+			// deliver only the short info about project versions
+			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
+		}
+		if (req.query.refNext)
+			queryVPV.sort('vpid name variantName +timestamp')
+		else
+			queryVPV.sort('vpid name variantName -timestamp')
+		queryVPV.exec(function (err, listVPV) {
 			if (err) {
 				return res.status(500).send({
 					state: 'failure',
@@ -123,57 +150,37 @@ router.route('/')
 					error: err
 				});
 			};
-			logger4js.debug("Filter ProjectVersions to %s Projects", listVP.length);
-			var vpArray = [];
-			var vp;
-			for (vp in listVP) {
-				vpArray.push(listVP[vp]._id);
-			}
-			logger4js.trace("Filter Projects %O", vpArray);
-			queryvpv.vpid = {$in: vpArray};
-			logger4js.debug("VPV query string %s", JSON.stringify(queryvpv));
-			var queryVPV = VisboProjectVersion.find(queryvpv);
-			if (!longList) {
-				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
-			}
-			queryVPV.sort('vpid name variantName -timestamp')
-			queryVPV.exec(function (err, listVPV) {
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
-				};
-				logger4js.debug("Found %d Project Versions", listVPV.length);
-				// if latestonly, reduce the list and deliver only the latest version of each project and variant
-				if (listVPV.length > 1 && latestOnly){
-					var listVPVfiltered = [];
-					listVPVfiltered.push(listVPV[0]);
-					for (let i = 1; i < listVPV.length; i++){
-						//compare current item with previous and ignore if it is the same vpid & variantname
-						logger4js.debug("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
-						if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-						|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
-							listVPVfiltered.push(listVPV[i])
-							logger4js.debug("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
-						}
+			logger4js.debug("Found %d Project Versions", listVPV.length);
+			// if latestonly, reduce the list and deliver only the latest version of each project and variant
+			if (listVPV.length > 1 && latestOnly){
+				var listVPVfiltered = [];
+				listVPVfiltered.push(listVPV[0]);
+				for (let i = 1; i < listVPV.length; i++){
+					//compare current item with previous and ignore if it is the same vpid & variantname
+					// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+					if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
+					|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
+						listVPVfiltered.push(listVPV[i])
+						// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 					}
-					logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned Visbo Project Versions',
-						vpv: listVPVfiltered
-					});
-				} else {
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned Visbo Project Versions',
-						vpv: listVPV
-					});
 				}
-			});
+				logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
+				req.auditInfo = listVPVfiltered.length;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Project Versions',
+					count: listVPVfiltered.length,
+					vpv: listVPVfiltered
+				});
+			} else {
+				req.auditInfo = listVPV.length;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Project Versions',
+					count: listVPV.length,
+					vpv: listVPV
+				});
+			}
 		});
 	})
 
@@ -224,16 +231,19 @@ router.route('/')
 		var variantName = req.body.variantName || "";
 		var variantIndex = -1;
 
-		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s", useremail, req.body.name, vpid);
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s with Perm %O", useremail, req.body.name, vpid, req.combinedPerm);
 		var newVPV = new VisboProjectVersion();
-		// check that vpid ist set and exists and user has Admin permission
-		if (!vpid) {
-			return res.status(400).send({
+		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
+			|| !(req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant))) {
+			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project ID defined'
+				message: 'Visbo Centers not found or no Admin'
 			});
 		}
-		VisboProject.findOne({'_id': vpid, 'users.email': useremail}, function (err, oneVP) {
+		var queryVp = {};
+		queryVp._id = vpid;
+		queryVp.deleted = {$exists: false};				// Not deleted
+		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
 				logger4js.fatal("VPV Post DB Connection ", err);
 				return res.status(500).send({
@@ -250,12 +260,6 @@ router.route('/')
 				});
 			}
 			req.oneVP = oneVP;
-			req.oneVPisAdmin = false
-			for (var i = 0; i < oneVP.users.length; i++){
-				if (oneVP.users[i].email == useremail && oneVP.users[i].role == 'Admin' ) {
-					req.oneVPisAdmin = true;
-				}
-			}
 			var allowPost = false
 			var variantExists = true;
 
@@ -283,7 +287,7 @@ router.route('/')
 			}
 			// user does not have admin permission and does not own the variant
 			var hasPerm = false;
-			if (req.oneVPisAdmin) {
+			if (req.combinedPerm.vp & constPermVP.Modify) {
 				hasPerm = true;
 			} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
 				hasPerm = true;
@@ -311,6 +315,7 @@ router.route('/')
 			newVPV.customDblFields = req.body.customDblFields;
 			newVPV.customStringFields = req.body.customStringFields;
 			newVPV.customBoolFields = req.body.customBoolFields;
+			newVPV.actualDataUntil = req.body.actualDataUntil;
 			newVPV.Erloes = req.body.Erloes;
 			newVPV.leadPerson = req.body.leadPerson;
 			newVPV.tfSpalte = req.body.tfSpalte;
@@ -459,15 +464,12 @@ router.route('/:vpvid')
 			variantIndex = variant.findVariant(req.oneVP, variantName)
 			if (variantIndex < 0) {
 				logger4js.warn("VPV Delete Variant does not exist %s %s", req.params.vpvid, variantName);
-				return res.status(401).send({
-					state: 'failure',
-					message: 'Visbo Project variant does not exist',
-					vp: [req.oneVP]
-				});
+				// Allow Deleting of a version where Variant does not exists for Admins
+				variantName = ""
 			};
 		}
 		// check if the project is locked
-		if (lockVP.lockStatus(req.oneVP, useremail, req.oneVPV.variantName).locked) {
+		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
 			return res.status(401).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
@@ -476,7 +478,7 @@ router.route('/:vpvid')
 		}
 		// user does not have admin permission and does not own the variant
 		var hasPerm = false;
-		if (req.oneVPisAdmin) {
+		if (req.combinedPerm & constPermVP.Delete) {
 			hasPerm = true;
 		} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
 			hasPerm = true;

@@ -4,7 +4,7 @@ var Schema = mongoose.Schema;
 var vpfItem = new Schema({
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
 	name: { type: String },
-	variantName: { type: String, required: false, maxlength: 100},
+	variantName: { type: String, required: false, maxlength: 256},
 	Start: { type: Date, required: false},
 	show: { type: Boolean },
 	zeile: { type: Number },
@@ -14,9 +14,9 @@ var vpfItem = new Schema({
 
 var visboPortfolioSchema = new mongoose.Schema({
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
-	variantName: { type: String, required: false, maxlength: 100},
+	variantName: { type: String, required: false, maxlength: 256},
 	timestamp: { type: Date, required: true},
-	name: { type: String, required: true, maxlength: 100},
+	name: { type: String, required: true, maxlength: 256},
 	allItems: [{ type: vpfItem, required: true}],
 	sortType: { type: Number, required: false},
 	sortList: [{type: Schema.Types.ObjectId, ref: 'VisboProject'}],
