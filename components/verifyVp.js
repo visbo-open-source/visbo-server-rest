@@ -138,7 +138,7 @@ function getVpidGroups(req, res, next, vpid) {
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		var checkDeletedVP = req.query.deleted;
+		var checkDeletedVP = req.query.deleted == true;
 		// allow access to GET, PUT & DELETE for VP of deleted VPs if user is sysadmin
 		// if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
 		// 	if (sysAdmin && req.query.deleted) checkDeletedVP = true;

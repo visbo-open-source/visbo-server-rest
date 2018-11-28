@@ -83,6 +83,20 @@ var updateVPCount = function(vcid, increment){
 	})
 }
 
+// updates the Global VC Groups to add the VPID to the list
+var updatePermAddVP = function(vcid, vpid){
+	var updateQuery = {vcid: vcid, global: true};
+	var updateUpdate = {$push: {vpids: vpid}};
+	var updateOption = {upsert: false};
+
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
+		}
+		logger4js.trace("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
+	})
+}
+
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // register the VP middleware to generate the VC List to check for public VPs
@@ -214,6 +228,7 @@ router.route('/')
 		logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
 
 		var queryVP = VisboProject.find(query);
+		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
 				logger4js.fatal("VP GET DB Connection ", err);
@@ -328,7 +343,7 @@ router.route('/')
 		var isAdmin = false;
 		logger4js.debug("Check VC Permission %O", req.combinedPerm);
 
-		if (!(req.combinedPerm.vc & (constPermVC.View + constPermVC.CreateVP))) {
+		if (!(req.combinedPerm.vc & constPermVC.CreateVP)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Centers not found or no Admin'
@@ -399,6 +414,7 @@ router.route('/')
 				logger4js.debug("Check users if they exist %s", JSON.stringify(vpUsers));
 				var queryUsers = User.find({'email': {'$in': vpUsers}});
 				queryUsers.select('email');
+				queryUsers.lean();
 				queryUsers.exec(function (err, listUsers) {
 					if (err) {
 						logger4js.fatal("VP Post DB Connection ", err);
@@ -447,7 +463,7 @@ router.route('/')
 					});
 					var newVGRead = new VisboGroup();
 					newVGRead.name = 'Read Access'
-					newVGRead.groupType = 'VP Custom'
+					newVGRead.groupType = 'VP'
 					newVGRead.global = false;
 					newVGRead.internal = false;
 					newVGRead.permission = {vp: constPermVP.View}
@@ -510,6 +526,7 @@ router.route('/')
 						}
 						req.oneVP = vp;
 						logger4js.debug("Update VC %s with %d Projects ", req.oneVC.name, req.oneVC.vpCount);
+						updatePermAddVP(req.oneVP.vcid, req.oneVP._id); // async
 						updateVPCount(req.oneVP.vcid, 1); // async
 						return res.status(200).send({
 							state: "success",
@@ -956,6 +973,861 @@ router.route('/:vpid')
 		}
 	})
 
+router.route('/:vpid/audit')
+ /**
+ 	* @api {get} /vp/:vpid/audit Get Visbo Pproject Audit Trail
+ 	* @apiVersion 1.0.0
+ 	* @apiGroup Visbo Project
+ 	* @apiName GetVisboProjectAudit
+	* @apiDescription Get Audit Trail for a specific Visbo Project
+	* the system checks if the user has access permission to it.
+	* In case of success, the system delivers an array of Audit Trail Activities
+ 	* @apiHeader {String} access-key User authentication token.
+ 	* @apiPermission user must be authenticated and user must have Audit permission in the VisboProject
+ 	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiError NoPermission user does not have access to the VisboProject HTTP 403
+ 	* @apiError ServerIssue No DB Connection HTTP 500
+ 	* @apiExample Example usage:
+ 	* url: http://localhost:3484/vp/vp5aada025/audit
+ 	* @apiSuccessExample {json} Success-Response:
+ 	* HTTP/1.1 200 OK
+ 	* {
+ 	*   "state":"success",
+ 	*   "message":"Audit Trail delivered",
+ 	*   "audit": [{
+ 	*     "_id":"vp541c754feaa",
+ 	*     "updatedAt":"2018-03-16T12:39:54.042Z",
+ 	*     "createdAt":"2018-03-12T09:54:56.411Z",
+	*			"XXXXXXXX": "XXXXXXXX"
+ 	*   }]
+ 	* }
+	*/
+// Get audit trail for a specific VP
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Audit (Read)';
+
+		logger4js.info("Get Visbo Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
+		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
+			return res.status(403).send({
+					state: 'failure',
+					message: 'You need to have View Audit permission to get audit trail'
+				});
+		}
+
+		var from, to, maxcount = 1000;
+		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
+		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
+		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
+		// no date is set to set to to current Date and recalculate from afterwards
+		if (!from && !to) to = new Date();
+		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+		if (!from) {
+			from = new Date(to);
+			from.setDate(from.getDate()-1)
+		}
+		if (!to) {
+			to = new Date(from);
+			to.setDate(to.getDate()+1)
+		}
+		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
+
+		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
+		// now fetch all entries related to this vc
+		VisboAudit.find(query)
+		.limit(maxcount)
+		.sort({createdAt: -1})
+		.lean()
+		.exec(function (err, listVPAudit) {
+			if (err) {
+				logger4js.fatal("VP Audit Get DB Connection ", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting VisboCenter Audit',
+					error: err
+				});
+			}
+			logger4js.debug("Found VP Audit Logs %d", listVPAudit.length);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Project Audit',
+				count: listVPAudit.length,
+				audit: listVPAudit
+			});
+		});
+	})
+
+	router.route('/:vpid/group')
+
+	/**
+		* @api {get} /vp/:vpid/group Get Groups
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Properties
+		* @apiName GetVisboProjectGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all groups of the specified Visbo Project
+		*
+		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs
+		* @apiPermission user must be authenticated, user must have access to referenced VisboProject
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/group
+		*   url: http://localhost:3484/vp/:vpid/group?userlist=true
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Project Groups",
+		*   "count": 1,
+		*   "groups":[{
+		*     "_id":"vpgroup5c754feaa",
+		*     "name":"Group Name",
+		*     "vcid": "vc5c754feaa",
+		*     "global": true,
+		*     "vpids": ["vp5c754feaa","vp5c754febb"],
+		*     "permission": {vc: 307, vp: 1 },
+		*     "users":[
+		*      {"userId":"us5aaf992", "email":"example@visbo.de"},
+		*      {"userId":"us5aaf993", "email":"example2@visbo.de"}
+		*     ]
+		*   }]
+		* }
+		*/
+
+	// Get VC Groups
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project Group (Read)';
+
+			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
+
+			var query = {};
+			query.vpids = req.oneVP._id;
+			query.groupType = {$in: ['VC', 'VP']};
+			// TODO: exclude VC Groups without global Permission for VP, but deliver VP Groups without permission
+			query['permission.vp'] = { $exists: true }		// any permission set for VP VC Groups
+			logger4js.info("Get Visbo Project Group Query %O", query);
+			var queryVCGroup = VisboGroup.find(query);
+			queryVCGroup.select('-vpids');
+			queryVCGroup.lean();
+			queryVCGroup.exec(function (err, listVCGroup) {
+				if (err) {
+					logger4js.fatal("VC Get Group DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboProject Groups',
+						error: err
+					});
+				}
+				logger4js.info("Found %d Groups for VC", listVCGroup.length);
+				if (req.query.userlist) {
+					var listVCUsers = [];
+					for (var i = 0; i < listVCGroup.length; i++) {
+						for (var j = 0; j < listVCGroup[i].users.length; j++) {
+							listVCUsers.push({userId: listVCGroup[i].users[j].userId,
+															email: listVCGroup[i].users[j].email,
+															groupId: listVCGroup[i]._id,
+															groupName: listVCGroup[i].name})
+						}
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Groups',
+						count: listVCGroup.length,
+						groups: listVCGroup,
+						users: listVCUsers
+					});
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Groups',
+						count: listVCGroup.length,
+						groups: listVCGroup
+					});
+				}
+			});
+		})
+
+	/**
+		* @api {post} /vp/:vpid/group Create a Group
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Properties
+		* @apiName PostVisboProjectGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new group inside the Visbo Project
+		*
+		* User must have Amdin Permission in the VC to create new groups
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError Duplicate group name exists already HTTP 409
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/groups
+		*  {
+		*     "name":"Group Name",
+		*     "global": true,
+		*     "permission": {vc: 307 }
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Project Group",
+		*   "groups":[{
+		*     "_id":"vpgroup5c754feaa",
+		*     "name":"My first Group",
+		*     "vpid": "vc5c754feaa",
+		*     "global": true,
+		*     "permission": {vc: 307 },
+		*   }]
+		* }
+		*/
+
+	// Create a Visbo Project Group
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			var groupType;
+
+			var vgName = req.body.name ? req.body.name.trim() : '';
+			var newPerm = {};
+			var vgGlobal = req.body.global == true;
+			// TODO Do we still need this?????
+			groupType = req.oneVC.system ? 'System' : 'VC';
+			if ( req.body.permission ) {
+				if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
+				if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
+				if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+			}
+			if (req.body.name) req.body.name = req.body.name.trim();
+
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project Group (Create)';
+
+			logger4js.info("Post a new Visbo Project Group with name %s executed by user %s ", req.body.name, useremail);
+			logger4js.debug("Post a new Visbo Project Group Req Body: %O Name %s Perm %O", req.body, vgName, req.combinedPerm);
+
+			if (groupType == 'VC') {
+				if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
+			} else {
+				if (!(req.combinedPerm.system & constPermSystem.ManagePerm)) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
+			}
+			if (!req.body.name) {
+				logger4js.info("Body is inconsistent VC %s Body %O", req.oneVC._id, req.body);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid Group Definition'
+				});
+			}
+			logger4js.debug("Post Group to VC %s Permission is ok, check unique name", req.params.vpid);
+			var queryVCGroup = VisboGroup.findOne({'vpid': req.params.vpid, 'name': req.body.name});
+			queryVCGroup.select('name');
+			queryVCGroup.lean();
+			queryVCGroup.exec(function (err, oneVCGroup) {
+				if (err) {
+					logger4js.fatal("VC Post Group DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting Visbo Project Groups',
+						error: err
+					});
+				}
+				if (oneVCGroup) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Visbo Project Group already exists'
+					});
+				}
+				logger4js.debug("Post Group %s to VC %s now", req.body.name, req.params.vpid);
+
+				var vcGroup = new VisboGroup();
+				// fill in the required fields
+				vcGroup.name = req.body.name;
+				vcGroup.vcid = req.params.vcid;
+				vcGroup.global = vgGlobal;
+				vcGroup.permission = newPerm;
+				vcGroup.groupType = groupType;
+				vcGroup.internal = false;
+				vcGroup.save(function(err, oneVcGroup) {
+					if (err) {
+						logger4js.fatal("VC Post Group DB Connection ", err);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Project Group',
+							error: err
+						});
+					}
+					var resultGroup = {};
+					resultGroup._id = oneVcGroup._id;
+					resultGroup.name = oneVcGroup.name;
+					resultGroup.vcid = oneVcGroup.vcid;
+					resultGroup.global = oneVcGroup.global;
+					resultGroup.permission = oneVcGroup.permission;
+					resultGroup.groupType = oneVcGroup.groupType;
+					resultGroup.users = oneVcGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Inserted Visbo Project Group',
+						groups: [ resultGroup ]
+					});
+				});
+			});
+		})
+
+
+	router.route('/:vpid/group/:groupid')
+
+	/**
+		* @api {delete} /vp/:vpid/group/:groupid Delete a Group
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Properties
+		* @apiName DeleteVisboProjectGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the specified group in the Visbo Project
+		*
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError GroupNotFound no valid groupid HTTP 404
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Visbo Project Group deleted"
+		* }
+		*/
+
+	// Delete Visbo Project Group
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project Group (Delete)';
+			req.auditInfo = req.oneGroup.name;
+			logger4js.info("DELETE Visbo Project Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vpid, req.params.groupid);
+
+			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Project or no Permission'
+				});
+			}
+			logger4js.debug("Delete Visbo Project Group after premission check %s", req.params.vpid);
+
+			// Do not allow to delete internal VC Group
+			if (req.oneGroup.internal) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Visbo Project Group not deletable'
+				});
+			}
+			req.oneGroup.remove(function(err, empty) {
+				if (err) {
+					logger4js.fatal("VC Delete Group DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error deleting Visbo Project Group',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Project Group'
+				});
+			});
+		})
+
+	/**
+		* @api {put} /vp/:vpid/group/:groupid Update a Group
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Properties
+		* @apiName PutVisboProjectGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Put updates a group inside the Visbo Project
+		*
+		* User must have Amdin Permission in the VC to create new groups
+		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+		* @apiError NotAuthenticated no valid token HTTP 401
+		* @apiError GroupNotFound no valid groupid HTTP 404
+		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		*  {
+	  *    "name":"My first Group Renamed",
+		*    "global": true,
+		*    "permission": {vc: 3, vp: 1 }
+	  *   }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Project Group",
+		*   "groups":[{
+		*     "_id":"vpgroup5c754feaa",
+		*     "name":"My first Group Renamed",
+		*     "vcid": "vc5c754feaa",
+		*     "global": true,
+		*     "permission": {vc: 3 },
+		*   }]
+		* }
+		*/
+
+	// Change Group
+		.put(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Project Group (Update)';
+
+			var vgName = req.body.name ? req.body.name.trim() : '';
+			var newPerm = {};
+			var vgGlobal = req.oneGroup.global == true;
+			if (req.body.global != undefined)
+				vgGlobal = req.body.global == true;
+			logger4js.debug("Get Global Flag %s process %s", req.body.global, vgGlobal);
+			if ( req.body.permission ) {
+				if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
+				if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
+				if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+			}
+
+			logger4js.info("PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vpid, req.params.groupid, req.combinedPerm);
+
+			if (req.oneGroup.groupType == 'VC') {
+				if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
+			} else {
+				if (!(req.combinedPerm.system & constPermSystem.ManagePerm)) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
+			}
+			logger4js.debug("Update Visbo Project Group after premission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
+
+			if (req.oneGroup.groupType == 'VC') {
+				var minimalPerm = constPermVC.View | constPermVC.ManagePerm;
+				if (req.oneGroup.internal == true && (newPerm.vc & minimalPerm) != minimalPerm  ) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Permission for internal group'
+					});
+				}
+			} else {
+				var minimalPerm = constPermSystem.View | constPermSystem.ManagePerm;
+				if (req.oneGroup.internal == true && (newPerm.system & minimalPerm) != minimalPerm  ) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Permission for internal group'
+					});
+				}
+			}
+			// query vpids to fill in if group is global
+			var query = {};
+			query.vcid = req.oneGroup.vcid;
+			// query['deleted.deletedAt'] = {$exists: false};
+			var queryVP = VisboProject.find(query);
+			queryVP.select('_id'); // return only _id
+			queryVP.lean();
+			queryVP.exec(function (err, listVP) {
+				if (err) {
+					logger4js.fatal("VP GET DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Internal Server Error with DB Connection',
+						error: err
+					});
+				};
+				logger4js.debug("Found %d Projects", listVP.length);
+				// logger4js.debug("Found Projects/n", listVP);
+
+				// fill in the required fields
+				if (vgName) req.oneGroup.name = vgName;
+				req.oneGroup.permission = newPerm;
+				if (vgGlobal != req.oneGroup.global) {
+					// switch global group setting, handle vpids
+					logger4js.debug("Switch Global Flag %s", vgGlobal);
+					req.oneGroup.vpids = [];
+					if (vgGlobal == true) {
+						for (var i = 0; i<listVP.length; i++) {
+							req.oneGroup.vpids.push(listVP[i]._id)
+						}
+						logger4js.debug("Updated Projects/n", req.oneGroup.vpids);
+					} else {
+						req.oneGroup.permission.vp = undefined;
+					}
+					req.oneGroup.global = vgGlobal;
+				}
+				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
+				req.oneGroup.save(function(err, oneVcGroup) {
+					if (err) {
+						logger4js.fatal("VC Put Group DB Connection ", err);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Project Group',
+							error: err
+						});
+					}
+					var resultGroup = {};
+					resultGroup._id = oneVcGroup._id;
+					resultGroup.name = oneVcGroup.name;
+					resultGroup.vcid = oneVcGroup.vcid;
+					resultGroup.global = oneVcGroup.global;
+					resultGroup.permission = oneVcGroup.permission;
+					resultGroup.groupType = oneVcGroup.groupType;
+					resultGroup.users = oneVcGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Project Group',
+						groups: [ resultGroup ]
+					});
+				});
+			});
+		})
+
+		router.route('/:vpid/group/:groupid/user')
+
+		/**
+			* @api {post} /vp/:vpid/group/:groupid/user Add User to Group
+			* @apiVersion 1.0.0
+			* @apiGroup Visbo Project Properties
+			* @apiName AddUserToVisboProjectGroup
+			* @apiHeader {String} access-key User authentication token.
+			* @apiDescription Adds the specified user from body to the group
+			*
+			* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+			* @apiError NotAuthenticated no valid token HTTP 401
+			* @apiError GroupNotFound no valid groupid HTTP 404
+			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiExample Example usage:
+			*  url: http://localhost:3484/vp/:vpid/group/:groupid/user
+			*  {
+		  *    "email":"new.user@visbo.de",
+			*    "message": "Invitation message"
+		  *  }
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 200 OK
+			* {
+			*   "state":"success",
+			*   "message":"User was added to Visbo Project Group",
+			*   "groups":[{
+			*     "_id":"vpgroup5c754feaa",
+			*     "name":"My first Group Renamed",
+			*     "vcid": "vc5c754feaa",
+			*     "users": [{userId: "userId5c754feaa", email: "new.user@visbo.de"}]
+			*     "global": true,
+			*     "permission": {vc: 3 },
+			*   }]
+			* }
+			*/
+
+		// Add User to Visbo Project Group
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			logger4js.info("Post a new Visbo Project User with name %s  to group executed by user %s with perm %s ", req.body.email, useremail, req.constPermVC);
+			req.auditDescription = 'Visbo Project User (Add)';
+
+			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
+			if (!req.body.email) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid user definition'
+				});
+			}
+
+			req.auditInfo = req.body.email;
+			// TODO: verify check for System VC & SysAdmin
+			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Project or no Permission'
+				});
+			}
+			logger4js.debug("Post User to VC %s Permission is ok", req.params.vpid);
+
+			var vcUser = new VCGroupUser();
+			var eMailMessage = undefined;
+			if (req.body.message) {
+				eMailMessage = req.body.message;
+			}
+			vcUser.email = req.body.email;
+
+			// check if the user is not member of the group already
+			if (req.oneGroup.users.filter(users => (users.email == vcUser.email)).length != 0) {
+				logger4js.debug("Post User %s to VC Group %s User is already a member", vcUser.email, req.oneGroup._id);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'User is already member',
+					groups: [req.oneGroup]
+				});
+			}
+			// check if the user exists and get the UserId or create the user
+			var queryUsers = User.findOne({'email': vcUser.email});
+			//queryUsers.select('email');
+			queryUsers.exec(function (err, user) {
+				if (err) {
+					logger4js.fatal("Post User to Group cannot find User, DB Connection %s", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting Users for VisboProjects',
+						error: err
+					});
+				}
+				if (!user) {
+					user = new User();
+					user.email = vcUser.email;
+					logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
+					user.save(function(err, user) {
+						if (err) {
+							logger4js.error("Add User to VC: Error DB Connection %O", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "database error, failed to create user",
+								error: err
+							});
+						}
+						// user exists now, now the VC can be updated
+						vcUser.userId = user._id;
+
+						req.oneGroup.users.push(vcUser)
+						req.oneGroup.save(function(err, vcGroup) {
+							if (err) {
+								logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+								return res.status(500).send({
+									state: "failure",
+									message: "database error, failed to update Visbo Group",
+									error: err
+								});
+							}
+							req.oneGroup = vcGroup;
+							// now send an e-Mail to the user for registration
+							var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
+							var uiUrl =  'http://localhost:4200'
+							if (process.env.UI_URL != undefined) {
+								uiUrl = process.env.UI_URL;
+							}
+
+							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+							var hash = createHash(secret);
+							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
+
+							logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+							if (eMailMessage === undefined) {
+									// do not send invitation mail if no message is specified
+									return res.status(200).send({
+										state: "success",
+										message: "Successfully added User to Visbo Group",
+										groups: [ vcGroup ]
+									});
+							} else {
+								ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+									if (err) {
+										logger4js.fatal("E-Mail Rendering failed %O", err);
+										return res.status(500).send({
+											state: "failure",
+											message: "E-Mail Rendering failed",
+											error: err
+										});
+									}
+									// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+									var message = {
+											from: useremail,
+											to: user.email,
+											subject: 'You have been invited to a Visbo Project ' + req.oneVC.name,
+											html: '<p> '.concat(emailHtml, " </p>")
+									};
+									logger4js.info("Now send mail from %s to %s", message.from, message.to);
+									mail.VisboSendMail(message);
+									return res.status(200).send({
+										state: "success",
+										message: "Successfully added User to Visbo Project",
+										groups: [ vcGroup ]
+									});
+								});
+							}
+						})
+					});
+				} else {
+					vcUser.userId = user._id;
+					req.oneGroup.users.push(vcUser)
+					req.oneGroup.save(function(err, vcGroup) {
+						if (err) {
+							logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+							return res.status(500).send({
+								state: "failure",
+								message: "database error, failed to update Visbo Group",
+								error: err
+							});
+						}
+						req.oneGroup = vcGroup;
+						// now send an e-Mail to the user for registration/login
+						var template = __dirname.concat('/../emailTemplates/');
+						var uiUrl =  'http://localhost:4200'
+						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVC.name
+						if (process.env.UI_URL != undefined) {
+							uiUrl = process.env.UI_URL;
+						}
+						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
+						if (user.status && user.status.registeredAt) {
+							// send e-Mail to a registered user
+							template = template.concat('inviteVCExistingUser.ejs');
+							uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
+						} else {
+							// send e-Mail to an existing but unregistered user
+							template = template.concat('inviteVCNewUser.ejs');
+							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+							var hash = createHash(secret);
+							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+						}
+
+						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+						if (eMailMessage === undefined) {
+								// do not send invitation mail if no message is specified
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully added User to Visbo Group",
+									groups: [ vcGroup ]
+								});
+						} else {
+							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+								if (err) {
+									logger4js.fatal("E-Mail Rendering failed %O", err);
+									return res.status(500).send({
+										state: "failure",
+										message: "E-Mail Rendering failed",
+										error: err
+									});
+								}
+								var message = {
+										from: useremail,
+										to: user.email,
+										subject: eMailSubject,
+										html: '<p> '.concat(emailHtml, " </p>")
+								};
+								logger4js.info("Now send mail from %s to %s", message.from, message.to);
+								mail.VisboSendMail(message);
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully added User to Visbo Project",
+									users: [ vcUser ]
+								});
+							});
+						}
+					})
+				}
+			})
+		})
+
+		router.route('/:vpid/group/:groupid/user/:userid')
+
+		/**
+			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from VC Group
+			* @apiVersion 1.0.0
+			* @apiGroup Visbo Project Users
+			* @apiName DeleteVisboProjectUser
+			* @apiHeader {String} access-key User authentication token.
+			* @apiDescription Deletes the specified user in the Visbo Project Group
+			*
+			* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
+			* @apiError NotAuthenticated no valid token HTTP 401
+			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiExample Example usage:
+			*   url: http://localhost:3484/vp/:vpid/group/:groupid/user/:userid
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 200 OK
+			* {
+			*   "state":"success",
+			*   "message":"Visbo Project User deleted from Group"
+			* }
+			*/
+
+	// Delete Visbo Project User
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			logger4js.info("DELETE Visbo Project User by userid %s email %s for user %s Group %s ", userId, useremail, req.params.userid, req.oneGroup._id);
+
+			req.auditDescription = 'Visbo Project User (Delete)';
+			req.auditInfo = req.params.userid + ' from ' + req.oneGroup.name;
+
+			var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
+			if (delUser) req.auditInfo = delUser.email  + ' from ' + req.oneGroup.name;
+
+			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Project or no Permission'
+				});
+			}
+			var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )))
+			logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
+			logger4js.trace("DELETE Visbo Project Filtered User List %O ", newUserList);
+			if (newUserList.length == req.oneGroup.users.length) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'User is not member of Group',
+					groups: [req.oneGroup]
+				});
+			}
+			// Check that there is still an Admin beside the removed one, if we remove a Admin role
+			if (req.oneGroup.internal && newUserList.length == 0) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Admin User will be left',
+					groups: [req.oneGroup]
+				});
+			}
+			logger4js.debug("Delete Visbo Project User after premission check %s", req.params.userid);
+			req.oneGroup.users = newUserList;
+			req.oneGroup.save(function(err, vg) {
+				if (err) {
+					logger4js.error("Error Update VisboProject Group %s with Error %s", req.oneVC.name, err);
+					return res.status(500).send({
+						state: "failure",
+						message: "database error, failed to update Visbo Project",
+						error: err
+					});
+				}
+				req.oneGroup = vg;
+				return res.status(200).send({
+					state: "success",
+					message: "Successfully removed User from Visbo Project",
+					groups: [req.oneGroup]
+				});
+			})
+		})
+
 router.route('/:vpid/lock')
 /**
 	* @api {post} /vp/:vpid/lock Create Lock
@@ -1177,11 +2049,18 @@ router.route('/:vpid/variant')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Variant (Create)';
 
-		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O", userId, useremail, req.params.vpid, req.body);
+		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O", userId, useremail, req.params.vpid, req.body, req.combinedPerm);
 
 		var variantList = req.oneVP.variant;
 		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
 
+		if (!(req.combinedPerm.vp & constPermVP.Modify
+				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Project or no Permission'
+			});
+		}
 		logger4js.trace("Variant %s current list %O", variantName, variantList);
 		var variantDuplicate = false
 		for (i = 0; i < variantList.length; i++) {
@@ -1389,6 +2268,7 @@ router.route('/:vpid/portfolio')
 		logger4js.info("Get Portfolio Version for user %s with query parameters %O", userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
+		queryVPF.lean();
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
 				logger4js.fatal("VPF GET DB Connection ", err);
@@ -1971,7 +2851,7 @@ router.route('/:vpid/portfolio/:vpfid')
 							mail.VisboSendMail(message);
 							return res.status(200).send({
 								state: "success",
-								message: "Successfully added User to Visbo Center",
+								message: "Successfully added User to Visbo Project",
 								users: [ vpUser ]
 							});
 						});

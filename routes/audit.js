@@ -94,6 +94,7 @@ router.route('/')
 	VisboAudit.find(query)
 	.limit(maxcount)
 	.sort({createdAt: -1})
+	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
 			logger4js.fatal("System Audit Get DB Connection ", err);
@@ -117,6 +118,7 @@ router.route('/')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned System Audit',
+			count: listVCAudit.length,
 			audit: listVCAudit
 		});
 	});

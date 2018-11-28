@@ -93,6 +93,10 @@ function dbConnect(dbconnection) {
     ).then(function() {
       //mongoose.set('debug', true);
       logger4js.mark('Server is fully functional DB Connected');
+      // mongoose.set('debug', true);
+      mongoose.set('debug', function (coll, method, query, doc, options) {
+         logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
+      });
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
