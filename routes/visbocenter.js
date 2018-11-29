@@ -45,7 +45,7 @@ var findUserById = function(currentUser) {
 	return currentUser.userId.toString() == this.toString();
 }
 
-// Generates hash using bCrypt staging
+// Generates hash using bCrypt
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
