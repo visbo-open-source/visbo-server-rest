@@ -85,6 +85,7 @@ router.route('/')
 		.limit(maxcount)
 		.select('-password')
 		.sort({updatedAt: -1})
+		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
 				logger4js.fatal("SysUser Get DB Connection ", err);

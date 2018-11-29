@@ -30,8 +30,26 @@ router.use('/', auth.verifyUser);
 router.use('/', verifyVpv.getAllVPVGroups);
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVpvidGroups);
-// register the VPV middleware to check that the user has access to the VPV
-// router.use('/', verifyVpv.verifyVpv);
+
+// updates the VP Count in the VC after create/delete/undelete Visbo Project
+var updateVPVCount = function(vpid, variantName, increment){
+	var updateQuery = {_id: vpid};
+	var updateOption = {upsert: false};
+
+	if (!variantName) {
+		var updateUpdate = {$inc: {vpvCount: increment}};
+		VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+			if (err){
+				logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err);
+			}
+			logger4js.trace("Updated VP %s vpvCount inc %d changed %d %d", vpid, increment, result.n, result.nModified)
+		})
+	} else {
+		// update a variant and increment the version counter
+		// TODO write the cirrect update statement for the array of variant
+		var updateUpdate = {};
+	}
+}
 
 /////////////////
 // Visbo Project Versions API
@@ -104,8 +122,12 @@ router.route('/')
 
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
-		for ( var i=0; i<req.permGroups.length; i++) {
-			vpidList = vpidList.concat(req.permGroups[i].vpids)
+		if (req.query.vpid) {
+			vpidList.push(req.query.vpid);
+		} else {
+			for ( var i=0; i<req.permGroups.length; i++) {
+				vpidList = vpidList.concat(req.permGroups[i].vpids)
+			}
 		}
 
 		logger4js.debug("Get VPV vpid List %O ", vpidList);
@@ -128,11 +150,10 @@ router.route('/')
 				longList = true;
 			}
 		}
-		logger4js.info("Get Project Versions for user %s for VPs %O Variant %s, timestamp %O latestOnly %s", userId, vpidList, queryvpv.variantName, queryvpv.timestamp, latestOnly);
-		logger4js.info("Get Project Versions Search VPV %O", queryvpv);
-
+		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 		queryvpv.vpid = {$in: vpidList};
 		logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
+		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (!longList) {
 			// deliver only the short info about project versions
@@ -142,6 +163,7 @@ router.route('/')
 			queryVPV.sort('vpid name variantName +timestamp')
 		else
 			queryVPV.sort('vpid name variantName -timestamp')
+		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
 				return res.status(500).send({
@@ -150,7 +172,8 @@ router.route('/')
 					error: err
 				});
 			};
-			logger4js.debug("Found %d Project Versions", listVPV.length);
+			var timeMongoEnd = new Date();
+			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
 			if (listVPV.length > 1 && latestOnly){
 				var listVPVfiltered = [];

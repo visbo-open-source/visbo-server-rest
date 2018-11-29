@@ -148,6 +148,7 @@ router.route('/')
 
 			var queryVC = VisboCenter.find(query);
 			//queryVC.select('name users updatedAt createdAt');
+			queryVC.lean();
 			queryVC.exec(function (err, listVC) {
 				if (err) {
 					logger4js.fatal("VC Get DB Connection ", err);
@@ -301,6 +302,7 @@ router.route('/')
 			logger4js.debug("Check users if they exist %s", JSON.stringify(vcUsers));
 			var queryUsers = User.find({'email': {'$in': vcUsers}});
 			queryUsers.select('email');
+			queryUsers.lean();
 			queryUsers.exec(function (err, listUsers) {
 				if (err) {
 					logger4js.fatal("VC Post DB Connection ", err);
@@ -836,6 +838,7 @@ router.route('/:vcid/audit')
 		VisboAudit.find(query)
 		.limit(maxcount)
 		.sort({createdAt: -1})
+		.lean()
 		.exec(function (err, listVCAudit) {
 			if (err) {
 				logger4js.fatal("VC Audit Get DB Connection ", err);
@@ -849,6 +852,7 @@ router.route('/:vcid/audit')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Center Audit',
+				count: listVCAudit.length,
 				audit: listVCAudit
 			});
 		});
@@ -907,6 +911,7 @@ router.route('/:vcid/group')
 
 		var queryVCGroup = VisboGroup.find(query);
 		queryVCGroup.select('-vpids');
+		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, listVCGroup) {
 			if (err) {
 				logger4js.fatal("VC Get Group DB Connection ", err);
@@ -1031,6 +1036,7 @@ router.route('/:vcid/group')
 		logger4js.debug("Post Group to VC %s Permission is ok, check unique name", req.params.vcid);
 		var queryVCGroup = VisboGroup.findOne({'vcid': req.params.vcid, 'name': req.body.name});
 		queryVCGroup.select('name');
+		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, oneVCGroup) {
 			if (err) {
 				logger4js.fatal("VC Post Group DB Connection ", err);
@@ -1244,6 +1250,7 @@ router.route('/:vcid/group/:groupid')
 		// query['deleted.deletedAt'] = {$exists: false};
 		var queryVP = VisboProject.find(query);
 		queryVP.select('_id'); // return only _id
+		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
 				logger4js.fatal("VP GET DB Connection ", err);
@@ -1659,6 +1666,7 @@ router.route('/:vcid/group/:groupid')
 
 			var queryVCRole = VCRole.find({'vcid': req.oneVC._id});
 			// queryVCRole.select('_id vcid name');
+			queryVCRole.lean();
 			queryVCRole.exec(function (err, listVCRole) {
 				if (err) {
 					logger4js.fatal("VC Get Role DB Connection ", err);
@@ -1739,6 +1747,7 @@ router.route('/:vcid/group/:groupid')
 			logger4js.debug("Post Role to VC %s Permission is ok, check unique uid", req.params.vcid);
 			var queryVCRole = VCRole.findOne({'vcid': req.params.vcid, 'uid': req.body.uid});
 			queryVCRole.select('name uid');
+			queryVCRole.lean();
 			queryVCRole.exec(function (err, oneVCRole) {
 				if (err) {
 					logger4js.fatal("VC Post Role DB Connection ", err);
@@ -2012,6 +2021,7 @@ router.route('/:vcid/cost')
 
 		var queryVCCost = VCCost.find({'vcid': req.oneVC._id});
 		// queryVCCost.select('_id vcid name');
+		queryVCCost.lean();
 		queryVCCost.exec(function (err, listVCCost) {
 			if (err) {
 				logger4js.fatal("VC Get Cost DB Connection ", err);
