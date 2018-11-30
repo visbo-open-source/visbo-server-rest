@@ -75,7 +75,7 @@ router.route('/')
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
-	* @apiParam {Boolean} refNext If refNext is true the system delivers not the version before refDate instead it delivers the version after refDate
+	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
 	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
@@ -130,7 +130,7 @@ router.route('/')
 			}
 		}
 
-		logger4js.debug("Get VPV vpid List %O ", vpidList);
+		logger4js.trace("Get VPV vpid List %O ", vpidList);
 
 		queryvpv.deleted = {$exists: false};
 		if (req.query) {
@@ -139,7 +139,7 @@ router.route('/')
 			}
 			if (req.query.refDate){
 				var refDate = new Date(req.query.refDate);
-				queryvpv.timestamp =  req.query.refNext == true ? {$gt: refDate} : {$lt: refDate};
+				queryvpv.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				latestOnly = true;
 			}
 			if (req.query.variantName != undefined){
