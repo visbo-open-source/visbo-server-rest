@@ -59,9 +59,6 @@ router.param('vcid', verifyVc.getVcidGroups);
 // Register the Group middleware to check the groupid param
 router.param('groupid', verifyVg.getGroupId);
 
-// register the VC middleware to check that the user has access to the VC
-// router.use('/', verifyVc.verifyVc);
-
 /////////////////
 // Visbo Center API
 // /vc
@@ -1122,16 +1119,26 @@ router.route('/:vcid/group/:groupid')
 		req.auditInfo = req.oneGroup.name;
 		logger4js.info("DELETE Visbo Center Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vcid, req.params.groupid);
 
-		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Visbo Center or no Permission'
-			});
+		if (req.oneGroup.groupType == 'VC') {
+			if (!(req.combinedPerm.vc & constPermVC.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+		} else {
+			if (!(req.combinedPerm.system & constPermSystem.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
 		}
 		logger4js.debug("Delete Visbo Center Group after premission check %s", req.params.vcid);
 
 		// Do not allow to delete internal VC Group
-		if (req.oneGroup.internal) {
+		if (req.oneGroup.internal
+			|| (req.oneGroup.groupType != 'VC' && !req.oneVC.system)) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Visbo Center Group not deletable'
@@ -1224,6 +1231,13 @@ router.route('/:vcid/group/:groupid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
+		}
+		if (req.oneGroup.internal
+			|| (req.oneGroup.groupType != 'VC' && !req.oneVC.system)) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'not a Visbo Center Group'
+			});
 		}
 		logger4js.debug("Update Visbo Center Group after premission check vcid %s groupName %s", req.params.vcid, req.oneGroup.name);
 
@@ -1350,7 +1364,7 @@ router.route('/:vcid/group/:groupid')
 		var useremail = req.decoded.email;
 
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, useremail, req.constPermVC);
+		logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.combinedPerm);
 		req.auditDescription = 'Visbo Center User (Add)';
 
 		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
@@ -1367,6 +1381,12 @@ router.route('/:vcid/group/:groupid')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
+			});
+		}
+		if (req.oneGroup.groupType != 'VC') {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'not a Visbo Center Group'
 			});
 		}
 		logger4js.debug("Post User to VC %s Permission is ok", req.params.vcid);
@@ -1584,6 +1604,12 @@ router.route('/:vcid/group/:groupid')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
+			});
+		}
+		if (req.oneGroup.groupType != 'VC') {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'not a Visbo Center Group'
 			});
 		}
 		var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )))
