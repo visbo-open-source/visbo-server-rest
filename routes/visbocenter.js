@@ -1232,8 +1232,8 @@ router.route('/:vcid/group/:groupid')
 				});
 			}
 		}
-		if (req.oneGroup.internal
-			|| (req.oneGroup.groupType != 'VC' && !req.oneVC.system)) {
+		if (req.oneGroup.internal) vgName = req.oneGroup.groupName; // do not overwrite internal Group Name
+		if (req.oneGroup.groupType != 'VC' && !req.oneVC.system) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'not a Visbo Center Group'

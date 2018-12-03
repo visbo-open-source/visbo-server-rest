@@ -1840,7 +1840,7 @@ router.route('/:vpid/lock')
 		}
 
 		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
-			return res.status(403).send({
+			return res.status(409).send({
 				state: 'failiure',
 				message: 'Visbo Project already locked',
 				lock: req.oneVP.lock
@@ -1848,7 +1848,7 @@ router.route('/:vpid/lock')
 		}
 		if (expiredAt <= dateNow) {
 			logger4js.info("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
-			return res.status(401).send({
+			return res.status(400).send({
 				state: 'failiure',
 				message: 'New Lock already expired',
 				lock: req.oneVP.lock
