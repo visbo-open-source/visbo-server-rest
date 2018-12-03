@@ -8,7 +8,7 @@ var vcUserSchema = new Schema({
 });
 
 var visboCenterSchema = new mongoose.Schema({
-	name: { type: String, required: true, maxlength: 100 },
+	name: { type: String, required: true, maxlength: 256 },
 	description: { type: String, required: false },
 	users: [{type: vcUserSchema, required: true }],
 	vpCount: { type: Number, reuqired: false },

@@ -1,24 +1,33 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
 <h1>
   You have been invited to a Visbo Project
 </h1>
 <p>
-  <%if (userFrom.profile && userFrom.profile.firstname ) { %>
+  <%if (userFrom.profile && userFrom.profile.firstName ) { %>
     <%= userFrom.profile.firstName %>
   <% } %>
-  <%if (userFrom.profile && userFrom.profile.lastname ) { %>
-    <%= userFrom.profile.lastname %>
+  <%if (userFrom.profile && userFrom.profile.lastName ) { %>
+    <%= userFrom.profile.lastName %>
   <% } %>
   (<%= userFrom.email %>) has invited you to Visbo Project: <b><%= vp.name %></b> with <%= vp.vpvCount %> Versions
 </p>
 <p>
   Message: <br>
-  <h4>
+  <h5>
     <%- message.replace(/\n/g, '<br/>')  %>
-  </h4>
+  </h5>
 </p>
-<h3>
+<h4>
   To access the Visbo Project you have to register first by following this link: <a href="<%= url %>">Register</a>
-</h3>
+</h4>
 <p>
   Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

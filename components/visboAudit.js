@@ -6,7 +6,7 @@ var moment = require('moment');
 var audit = require('./../components/visboAudit');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var logModule = "AUDIT";
+var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -67,6 +67,7 @@ function visboAudit(tokens, req, res) {
 	auditEntry.result = {};
 	auditEntry.result.time = Math.round(tokens['response-time'](req, res))
 	auditEntry.result.status = tokens.status(req, res);
+	auditEntry.result.size = tokens.res(req, res, 'content-length')||0;
 	auditEntry.save(function(err, auditEntryResult) {
 		if (err) {
 			logger4js.error("VisboAudit failed to save %O", auditEntry);

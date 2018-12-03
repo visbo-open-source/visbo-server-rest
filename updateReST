@@ -1,0 +1,42 @@
+#!/bin/bash
+cd $HOME/GitHub/visbo-server-rest
+echo "01: Checking Local Status of Branch"
+git status
+if [ $? -ne 0 ]
+then
+  echo "FATAL: Local Changes have to be checked first before upgrading."
+  exit
+fi
+
+echo "02: Pull Branch from Repository Server"
+git pull
+if [ $? -ne 0 ]
+then
+  echo "FATAL: Pull Failed to update ReST Server Branch."
+  exit
+fi
+
+echo "03: Install subcomponents from NODE environment"
+npm install
+if [ $? -ne 0 ]
+then
+  echo "FATAL: Install of NODE components failed."
+  exit
+fi
+
+echo "04: Update API Documentation"
+apidoc -i routes -o public/apidoc
+sudo rm -rf /var/www/apidoc
+sudo cp -r public/apidoc /var/www
+
+echo "05: Manage NODE Process with PM2"
+pm2 list
+pm2 restart VisboReST
+if [ $? -ne 0 ]
+then
+  echo "FATAL: PM2 Restart failed to Restart Visbo-Server-Rest."
+  exit
+fi
+pm2 reset VisboReST
+
+echo "ReST Server Updated Successfully"

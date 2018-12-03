@@ -23,3 +23,17 @@ debugLogLevel = function(logCategory) {
 	// console.log("LOG CATEGORY %s :%s:%s:", logCategory, configDebug[logCategory], configDebug[logCategory] || "warn");
 	return configDebug[logCategory] || configDebug["All"] || "info";
 }
+
+getLogLevelConfig = function() {
+	if ( configDebug == undefined ) {
+		debugLogLevel();
+	}
+	return configDebug;
+}
+
+setLogLevelConfig = function(newConfigDebug) {
+	if ( newConfigDebug == undefined ) {
+		return;
+	}
+	configDebug = newConfigDebug
+}

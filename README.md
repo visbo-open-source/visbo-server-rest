@@ -48,7 +48,7 @@ for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br>
 To create your own API documentation run command in the root folder<br>
 
-	apidoc -i routes -o public/doc
+	apidoc -i routes -o public/apidoc
 
 <br>for addition information <a href="http://apidocjs.com/">follow this link</a>.
 <br><br>
