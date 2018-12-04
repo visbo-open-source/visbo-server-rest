@@ -36,7 +36,7 @@ var createSystemVC = function (body) {
 			return undefined;
 		}
 		if (vc) {
-			logger4js.warn("System VisboCenter already exists");
+			logger4js.debug("System VisboCenter already exists");
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
