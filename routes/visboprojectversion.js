@@ -157,7 +157,7 @@ router.route('/')
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (!longList) {
 			// deliver only the short info about project versions
-			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
+			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt');
 		}
 		if (req.query.refNext)
 			queryVPV.sort('vpid name variantName +timestamp')
@@ -166,6 +166,7 @@ router.route('/')
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
+				logger4js.fatal("Error connecting to DB during Get VPV: %O", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -249,18 +250,19 @@ router.route('/')
 		var useremail  = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Create)';
+		var queryvpv = {};
 
 		var vpid = req.body.vpid || 0;
 		var variantName = req.body.variantName || "";
 		var variantIndex = -1;
 
-		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s with Perm %O", useremail, req.body.name, vpid, req.combinedPerm);
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, vpid, req.body.updatedAt, req.combinedPerm);
 		var newVPV = new VisboProjectVersion();
 		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
 			|| !(req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant))) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Centers not found or no Admin'
+				message: 'Visbo Centers not found or no Permission'
 			});
 		}
 		var queryVp = {};
@@ -268,15 +270,14 @@ router.route('/')
 		queryVp.deleted = {$exists: false};				// Not deleted
 		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("VPV Post DB Connection ", err);
+				logger4js.fatal("Error connecting to DB during POST VPV find VP: %O", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
 					error: err
 				});
-			}
+			};
 			if (!oneVP) {
-				logger4js.warn("VPV Post VP not found or no permission %s", vpid);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'Visbo Project not found or no Permission'
@@ -292,7 +293,7 @@ router.route('/')
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
-					return res.status(401).send({
+					return res.status(400).send({
 						state: 'failure',
 						message: 'Visbo Project variant does not exist',
 						vp: [req.oneVP]
@@ -302,7 +303,7 @@ router.route('/')
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn("VPV Post VP locked %s %s", vpid, variantName);
-				return res.status(401).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
 					vp: [req.oneVP]
@@ -323,80 +324,113 @@ router.route('/')
 					vp: [req.oneVP]
 				});
 			}
+
 			logger4js.debug("User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
-
-			// keep unchangable attributes
-			newVPV.name = oneVP.name;
-			newVPV.vpid = oneVP._id;
-			newVPV.variantName = variantName;
-			newVPV.timestamp = req.body.timestamp || new Date();
-
-			// copy all attributes
-			newVPV.variantDescription = req.body.variantDescription;
-			newVPV.Risiko = req.body.Risiko;
-			newVPV.StrategicFit = req.body.StrategicFit;
-			newVPV.customDblFields = req.body.customDblFields;
-			newVPV.customStringFields = req.body.customStringFields;
-			newVPV.customBoolFields = req.body.customBoolFields;
-			newVPV.actualDataUntil = req.body.actualDataUntil;
-			newVPV.Erloes = req.body.Erloes;
-			newVPV.leadPerson = req.body.leadPerson;
-			newVPV.tfSpalte = req.body.tfSpalte;
-			newVPV.tfZeile = req.body.tfZeile;
-			newVPV.startDate = req.body.startDate;
-			newVPV.endDate = req.body.endDate;
-			newVPV.earliestStart = req.body.earliestStart;
-			newVPV.earliestStartDate = req.body.earliestStartDate;
-			newVPV.latestStart = req.body.latestStart;
-			newVPV.latestStartDate = req.body.latestStartDate;
-			newVPV.status = req.body.status;
-			newVPV.ampelStatus = req.body.ampelStatus;
-			newVPV.ampelErlaeuterung = req.body.ampelErlaeuterung;
-			newVPV.farbe = req.body.farbe;
-			newVPV.Schrift = req.body.Schrift;
-			newVPV.Schriftfarbe = req.body.Schriftfarbe;
-			newVPV.VorlagenName = req.body.VorlagenName;
-			newVPV.Dauer = req.body.Dauer;
-			newVPV.AllPhases = req.body.AllPhases;
-			newVPV.hierarchy = req.body.hierarchy;
-			newVPV.volumen = req.body.volumen;
-			newVPV.complexity = req.body.complexity;
-			newVPV.description = req.body.description;
-			newVPV.businessUnit = req.body.businessUnit;
-
-			logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
-			newVPV.save(function(err, oneVPV) {
+			// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
+			queryvpv.deleted = {$exists: false};
+			queryvpv.vpid = req.body.vpid
+			queryvpv.variantName = req.body.variantName || '';
+			var queryVPV = VisboProjectVersion.findOne(queryvpv);
+			queryVPV.sort('-timestamp');
+			queryVPV.select('_id vpid name timestamp variantName updatedAt createdAt');
+			queryVPV.lean();
+			queryVPV.exec(function (err, lastVPV) {
 				if (err) {
+					logger4js.fatal("Error connecting to DB during POST VPV: %O", err);
 					return res.status(500).send({
-						state: "failure",
-						message: "database error, failed to create VisboProjectVersion",
+						state: 'failure',
+						message: 'Internal Server Error with DB Connection',
 						error: err
 					});
+				};
+				if (req.body.updatedAt) {
+					// check that the last VPV has the same date
+					var updatedAt = new Date(req.body.updatedAt);
+					if (lastVPV) {
+						logger4js.debug("last VPV: updatedAt Body %s last Version %s", updatedAt.getTime(), lastVPV.updatedAt.getTime());
+						if (lastVPV.updatedAt.getTime() != updatedAt.getTime()) {
+							return res.status(409).send({
+								state: 'failure',
+								message: 'Conflict with update Dates',
+								vpv: [lastVPV]
+							});
+						}
+					}
 				}
-				req.oneVPV = oneVPV;
-				// update the version count of the base version or the variant
-				if (variantName == "") {
-					req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 1 : req.oneVP.vpvCount + 1;
-				} else {
-					req.oneVP.variant[variantIndex].vpvCount += 1;
-				}
-				logger4js.debug("Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
-				req.oneVP.save(function(err, vp) {
+
+				// keep unchangable attributes
+				newVPV.name = oneVP.name;
+				newVPV.vpid = oneVP._id;
+				newVPV.variantName = variantName;
+				newVPV.timestamp = req.body.timestamp || new Date();
+
+				// copy all attributes
+				newVPV.variantDescription = req.body.variantDescription;
+				newVPV.Risiko = req.body.Risiko;
+				newVPV.StrategicFit = req.body.StrategicFit;
+				newVPV.customDblFields = req.body.customDblFields;
+				newVPV.customStringFields = req.body.customStringFields;
+				newVPV.customBoolFields = req.body.customBoolFields;
+				newVPV.actualDataUntil = req.body.actualDataUntil;
+				newVPV.Erloes = req.body.Erloes;
+				newVPV.leadPerson = req.body.leadPerson;
+				newVPV.tfSpalte = req.body.tfSpalte;
+				newVPV.tfZeile = req.body.tfZeile;
+				newVPV.startDate = req.body.startDate;
+				newVPV.endDate = req.body.endDate;
+				newVPV.earliestStart = req.body.earliestStart;
+				newVPV.earliestStartDate = req.body.earliestStartDate;
+				newVPV.latestStart = req.body.latestStart;
+				newVPV.latestStartDate = req.body.latestStartDate;
+				newVPV.status = req.body.status;
+				newVPV.ampelStatus = req.body.ampelStatus;
+				newVPV.ampelErlaeuterung = req.body.ampelErlaeuterung;
+				newVPV.farbe = req.body.farbe;
+				newVPV.Schrift = req.body.Schrift;
+				newVPV.Schriftfarbe = req.body.Schriftfarbe;
+				newVPV.VorlagenName = req.body.VorlagenName;
+				newVPV.Dauer = req.body.Dauer;
+				newVPV.AllPhases = req.body.AllPhases;
+				newVPV.hierarchy = req.body.hierarchy;
+				newVPV.volumen = req.body.volumen;
+				newVPV.complexity = req.body.complexity;
+				newVPV.description = req.body.description;
+				newVPV.businessUnit = req.body.businessUnit;
+
+				logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
+				newVPV.save(function(err, oneVPV) {
 					if (err) {
-						logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
 						return res.status(500).send({
 							state: "failure",
-							message: "database error, failed to update Visbo Project",
+							message: "database error, failed to create VisboProjectVersion",
 							error: err
 						});
 					}
-					req.oneVP = vp;
-					return res.status(200).send({
-						state: "success",
-						message: "Successfully created new Project Version",
-						vpv: [ oneVPV ]
-					});
-				})
+					req.oneVPV = oneVPV;
+					// update the version count of the base version or the variant
+					if (variantName == "") {
+						req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 1 : req.oneVP.vpvCount + 1;
+					} else {
+						req.oneVP.variant[variantIndex].vpvCount += 1;
+					}
+					logger4js.debug("Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
+					req.oneVP.save(function(err, vp) {
+						if (err) {
+							logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
+							return res.status(500).send({
+								state: "failure",
+								message: "database error, failed to update Visbo Project",
+								error: err
+							});
+						}
+						req.oneVP = vp;
+						return res.status(200).send({
+							state: "success",
+							message: "Successfully created new Project Version",
+							vpv: [ oneVPV ]
+						});
+					})
+				});
 			});
 		});
 	})
@@ -477,23 +511,24 @@ router.route('/:vpvid')
 
 		logger4js.info("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
 
-		logger4js.debug("DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVPV.name, req.oneVPV.variantName);
+		logger4js.debug("DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVP.name, req.oneVPV.variantName);
 		var variantExists = false;
 		var variantIndex;
 		var variantName = req.oneVPV.variantName
 		if (variantName != "") {
 			// check that the Variant exists
-			variantExists = false;
+			variantExists = true;
 			variantIndex = variant.findVariant(req.oneVP, variantName)
 			if (variantIndex < 0) {
 				logger4js.warn("VPV Delete Variant does not exist %s %s", req.params.vpvid, variantName);
 				// Allow Deleting of a version where Variant does not exists for Admins
 				variantName = ""
+				variantExists = false;
 			};
 		}
 		// check if the project is locked
 		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
-			return res.status(401).send({
+			return res.status(409).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
@@ -501,7 +536,7 @@ router.route('/:vpvid')
 		}
 		// user does not have admin permission and does not own the variant
 		var hasPerm = false;
-		if (req.combinedPerm & constPermVP.Delete) {
+		if (req.combinedPerm.vp & constPermVP.Delete) {
 			hasPerm = true;
 		} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
 			hasPerm = true;
@@ -528,7 +563,8 @@ router.route('/:vpvid')
 			}
 			req.oneVPV = oneVPV;
 			if (variantName == "") {
-				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 0 : req.oneVP.vpvCount - 1;
+				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined || req.oneVP.vpvCount < 1 ? 0 : req.oneVP.vpvCount;
+				req.oneVP.vpvCount -= 1;
 			} else if (variantExists) {
 				req.oneVP.variant[variantIndex].vpvCount -= 1;
 			}

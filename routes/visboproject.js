@@ -21,6 +21,7 @@ var Lock = mongoose.model('Lock');
 var Variant = mongoose.model('Variant');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
+var VisboAudit = mongoose.model('VisboAudit');
 
 var Const = require('../models/constants')
 var constPermVC = Const.constPermVC
@@ -465,7 +466,7 @@ router.route('/')
 						}
 					});
 					var newVGRead = new VisboGroup();
-					newVGRead.name = 'Read Access'
+					newVGRead.name = 'Project Read Access'
 					newVGRead.groupType = 'VP'
 					newVGRead.global = false;
 					newVGRead.internal = false;
@@ -488,12 +489,14 @@ router.route('/')
 						};
 					};
 					// save asynchronous
-					logger4js.debug("VP Post Create 2. Group for vp %s group %O ", newVP._id, newVG);
-					newVGRead.save(function(err, vg) {
-						if (err) {
-							logger4js.fatal("VP Post Create 2. Group for vp %s DB Connection ", newVP._id, err);
-						}
-					});
+					if (newVGRead.users.length > 0) {
+						logger4js.debug("VP Post Create 2. Group for vp %s group %O ", newVP._id, newVG);
+						newVGRead.save(function(err, vg) {
+							if (err) {
+								logger4js.fatal("VP Post Create 2. Group for vp %s DB Connection ", newVP._id, err);
+							}
+						});
+					}
 
 					// copy all existing users to newVP and set the userId correct.
 					if (req.body.users) {
@@ -1119,7 +1122,7 @@ router.route('/:vpid/audit')
 			var queryVCGroup = VisboGroup.find(query);
 			queryVCGroup.select('-vpids');
 			queryVCGroup.lean();
-			queryVCGroup.exec(function (err, listVCGroup) {
+			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
 					logger4js.fatal("VC Get Group DB Connection ", err);
 					return res.status(500).send({
@@ -1128,30 +1131,32 @@ router.route('/:vpid/audit')
 						error: err
 					});
 				}
-				logger4js.info("Found %d Groups for VC", listVCGroup.length);
+				logger4js.info("Found %d Groups for VC", listVPGroup.length);
 				if (req.query.userlist) {
-					var listVCUsers = [];
-					for (var i = 0; i < listVCGroup.length; i++) {
-						for (var j = 0; j < listVCGroup[i].users.length; j++) {
-							listVCUsers.push({userId: listVCGroup[i].users[j].userId,
-															email: listVCGroup[i].users[j].email,
-															groupId: listVCGroup[i]._id,
-															groupName: listVCGroup[i].name})
+					var listVPUsers = [];
+					for (var i = 0; i < listVPGroup.length; i++) {
+						for (var j = 0; j < listVPGroup[i].users.length; j++) {
+							listVPUsers.push({userId: listVPGroup[i].users[j].userId,
+															email: listVPGroup[i].users[j].email,
+															groupId: listVPGroup[i]._id,
+															groupName: listVPGroup[i].name,
+														  groupType: listVPGroup[i].groupType,
+															internal: listVPGroup[i].internal})
 						}
 					}
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Groups',
-						count: listVCGroup.length,
-						groups: listVCGroup,
-						users: listVCUsers
+						count: listVPGroup.length,
+						groups: listVPGroup,
+						users: listVPUsers
 					});
 				} else {
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Groups',
-						count: listVCGroup.length,
-						groups: listVCGroup
+						count: listVPGroup.length,
+						groups: listVPGroup
 					});
 				}
 			});

@@ -636,7 +636,6 @@ router.route('/:vcid')
 							// Define the correct Query to find the VPs that have to be undeleted
 							var updateQuery = {"vcid": req.oneVC._id};
 							updateQuery['deleted.byParent'] = true;
-							// TODO: Define the correct Update to remove the Deleted flag from the VP
 							var updateUpdate = {$unset: deleted};
 							var updateOption = {upsert: false};
 							VisboProject.update(updateQuery, updateUpdate, updateOption, function (err, result) {
@@ -926,7 +925,9 @@ router.route('/:vcid/group')
 						listVCUsers.push({userId: listVCGroup[i].users[j].userId,
 														email: listVCGroup[i].users[j].email,
 														groupId: listVCGroup[i]._id,
-														groupName: listVCGroup[i].name})
+														groupName: listVCGroup[i].name,
+														groupType: listVCGroup[i].groupType,
+														internal: listVCGroup[i].internal})
 					}
 				}
 				return res.status(200).send({
@@ -993,7 +994,6 @@ router.route('/:vcid/group')
 		var vgName = req.body.name ? req.body.name.trim() : '';
 		var newPerm = {};
 		var vgGlobal = req.body.global == true;
-		// TODO Do we still need this?????
 		groupType = req.oneVC.system ? 'System' : 'VC';
 		if ( req.body.permission ) {
 			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll

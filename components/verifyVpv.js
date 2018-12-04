@@ -51,7 +51,7 @@ function getAllVPVGroups(req, res, next) {
 			query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 			query.vpids = req.body && req.body.vpid
 			acceptEmpty = false;
-			query['permission.vc'] = { $bitsAnySet: constPermVP.View + constPermVP.Modify + constPermVP.CreateVariant }
+			query['permission.vp'] = { $bitsAnySet: constPermVP.View + constPermVP.Modify + constPermVP.CreateVariant }
 		}
 
 		logger4js.debug("Query VGs %s", JSON.stringify(query));
@@ -170,11 +170,8 @@ function getVpvidGroups(req, res, next, vpvid) {
 			// 	if (sysAdmin && req.query.deleted) checkDeletedVP = true;
 			// }
 			// check against the groups
-			var vpidList = [];
 			var combinedPerm = {system: 0, vc: 0, vp: 0};
 			for (var i=0; i < req.permGroups.length; i++) {
-				// TODO build the correct vpid list from vpids
-				// vpidList.push(req.permGroups[i].vpid);
 				combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
 				combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
 				combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
@@ -188,7 +185,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 			if (checkDeletedVP) {
 				query['deleted.byParent'] = false;			// to guarantee that the user can not see a vp that is deleted by VC
 			}
-			// TODO prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
+			// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
 			logger4js.trace("Get Visbo Project Query %O", query);
 			var queryVP = VisboProject.findOne(query);
 			// queryVP.select('name users updatedAt createdAt');
