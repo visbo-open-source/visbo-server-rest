@@ -728,7 +728,7 @@ router.route('/:vpid')
 		}
 		// undelete the VP in case of change
 		// if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
-		if (req.oneVP.deleted) {
+		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
 			req.oneVP.deleted = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
@@ -757,7 +757,7 @@ router.route('/:vpid')
 					message: 'Project with same name exists'
 				});
 			};
-			logger4js.debug("PUT VP: save now deleted %O", req.oneVP);
+			logger4js.debug("PUT VP: save now %O unDelete %s", req.oneVP, vpUndelete);
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
 					logger4js.fatal("VP PUT DB Connection ", err);
@@ -791,20 +791,12 @@ router.route('/:vpid')
 							}
 							logger4js.debug("Update Portfolio Name found %d updated %d", result.n, result.nModified)
 
-							if (!vpUndelete){
-								return res.status(200).send({
-									state: 'success',
-									message: 'Updated Visbo Project',
-									vp: [ oneVP ]
-								});
-							} else {
-								updateVPCount(req.oneVP.vcid, 1); // async
-								return res.status(200).send({
-									state: "success",
-									message: 'Updated Visbo Project',
-									vp: [ oneVP ]
-								});
-							}
+							if (vpUndelete) updateVPCount(req.oneVP.vcid, 1); // async
+							return res.status(200).send({
+								state: 'success',
+								message: 'Updated Visbo Project',
+								vp: [ oneVP ]
+							});
 						});
 					} else {
 						logger4js.debug("VP PUT %s: Update Project Versions to %s", oneVP._id, oneVP.name);
@@ -839,38 +831,22 @@ router.route('/:vpid')
 									});
 								}
 								logger4js.debug("Update VP names in Portfolio References found %d updated %d", result.n, result.nModified)
-								if (!vpUndelete){
-									return res.status(200).send({
-										state: 'success',
-										message: 'Updated Visbo Project',
-										vp: [ oneVP ]
-									});
-								} else {
-									updateVPCount(req.oneVP.vcid, 1); // async
-									return res.status(200).send({
-										state: "success",
-										message: 'Updated Visbo Project',
-										vp: [ oneVP ]
-									});
-								}
+								if (vpUndelete) updateVPCount(req.oneVP.vcid, 1); // async
+								return res.status(200).send({
+									state: 'success',
+									message: 'Updated Visbo Project',
+									vp: [ oneVP ]
+								});
 							});
 						});
 					}
 				} else {
-					if (!vpUndelete){
-						return res.status(200).send({
-							state: 'success',
-							message: 'Updated Visbo Project',
-							vp: [ oneVP ]
-						});
-					} else {
-						updateVPCount(req.oneVP.vcid, 1); // async
-						return res.status(200).send({
-							state: "success",
-							message: 'Updated Visbo Project',
-							vp: [ oneVP ]
-						});
-					}
+					if (vpUndelete) updateVPCount(req.oneVP.vcid, 1); // async
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Project',
+						vp: [ oneVP ]
+					});
 				}
 			});
 		});
