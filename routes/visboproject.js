@@ -122,20 +122,19 @@ router.route('/')
 	* @apiGroup Visbo Project
 	* @apiName GetVisboProjects
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp retruns all VP the user has access permission to
-	* In case of success it delivers an array of VPs, the array contains in each element a VP
-	* the lock section is empty if no lock is set
-	* the variant section is empty if there are no variants for this Project
+	* @apiDescription GET /vp retruns all Visbo Projects the user has access permission to
+	* In case of success it delivers an array of VPs, the array contains in each element a Visbo Project
+	* The lock section is empty if no lock is set, otherwise it delivers the list of locks that were set for the Visbo Project and the respective Variant.
+	* The variant section is empty if there are no variants for this Project, otherwise it contains a list of variants that exists for this project.
 	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
-	* with an additional query paramteter ?vcid=vc5aaf992 the system restricts the list of VP to the specified VC
 	* @apiParam (Parameter) {String} [vcid] Deliver only projects for a specific Visbo Center
 	* @apiParam (Parameter) {Number=0,1,2} [vpType] Deliver only projects of the specified Type, if not defined, deliver all types
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  if true, request VPs for Appl. Admin User
-	* @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
-	* @apiDescription Get all Visbo Projects to whom the authenticated user has access. Optional with a query parameter "vcid" in the URL to restrict the results to a specific Visbo Center
+	*
+	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
 	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=1
@@ -144,8 +143,7 @@ router.route('/')
 	* {
 	*   "state":"success",
 	*   "message":"Returned Visbo Projects",
-	*   "vp":[
-	*    {
+	*   "vp":[{
 	*       "_id":"vp541c754feaa",
 	*      "updatedAt":"2018-03-16T12:39:54.042Z",
 	*      "createdAt":"2018-03-12T09:54:56.411Z",
@@ -153,37 +151,19 @@ router.route('/')
 	*      "vcid": "vc5aaf992",
 	*      "vpvCount": "0",
 	*      "vpType": "1",
-	*      "vpPublic": "false",
-	*      "users":[
-	*       {
-	*        "email":"example1@visbo.de",
-	*        "role":"Admin",
-	*        "userId":"us5c754feab"
-	*       },
-	*       {
-	*        "email":"example2@visbo.de",
-	*        "role":"User",
-	*        "userId":"us5c754feac"
-	*       }
-	*     ],
-	*     "lock": [
-	*      {
-	*       "variantName": "",
-	*       "email": "someone@visbo.de",
-	*       "createdAt": "2018-04-26T11:04:12.094Z",
-	*       "expiresAt": "2018-04-26T12:04:12.094Z"
-	*      }
-	*    ],
-	*    "variant": [
-	*      {
-	*       "variantName": "V1",
-	*       "email": "someone@visbo.de",
-	*       "createdAt": "2018-04-26T11:04:12.094Z",
-	*       "vpvCount": "1"
-	*      }
-	*    ]
-	*   }
-	*  ]
+	*      "lock": [{
+	*        "variantName": "",
+	*        "email": "someone@visbo.de",
+	*        "createdAt": "2018-04-26T11:04:12.094Z",
+	*        "expiresAt": "2018-04-26T12:04:12.094Z"
+	*      }],
+	*      "variant": [{
+	*        "variantName": "V1",
+	*        "email": "someone@visbo.de",
+	*        "createdAt": "2018-04-26T11:04:12.094Z",
+	*        "vpvCount": "1"
+	*      }]
+	*   }]
 	* }
 	*/
 // Get Visbo projects
@@ -209,18 +189,10 @@ router.route('/')
 			query._id = {$in: vpidList};
 		}
 
-		// if user is not sysadmin check for user permission
-		// if (!isSysAdmin) {
-		// 	// either member of the project or if project is public member of the VC
-		// 	logger4js.debug("Get Project Public VC %s", JSON.stringify(req.listVC));
-		// 	query = { $or: [ {'users.email': useremail}, { vpPublic: true, vcid: {$in: req.listVC } } ] }		// Permission for User
-		// }
-		// check for deleted VPs?
+		// check for deleted VPs
 		if (req.query.deleted) {
-			// query['deleted.deletedAt'] = {$exists: true}				// Not deleted
 			query.deleted = {$exists: true}				// Not deleted
 		} else {
-			// query['deleted.deletedAt'] = {$exists: false};
 			query.deleted = {$exists: false};
 		}
 		// check if query string is used to restrict to a specific VC
@@ -261,30 +233,28 @@ router.route('/')
 	* @apiName CreateVisboProjects
 	* @apiDescription Post creates a new VP
 	* with a unique name inside VC and the users with their roles as defined in the body.
-	* If no admin is specified for the project the current user is added as Admin.
+	* If no user is specified for the project the current user is added as Admin.
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to create a VisboProject HTTP 403
-	* @apiError Duplicate VisboProject does already exist HTTP 409
-	* @apiError HTTP-400 VisboProject does not exist or user does not have permission to create project
-	* @apiPermission user must be authenticated and user must have permission to create a VP
+  *
+	* @apiPermission Authenticated and Permission: View Visbo Project, Create Visbo Project.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create Visbo Project
+	* @apiError {number} 409 Visbo Project with same name exists already
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
 	* {
 	*  "name":"My first Visbo Project",
 	*  "vcid": "vc5aaf992",
 	*  "vpType": "0",
-	*  "users":[
-	*   {
-	*    "email":"example1@visbo.de",
-	*    "role": "Admin"
-	*   },
-	*   {
-	*    "email":"example2@visbo.de",
-	*    "role": "User"
-	*   }
-	*  ]
+	*  "users":[{
+	*    "email":"example1@visbo.de"
+	*   }, {
+	*    "email":"example2@visbo.de"
+	*  }]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -301,19 +271,6 @@ router.route('/')
 	*   "vpvCount": "0",
 	*   "vpType": "0",
 	*   "kundennummer": "customer project identifier"
-	*   "vpPublic": "false",
-	*   "users":[
-	*    {
-	*     "userID": "us5aaf992",
-	*     "email":"example@visbo.de",
-	*     "role":"Admin"
-	*    },
-	*    {
-	*     "email":"example2@visbo.de",
-	*     "role":"User",
-	*     "userId":us5aaf993
-	*    }
-	*   ],
 	*   "lock": []
 	*  }]
 	* }
@@ -337,7 +294,6 @@ router.route('/')
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
 		var vpUsers = req.body.users || [];
-		var vpPublic = req.body.vpPublic == true ? true : false;
 		var vpCustomerID = (req.body.kundennummer != undefined) ? req.body.kundennummer.trim() : undefined;
 		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s with %d Users. Perm: %O", useremail, req.body.name, vcid, vpUsers.length, req.combinedPerm);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
@@ -404,7 +360,6 @@ router.route('/')
 					newVP.vpType = req.body.vpType;
 				}
 				newVP.vpvCount = 0;
-				// newVP.vpPublic = vpPublic;
 				var vpUsers = new Array();
 				if (req.body.users) {
 					for (var i = 0; i < req.body.users.length; i++) {
@@ -555,10 +510,11 @@ router.route('/:vpid')
 	* @apiDescription Get a specific Visbo Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
- 	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
- 	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject HTTP 403
- 	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Project
  	* @apiExample Example usage:
  	*   url: http://localhost:3484/vp/5aada025
  	* @apiSuccessExample {json} Success-Response:
@@ -574,28 +530,14 @@ router.route('/:vpid')
 	*		 "vcid": "vc5aaf992",
 	*    "vpvCount": "0",
 	*    "vpType": "0",
- 	*    "users":[
- 	*     {
- 	*      "email":"example1@visbo.de",
- 	*      "role":"Admin",
- 	*      "userId":"us5c754feab"
- 	*     },
- 	*     {
- 	*      "email":"example2@visbo.de",
- 	*      "role":"User",
- 	*      "userId":"us5c754feac"
- 	*     }
- 	*    ],
-	*    "lock": [
-	*      {
-	*       "variantName": "",
-	*       "email": "someone@visbo.de",
-	*       "createdAt": "2018-04-26T11:04:12.094Z",
-	*       "expiresAt": "2018-04-26T12:04:12.094Z"
-	*      }
-	*    ]
- 	*   }]
- 	* }
+	*    "lock": [{
+	*      "variantName": "",
+	*      "email": "someone@visbo.de",
+	*      "createdAt": "2018-04-26T11:04:12.094Z",
+	*      "expiresAt": "2018-04-26T12:04:12.094Z"
+	*    }]
+	* }]
+ 	*}
 	*/
 // Get a specific visbo project
 	.get(function(req, res) {
@@ -622,23 +564,24 @@ router.route('/:vpid')
 	* @apiGroup Visbo Project
 	* @apiName UpdateVisboProjects
 	* @apiDescription Put updates a specific Visbo Project
-	* the system checks if the user has admin permission to it.
-	* If no user list is delivered in the body, no updates will be performed to the users.
-	* If the user list is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
+	* the system checks if the user has Modify permission to the Visbo Project.
+	* If an updatedAt Info is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 	* If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
-	 *
-	* If the VP Name is changed, the VP Name is populated to the Visbo Project Versions.
+	* If the Visbo Project Name has changed, the Name will be populated to the Visbo Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to update this VisboProject HTTP 403
-	* @apiPermission user must be authenticated and user must have Admin permission for this VP
 	* @apiHeader {String} access-key User authentication token.
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project. In case of undelete a Visbo Project the user needs to have Delete Visbo project permission.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 no Data provided in Body for updating the Visbp Project
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Modify Visbo Project
+	* @apiError {number} 423 Visbo Project is locked by another user
+	* @apiError {number} 409 Visbo Project with same name exists already or Visbo Project was updatd in between
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5cf3da025
 	* {
 	*  "name":"My first Visbo Project Renamed",
 	*  "description": "New Description for VP",
-	*  "vpPublic": true,
 	*  "kundennummer": "Customer Project Identifier"
 	* }
 	* @apiSuccessExample {json} Success-Response:
@@ -716,10 +659,6 @@ router.route('/:vpid')
 		var vpUndelete = false;
 		req.oneVP.name = name;
 
-		// change only if present
-		// if (req.body.vpPublic != undefined) {
-		// 	req.oneVP.vpPublic = (req.body.vpPublic == true || req.body.vpPublic == 'true') ? true : false;
-		// }
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
 		}
@@ -859,11 +798,11 @@ router.route('/:vpid')
 	* @apiName DeleteVisboProject
 	* @apiDescription Deletes a specific Visbo Project.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProject
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 400
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Delete Visbo Project
+	* @apiError {number} 423 Visbo Project is locked by another user
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025
 	* @apiSuccessExample {json} Success-Response:
@@ -957,7 +896,7 @@ router.route('/:vpid')
 
 router.route('/:vpid/audit')
  /**
- 	* @api {get} /vp/:vpid/audit Get Visbo Pproject Audit Trail
+ 	* @api {get} /vp/:vpid/audit Get Visbo Project Audit Trail
  	* @apiVersion 1.0.0
  	* @apiGroup Visbo Project
  	* @apiName GetVisboProjectAudit
@@ -965,10 +904,10 @@ router.route('/:vpid/audit')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
- 	* @apiPermission user must be authenticated and user must have Audit permission in the VisboProject
- 	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject HTTP 403
- 	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Project, View Project Audit
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Project Audit
  	* @apiExample Example usage:
  	* url: http://localhost:3484/vp/vp5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
@@ -1028,7 +967,7 @@ router.route('/:vpid/audit')
 				logger4js.fatal("VP Audit Get DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
-					message: 'Error getting VisboCenter Audit',
+					message: 'Error getting VisboProject Audit',
 					error: err
 				});
 			}
@@ -1047,15 +986,16 @@ router.route('/:vpid/audit')
 	/**
 		* @api {get} /vp/:vpid/group Get Groups
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Properties
+		* @apiGroup Visbo Project Permission
 		* @apiName GetVisboProjectGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all groups of the specified Visbo Project
 		*
-		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs
-		* @apiPermission user must be authenticated, user must have access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Project.
+		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Visbo Project, or Visbo Project does not exists
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group
 		*   url: http://localhost:3484/vp/:vpid/group?userlist=true
@@ -1141,16 +1081,17 @@ router.route('/:vpid/audit')
 	/**
 		* @api {post} /vp/:vpid/group Create a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Properties
+		* @apiGroup Visbo Project Permission
 		* @apiName PostVisboProjectGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new group inside the Visbo Project
 		*
-		* User must have Amdin Permission in the VC to create new groups
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError Duplicate group name exists already HTTP 409
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and System Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 missing name of Visbo Project Group during Creation
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Visbo Project Group
+		* @apiError {number} 409 Visbo Project Group with same name exists already
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/groups
 		*  {
@@ -1272,15 +1213,16 @@ router.route('/:vpid/audit')
 	/**
 		* @api {delete} /vp/:vpid/group/:groupid Delete a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Properties
+		* @apiGroup Visbo Project Permission
 		* @apiName DeleteVisboProjectGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified group in the Visbo Project
 		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError GroupNotFound no valid groupid HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 delete of internal Visbo Project Group or a Visbo Center Group inside the Visbo Project not allowed.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a Visbo Project Group
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group/:groupid
 		* @apiSuccessExample {json} Success-Response:
@@ -1334,16 +1276,17 @@ router.route('/:vpid/audit')
 	/**
 		* @api {put} /vp/:vpid/group/:groupid Update a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Properties
+		* @apiGroup Visbo Project Permission
 		* @apiName PutVisboProjectGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Put updates a group inside the Visbo Project
 		*
-		* User must have Amdin Permission in the VC to create new groups
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError GroupNotFound no valid groupid HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 Not allowed to change a Visbo Center Group inside the Visbo Project.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Visbo Project Group
+		* @apiError {number} 409 Visbo Project Group with same name exists already
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group/:groupid
 		*  {
@@ -1435,15 +1378,17 @@ router.route('/:vpid/audit')
 		/**
 			* @api {post} /vp/:vpid/group/:groupid/user Add User to Group
 			* @apiVersion 1.0.0
-			* @apiGroup Visbo Project Properties
+			* @apiGroup Visbo Project Permission
 			* @apiName AddUserToVisboProjectGroup
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Adds the specified user from body to the group
 			*
-			* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-			* @apiError NotAuthenticated no valid token HTTP 401
-			* @apiError GroupNotFound no valid groupid HTTP 404
-			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+			* @apiError {number} 400 missing user name to add to the Visbo Project Group or the Group is a Visbo Center Group
+			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+			* @apiError {number} 403 No Permission to Add a User to Visbo Project Group
+			* @apiError {number} 409 user is already member of the Visbo Project Group
 			* @apiExample Example usage:
 			*  url: http://localhost:3484/vp/:vpid/group/:groupid/user
 			*  {
@@ -1510,7 +1455,7 @@ router.route('/:vpid/audit')
 			// check if the user is not member of the group already
 			if (req.oneGroup.users.filter(users => (users.email == vgUser.email)).length != 0) {
 				logger4js.debug("Post User %s to VC Group %s User is already a member", vgUser.email, req.oneGroup._id);
-				return res.status(400).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'User is already member',
 					groups: [req.oneGroup]
@@ -1679,14 +1624,18 @@ router.route('/:vpid/audit')
 		/**
 			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from VC Group
 			* @apiVersion 1.0.0
-			* @apiGroup Visbo Project Users
+			* @apiGroup Visbo Project Permission
 			* @apiName DeleteVisboProjectUser
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Deletes the specified user in the Visbo Project Group
 			*
-			* @apiPermission user must be authenticated, user must have admin access to referenced VisboProject
-			* @apiError NotAuthenticated no valid token HTTP 401
-			* @apiError ServerIssue No DB Connection HTTP 500
+			* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+			* @apiError {number} 400 no Admin user will be left in internal Visbo Project Group or the group is a Visbo Center Group
+			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+			* @apiError {number} 403 No Permission to Create a Visbo Project Group
+			* @apiError {number} 404 user is not member of the Visbo Project Group
+			*
 			* @apiExample Example usage:
 			*   url: http://localhost:3484/vp/:vpid/group/:groupid/user/:userid
 			* @apiSuccessExample {json} Success-Response:
@@ -1726,7 +1675,7 @@ router.route('/:vpid/audit')
 			logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 			logger4js.trace("DELETE Visbo Project Filtered User List %O ", newUserList);
 			if (newUserList.length == req.oneGroup.users.length) {
-				return res.status(400).send({
+				return res.status(404).send({
 					state: 'failure',
 					message: 'User is not member of Group',
 					groups: [req.oneGroup]
@@ -1766,12 +1715,18 @@ router.route('/:vpid/lock')
 	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Properties
 	* @apiName CreateLock
-	* @apiDescription Post creates or renews a lock for a user to a specific project and variant
-	* In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to update this VisboProject HTTP 403
-	* @apiPermission user must be authenticated and user must have permission for this VP
 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Post creates or renews a lock for a user to a specific project and variant
+	* In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock.
+	* A User who can not Modify the Visbo Project can not lock the Visbo Project only a Variant of a Project, if the user has CreateVariant Permission.
+  *
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project, Create Variant.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 no valid lock date or a variant that does not exist
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Lock the Visbo Project
+	* @apiError {number} 409 Visbo Project already locked by another user.
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/lock
 	* {
@@ -1813,7 +1768,7 @@ router.route('/:vpid/lock')
 
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
 				logger4js.warn("POST Lock Visbo Project %s variant %s does not exists  ", req.params.vpid, variantName);
-				return res.status(401).send({
+				return res.status(400).send({
 				state: 'failiure',
 				message: 'Visbo Project Variant does not exist',
 				vp: [req.oneVP]
@@ -1852,7 +1807,7 @@ router.route('/:vpid/lock')
 		}
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP DELETE DB Connection ", err);
+				logger4js.fatal("VP Lock DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Locks',
@@ -1874,14 +1829,16 @@ router.route('/:vpid/lock')
 	* @apiGroup Visbo Project Properties
 	* @apiName DeleteLock
 	* @apiDescription Deletes a lock for a specific project and a specific variantName
-	* the user needs to have read access to the Visbo Project and either owns the lock or is an admin in the Visbo Project
+	* the user needs to have read access to the Visbo Project and either owns the lock or has Modify Permission in the Visbo Project
 	* @apiHeader {String} access-key User authentication token.
 	* @apiParam {String} variantName The Variant Name of the Project for the Lock
-	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 400
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Lock the Visbo Project
+	* @apiError {number} 404 No Lock exists for the specified Visbo Project and Variant.
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/lock
 	*   url: http://localhost:3484/vp/vp5aada025/lock?variantName=Variant1
@@ -1906,7 +1863,7 @@ router.route('/:vpid/lock')
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
 			logger4js.warn("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
-			return res.status(400).send({
+			return res.status(404).send({
 				state: 'failure',
 				message: 'VP no Lock exists for Deletion',
 				lock: req.oneVP.lock
@@ -1951,9 +1908,12 @@ router.route('/:vpid/variant')
 	* @apiGroup Visbo Project Properties
 	* @apiName CreateVisboProjectVariant
 	* @apiDescription Post creates a new Variant for the Visbo Project
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to see this VisboProject HTTP 403
-	* @apiPermission user must be authenticated and user must have permission for this VP
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project or Create Variant.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create a Variant for the Visbo Project
+	* @apiError {number} 409 Variant already exists.
+	*
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/variant
@@ -2003,7 +1963,7 @@ router.route('/:vpid/variant')
 		}
 		logger4js.debug("Variant Duplicate %s Variant Name %s", variantDuplicate, variantName);
 		if (variantDuplicate || variantName == "") {
-			return res.status(401).send({
+			return res.status(409).send({
 				state: 'failure',
 				message: 'Variant already exists',
 				vp: [req.oneVP]
@@ -2044,13 +2004,16 @@ router.route('/:vpid/variant/:vid')
 	* @apiGroup Visbo Project Properties
 	* @apiName DeleteVisboProjectVariant
 	* @apiDescription Deletes a specific Variant for a project and also the project Versions
-	* the user needs to have read access to the Visbo Project and either owns the Variant or is an admin in the Visbo Project
+	* the user needs to have read access to the Visbo Project and either owns the Variant or has Modify Permission in the Visbo Project
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError NotFound VisboProject does not exist HTTP 400
-	* @apiError ServerIssue No DB Connection HTTP 500
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Lock the Visbo Project
+	* @apiError {number} 404 Variant does not exist
+	* @apiError {number} 409 Variant still contains Versions
+	* @apiError {number} 423 Variant is locked by another user
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/variant/variant5aada
 	* @apiSuccessExample {json} Success-Response:
@@ -2074,7 +2037,7 @@ router.route('/:vpid/variant/:vid')
 
 		var variantIndex = variant.findVariantId(req.oneVP, variantId);
 		if (variantIndex < 0) {
-			return res.status(400).send({
+			return res.status(404).send({
 				state: 'failure',
 				message: 'Variant does not exists',
 				vp: [req.oneVP]
@@ -2092,16 +2055,16 @@ router.route('/:vpid/variant/:vid')
 		}
 		lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (lockResult.locked) {
-			return res.status(401).send({
+			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
 			});
 		}
 		if (req.oneVP.variant[variantIndex].vpvCount > 0) {
-			return res.status(401).send({
+			return res.status(409).send({
 				state: 'failure',
-				message: 'Visbo Project Variant has Versions',
+				message: 'Visbo Project Variant still has Versions',
 				vp: [req.oneVP]
 			});
 		}
@@ -2130,19 +2093,20 @@ router.route('/:vpid/variant/:vid')
 		})
 	})
 
-
 router.route('/:vpid/portfolio')
 /**
 	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Portfolio
+	* @apiGroup Visbo Project Portfolio
 	* @apiName GetPortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Visbo Project
-	* In case of success it delivers an array of Portfolios, the array contains in each element a Portfolio
-	* @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiDescription GET /vp/:vpid/portfolio returns all Portfolio List Versions in the specified Visbo Project
+	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View the Visbo Project
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aaf992/portfolio
 	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
@@ -2224,13 +2188,17 @@ router.route('/:vpid/portfolio')
 /**
 	* @api {post} /vp/:vpid/portfolio Create a Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Portfolio
+	* @apiGroup Visbo Project Portfolio
 	* @apiName CreatePortfolio
-	* @apiDescription Post creates a new Definition of a Portfolio for the Visbo Project
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to see this VisboProject HTTP 403
-	* @apiPermission user must be authenticated and user must have Admin permission for this VP
 	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Post creates a new Definition of a Portfolio for the Visbo Project
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project.
+	* @apiError {number} 400 no Project Items specified for Portfolio or Visbo Project is not a Portfolio.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View the Visb Proect (Portfolio) or Create a Visbo Center Portfolio List
+	* @apiError {number} 404 Variant does not exist
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/portfolio
 	*  {
@@ -2287,7 +2255,7 @@ router.route('/:vpid/portfolio')
 		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
 		var variantIndex = variantName == "" ? 0 : variant.findVariant(req.oneVP, variantName);
 		if (variantIndex < 0) {
-			return res.status(400).send({
+			return res.status(404).send({
 				state: 'failure',
 				message: 'Variant does not exists',
 				vp: [req.oneVP]
@@ -2376,14 +2344,16 @@ router.route('/:vpid/portfolio/:vpfid')
 /**
 	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Portfolio
+	* @apiGroup Visbo Project Portfolio
 	* @apiName GetVisboPortfolio
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Visbo Project
-	* In case of success it delivers an array of Portfolios, the array contains in each element a Portfolio
-	* @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View the Visbo Project
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
 	* @apiSuccessExample {json} Success-Response:
@@ -2455,15 +2425,17 @@ router.route('/:vpid/portfolio/:vpfid')
 /**
 	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Portfolio
+	* @apiGroup Visbo Project Portfolio
 	* @apiName DeleteVisboPortfolio
-	* @apiDescription Deletes a specific Portfolio Version
-	* the user needs to have admin access to the Visbo Project
+	* @apiDescription Deletes a specific Portfolio List Version
+	* the user needs to have Delete Visbo Project Permission to the Visbo Project
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission user must be authenticated and user must have permission to access the VisboProject
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProject as Admin HTTP 403
-	* @apiError ServerIssue No DB Connection HTTP 500
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View the Visbo Project or no Delete Permission to delete the Version
+	* @apiError {number} 423 Portfolio locked by another user
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/portfolio/vpf5aada
 	* @apiSuccessExample {json} Success-Response:
@@ -2506,7 +2478,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 			lockResult = lockVP.lockStatus(req.oneVP, useremail, oneVPF.variantName);
 			if (lockResult.locked) {
-				return res.status(401).send({
+				return res.status(423).send({
 					state: 'failure',
 					message: 'Visbo Portfolio Project locked',
 					vp: [req.oneVP]

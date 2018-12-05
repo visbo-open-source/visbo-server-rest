@@ -11,8 +11,8 @@ router.route('/')
 /**
 	* @api {get} /status Get status of ReST Server
 	* @apiVersion 1.0.0
-	* @apiGroup SysLog
-	* @apiName GetStatus
+	* @apiGroup Visbo System
+	* @apiName GetReSTStatus
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/status
 	* @apiSuccessExample {json} Success-Response:

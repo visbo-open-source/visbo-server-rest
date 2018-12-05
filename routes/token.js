@@ -37,9 +37,9 @@ router.route('/user/login')
 	* @apiGroup Authentication
 	* @apiName UserLogin
 	* @apiPermission none
-	* @apiError UserNamePasswordMismatch User not found or user &password do not match HTTP 401
-	* @apiError ParameterMissing required parameters email, password missing HTTP 400
-	* @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
+	* @apiError {number} 401 user & password do not match
+	* @apiError {number} 400 User or password missing, email not registered,
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/token/user/login
 	*   body:
@@ -54,7 +54,7 @@ router.route('/user/login')
 	*   "message":"Successfully logged in",
 	*   "token":"eyJhbG...brDI",
 	*   "user":{
-	*     "_id":"5a96787976294c5417f0e409",
+	*     "_id":"UID5a96787976294c5417f0e49",
 	*     "updatedAt":"2018-02-28T09:38:04.774Z",
 	*     "createdAt":"2018-02-28T09:38:04.774Z",
 	*     "email":"example@example.com",
@@ -212,7 +212,9 @@ router.route('/user/pwforgotten')
 	* @apiDescription Post pwforgotten initiates the setting of a new password. To avoid user & password probing, this function delivers always success
 	* but send a Mail with the Reset Link only if the user was found and the last Reset Password was not done in the last 15 minutes.
 	* in case the user does a successful login, the timer is ignored
-	* @apiError InternalServerError If the Dtabase is not reachable or delivers an error
+	* @apiPermission none
+	* @apiError {number} 400 email missing
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/forgottenpw
 	*  body: {
@@ -226,6 +228,14 @@ router.route('/user/pwforgotten')
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
+		if (!req.body.email || !req.body.email.trim()) {
+			logger4js.info("No eMail specified");
+			return res.status(400).send({
+				state: "failure",
+				message: "No eMail specified"
+			});
+		}
+
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Forgot Password DB Connection ", err);
@@ -339,6 +349,11 @@ router.route('/user/pwreset')
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName PasswordReset
+	* @apiPermission none
+	* @apiError {number} 400 email or token missing
+	* @apiError {number} 401 token no longer valid
+	* @apiError {number} 404 user not found or user already changed
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/pwreset
 	*  body: {
@@ -363,7 +378,7 @@ router.route('/user/pwreset')
 		// verifies secret and checks exp
     jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
       if (err) {
-        return res.status(409).send({
+        return res.status(401).send({
         	state: 'failure',
         	message: 'Token is dead'
         });
@@ -381,7 +396,7 @@ router.route('/user/pwreset')
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
-						return res.status(409).send({
+						return res.status(404).send({
 							state: "failure",
 							message: "invalid token"
 						});
@@ -416,20 +431,21 @@ router.route('/user/signup')
   * @apiVersion 1.0.0
   * @apiGroup Authentication
   * @apiName UserSignup
-  * @apiPermission none
+	* @apiPermission none
+	* @apiError {number} 400 email or userid missing in body
+	* @apiError {number} 401 token no longer valid
+	* @apiError {number} 404 unknown userID
+	* @apiError {number} 409 email already registered
 	* @apiDescription signup a user with Profile Details and a new password.
 	* Signup can be called with an e-mail address or an _id. The system refuses the registration if an _id is specified and there is no user with this _id to be registered
 	* If called with an e-mail, the system returns an error if a user with this e-mail already exists and is registered.
 	* The hash is optional and if delivered correct, the system does not ask for e-mail confirmation.
-  * @apiError UserEsists User does already exist HTTP 401
-	* @apiError ParameterMissing required parameters email, password missing HTTP 400
-  * @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
   * @apiExample Example usage:
   *   url: http://localhost:3484/token/user/signup
   *   body:
   *   {
   *     "email": "example@example.com",
-	*     "_id": "UID294c5417f0e409",
+	*     "_id": "UID294c5417f0e49",
   *     "password": "thisIsPassword",
 	*     "profile": {
 	*       "firstName": "First",
@@ -452,7 +468,7 @@ router.route('/user/signup')
   *   "message":"Successfully logged in",
   *   "token":"eyJhbG...brDI",
   *   "user":{
-  *    "_id":"UID294c5417f0e409",
+  *    "_id":"UID294c5417f0e49",
   *    "updatedAt":"2018-02-28T09:38:04.774Z",
   *    "createdAt":"2018-02-28T09:38:04.774Z",
   *    "email":"example@example.com",
@@ -512,7 +528,7 @@ router.route('/user/signup')
 			}
 			// if user does not exist already refuse to register with id
 			if (!user && req.body._id) {
-				return res.status(400).send({
+				return res.status(404).send({
 					state: "failure",
 					message: "User ID incorrect"
 				});
@@ -618,9 +634,10 @@ router.route('/user/signup')
 	  * @apiVersion 1.0.0
 	  * @apiGroup Authentication
 	  * @apiName emailConfirm
-	  * @apiPermission none
-		* @apiError ParameterMissing required parameters userId & hash missing HTTP 400
-	  * @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission none
+		* @apiError {number} 400 no userid or hash missing
+		* @apiError {number} 401 hash no longer valid for user
+		* @apiError {number} 500 Internal Server Error
 	  * @apiExample Example usage:
 	  *   url: http://localhost:3484/token/user/confirm
 	  *   body:

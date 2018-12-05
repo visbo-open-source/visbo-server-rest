@@ -27,10 +27,11 @@ router.route('/')
 	* @api {get} /syslog Get log file list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName GetSysLogs
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and access to System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog
 	* @apiSuccessExample {json} Success-Response:
@@ -86,10 +87,11 @@ router.route('/file/:filename')
 	* @api {get} /syslog/filename Get log file
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName GetSysLogFile
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and has System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog/all-the-logs.log
 	* @apiSuccessExample {json} Success-Response:
@@ -145,10 +147,11 @@ router.route('/config')
 	* @api {get} /syslog/config Get log levels
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName GetSysLogConfig
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and has System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog/config
 	* @apiSuccessExample {json} Success-Response:
@@ -193,10 +196,11 @@ router.route('/config')
 	* @api {put} /syslog/config Save log levels
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName PutSysLogConfig
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and has System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog/config
 	* @apiSuccessExample {json} Success-Response:

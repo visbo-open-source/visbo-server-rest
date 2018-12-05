@@ -74,12 +74,12 @@ router.route('/')
 	* @apiDescription Get retruns all VC where the user has access permission to
 	* In case of success it delivers an array of VCs, the array contains in each element a VC
 	* if systemvc is specified only the systemvc is retrieved if the user has permission to see it
-	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VCs
+	* @apiPermission Permission: Authenticated, View Visbo Center.
+	* In case of AppAdmin Parameters the User needs to have View Visbo Center Permission on System Level.
+	* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
 	* @apiParam (Parameter AppAdmin) {Boolean} [systemvc=false]  Optional Request System VC
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
-  * @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiError {number} 401 user not authenticated, the <code>token</code> is no longer valid
 	* @apiExample Example usage:
 	* url: http://localhost:3484/vc
 	* url: http://localhost:3484/vc?systemvc=true&deleted=true
@@ -93,19 +93,7 @@ router.route('/')
 	*      "updatedAt": "2018-03-16T12:39:54.042Z",
 	*      "createdAt": "2018-03-12T09:54:56.411Z",
 	*      "name": "My new VisobCenter",
-	*      "vpCount": "0",
-	*      "users": [
-	*       {
-	*        "email": "example1@visbo.de",
-	*        "role": "Admin",
-	*        "userId": "us5c754feab"
-	*       },
-	*       {
-	*        "email": "example2@visbo.de",
-	*        "role": "User",
-	*        "userId": "us5c754feac"
-	*       }
-	*     ]
+	*      "vpCount": "0"
 	*   }]
 	* }
 	*/
@@ -182,15 +170,16 @@ router.route('/')
 	 * @apiVersion 1.0.0
 	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
-	 * @apiDescription Post creates a new VC
-	 * with a unique name and the users with their roles as defined in the body.
- 	 * If no admin is specified the current user is added as Admin.
-	 * In case of success it delivers an array of VCs to be uniform to GET, the array contains as one element the created VC.
-	 * @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	 * @apiError NoPermission No permission to create a VisboCenter HTTP 403
-	 * @apiError Duplicate VisboCenter does already exist HTTP 409
-	 * @apiPermission user must be authenticated and user must be Appl-Admin in the system to create a VC
+	 * @apiDescription Post creates a new VC with a unique name and  a description.
+	 * Optinal an initial user can be defined who will get Visbo Center Administrator, if none is specified, the current user is added.
+	 * In case of success it delivers an array of VCs. The array contains one element for the created VC.
 	 * @apiHeader {String} access-key User authentication token.
+	 * @apiPermission Authenticated and System Permission: View Sytem, Create Visbo Center.
+	 * @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	 * @apiError {number} 400 missing name of Visbo Center during Creation
+	 * @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	 * @apiError {number} 403 No Permission to Create Visbo Center
+	 * @apiError {number} 409 Visbo Center with same name exists already
 	 * @apiExample Example usage:
 	 * url: http://localhost:3484/vc
 	 * {
@@ -255,7 +244,7 @@ router.route('/')
 		if (!(req.combinedPerm.system & constPermSystem.CreateVC)) {
 			return res.status(403).send({
 				state: "failure",
-				message: "No permission to delete Visbo Center"
+				message: "No permission to create Visbo Center"
 			});
 		}
 		// check that VC name is unique
@@ -431,10 +420,13 @@ router.route('/:vcid')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
  	* @apiHeader {String} access-key User authentication token.
- 	* @apiPermission user must be authenticated and user must have permission to access the VisboCenter
+	* @apiPermission Permission: Authenticated, View Visbo Center.
  	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboCenter HTTP 403
- 	* @apiError ServerIssue No DB Connection HTTP 500
+	* In case of AppAdmin Parameters the User needs to have View Visbo Center Permission on System Level.
+	* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Center
  	* @apiExample Example usage:
  	* url: http://localhost:3484/vc/vc5aada025
  	* @apiSuccessExample {json} Success-Response:
@@ -495,10 +487,12 @@ router.route('/:vcid')
 	*
 	* If the VC Name is changed, the VC Name is populated to the Visbo Projects.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to update this VisboCenter HTTP 403
-	* @apiError VC was updated in between HTTP 409
-	* @apiPermission user must be authenticated and user must have Admin permission for this VC
+	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 no Data provided in Body for updating the Visbp Center
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Modify Visbo Center
+	* @apiError {number} 409 Visbo Center with same name exists already or Visbo Center was updatd in between
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
 	* url: http://localhost:3484/vc/vc5aada025
@@ -679,13 +673,12 @@ router.route('/:vcid')
 	* @apiGroup Visbo Center
 	* @apiName DeleteVisboCenter
 	* @apiDescription Deletes a specific Visbo Center.
-	* the system checks if the user has Admin permission to it.
+	* the system checks if the user has Delete Visbo Center permission to it.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboCenter as Admin HTTP 403
-	* @apiError NotFound VisboCenter does not exist HTTP 400
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and System Permission: View Visbo Center, Delete Visbo Center.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Modify Visbo Center or Visbo Center does not exists
 	* @apiExample Example usage:
 	* url: http://localhost:3484/vc/vc5aada025
 	* @apiSuccessExample {json} Success-Response:
@@ -777,10 +770,10 @@ router.route('/:vcid/audit')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
- 	* @apiPermission user must be authenticated and user must have admin permission in the VisboCenter
- 	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboCenter HTTP 403
- 	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, View Visbo Center Audit.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Center Audit or Visbo Center does not exists
  	* @apiExample Example usage:
  	* url: http://localhost:3484/vc/vc5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
@@ -807,7 +800,7 @@ router.route('/:vcid/audit')
 		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
-					message: 'You need to have Admin permission to get audit trail'
+					message: 'You need to have View Audit permission to get audit trail'
 				});
 		}
 
@@ -859,15 +852,16 @@ router.route('/:vcid/group')
 /**
 	* @api {get} /vc/:vcid/group Get Groups
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Permission
 	* @apiName GetVisboCenterGroup
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Gets all groups of the specified Visbo Center
 	*
-	* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs
-	* @apiPermission user must be authenticated, user must have access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center.
+	* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Center, or Visbo Center does not exists
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/group
 	*   url: http://localhost:3484/vc/:vcid/group?userlist=true
@@ -951,16 +945,16 @@ router.route('/:vcid/group')
 /**
 	* @api {post} /vc/:vcid/group Create a Group
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Permission
 	* @apiName PostVisboCenterGroup
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new group inside the Visbo Center
-	*
-	* User must have Amdin Permission in the VC to create new groups
-	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError Duplicate group name exists already HTTP 409
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and System Permission: View Visbo Center, Manage Visbo Center Permission.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 missing name of Visbo Center Group during Creation
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create a Visbo Center Group
+	* @apiError {number} 409 Visbo Center Group with same name exists already
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/groups
 	*  {
@@ -1091,15 +1085,16 @@ router.route('/:vcid/group/:groupid')
 /**
 	* @api {delete} /vc/:vcid/group/:groupid Delete a Group
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Permission
 	* @apiName DeleteVisboCenterGroup
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Deletes the specified group in the Visbo Center
 	*
-	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError GroupNotFound no valid groupid HTTP 404
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Manage Visbo Center Permission.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 delete of internal Visbo Center Group not allowed
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Delete a Visbo Center Group
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/group/:groupid
 	* @apiSuccessExample {json} Success-Response:
@@ -1163,16 +1158,17 @@ router.route('/:vcid/group/:groupid')
 /**
 	* @api {put} /vc/:vcid/group/:groupid Update a Group
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Center Properties
+	* @apiGroup Visbo Center Permission
 	* @apiName PutVisboCenterGroup
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Put updates a group inside the Visbo Center
 	*
-	* User must have Amdin Permission in the VC to create new groups
-	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError GroupNotFound no valid groupid HTTP 404
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Manage Visbo Center Permission.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 400 name of internal group can not be changed or new permission does not meet the minimal permission for internal group.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create a Visbo Center Group
+	* @apiError {number} 409 Visbo Center Group with same name exists already
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/group/:groupid
 	*  {
@@ -1326,15 +1322,17 @@ router.route('/:vcid/group/:groupid')
 	/**
 		* @api {post} /vc/:vcid/group/:groupid/user Add User to Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Center Properties
+		* @apiGroup Visbo Center Permission
 		* @apiName AddUserToVisboCenterGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Adds the specified user from body to the group
 		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError GroupNotFound no valid groupid HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center, Manage Visbo Center Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 missing user name to add to the Visbo Center Group
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to add a user to a Visbo Center Group
+		* @apiError {number} 409 user is already member of the Visbo Center Group
 		* @apiExample Example usage:
 		*  url: http://localhost:3484/vc/:vcid/group/:groupid/user
 		*  {
@@ -1401,7 +1399,7 @@ router.route('/:vcid/group/:groupid')
 		// check if the user is not member of the group already
 		if (req.oneGroup.users.filter(users => (users.email == vcUser.email)).length != 0) {
 			logger4js.debug("Post User %s to VC Group %s User is already a member", vcUser.email, req.oneGroup._id);
-			return res.status(400).send({
+			return res.status(409).send({
 				state: 'failure',
 				message: 'User is already member',
 				groups: [req.oneGroup]
@@ -1567,16 +1565,19 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/group/:groupid/user/:userid')
 
 	/**
-		* @api {delete} /vc/:vcid/group/:groupid/user/:userid Delete a User from VC Group
+		* @api {delete} /vc/:vcid/group/:groupid/user/:userid Delete User from Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Center Users
+		* @apiGroup Visbo Center Permission
 		* @apiName DeleteVisboCenterUser
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified user in the Visbo Center Group
 		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center, Manage Visbo Center Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 no Admin user will be left in internal Visbo Center Group
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a user from Visbo Center Group
+		* @apiError {number} 404 user is not member of the Visbo Center Group
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/group/:groupid/user/:userid
 		* @apiSuccessExample {json} Success-Response:
@@ -1616,7 +1617,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 		logger4js.trace("DELETE Visbo Center Filtered User List %O ", newUserList);
 		if (newUserList.length == req.oneGroup.users.length) {
-			return res.status(400).send({
+			return res.status(404).send({
 				state: 'failure',
 				message: 'User is not member of Group',
 				groups: [req.oneGroup]
@@ -1661,9 +1662,9 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all roles of the specified Visbo Center
 		*
-		* @apiPermission user must be authenticated, user must have access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View the Visbo Center
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role
 		* @apiSuccessExample {json} Success-Response:
@@ -1719,10 +1720,11 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new role inside the Visbo Center
 		*
-		* User must have Amdin Permission in the VC to create new roles
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 400 no valid name is defined
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Visbo Center Role
+		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role
 		*  {
@@ -1833,10 +1835,11 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified role in the Visbo Center
 		*
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError GroupNotFound no valid roleid HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a Visbo Center Role
+		* @apiError {number} 404 Visbo Center Role does not exists
+		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
 		* @apiSuccessExample {json} Success-Response:
@@ -1910,11 +1913,11 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Put updates a role inside the Visbo Center
 		*
-		* User must have Amdin Permission in the VC to create new roles
-		* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-		* @apiError NotAuthenticated no valid token HTTP 401
-		* @apiError GroupNotFound no valid roleid HTTP 404
-		* @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Modify a Visbo Center Role
+		* @apiError {number} 404 Visbo Center Role does not exists
+		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
 		*  {
@@ -2014,10 +2017,9 @@ router.route('/:vcid/cost')
 	* @apiName GetVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Gets all costs of the specified Visbo Center
-	*
-	* @apiPermission user must be authenticated, user must have access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View the Visbo Center
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/cost
 	* @apiSuccessExample {json} Success-Response:
@@ -2074,10 +2076,10 @@ router.route('/:vcid/cost')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new cost inside the Visbo Center
 	*
-	* User must have Amdin Permission in the VC to create new costs
-	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiError {number} 400 no valid cost definition
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create a Visbo Center Cost
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/cost
 	*  {
@@ -2158,10 +2160,11 @@ router.route('/:vcid/cost')
   * @apiHeader {String} access-key User authentication token.
   * @apiDescription Deletes the specified cost in the Visbo Center
   *
-  * @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-  * @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError GroupNotFound no valid costid HTTP 404
-  * @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Delete a Visbo Center Cost
+	* @apiError {number} 404 Visbo Center Cost does not exists
+	*
   * @apiExample Example usage:
   *   url: http://localhost:3484/vc/:vcid/cost/:costid
   * @apiSuccessExample {json} Success-Response:
@@ -2235,11 +2238,11 @@ router.route('/:vcid/cost')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Put updates a cost definition inside the Visbo Center
 	*
-	* User must have Amdin Permission in the VC to create new costs
-	* @apiPermission user must be authenticated, user must have admin access to referenced VisboCenter
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError GroupNotFound no valid costid HTTP 404
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Update a Visbo Center Cost
+	* @apiError {number} 404 Visbo Center Cost does not exists
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/cost/:costid
 	*  {

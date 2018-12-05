@@ -33,11 +33,11 @@ router.route('/profile')
 	* @api {get} /user/profile Get own profile
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName GetUserProfile
 	* @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/user/profile
 	* @apiSuccessExample {json} Success-Response:
@@ -95,8 +95,11 @@ router.route('/profile')
 	* @api {put} /user/profile Update own profile
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName UpdateUserProfile
+	* @apiError {number} 400 required fields for profile missing
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/user/profile
 	*   body:
@@ -121,7 +124,7 @@ router.route('/profile')
 	*  "state":"success",
 	* "message":"Updated user profile",
 	* "user":{
-	*    "_id":"5a96787976294c5417f0e409",
+	*    "_id":"UID294c5417f0e49",
 	*    "updatedAt":"2018-03-20T10:31:27.216Z",
 	*    "createdAt":"2018-02-28T09:38:04.774Z",
 	*    "email":"markus.seyfried@visbo.de",
@@ -204,8 +207,12 @@ router.route('/passwordchange')
 	* @api {put} /user/passwordchange Update password
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName PasswordChange
+	* @apiError {number} 400 old or new password missing
+	* @apiError {number} 409 password mismatch
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/user/passwordchange
 	*  body:
@@ -246,7 +253,7 @@ router.route('/passwordchange')
 			logger4js.debug("Put/Update Password Check Old Password");
 			if (!isValidPassword(user, req.body.oldpassword)) {
 				logger4js.info("Change Password: Wrong password", user.email);
-				return res.status(403).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "password mismatch"
 				});

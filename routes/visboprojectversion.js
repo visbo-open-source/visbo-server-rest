@@ -81,9 +81,10 @@ router.route('/')
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
-	* @apiPermission user must be authenticated, user must have access to related VisboProject
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	*
+	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vpv
 	*   url: http://localhost:3484/vpv?vcid=vc5c754feaa&refDate=2018-01-01
@@ -214,15 +215,19 @@ router.route('/')
 	* @apiGroup Visbo Project Version
 	* @apiName CreateVisboProjectVersions
 	* @apiDescription Post creates a new Visbo Project Version.
-	* The user needs to have Admin permission in the Referenced Project or is the owner of the Variant.
+	* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
 	* Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
-	* @apiError NotAuthenticated Not Authenticated The <code>access-key</code> was not delivered or is outdated HTTP 401
-	* @apiError NoPermission No permission to create a VisboProjectVersion HTTP 403
-	* @apiError Duplicate VisboProjectVersion does already exist HTTP 409
-	* @apiError HTTP-400 VisboProject does not exist or user does not have permission to create project Version
-	* @apiPermission user must be authenticated and user must have permission to create a VP
 	* @apiHeader {String} access-key User authentication token.
-	* @apiExample Example usage:
+	*
+	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project or Create Variant.
+	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Create Visbo Project Version
+	* @apiError {number} 404 Visbo Project Variant does not exists
+	* @apiError {number} 409 Visbo Project (Portfolio) Version was alreaddy updated in between (Checked updatedAt Flag)
+	* @apiError {number} 423 Visbo Project (Portfolio) is locked by another user
+	*
+  * @apiExample Example usage:
 	*   url: http://localhost:3484/vpv
 	* {
 	*  "vpid": "vp5c754feaa"
@@ -293,7 +298,7 @@ router.route('/')
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
-					return res.status(400).send({
+					return res.status(404).send({
 						state: 'failure',
 						message: 'Visbo Project variant does not exist',
 						vp: [req.oneVP]
@@ -303,7 +308,7 @@ router.route('/')
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn("VPV Post VP locked %s %s", vpid, variantName);
-				return res.status(409).send({
+				return res.status(423).send({
 					state: 'failure',
 					message: 'Visbo Project locked',
 					vp: [req.oneVP]
@@ -445,10 +450,11 @@ router.route('/:vpvid')
  	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get returns a specific VisboProjectVersion the user has access permission to the VisboProject
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
- 	* @apiPermission user must be authenticated and user must have permission to access the VisboProjectVersion
- 	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProjectVersion HTTP 403
- 	* @apiError ServerIssue No DB Connection HTTP 500
+	*
+	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Visbo Project Version
+	*
  	* @apiExample Example usage:
  	*   url: http://localhost:3484/vpv/vpv5aada025
  	* @apiSuccessExample {json} Success-Response:
@@ -488,10 +494,12 @@ router.route('/:vpvid')
 	* @apiName DeleteVisboProjectVersion
 	* @apiDescription Deletes a specific Visbo Project Version.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission user must be authenticated and user must have Admin permission to access the VisboProjectVersion
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NoPermission user does not have access to the VisboProjectVersion as Admin HTTP 403
-	* @apiError NotFound VisboProjectVersion does not exist HTTP 400
+	*
+	* @apiPermission Permission: Authenticated, View Visbo Project, Delete Visbo Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Delete Visbo Project Version or Project Version does not exists
+	* @apiError {number} 423 Visbo Project locked by another user
+	*
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vpv/vpv5c754feaa
@@ -528,7 +536,7 @@ router.route('/:vpvid')
 		}
 		// check if the project is locked
 		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
-			return res.status(409).send({
+			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
 				vp: [req.oneVP]
