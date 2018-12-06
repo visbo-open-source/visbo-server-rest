@@ -1799,12 +1799,13 @@ router.route('/:vcid/group/:groupid')
 				vcRole.vcid = req.params.vcid;
 				vcRole.uid = req.body.uid;
 				vcRole.subRoleIDs = req.body.subRoleIDs;
+				vcRole.teamIDs = req.body.teamIDs;
+				vcRole.isTeam = req.body.isTeam;
+				vcRole.isExternRole = req.body.isExternRole;
 				vcRole.farbe = req.body.farbe;
 				vcRole.defaultKapa = req.body.defaultKapa;
 				vcRole.tagessatzIntern = req.body.tagessatzIntern;
-				vcRole.tagessatzExtern = req.body.tagessatzExtern;
 				vcRole.kapazitaet = req.body.kapazitaet;
-				vcRole.externeKapazitaet = req.body.externeKapazitaet;
 				vcRole.startOfCal = req.body.startOfCal;
 				vcRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 				vcRole.save(function(err, oneVcRole) {
@@ -1983,12 +1984,13 @@ router.route('/:vcid/group/:groupid')
 				logger4js.info("Found the Role for VC");
 				oneVCRole.name = req.body.name;
 				oneVCRole.subRoleIDs = req.body.subRoleIDs;
+				oneVCRole.teamIDs = req.body.teamIDs;
+				oneVCRole.isTeam = req.body.isTeam;
+				oneVCRole.isExternRole = req.body.isExternRole;
 				oneVCRole.farbe = req.body.farbe;
 				oneVCRole.defaultKapa = req.body.defaultKapa;
 				oneVCRole.tagessatzIntern = req.body.tagessatzIntern;
-				oneVCRole.tagessatzExtern = req.body.tagessatzExtern;
 				oneVCRole.kapazitaet = req.body.kapazitaet;
-				oneVCRole.externeKapazitaet = req.body.externeKapazitaet;
 				oneVCRole.startOfCal = req.body.startOfCal;
 				oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
 				oneVCRole.save(function(err, oneVcRole) {
