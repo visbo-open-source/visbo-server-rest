@@ -24,6 +24,7 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcrole');
 require('./models/vccost');
+require('./models/vcsetting');
 
 var systemVC = require('./components/sytemVC');
 

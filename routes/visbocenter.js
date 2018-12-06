@@ -16,6 +16,7 @@ var VCUser = mongoose.model('VCUser');
 var VisboProject = mongoose.model('VisboProject');
 var VCRole = mongoose.model('VCRole');
 var VCCost = mongoose.model('VCCost');
+var VCSetting = mongoose.model('VCSetting');
 var VisboAudit = mongoose.model('VisboAudit');
 
 var Const = require('../models/constants')
@@ -1655,7 +1656,7 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/role')
 
 	/**
-		* @api {get} /vc/:vcid/role Get Roles
+		* @api {get} /vc/:vcid/role Role: get all
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Center Properties
 		* @apiName GetVisboCenterRole
@@ -1713,7 +1714,7 @@ router.route('/:vcid/group/:groupid')
 		})
 
 	/**
-		* @api {post} /vc/:vcid/role Create a Role
+		* @api {post} /vc/:vcid/role Role: create new
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Center Properties
 		* @apiName PostVisboCenterRole
@@ -1828,7 +1829,7 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/role/:roleid')
 
 	/**
-		* @api {delete} /vc/:vcid/role/:roleid Delete a Role
+		* @api {delete} /vc/:vcid/role/:roleid Role: delete one
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Center Properties
 		* @apiName DeleteVisboCenterRole
@@ -1906,7 +1907,7 @@ router.route('/:vcid/group/:groupid')
 		})
 
 	/**
-		* @api {put} /vc/:vcid/role/:roleid Update a Role
+		* @api {put} /vc/:vcid/role/:roleid Role: update one
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Center Properties
 		* @apiName PutVisboCenterRole
@@ -2011,13 +2012,13 @@ router.route('/:vcid/group/:groupid')
 router.route('/:vcid/cost')
 
 /**
-	* @api {get} /vc/:vcid/cost Get Costs
+	* @api {get} /vc/:vcid/cost Cost: get all
 	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName GetVisboCenterCost
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Gets all costs of the specified Visbo Center
-	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+	* @apiPermission Authenticated and Permission: View Visbo Center.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Visbo Center
 	* @apiExample Example usage:
@@ -2069,7 +2070,7 @@ router.route('/:vcid/cost')
 	})
 
 /**
-	* @api {post} /vc/:vcid/cost Create a Cost Definition
+	* @api {post} /vc/:vcid/cost Cost: create one
 	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PostVisboCenterCost
@@ -2153,7 +2154,7 @@ router.route('/:vcid/cost')
 	router.route('/:vcid/cost/:costid')
 
 /**
-  * @api {delete} /vc/:vcid/cost/:costid Delete a Cost Definition
+  * @api {delete} /vc/:vcid/cost/:costid Cost: delete one
   * @apiVersion 1.0.0
   * @apiGroup Visbo Center Properties
   * @apiName DeleteVisboCenterCost
@@ -2231,7 +2232,7 @@ router.route('/:vcid/cost')
 	})
 
 /**
-	* @api {put} /vc/:vcid/cost/:costid Update a Cost Definition
+	* @api {put} /vc/:vcid/cost/:costid Cost: update one
 	* @apiVersion 1.0.0
 	* @apiGroup Visbo Center Properties
 	* @apiName PutVisboCenterCost
@@ -2320,6 +2321,321 @@ router.route('/:vcid/cost')
 					state: 'success',
 					message: 'Updated Visbo Center Cost',
 					vccost: [ oneVcCost ]
+				});
+			});
+		});
+	})
+
+	router.route('/:vcid/setting')
+
+	/**
+		* @api {get} /vc/:vcid/setting Setting: get all
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Center Properties
+		* @apiName GetVisboCenterSetting
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all settings of the specified Visbo Center
+		* @apiPermission Authenticated and Permission: View Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View the Visbo Center
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/setting
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Center Settings",
+		*   "vcsetting":[{
+		*     "_id":"vcsetting5c754feaa",
+		*     "name":"Setting Name",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "uid": "1",
+		*     "farbe": "49407"
+		*   }]
+		* }
+		*/
+
+	// get VC Settings
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Center Setting (Read)';
+
+			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
+
+			var queryVCSetting = VCSetting.find({'vcid': req.oneVC._id});
+			// queryVCSetting.select('_id vcid name');
+			queryVCSetting.lean();
+			queryVCSetting.exec(function (err, listVCSetting) {
+				if (err) {
+					logger4js.fatal("VC Get Setting DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenter Settings',
+						error: err
+					});
+				}
+				logger4js.info("Found %d Settings for VC", listVCSetting.length);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Center Settings',
+					vcsetting: listVCSetting
+				});
+			});
+		})
+
+	/**
+		* @api {post} /vc/:vcid/setting Setting: create one
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Center Properties
+		* @apiName PostVisboCenterSetting
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new setting inside the Visbo Center
+		*
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 400 no valid setting definition
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Visbo Center Setting
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/setting
+		*  {
+	  *    "name":"My first Setting",
+	  *    "uid": "1",
+		*    "farbe": "49407"
+	  *  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Center Setting",
+		*   "vcsetting":[{
+		*     "_id":"vcsetting5c754feaa",
+		*     "name":"My first Setting",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "uid": "1",
+		*     "farbe": "49407"
+		*   }]
+		* }
+		*/
+
+	// Create Visbo Center Setting
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Center Setting (Create)';
+
+			logger4js.trace("Post a new Visbo Center Setting Req Body: %O Name %s", req.body, req.body.name);
+			logger4js.info("Post a new Visbo Center Setting with name %s executed by user %s sysadmin %s", req.body.name, useremail, req.query.sysadmin);
+
+			if (!req.body.name || !req.body.value) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid setting definition'
+				});
+			}
+			if ((!req.query.sysadmin && !(req.combinedPerm.vc & constPermVC.Modify))
+			|| (req.query.sysadmin && !(req.combinedPerm.system & constPermSystem.Modify))) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			logger4js.debug("Post Setting to VC %s Permission is ok", req.params.vcid);
+			var vcSetting = new VCSetting();
+			vcSetting.name = req.body.name;
+			vcSetting.vcid = req.params.vcid;
+			vcSetting.type = 'Custom';
+			vcSetting.value = req.body.value;
+			vcSetting.save(function(err, oneVcSetting) {
+				if (err) {
+					logger4js.fatal("VC Post Role DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Center Setting',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Inserted Visbo Center Setting',
+					vcsetting: [ oneVcSetting ]
+				});
+			});
+		})
+
+		router.route('/:vcid/setting/:settingid')
+
+	/**
+	  * @api {delete} /vc/:vcid/setting/:settingid Setting: delete one
+	  * @apiVersion 1.0.0
+	  * @apiGroup Visbo Center Properties
+	  * @apiName DeleteVisboCenterSetting
+	  * @apiHeader {String} access-key User authentication token.
+	  * @apiDescription Deletes the specified setting in the Visbo Center
+	  *
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a Visbo Center Setting
+		* @apiError {number} 404 Visbo Center Setting does not exists
+		*
+	  * @apiExample Example usage:
+	  *   url: http://localhost:3484/vc/:vcid/setting/:settingid
+	  * @apiSuccessExample {json} Success-Response:
+	  * HTTP/1.1 200 OK
+	  * {
+	  *   "state":"success",
+	  *   "message":"Visbo Center Setting deleted"
+	  * }
+	  */
+
+	// Delete Visbo Center Setting
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			req.auditDescription = 'Visbo Center Setting (Delete)';
+
+			logger4js.info("DELETE Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
+
+			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Center or no Permission'
+				});
+			}
+			logger4js.debug("Delete Visbo Center Setting after premission check %s", req.params.vcid);
+			var query = {};
+			query._id = req.params.settingid;
+			query.vcid = req.params.vcid;
+			var queryVCSetting = VCSetting.findOne(query);
+			// queryVCSetting.select('_id vcid name');
+			queryVCSetting.exec(function (err, oneVCSetting) {
+				if (err) {
+					logger4js.fatal("VC Delete Role DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error getting VisboCenter Settings',
+						error: err
+					});
+				}
+				if (!oneVCSetting) {
+					return res.status(404).send({
+						state: 'failure',
+						message: 'Visbo Center Setting not found',
+						error: err
+					});
+				}
+				logger4js.info("Found the Setting for VC");
+				oneVCSetting.remove(function(err, empty) {
+					if (err) {
+						logger4js.fatal("VC Delete Role DB Connection ", err);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error deleting Visbo Center Setting',
+							error: err
+						});
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Deleted Visbo Center Setting'
+					});
+				});
+			});
+		})
+
+	/**
+		* @api {put} /vc/:vcid/setting/:settingid Setting: update one
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Center Properties
+		* @apiName PutVisboCenterSetting
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Put updates a setting definition inside the Visbo Center
+		*
+		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Update a Visbo Center Setting
+		* @apiError {number} 404 Visbo Center Setting does not exists
+		*
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
+		*  {
+	  *    "name":"My first Setting Renamed",
+	  *    "uid": "2",
+		*    "farbe": "49407"
+	  *   }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   "state":"success",
+		*   "message":"Returned Visbo Center Setting",
+		*   "vcsetting":[{
+		*     "_id":"vcsetting5c754feaa",
+		*     "name":"My first Setting Renamed",
+		*     "vcid": "vc5c754feaa",
+		*     "timestamp": "2018-01-01",
+		*     "uid": "1",
+		*     "farbe": "49407"
+		*   }]
+		* }
+		*/
+
+// change setting
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Center Setting (Update)';
+
+		logger4js.info("PUT Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
+
+		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Center or no Permission'
+			});
+		}
+		logger4js.debug("Update Visbo Center Setting after premission check %s", req.params.vcid);
+		var query = {};
+		query._id =  req.params.settingid;
+		query.vcid = req.params.vcid;
+		var queryVCSetting = VCSetting.findOne(query);
+		// queryVCSetting.select('_id vcid name');
+		queryVCSetting.exec(function (err, oneVCSetting) {
+			if (err) {
+				logger4js.fatal("VC Put Setting DB Connection ", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error getting VisboCenter Settings',
+					error: err
+				});
+			}
+			if (!oneVCSetting) {
+				return res.status(404).send({
+					state: 'failure',
+					message: 'Visbo Center Setting not found',
+					error: err
+				});
+			}
+			logger4js.info("Found the Setting for VC");
+			oneVCSetting.name = req.body.name;
+			oneVCSetting.value = req.body.value;
+			oneVCSetting.save(function(err, oneVcSetting) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error updating Visbo Center Setting',
+						error: err
+					});
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated Visbo Center Setting',
+					vcsetting: [ oneVcSetting ]
 				});
 			});
 		});
