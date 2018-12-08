@@ -12,7 +12,7 @@ var moment = require('moment');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
 var logger4jsRest = log4js.getLogger("REST");
-
+var logging = require('./components/logging');
 
 //initialize mongoose schemas
 require('./models/users');
@@ -26,7 +26,7 @@ require('./models/vcrole');
 require('./models/vccost');
 require('./models/vcsetting');
 
-var systemVC = require('./components/sytemVC');
+var systemVC = require('./components/systemVC');
 
 // include the route modules
 var user = require('./routes/user');
@@ -114,8 +114,6 @@ function dbConnect(dbconnection) {
   }
 }
 
-// dbConnect();
-
 // CORS Config, whitelist is an array
 var whitelist = [
   undefined, // POSTMAN Support
@@ -150,8 +148,8 @@ if (process.env.LOGPATH != undefined) {
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -167,7 +165,9 @@ log4js.configure({
   }
 });
 logger4js.level = 'info';
-
+// initialise with default debug
+var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "All": "debug"}
+logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
@@ -204,10 +204,11 @@ app.use(logger(function (tokens, req, res) {
 }));
 
 dbConnect(process.env.NODE_VISBODB);
+mongoose.set('debug', true);
 
 var sysVC = systemVC.createSystemVC(
     { users: [
-        { "email":"support@visbo.de", "role": "Admin" }
+        { "email":"support@visbo.de" }
      ]}
    )
 

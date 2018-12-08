@@ -1,12 +1,16 @@
 var mongoose = require('mongoose');
+mongoose.Promise = require('q').Promise;
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboCenter = mongoose.model('VisboCenter');
+var VCSetting = mongoose.model('VCSetting');
 
-var logging = require('./../components/logging');
+var logging = require('./logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
+var vcSystem = undefined;
 
 var findUser = function(currentUser) {
 		return currentUser == this;
@@ -17,9 +21,10 @@ var findUserList = function(currentUser) {
 		return currentUser.email == this;
 }
 
-// Verify Visbo Center and the role of the user
+// Verify/Create Visbo Center with an initial user
 var createSystemVC = function (body) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	// logger4js.level = 'debug';
 
 	logger4js.info("Create System Visbo Center if not existent");
 	if (!body && !body.users) {
@@ -32,11 +37,28 @@ var createSystemVC = function (body) {
 	var query = {system: true};
 	VisboCenter.findOne(query, function(err, vc) {
 		if (err) {
-			logger4js.fatal("Could not find System VisboCenter");
+			logger4js.fatal("Could not access Database during System VC");
 			return undefined;
 		}
 		if (vc) {
 			logger4js.debug("System VisboCenter already exists");
+			vcSystem = vc;
+			// Get the Default Log Level from DB
+			var query = {};
+			var listSetting;
+			query.vcid = vcSystem._id;
+			query.name = 'DEBUG';
+			var queryVCSetting = VCSetting.findOne(query);
+			queryVCSetting.exec(function (err, item) {
+				if (err) {
+					logger4js.fatal("VC Get System Setting DB Connection ", err);
+				} else if (item) {
+					logger4js.debug("Setting found for System VC %O", item);
+					logging.setLogLevelConfig(item.value);
+				} else {
+					logger4js.debug("Setting not found for System VC", name);
+				}
+			});
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
@@ -50,6 +72,8 @@ var createSystemVC = function (body) {
 				logger4js.fatal("DB error during Creating System Visbo Center %s", err);
 				return undefined
 			}
+			vcSystem = vc;
+
 			var newUser = new User();
 			newUser.email = body.users[0].email;
 			newUser.save(function(err, user) {

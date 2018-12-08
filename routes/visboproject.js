@@ -101,7 +101,7 @@ var updatePermAddVP = function(vcid, vpid){
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
-// register the VP middleware to generate the VC List to check for public VPs
+// register the VP middleware to get all Groups with VP Permissions for the user
 router.use('/', verifyVp.getAllVPGroups);
 // register the VP middleware to check that the user has access to the VP
 router.param('vpid', verifyVp.getVpidGroups);
@@ -299,14 +299,11 @@ router.route('/')
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 		var newVP = new VisboProject();
 
-		// Check that the user has Admin permission in the VC
-		var isAdmin = false;
 		logger4js.debug("Check VC Permission %O", req.combinedPerm);
-
 		if (!(req.combinedPerm.vc & constPermVC.CreateVP)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Centers not found or no Admin'
+				message: 'Visbo Centers not found or no Permission to create Project'
 			});
 		}
 		VisboCenter.findOne({'_id': vcid}, function (err, vc) {
@@ -372,7 +369,7 @@ router.route('/')
 				};
 				logger4js.debug("Check users if they exist %s", JSON.stringify(vpUsers));
 				var queryUsers = User.find({'email': {'$in': vpUsers}});
-				queryUsers.select('email');
+				queryUsers.select('_id email');
 				queryUsers.lean();
 				queryUsers.exec(function (err, listUsers) {
 					if (err) {
@@ -396,19 +393,9 @@ router.route('/')
 					newVG.global = false;
 					newVG.vpids.push(newVP._id);
 					newVG.users = [];
-					if (req.body.users) {
-						for (i = 0; i < req.body.users.length; i++) {
-							// build up user list for newVG and a unique list of admins
-							if (req.body.users[i].role == 'Admin') {
-								vpUser = listUsers.find(findUserList, req.body.users[i].email);
-								// if user does not exist, ignore the user
-								if (vpUser){
-									req.body.users[i].userId = vpUser._id;
-									delete req.body.users[i]._id;
-									newVG.users.push({email: vpUser.email, userId: vpUser._id});
-								}
-							}
-						};
+					for (var i = 0; i < listUsers.length; i++) {
+						// build up user list for Visbo Project Admin Group
+						newVG.users.push({email: listUsers[i].email, userId: listUsers[i]._id});
 					};
 					// no admin defined, add current user as admin
 					if (newVG.users.length == 0)
@@ -420,62 +407,10 @@ router.route('/')
 							logger4js.fatal("VP Post Create 1. Group for vp %s DB Connection ", newVP._id, err);
 						}
 					});
-					var newVGRead = new VisboGroup();
-					newVGRead.name = 'Project Read Access'
-					newVGRead.groupType = 'VP'
-					newVGRead.global = false;
-					newVGRead.internal = false;
-					newVGRead.permission = {vp: constPermVP.View}
-					newVGRead.vcid = req.oneVC._id;
-					newVGRead.vpids.push(newVP._id);
-					newVGRead.users = [];
-					if (req.body.users) {
-						for (i = 0; i < req.body.users.length; i++) {
-							// build up user list for newVG and a unique list of admins
-							if (req.body.users[i].role == 'User') {
-								vpUser = listUsers.find(findUserList, req.body.users[i].email);
-								// if user does not exist, ignore the user
-								if (vpUser){
-									req.body.users[i].userId = vpUser._id;
-									delete req.body.users[i]._id;
-									newVGRead.users.push({email: vpUser.email, userId: vpUser._id});
-								}
-							}
-						};
-					};
-					// save asynchronous
-					if (newVGRead.users.length > 0) {
-						logger4js.debug("VP Post Create 2. Group for vp %s group %O ", newVP._id, newVG);
-						newVGRead.save(function(err, vg) {
-							if (err) {
-								logger4js.fatal("VP Post Create 2. Group for vp %s DB Connection ", newVP._id, err);
-							}
-						});
-					}
-
-					// copy all existing users to newVP and set the userId correct.
-					if (req.body.users) {
-						for (i = 0; i < req.body.users.length; i++) {
-							// build up user list for newVP and a unique list of vpUsers
-							vpUser = listUsers.find(findUserList, req.body.users[i].email);
-							// if user does not exist, ignore the user
-							if (vpUser){
-								req.body.users[i].userId = vpUser._id;
-								delete req.body.users[i]._id;
-								newVP.users.push(req.body.users[i]);
-							}
-						};
-					};
-					// check that there is an Admin available, if not add the current user as Admin
-					if (newVP.users.filter(users => users.role == 'Admin').length == 0) {
-						var admin = {userId: userId, email:useremail, role:"Admin"};
-						logger4js.info("No Admin User found add current user as admin");
-						newVP.users.push(admin);
-					};
 					// set the VP Name
 					newVP.vc.name = vc.name;
 					logger4js.trace("VP Create add VP Name %s %O", vc.name, newVP);
-					logger4js.debug("Save VisboProject %s  with %d Users", newVP.name, newVP.users.length);
+					logger4js.debug("Save VisboProject %s %s", newVP.name, newVP._id);
 					newVP.save(function(err, vp) {
 						if (err) {
 							logger4js.debug("Error Save VisboProject %s  with Error %s", newVP.name, err);
@@ -598,19 +533,7 @@ router.route('/:vpid')
 	*   "kundennummer": "Customer Project Identifier"
 	*   "vcid": "vc5aaf992",
 	*   "vpvCount": "0",
-	*   "vpType": "0",
-	*   "users":[
-	*    {
-	*     "userId":"us5aaf992"
-	*     "email":"example@visbo.de",
-	*     "role":"Admin"
-	*    },
-	*    {
-	*     "email":"example2@visbo.de",
-	*     "role":"User",
-	*     "userId":"us5aaf993"
-	*    }
-	*   ]
+	*   "vpType": "0"
 	*  }]
 	* }
 	*/

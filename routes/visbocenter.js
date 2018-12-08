@@ -24,13 +24,15 @@ var constPermVC = Const.constPermVC
 var constPermVP = Const.constPermVP
 var constPermSystem = Const.constPermSystem
 
-var mail = require('./../components/mail');
+var mail = require('../components/mail');
 var ejs = require('ejs');
 var read = require('fs').readFileSync;
 
+var logging = require('../components/logging');
 var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 var findUser = function(currentUser) {
 		return currentUser == this;
@@ -130,10 +132,10 @@ router.route('/')
 				query.deleted = {$exists: false}				// Not deleted
 			}
 			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
-			logger4js.debug("Check for VC query %O", query);
+			logger4js.trace("Check for VC query %O", query);
 
 			var queryVC = VisboCenter.find(query);
-			//queryVC.select('name users updatedAt createdAt');
+			queryVC.select('-users');
 			queryVC.lean();
 			queryVC.exec(function (err, listVC) {
 				if (err) {
@@ -288,7 +290,7 @@ router.route('/')
 			};
 			logger4js.debug("Check users if they exist %s", JSON.stringify(vcUsers));
 			var queryUsers = User.find({'email': {'$in': vcUsers}});
-			queryUsers.select('email');
+			queryUsers.select('_id email');
 			queryUsers.lean();
 			queryUsers.exec(function (err, listUsers) {
 				if (err) {
@@ -311,19 +313,9 @@ router.route('/')
 				newVG.permission = {vc: Const.constPermVCAll }
 				newVG.vcid = newVC._id;
 				newVG.users = [];
-				if (req.body.users) {
-					for (i = 0; i < req.body.users.length; i++) {
-						// build up user list for newVG and a unique list of admins
-						if (req.body.users[i].role == 'Admin') {
-							vcUser = listUsers.find(findUserList, req.body.users[i].email);
-							// if user does not exist, ignore the user
-							if (vcUser){
-								req.body.users[i].userId = vcUser._id;
-								req.body.users[i]._id = undefined;
-								newVG.users.push({email: vcUser.email, userId: vcUser._id});
-							}
-						}
-					};
+				for (var i = 0; i < listUsers.length; i++) {
+					// build up user list for Visbo Project Admin Group
+					newVG.users.push({email: listUsers[i].email, userId: listUsers[i]._id});
 				};
 				// no admin defined, add current user as admin
 				if (newVG.users.length == 0)
@@ -334,63 +326,9 @@ router.route('/')
 					if (err) {
 						logger4js.fatal("VC Post Create 1. Group for vc %s DB Connection ", newVC._id, err);
 					}
-					logger4js.debug("VC Post Created 1. Group for vc %s vg %O ", newVC._id, vg);
-				});
-				var newVGRead = new VisboGroup();
-				newVGRead.name = 'Read Access'
-				newVGRead.groupType = 'VC'
-				newVGRead.internal = false;
-				newVGRead.global = false;
-				newVGRead.permission = {vc: constPermVC.View}
-				newVGRead.vcid = newVC._id;
-				newVGRead.users = [];
-				if (req.body.users) {
-					for (i = 0; i < req.body.users.length; i++) {
-						// build up user list for newVG and a unique list of admins
-						if (req.body.users[i].role == 'User') {
-							vcUser = listUsers.find(findUserList, req.body.users[i].email);
-							// if user does not exist, ignore the user
-							if (vcUser){
-								req.body.users[i].userId = vcUser._id;
-								req.body.users[i]._id = undefined;
-								newVGRead.users.push({email: vcUser.email, userId: vcUser._id});
-							}
-						}
-					};
-				};
-				// save asynchronous
-				logger4js.debug("VC Post Create 2. Group for vc %s group %O ", newVC._id, newVGRead);
-				newVGRead.save(function(err, vg) {
-					if (err) {
-						logger4js.fatal("VC Post Create 2. Group for vc %s DB Connection ", vc._id, err);
-					}
-					logger4js.debug("VC Post Created 2. Group for vc %s vg %O ", newVC._id, vg);
 				});
 
-				// copy all existing users to newVC and set the userId correct.
-				if (req.body.users) {
-					for (i = 0; i < req.body.users.length; i++) {
-						// build up user list for newVC and a unique list of vcUsers
-						vcUser = listUsers.find(findUserList, req.body.users[i].email);
-						// if user does not exist, ignore the user
-						if (vcUser){
-							req.body.users[i].userId = vcUser._id;
-							req.body.users[i]._id = undefined;
-							newVC.users.push(req.body.users[i]);
-						}
-					};
-				};
-				// check that there is an Admin available, if not add the current user as Admin
-				if (newVC.users.filter(users => users.role == 'Admin').length == 0) {
-					var admin = {userId: userId, email:useremail, role:"Admin"};
-					logger4js.warn("No Admin User found add current user as admin");
-					newVC.users.push(admin);
-					if (!vcUsers.find(findUser, useremail)){
-						vcUsers.push(useremail)
-					}
-				};
-
-				logger4js.debug("Save VisboCenter %s with %d Users", newVC.name, newVC.users.length);
+				logger4js.debug("Save VisboCenter %s %s", newVC.name, newVC._id);
 				newVC.save(function(err, vc) {
 					if (err) {
 						logger4js.fatal("VC Post DB Connection ", err);
@@ -710,7 +648,7 @@ router.route('/:vcid')
 		logger4js.trace("Delete Visbo Center %s Status %s %O", req.params.vcid, req.oneVC.deleted, req.oneVC);
 		if (!(req.oneVC.deleted && req.oneVC.deleted.deletedAt)) {
 			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
-			logger4js.debug("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+			logger4js.trace("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
 					logger4js.fatal("VC Delete DB Connection ", err);
@@ -2351,9 +2289,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "name":"Setting Name",
 		*     "vcid": "vc5c754feaa",
-		*     "timestamp": "2018-01-01",
-		*     "uid": "1",
-		*     "farbe": "49407"
+		*     "value": {"any name": "any value"}
 		*   }]
 		* }
 		*/
@@ -2367,7 +2303,10 @@ router.route('/:vcid/cost')
 
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
-			var queryVCSetting = VCSetting.find({'vcid': req.oneVC._id});
+			var query = {};
+			query.vcid = req.oneVC._id
+			if (req.query.name) query.name = req.query.name;
+			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
@@ -2404,8 +2343,7 @@ router.route('/:vcid/cost')
 		*   url: http://localhost:3484/vc/:vcid/setting
 		*  {
 	  *    "name":"My first Setting",
-	  *    "uid": "1",
-		*    "farbe": "49407"
+	  *     "value": {"any name": "any value"}
 	  *  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -2416,9 +2354,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "name":"My first Setting",
 		*     "vcid": "vc5c754feaa",
-		*     "timestamp": "2018-01-01",
-		*     "uid": "1",
-		*     "farbe": "49407"
+		*     "value": {"any name": "any value"}
 		*   }]
 		* }
 		*/
@@ -2452,6 +2388,7 @@ router.route('/:vcid/cost')
 			vcSetting.name = req.body.name;
 			vcSetting.vcid = req.params.vcid;
 			vcSetting.type = 'Custom';
+			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
 			vcSetting.save(function(err, oneVcSetting) {
 				if (err) {
@@ -2504,7 +2441,8 @@ router.route('/:vcid/cost')
 
 			logger4js.info("DELETE Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
 
-			if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+			if ((!req.query.sysadmin && !(req.combinedPerm.vc & constPermVC.Modify))
+			|| (req.query.sysadmin && !(req.combinedPerm.system & constPermSystem.Modify))) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
@@ -2530,6 +2468,12 @@ router.route('/:vcid/cost')
 						state: 'failure',
 						message: 'Visbo Center Setting not found',
 						error: err
+					});
+				}
+				if (oneVCSetting.type == 'Internal') {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Not allowed to delete Internal Settings'
 					});
 				}
 				logger4js.info("Found the Setting for VC");
@@ -2567,8 +2511,7 @@ router.route('/:vcid/cost')
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
 		*  {
 	  *    "name":"My first Setting Renamed",
-	  *    "uid": "2",
-		*    "farbe": "49407"
+	  *    "value": "any"
 	  *   }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -2579,9 +2522,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "name":"My first Setting Renamed",
 		*     "vcid": "vc5c754feaa",
-		*     "timestamp": "2018-01-01",
-		*     "uid": "1",
-		*     "farbe": "49407"
+		*     "value": {"any name": "any value"}
 		*   }]
 		* }
 		*/
@@ -2595,7 +2536,8 @@ router.route('/:vcid/cost')
 
 		logger4js.info("PUT Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
 
-		if (!(req.combinedPerm.vc & constPermVC.Modify)) {
+		if ((!req.query.sysadmin && !(req.combinedPerm.vc & constPermVC.Modify))
+		|| (req.query.sysadmin && !(req.combinedPerm.system & constPermSystem.Modify))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Center or no Permission'
@@ -2624,8 +2566,8 @@ router.route('/:vcid/cost')
 				});
 			}
 			logger4js.info("Found the Setting for VC");
-			oneVCSetting.name = req.body.name;
-			oneVCSetting.value = req.body.value;
+			if (req.body.name) oneVCSetting.name = req.body.name;
+			if (req.body.value) oneVCSetting.value = req.body.value;
 			oneVCSetting.save(function(err, oneVcSetting) {
 				if (err) {
 					return res.status(500).send({
@@ -2633,6 +2575,12 @@ router.route('/:vcid/cost')
 						message: 'Error updating Visbo Center Setting',
 						error: err
 					});
+				}
+				if (oneVcSetting.type == 'Internal') {
+					if (oneVcSetting.name == 'DEBUG') {
+						logger4js.info("Update System Log Setting");
+						logging.setLogLevelConfig(oneVcSetting.value)
+					}
 				}
 				return res.status(200).send({
 					state: 'success',

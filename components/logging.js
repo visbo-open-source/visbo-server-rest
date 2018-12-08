@@ -11,22 +11,15 @@ var fsLogPath = undefined;
 debugLogLevel = function(logCategory) {
 	if ( configDebug == undefined ) {
 		// console.log("LOG CATEGORY Init");
-		if (process.env.DEBUG != undefined) {
-			// console.log("LOG CATEGORY Env");
-			configDebug = JSON.parse(process.env.DEBUG);
-		} else {
-			// console.log("LOG CATEGORY Default");
-			configDebug = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "All": "info"}
-		}
-		// console.log("LOG LEVEL: %O", configDebug)
+		configDebug = {"VC": "debug", "VP": "debug", "VPV": "debug", "USER":"debug", "OTHER": "debug", "All": "debug"}
+		// console.log("LOG LEVEL Init: %O", configDebug)
 	}
-	// console.log("LOG CATEGORY %s :%s:%s:", logCategory, configDebug[logCategory], configDebug[logCategory] || "warn");
 	return configDebug[logCategory] || configDebug["All"] || "info";
 }
 
 getLogLevelConfig = function() {
 	if ( configDebug == undefined ) {
-		debugLogLevel();
+		configDebug = debugLogLevel();
 	}
 	return configDebug;
 }
@@ -35,5 +28,12 @@ setLogLevelConfig = function(newConfigDebug) {
 	if ( newConfigDebug == undefined ) {
 		return;
 	}
+	// console.log("LOG LEVEL SET: %O", newConfigDebug)
 	configDebug = newConfigDebug
 }
+
+module.exports = {
+	debugLogLevel: debugLogLevel,
+	getLogLevelConfig: getLogLevelConfig,
+	setLogLevelConfig: setLogLevelConfig
+};

@@ -24,12 +24,10 @@ var vpUserSchema = new Schema({
 var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
-//	portfolio: { type: Boolean, reuqired: false },
 	vpType: {type: Number, required: false},					// vpType: Project, Portfolio, ProjectTemplate
 	description: { type: String, required: false },
 	kundennummer: { type: String, required: false }, // customer project identifier
 	vpPublic: {type: Boolean, required: false}, 			// Public means visible for all VC Users
-	users: [{type: vpUserSchema, required: true }],
 	vc: {
 		name: { type: String, required: false, maxlength: 256}
 	},
