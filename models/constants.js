@@ -1,9 +1,9 @@
 // Permission Values
 var constPermSystem = Object.freeze({
 		"View":1, "ViewAudit":2, "ViewLog":4, "Modify":16, "ManagePerm":32,
-		"ViewVC":128, "CreateVC":256, "ManageVC":512, "DeleteVC":1024
+		"CreateVC":256, "DeleteVC":1024
 	})
-const constPermSystemAll = 1975;
+const constPermSystemAll = 1335;
 
 var constPermVC = Object.freeze({
 	"View":1, "ViewAudit":2, "Modify":16, "ManagePerm":32, "CreateVP":256

@@ -31,24 +31,25 @@ router.use('/', verifyVpv.getAllVPVGroups);
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVpvidGroups);
 
-// updates the VP Count in the VC after create/delete/undelete Visbo Project
+// updates the VPV Count in the VP after create/delete/undelete Visbo Project
 var updateVPVCount = function(vpid, variantName, increment){
 	var updateQuery = {_id: vpid};
 	var updateOption = {upsert: false};
 
 	if (!variantName) {
 		var updateUpdate = {$inc: {vpvCount: increment}};
-		VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-			if (err){
-				logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err);
-			}
-			logger4js.trace("Updated VP %s vpvCount inc %d changed %d %d", vpid, increment, result.n, result.nModified)
-		})
 	} else {
 		// update a variant and increment the version counter
-		// TODO write the cirrect update statement for the array of variant
-		var updateUpdate = {};
+		updateQuery['variant.variantName'] = variantName;
+		var updateUpdate = {$inc : {"variant.$.vpvCount" : increment} };
 	}
+	logger4js.debug("Update VP %s with vpvCount inc %d update: %O with %O", vpid, increment, updateQuery, updateUpdate)
+	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err);
+		}
+		logger4js.trace("Updated VP %s vpvCount inc %d changed %d %d", vpid, increment, result.n, result.nModified)
+	})
 }
 
 /////////////////
@@ -413,28 +414,12 @@ router.route('/')
 					}
 					req.oneVPV = oneVPV;
 					// update the version count of the base version or the variant
-					if (variantName == "") {
-						req.oneVP.vpvCount = req.oneVP.vpvCount == undefined ? 1 : req.oneVP.vpvCount + 1;
-					} else {
-						req.oneVP.variant[variantIndex].vpvCount += 1;
-					}
-					logger4js.debug("Update VisboProject %s count %d %O", req.oneVP.name, req.oneVP.vpvCount, req.oneVP.variant);
-					req.oneVP.save(function(err, vp) {
-						if (err) {
-							logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
-							return res.status(500).send({
-								state: "failure",
-								message: "database error, failed to update Visbo Project",
-								error: err
-							});
-						}
-						req.oneVP = vp;
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully created new Project Version",
-							vpv: [ oneVPV ]
-						});
-					})
+					updateVPVCount(req.oneVPV.vpid, variantName, 1)
+					return res.status(200).send({
+						state: "success",
+						message: "Successfully created new Project Version",
+						vpv: [ oneVPV ]
+					});
 				});
 			});
 		});
@@ -553,8 +538,7 @@ router.route('/:vpvid')
 			logger4js.warn("VPV Delete no Permission %s %s", req.params.vpvid, variantName);
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Project Version no permission to delete Version',
-				vp: [req.oneVP]
+				message: 'Visbo Project Version no permission to delete Version'
 			});
 		}
 		logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
@@ -570,29 +554,12 @@ router.route('/:vpvid')
 				});
 			}
 			req.oneVPV = oneVPV;
-			if (variantName == "") {
-				req.oneVP.vpvCount = req.oneVP.vpvCount == undefined || req.oneVP.vpvCount < 1 ? 0 : req.oneVP.vpvCount;
-				req.oneVP.vpvCount -= 1;
-			} else if (variantExists) {
-				req.oneVP.variant[variantIndex].vpvCount -= 1;
-			}
 
-			req.oneVP.save(function(err, vp) {
-				if (err) {
-					logger4js.error("Error Update VisboProject %s  with Error %s", req.oneVP.name, err);
-					return res.status(500).send({
-						state: "failure",
-						message: "database error, failed to update Visbo Project",
-						error: err
-					});
-				}
-				req.oneVP = vp;
-				return res.status(200).send({
-					state: "success",
-					message: "Successfully deleted Project Version",
-					vp: [ req.oneVP ]
-				});
-			})
+			updateVPVCount(req.oneVPV.vpid, variantName, -1)
+			return res.status(200).send({
+				state: "success",
+				message: "Successfully deleted Project Version"
+			});
 		});
 	})
 

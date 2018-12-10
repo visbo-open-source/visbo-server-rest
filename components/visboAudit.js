@@ -41,19 +41,21 @@ function visboAudit(tokens, req, res) {
 		auditEntry.user.email = 'Unknown'
 	}
 	auditEntry.vpv = {};
+	auditEntry.vp = {};
+	auditEntry.vc = {};
 	if (req.oneVPV) {
 			auditEntry.vpv.vpvid = req.oneVPV._id;
+			auditEntry.vp.vpid = req.oneVPV.vpid;
 			auditEntry.vpv.name = req.oneVPV.name;
 			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vpv.name
 	}
-	auditEntry.vp = {};
 	if (req.oneVP) {
 			auditEntry.vp.vpid = req.oneVP._id;
+			auditEntry.vc.vcid = req.oneVP.vcid;
 			auditEntry.vp.name = req.oneVP.name;
 			if (auditEntry.action != 'GET') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
 			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name
 	}
-	auditEntry.vc = {};
 	if (req.oneVC) {
 			auditEntry.vc.vcid = req.oneVC._id;
 			auditEntry.vc.name = req.oneVC.name;

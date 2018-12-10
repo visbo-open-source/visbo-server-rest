@@ -56,7 +56,22 @@ var createSystemVC = function (body) {
 					logger4js.debug("Setting found for System VC %O", item);
 					logging.setLogLevelConfig(item.value);
 				} else {
-					logger4js.debug("Setting not found for System VC", name);
+					logger4js.debug("Setting not found for System VC", query.name);
+					// insert a default Config Value for Debug
+					var vcSetting = new VCSetting();
+					vcSetting.name = 'DEBUG';
+					vcSetting.vcid = vcSystem._id;
+					vcSetting.timestamp = new Date();
+					vcSetting.type = 'Internal';
+					vcSetting.value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"};
+					vcSetting.save(function(err, oneVcSetting) {
+						if (err) {
+							logger4js.fatal("VC Define Initial Logging DB Connection ", err);
+						} else {
+							logger4js.info("Update System Log Setting");
+							logging.setLogLevelConfig(oneVcSetting.value)
+						}
+					});
 				}
 			});
 			return vc;
@@ -86,7 +101,7 @@ var createSystemVC = function (body) {
 				newGroup.global = false;
 				newGroup.name = 'SysAdmin';
 				newGroup.vcid = vc._id;
-				newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permManageVC: true, permDeleteVC: true, permManagePerm: true}}
+				newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permDeleteVC: true, permManagePerm: true}}
 				newGroup.users.push({userId: user._id, email: user.email});
 				newGroup.save(function(err, group) {
 					if (err) {

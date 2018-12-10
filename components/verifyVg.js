@@ -13,15 +13,14 @@ var logger4js = log4js.getLogger(logModule);
 function getGroupId(req, res, next, groupId) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	var vcid = req.oneVC ? req.oneVC._id : undefined;
-	var vpid = req.oneVP ? req.oneVP._id : undefined;
+	var vcid = req.params.vcid ? req.params.vcid : undefined;
+	var vpid = req.params.vpid ? req.params.vpid : undefined;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-	// TODO: handle sysadmin case, handle sysVC
 	logger4js.debug("Check GroupId %s for vcid %s vpid %s ", groupId, vcid);
 	var query = {};
 	if (vcid) query.vcid = vcid;
-	if (vpid)  { query.vpids = vpid; query.vcid = req.oneVP.vcid }
+	if (vpid)  { query.vpids = vpid }
 	query._id = groupId
 	logger4js.trace("Search VGs %O", query);
 
