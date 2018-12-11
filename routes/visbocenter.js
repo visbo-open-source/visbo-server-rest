@@ -2382,6 +2382,16 @@ router.route('/:vcid/cost')
 		* @apiName GetVisboCenterSetting
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all settings of the specified Visbo Center
+		*
+		* With additional query paramteters the amount of settings can be restricted. Available Restirctions are: refDate, type, name, userId.
+		*
+		* @apiParam {Date} refDate only the latest setting with a timestamp before the reference date is delivered
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
+		* @apiParam {String} name Deliver only settings with the specified name
+		* @apiParam {String} type Deliver only settings of the the specified type
+		* @apiParam {String} userId Deliver only settings that has set the specified userId
+		*
 		* @apiPermission Authenticated and Permission: View Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the Visbo Center
@@ -2397,7 +2407,7 @@ router.route('/:vcid/cost')
 		*     "vcid": "vc5c754feaa",
 		*     "name":"Setting Name",
 		*     "userId": "us5c754feab",
-		* 		"type": "Type of Setting",
+		*     "type": "Type of Setting",
 		*     "timestamp": "2018-12-01",
 		*     "value": {"any name": "any value"}
 		*   }]
@@ -2408,16 +2418,31 @@ router.route('/:vcid/cost')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var latestOnly = false; 	// as default show all settings
+
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Setting (Read)';
 
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
 			var query = {};
+			if (req.query.refDate){
+				var refDate = new Date(req.query.refDate);
+				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
+				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
+				latestOnly = true;
+			}
 			query.vcid = req.oneVC._id
 			if (req.query.name) query.name = req.query.name;
+			if (req.query.type) query.type = req.query.type;
+			if (req.query.userId) query.userId = req.query.userId;
+
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
+			if (req.query.refNext)
+				queryVCSetting.sort('type name userId +timestamp')
+			else
+				queryVCSetting.sort('type name userId -timestamp')
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
 				if (err) {
@@ -2429,12 +2454,36 @@ router.route('/:vcid/cost')
 					});
 				}
 				logger4js.info("Found %d Settings for VC", listVCSetting.length);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Center Settings',
-					count: listVCSetting.length,
-					vcsetting: listVCSetting
-				});
+				if (listVCSetting.length > 1 && latestOnly){
+					var listVCSettingfiltered = [];
+					listVCSettingfiltered.push(listVCSetting[0]);
+					for (let i = 1; i < listVCSetting.length; i++){
+						//compare current item with previous and ignore if it is the same type, name, userId
+						logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
+						if (listVCSetting[i].type != listVCSetting[i-1].type
+						|| listVCSetting[i].name != listVCSetting[i-1].name
+						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
+							listVCSettingfiltered.push(listVCSetting[i])
+							logger4js.trace("compare unequal: ", listVCSetting[i]._id != listVCSetting[i-1]._id);
+						}
+					}
+					logger4js.debug("Found %d Project Versions after Filtering", listVCSettingfiltered.length);
+					req.auditInfo = listVCSettingfiltered.length;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Versions',
+						count: listVCSettingfiltered.length,
+						vcsetting: listVCSettingfiltered
+					});
+				} else {
+					req.auditInfo = listVCSetting.length;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Project Versions',
+						count: listVCSetting.length,
+						vcsetting: listVCSetting
+					});
+				}
 			});
 		})
 
@@ -2467,7 +2516,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "vcid": "vc5c754feaa",
 		*     "name":"My first Setting",
-		* 		"type": "Type of Setting",
+		*     "type": "Type of Setting",
 		*     "timestamp": "2018-12-01",
 		*     "value": {"any name": "any value"}
 		*   }]
@@ -2634,7 +2683,7 @@ router.route('/:vcid/cost')
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
 		*  {
 	  *    "name":"My first Setting Renamed",
-		* 	 "type": "Type of Setting",
+		*    "type": "Type of Setting",
 		*    "timestamp": "2018-12-02",
 	  *    "value": "any"
 	  *   }
@@ -2647,7 +2696,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "vcid": "vc5c754feaa",
 		*     "name":"My first Setting Renamed",
-		*     "uid": 0,
+		*     "type": "Type of Setting",
 		*     "timestamp": "2018-12-02",
 		*     "value": {"any name": "any value"}
 		*   }]
