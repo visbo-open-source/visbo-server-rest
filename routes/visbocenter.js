@@ -436,14 +436,29 @@ router.route('/:vcid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
 
-		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
-		// we have found the VC already in middleware
-		return res.status(200).send({
+		// check for deleted only for sysAdmins
+		var found = false;
+		if (isSysAdmin && req.query.deleted && req.oneVC.deleted && req.oneVC.deleted.deletedAt) {
+			found = true;
+		} else if (!(req.oneVC.deleted && req.oneVC.deleted.deletedAt)) {
+			logger4js.info("Deleted %O", req.oneVC.deleted);
+			found= true;
+		}
+
+		logger4js.info("Get Visbo Center for userid %s email %s and vc %s oneVC %s Perm %O found %s", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm, found);
+		if (found) {
+			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Centers',
 				vc: [req.oneVC],
 				perm: req.combinedPerm
 			});
+		} else {
+			return res.status(200).send({
+				state: 'failiure',
+				message: 'Visbo Center not found',
+			});
+		}
 	})
 
 /**
@@ -762,7 +777,7 @@ router.route('/:vcid')
 				// Delete the VC  itself
 				return res.status(200).send({
 					state: 'success',
-					message: 'VC Destroyed'
+					message: 'Visbo Center Destroyed'
 				});
 			});
 		}
@@ -2352,7 +2367,8 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "vcid": "vc5c754feaa",
 		*     "name":"Setting Name",
-		*     "uid": 0,
+		*     "userId": "us5c754feab",
+		* 		"type": "Type of Setting",
 		*     "timestamp": "2018-12-01",
 		*     "value": {"any name": "any value"}
 		*   }]
@@ -2409,7 +2425,7 @@ router.route('/:vcid/cost')
 		*   url: http://localhost:3484/vc/:vcid/setting
 		*  {
 	  *    "name":"My first Setting",
-		*    "uid": 0,
+		*    "type": "Type of Setting",
 		*    "timestamp": "2018-12-01",
 	  *    "value": {"any name": "any value"}
 	  *  }
@@ -2422,7 +2438,7 @@ router.route('/:vcid/cost')
 		*     "_id":"vcsetting5c754feaa",
 		*     "vcid": "vc5c754feaa",
 		*     "name":"My first Setting",
-		*     "uid": 0,
+		* 		"type": "Type of Setting",
 		*     "timestamp": "2018-12-01",
 		*     "value": {"any name": "any value"}
 		*   }]
@@ -2458,8 +2474,7 @@ router.route('/:vcid/cost')
 			vcSetting.name = req.body.name;
 			vcSetting.vcid = req.params.vcid;
 			if (req.body.timestamp) vcSetting.timestamp = req.body.timestamp;
-			else vcSetting.timestamp = new Date();
-			if (req.body.uid) vcSetting.uid = req.body.uid;
+			if (req.body.userId) vcSetting.userId = req.body.userId;
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
@@ -2590,6 +2605,8 @@ router.route('/:vcid/cost')
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
 		*  {
 	  *    "name":"My first Setting Renamed",
+		* 	 "type": "Type of Setting",
+		*    "timestamp": "2018-12-02",
 	  *    "value": "any"
 	  *   }
 		* @apiSuccessExample {json} Success-Response:
@@ -2602,7 +2619,7 @@ router.route('/:vcid/cost')
 		*     "vcid": "vc5c754feaa",
 		*     "name":"My first Setting Renamed",
 		*     "uid": 0,
-		*     "timestamp": "2018-12-01",
+		*     "timestamp": "2018-12-02",
 		*     "value": {"any name": "any value"}
 		*   }]
 		* }

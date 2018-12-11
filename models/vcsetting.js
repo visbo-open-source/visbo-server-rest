@@ -5,9 +5,9 @@ var vcSettingSchema = new mongoose.Schema({
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
 	type: { type: String, required: true, maxlength: 20},
 	name: { type: String, required: true, maxlength: 100},
-	uid: {type: Number, required: false},
-	timestamp: { type: Date, required: true},
-	value: { type: Schema.Types.Mixed }
+	userId: {type: Schema.Types.ObjectId, ref: 'User', required: false},
+	timestamp: { type: Date, required: false},
+	value: { type: Schema.Types.Mixed, required: true }
 });
 // Set Creation and modification date automatically
 vcSettingSchema.set('timestamps', true);
