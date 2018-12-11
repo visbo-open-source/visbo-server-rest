@@ -1068,40 +1068,69 @@ router.route('/:vcid/group')
 			}
 			logger4js.debug("Post Group %s to VC %s now", req.body.name, req.params.vcid);
 
-			var vcGroup = new VisboGroup();
-			// fill in the required fields
-			vcGroup.name = req.body.name;
-			vcGroup.vcid = req.params.vcid;
-			vcGroup.global = vgGlobal;
-			vcGroup.permission = newPerm;
-			vcGroup.groupType = groupType;
-			vcGroup.internal = false;
-			vcGroup.save(function(err, oneVcGroup) {
+			// query vpids to fill in if group is global
+			var query = {};
+			query.vcid = req.oneVC._id;
+			// query['deleted.deletedAt'] = {$exists: false};
+			var queryVP = VisboProject.find(query);
+			queryVP.select('_id'); // return only _id
+			queryVP.lean();
+			queryVP.exec(function (err, listVP) {
 				if (err) {
-					logger4js.fatal("VC Post Group DB Connection ", err);
+					logger4js.fatal("VC Create Group: GET DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error updating Visbo Center Group',
+						message: 'Internal Server Error with DB Connection',
 						error: err
 					});
+				};
+				logger4js.debug("VC Create Group: Found %d Projects", listVP.length);
+
+				var vcGroup = new VisboGroup();
+				// fill in the required fields
+				vcGroup.name = req.body.name;
+				vcGroup.vcid = req.params.vcid;
+				vcGroup.global = vgGlobal;
+				vcGroup.permission = newPerm;
+				vcGroup.groupType = groupType;
+				vcGroup.internal = false;
+				if (vgGlobal) {
+					// set global group setting, handle vpids
+					logger4js.debug("Set Global Flag %s", vgGlobal);
+					vcGroup.vpids = [];
+					for (var i = 0; i<listVP.length; i++) {
+						vcGroup.vpids.push(listVP[i]._id)
+					}
+					logger4js.debug("Updated Projects/n", vcGroup.vpids);
+				} else {
+						vcGroup.permission.vp = undefined;
 				}
-				var resultGroup = {};
-				resultGroup._id = oneVcGroup._id;
-				resultGroup.name = oneVcGroup.name;
-				resultGroup.vcid = oneVcGroup.vcid;
-				resultGroup.global = oneVcGroup.global;
-				resultGroup.permission = oneVcGroup.permission;
-				resultGroup.groupType = oneVcGroup.groupType;
-				resultGroup.users = oneVcGroup.users;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Inserted Visbo Center Group',
-					groups: [ resultGroup ]
+				vcGroup.save(function(err, oneVcGroup) {
+					if (err) {
+						logger4js.fatal("VC Post Group DB Connection ", err);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'Error updating Visbo Center Group',
+							error: err
+						});
+					}
+					var resultGroup = {};
+					resultGroup._id = oneVcGroup._id;
+					resultGroup.name = oneVcGroup.name;
+					resultGroup.vcid = oneVcGroup.vcid;
+					resultGroup.global = oneVcGroup.global;
+					resultGroup.permission = oneVcGroup.permission;
+					resultGroup.groupType = oneVcGroup.groupType;
+					resultGroup.users = oneVcGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Inserted Visbo Center Group',
+						groups: [ resultGroup ]
+					});
 				});
 			});
 		});
 	})
-
 
 router.route('/:vcid/group/:groupid')
 
@@ -2484,7 +2513,7 @@ router.route('/:vcid/cost')
 					if (err.code == 11000) {
 						return res.status(409).send({
 							state: 'failure',
-							message: 'Visbo Center Setting with same Name, UID and Timestamp exists'
+							message: 'Visbo Center Setting not unique'
 						});
 					}
 					return res.status(500).send({
