@@ -2227,6 +2227,14 @@ router.route('/:vpid/portfolio')
 				vp: [req.oneVP]
 			});
 		}
+		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
+		|| !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo Project Portfolio no Permission to create Portfolio List'
+			});
+		}
+
 		var newPortfolio = new VisboPortfolio;
 		newPortfolio.vpid = req.oneVP._id;
 		newPortfolio.variantName = variantName;
@@ -2428,12 +2436,40 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No Visbo Portfolio or no Permission'
 				});
 			}
-			lockResult = lockVP.lockStatus(req.oneVP, useremail, oneVPF.variantName);
+			var variantExists = false;
+			var variantIndex;
+			var variantName = req.oneVPF.variantName
+			if (variantName != "") {
+				// check that the Variant exists
+				variantExists = true;
+				variantIndex = variant.findVariant(req.oneVP, variantName)
+				if (variantIndex < 0) {
+					logger4js.warn("VP PortfolioList Delete Variant does not exist %s %s", req.params.vpvid, variantName);
+					// Allow Deleting of a version where Variant does not exists for Admins
+					variantName = ""
+					variantExists = false;
+				};
+			}
+			lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
 			if (lockResult.locked) {
 				return res.status(423).send({
 					state: 'failure',
 					message: 'Visbo Portfolio Project locked',
 					vp: [req.oneVP]
+				});
+			}
+			// user needs to have Delete Permission or owns the Variant
+			var hasPerm = false;
+			if (req.combinedPerm.vp & constPermVP.Delete) {
+				hasPerm = true;
+			} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
+				hasPerm = true;
+			}
+			if (!hasPerm) {
+				logger4js.warn("VP Portfolio List Delete no Permission %s %s", oneVP._id, variantName);
+				return res.status(403).send({
+					state: 'failure',
+					message: 'Visbo Portfolio List no permission to delete Version'
 				});
 			}
 			oneVPF.deleted = {deletedAt: new Date(), byParent: false }

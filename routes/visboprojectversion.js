@@ -259,13 +259,13 @@ router.route('/')
 		var queryvpv = {};
 
 		var vpid = req.body.vpid || 0;
-		var variantName = req.body.variantName || "";
+		var variantName = req.body.variantName.trim() || '';
 		var variantIndex = -1;
 
 		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, vpid, req.body.updatedAt, req.combinedPerm);
 		var newVPV = new VisboProjectVersion();
 		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
-			|| !(req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant))) {
+			|| !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Centers not found or no Permission'
