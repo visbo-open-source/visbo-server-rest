@@ -120,7 +120,7 @@ var updateVCName = function(vp){
 // updates the VP Name in the VPV after name change of Visbo Project
 var updateVPName = function(vpid, name, type){
 	logger4js.trace("Start Update VP %s New Name %s ", vpid, name)
-	var updateQuery = {vpid: vpid, deleted: {$exists: false}};
+	var updateQuery = {vpid: vpid, deletedAt: {$exists: false}};
 	var updateUpdate = {$set: {name: name}};
 	var updateOption = {upsert: false};
 
@@ -274,10 +274,11 @@ router.route('/')
 
 		// check for deleted VPs
 		if (req.query.deleted) {
-			query.deleted = {$exists: true}				// Not deleted
+			query.deletedAt = {$exists: true}				// Not deleted
 		} else {
-			query.deleted = {$exists: false};
+			query.deletedAt = {$exists: false};
 		}
+		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
 		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
@@ -333,11 +334,9 @@ router.route('/')
 	*  "name":"My first Visbo Project",
 	*  "vcid": "vc5aaf992",
 	*  "vpType": "0",
-	*  "users":[{
-	*    "email":"example1@visbo.de"
-	*   }, {
-	*    "email":"example2@visbo.de"
-	*  }]
+	*  "users":[
+	*    { "email":"example1@visbo.de" },
+	*    { "email":"example2@visbo.de" }]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -410,8 +409,7 @@ router.route('/')
 			var query = {};
 			query.vcid = vcid;
 			query.name = vpname;
-			// query['deleted.deletedAt'] = {$exists: false};
-			query.deleted = {$exists: false};
+			query.deletedAt = {$exists: false};
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
@@ -637,9 +635,8 @@ router.route('/:vpid')
 		}
 		var vpUndelete = false;
 		// undelete the VP in case of change
-		// if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
-		if (req.oneVP.deleted && req.oneVP.deleted.deletedAt) {
-			req.oneVP.deleted = undefined;
+		if (req.oneVP.deletedAt) {
+			req.oneVP.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
 		}
@@ -674,7 +671,7 @@ router.route('/:vpid')
 		query.vcid = req.oneVP.vcid;
 		query._id = {$ne: req.oneVP._id}
 		query.name = name;
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
@@ -766,12 +763,11 @@ router.route('/:vpid')
 				vp: [req.oneVP]
 			});
 		}
-		// var destroyVP = req.oneVP.deleted && req.oneVP.deleted.deletedAt != undefined
-		var destroyVP = req.oneVP.deleted && req.oneVP.deleted.deletedAt
+		var destroyVP = req.oneVP.deletedAt
 		logger4js.debug("Delete Visbo Project %s %s after premission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
-			req.oneVP.deleted = {deletedAt: new Date(), byParent: false }
+			req.oneVP.deletedAt = new Date();
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
 					logger4js.fatal("VP DELETE DB Connection ", err);
@@ -821,9 +817,9 @@ router.route('/:vpid')
 			var queryaudit = {'vp.vpid': req.oneVP._id};
 			VisboAudit.deleteMany(queryaudit, function (err) {
 				if (err){
-					logger4js.error("VP Destroy: %s Problem deleting Audit %O", req.oneVC._id, err);
+					logger4js.error("VP Destroy: %s Problem deleting Audit %O", req.oneVP._id, err);
 				}
-				logger4js.trace("VP Destroy: %s VP Audit Deleted", req.oneVC._id)
+				logger4js.trace("VP Destroy: %s VP Audit Deleted", req.oneVP._id)
 			});
 
 			// DESTROY VP itself
@@ -2101,8 +2097,7 @@ router.route('/:vpid/portfolio')
 		var query = {};
 		query.vpid = req.oneVP._id;
 		query.timestamp =  {$lt: new Date()};
-		// query['deleted.deletedAt'] = {$exists: false};
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 		if (req.query.refDate){
 			var refDate = new Date(req.query.refDate);
 			query.timestamp =  {$lt: refDate};
@@ -2355,8 +2350,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var query = {}
 		query._id = req.params.vpfid
 		query.vpid = req.oneVP._id;
-		// query['deleted.deletedAt'] = {$exists: false};
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 		// check if query string is used to restrict to a specific VC
 		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
 		// logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
@@ -2418,8 +2412,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var query = {};
 		query._id = vpfid;
 		query.vpid = req.oneVP._id;
-		// query['deleted.deletedAt'] = {$exists: false};
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
@@ -2472,7 +2465,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'Visbo Portfolio List no permission to delete Version'
 				});
 			}
-			oneVPF.deleted = {deletedAt: new Date(), byParent: false }
+			oneVPF.deletedAt = new Date();
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
 					logger4js.fatal("VPF Delete DB Connection ", err);

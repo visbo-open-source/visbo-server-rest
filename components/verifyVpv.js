@@ -74,7 +74,7 @@ function getAllVPVGroups(req, res, next) {
 				// do not accept requests without a group assignement especially to System Group
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No Visbo Project or no Permission'
 				});
 			}
 
@@ -105,23 +105,25 @@ function getVpvidGroups(req, res, next, vpvid) {
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
+	var checkDeletedVP = req.query.deleted == true;
 
 	// get the VPV without checks to find the corresponding VP
-	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deleted: {$exists: false}});
-	queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName');
+	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deletedAt: {$exists: checkDeletedVP}});
+
+	queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
 			logger4js.fatal("VPV Get with ID DB Connection %O", err);
 			return res.status(500).send({
 				state: 'failure',
-				message: 'Error getting Visbo Centers',
+				message: 'Error getting Visbo Project Versions',
 				error: err
 			});
 		}
 		if (!oneVPV) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Center or no Permission'
+				message: 'No Visbo Project or no Permission'
 			});
 		}
 		req.oneVPV = oneVPV;
@@ -161,14 +163,9 @@ function getVpvidGroups(req, res, next, vpvid) {
 				// do not accept requests without a group assignement especially to System Group
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No Visbo Project or no Permission'
 				});
 			}
-			var checkDeletedVP = req.query.deleted;
-			// allow access to GET, PUT & DELETE for VP of deleted VPs if user is sysadmin
-			// if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
-			// 	if (sysAdmin && req.query.deleted) checkDeletedVP = true;
-			// }
 			// check against the groups
 			var combinedPerm = {system: 0, vc: 0, vp: 0};
 			for (var i=0; i < req.permGroups.length; i++) {
@@ -181,11 +178,9 @@ function getVpvidGroups(req, res, next, vpvid) {
 			logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", oneVPV.vpid, req.permGroups.length, combinedPerm);
 			var query = {};
 			query._id = oneVPV.vpid;
-			query.deleted =  {$exists: checkDeletedVP};
-			if (checkDeletedVP) {
-				query['deleted.byParent'] = false;			// to guarantee that the user can not see a vp that is deleted by VC
-			}
-			// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
+			// prevent that the user gets access to Versions of Deleted VPs or Deleted VCs
+			query.deletedAt =  {$exists: false};
+			query['vc.deletedAt'] = {$exists: false}
 			logger4js.trace("Get Visbo Project Query %O", query);
 			var queryVP = VisboProject.findOne(query);
 			// queryVP.select('name users updatedAt createdAt');
@@ -194,14 +189,14 @@ function getVpvidGroups(req, res, next, vpvid) {
 					logger4js.fatal("VP Get with ID DB Connection %O", err);
 					return res.status(500).send({
 						state: 'failure',
-						message: 'Error getting Visbo Centers',
+						message: 'Error getting Visbo Projects',
 						error: err
 					});
 				}
 				if (!oneVP) {
 					return res.status(403).send({
 						state: 'failure',
-						message: 'No Visbo Center or no Permission'
+						message: 'No Visbo Project or no Permission'
 					});
 				}
 				req.oneVP = oneVP

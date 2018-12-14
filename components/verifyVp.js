@@ -68,7 +68,7 @@ function getAllVPGroups(req, res, next) {
 				// do not accept requests without a group assignement especially to System Group
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No Visbo Project or no Permission'
 				});
 			}
 
@@ -135,7 +135,7 @@ function getVpidGroups(req, res, next, vpid) {
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Center or no Permission'
+				message: 'No Visbo Project or no Permission'
 			});
 		}
 		var checkDeletedVP = req.query.deleted == true;
@@ -151,11 +151,9 @@ function getVpidGroups(req, res, next, vpid) {
 		logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", vpid, req.permGroups.length, combinedPerm);
 		var query = {};
 		query._id = vpid;
-		query.deleted =  {$exists: checkDeletedVP};
-		if (checkDeletedVP) {
-			query['deleted.byParent'] = false;			// to guarantee that the user can not see a vp that is deleted by VC
-		}
+		query.deletedAt =  {$exists: checkDeletedVP};
 		// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
+		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		logger4js.trace("Get Visbo Project Query %O", query);
 		var queryVP = VisboProject.findOne(query);
 		// queryVP.select('name users updatedAt createdAt');
@@ -164,14 +162,14 @@ function getVpidGroups(req, res, next, vpid) {
 				logger4js.fatal("VP Get with ID DB Connection %O", err);
 				return res.status(500).send({
 					state: 'failure',
-					message: 'Error getting Visbo Centers',
+					message: 'Error getting Visbo Project',
 					error: err
 				});
 			}
 			if (!oneVP) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No Visbo Project or no Permission'
 				});
 			}
 			req.oneVP = oneVP

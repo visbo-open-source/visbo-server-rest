@@ -134,7 +134,7 @@ router.route('/')
 
 		logger4js.trace("Get VPV vpid List %O ", vpidList);
 
-		queryvpv.deleted = {$exists: false};
+		queryvpv.deletedAt = {$exists: false};
 		if (req.query) {
 			if (req.query.status) {
 				queryvpv.status = req.query.status;
@@ -159,7 +159,7 @@ router.route('/')
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (!longList) {
 			// deliver only the short info about project versions
-			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt');
+			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
 		}
 		if (req.query.refNext)
 			queryVPV.sort('vpid name variantName +timestamp')
@@ -262,18 +262,20 @@ router.route('/')
 		var variantName = req.body.variantName.trim() || '';
 		var variantIndex = -1;
 
-		logger4js.info("Post a new Visbo Project Version for user %s with name %s in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, vpid, req.body.updatedAt, req.combinedPerm);
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.combinedPerm);
 		var newVPV = new VisboProjectVersion();
-		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
-			|| !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
+		var permCreateVersion = false
+		if (req.combinedPerm.vp & constPermVP.Modify) permCreateVersion = true;
+		if ((req.combinedPerm.vp & constPermVP.CreateVariant) && variantName != '') permCreateVersion = true;
+		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Centers not found or no Permission'
+				message: 'Visbo Project not found or no Permission'
 			});
 		}
 		var queryVp = {};
 		queryVp._id = vpid;
-		queryVp.deleted = {$exists: false};				// Not deleted
+		queryVp.deletedAt = {$exists: false};				// Not deleted
 		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
 				logger4js.fatal("Error connecting to DB during POST VPV find VP: %O", err);
@@ -315,25 +317,10 @@ router.route('/')
 					vp: [req.oneVP]
 				});
 			}
-			// user does not have admin permission and does not own the variant
-			var hasPerm = false;
-			if (req.combinedPerm.vp & constPermVP.Modify) {
-				hasPerm = true;
-			} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
-				hasPerm = true;
-			}
-			if (!hasPerm) {
-				logger4js.warn("VPV Post no Permission %s %s", vpid, variantName);
-				return res.status(403).send({
-					state: 'failure',
-					message: 'Visbo Project Version no permission to create new Version',
-					vp: [req.oneVP]
-				});
-			}
 
 			logger4js.debug("User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
-			queryvpv.deleted = {$exists: false};
+			queryvpv.deletedAt = {$exists: false};
 			queryvpv.vpid = req.body.vpid
 			queryvpv.variantName = req.body.variantName || '';
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
@@ -544,7 +531,7 @@ router.route('/:vpvid')
 		logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
 		var variantName = req.oneVPV.variantName;
 
-		req.oneVPV.deleted = {deletedAt: new Date(), byParent: false }
+		req.oneVPV.deletedAt = new Date();
 		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
 				return res.status(500).send({

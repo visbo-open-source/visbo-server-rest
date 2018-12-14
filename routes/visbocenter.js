@@ -66,9 +66,9 @@ var createHash = function(secret){
 
 // updates the VC Name in the VP after rename VC
 var updateVCName = function(vcid, name){
-	var updateQuery = {vcid: vcid, deleted: {$exists: false}};
+	var updateQuery = {vcid: vcid, $or: [{deletedAt: {$exists: false}},{'vc.deletedAt': {$exists: false}}]} ;
 	var updateOption = {upsert: false};
-	var updateUpdate = {$set: {"vc": { "name": name}}};
+	var updateUpdate = {$set: {"vc.name": name}};
 
 	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
@@ -81,9 +81,9 @@ var updateVCName = function(vcid, name){
 
 // undelete the VPs after undelete VC and set the actual VC Name
 var unDeleteVP = function(vcid, name){
-	var updateQuery = {vcid: vcid, 'deleted.byParent': true};
+	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
 	var updateOption = {upsert: false};
-	var updateUpdate = {$unset: {deleted: ""}, $set: {"vc": { "name": name}}};
+	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}, $set: {"vc.name": name}};
 
 	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
@@ -157,11 +157,9 @@ router.route('/')
 
 			// check for deleted only for sysAdmins
 			if (isSysAdmin && req.query.deleted) {
-				// query['deleted.deletedAt'] = {$exists: true}				//  deleted
-				query.deleted = {$exists: true}				//  deleted
+				query.deletedAt = {$exists: true}				//  deleted
 			} else {
-				// query['deleted.deletedAt'] = {$exists: false}				// Not deleted
-				query.deleted = {$exists: false}				// Not deleted
+				query.deletedAt = {$exists: false}				// Not deleted
 			}
 			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
 			logger4js.trace("Check for VC query %O", query);
@@ -221,14 +219,8 @@ router.route('/')
 	 *  "name":"My first Visbo Center",
 	 *  "description": "Visbo Center Descripton"
 	 *  "users":[
-	 *   {
-	 *    "email":"example1@visbo.de",
-	 *    "role": "Admin"
-	 *   },
-	 *   {
-	 *    "email":"example2@visbo.de",
-	 *    "role": "User"
-	 *   }
+	 *   { "email":"example1@visbo.de" },
+	 *   { "email":"example2@visbo.de" }
 	 *  ]
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
@@ -242,20 +234,7 @@ router.route('/')
 	 *    "createdAt":"2018-03-19T11:04:12.094Z",
 	 *    "name":"My first Visbo Center",
 	 *    "_id":"vc541c754feaa",
-	 *    "vpCount": 0,
-	 *    "users":[
-	 *     {
-	 *      "_id": "us5c754feab"
-	 *      "email": "example@visbo.de",
-	 *      "role": "Admin"
-	 *     },
-	 *    {
-	 *     "email": "example2@visbo.de",
-	 *     "role": "User",
-	 *     "_id": "us5c754feac"
-	 *    }
-	 *   ]
-	 *  }]
+	 *    "vpCount": 0
 	 * }
 	 */
 // Create a Visbo Center
@@ -285,8 +264,7 @@ router.route('/')
 		// check that VC name is unique
 		var query = {};
 		query.name = name;								// name Duplicate check
-		// query['deleted.deletedAt'] = {$exists: false};
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
 				logger4js.fatal("VC Post DB Connection ", err);
@@ -410,19 +388,7 @@ router.route('/:vcid')
  	*     "updatedAt":"2018-03-16T12:39:54.042Z",
  	*     "createdAt":"2018-03-12T09:54:56.411Z",
  	*     "name":"My new VisobCenter",
-	*     "vpCount": "0",
- 	*     "users":[
- 	*      {
- 	*       "email":"example1@visbo.de",
- 	*       "role":"Admin",
- 	*       "userId":"us5c754feab"
- 	*      },
- 	*      {
- 	*       "email":"example2@visbo.de",
- 	*       "role":"User",
- 	*       "userId":"us5c754feac"
- 	*      }
- 	*     ]
+	*     "vpCount": "0"
  	*   }],
 	*   "perm": {"vc": 307}
  	* }
@@ -438,10 +404,10 @@ router.route('/:vcid')
 
 		// check for deleted only for sysAdmins
 		var found = false;
-		if (isSysAdmin && req.query.deleted && req.oneVC.deleted && req.oneVC.deleted.deletedAt) {
+		if (isSysAdmin && req.query.deleted && req.oneVC.deletedAt) {
 			found = true;
-		} else if (!(req.oneVC.deleted && req.oneVC.deleted.deletedAt)) {
-			logger4js.info("Deleted %O", req.oneVC.deleted);
+		} else if (!req.oneVC.deletedAt) {
+			logger4js.info("VC not Deleted: DeletedAt %s", req.oneVC.deletedAt);
 			found= true;
 		}
 
@@ -497,19 +463,7 @@ router.route('/:vcid')
 	*    "createdAt":"2018-03-19T11:04:12.094Z",
 	*    "name":"My first Visbo Center",
 	*    "_id":"vc541c754feaa",
-	*    "vpCount": "0",
-	*    "users":[
-	*     {
-	*      "userId":"us5aaf992",
-	*      "email":"example@visbo.de",
-	*      "role":"Admin"
-	*     },
-	*     {
-	*      "email":"example2@visbo.de",
-	*      "role":"User",
-	*      "userId":"us5aaf993"
-	*     }
-	*    ]
+	*    "vpCount": "0"
 	*  }]
 	* }
 	*/
@@ -532,10 +486,10 @@ router.route('/:vcid')
 		var vcUndelete = false;
 		// undelete the VC in case of change
 		// TODO check correct undelete Permission
-		if (req.oneVC.deleted && req.oneVC.deleted.deletedAt) {
-			req.oneVC.deleted = undefined;
+		if (req.oneVC.deletedAt) {
+			req.oneVC.deletedAt = undefined;
 			vcUndelete = true;
-			logger4js.debug("Undelete VC %s flag %O", req.oneVC._id, req.oneVC.deleted);
+			logger4js.debug("Undelete VC %s flag %s", req.oneVC._id, req.oneVC.deletedAt);
 		}
 
 		if ((!vcUndelete && !(req.combinedPerm.vc & constPermVC.Modify))
@@ -558,8 +512,7 @@ router.route('/:vcid')
 		var query = {};
 		query._id = {$ne: req.oneVC._id}
 		query.name = name;								// name Duplicate check
-		// query['deleted.deletedAt'] = {$exists: false};
-		query.deleted = {$exists: false};
+		query.deletedAt = {$exists: false};
 
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
@@ -644,9 +597,9 @@ router.route('/:vcid')
 			});
 		}
 		// if the VC is not deleted up to now, mark it as deleted only
-		logger4js.trace("Delete Visbo Center %s Status %s %O", req.params.vcid, req.oneVC.deleted, req.oneVC);
-		if (!(req.oneVC.deleted && req.oneVC.deleted.deletedAt)) {
-			req.oneVC.deleted = {deletedAt: new Date(), byParent: false }
+		logger4js.trace("Delete Visbo Center %s Status %s %O", req.params.vcid, req.oneVC.deletedAt, req.oneVC);
+		if (!req.oneVC.deletedAt) {
+			req.oneVC.deletedAt = new Date();
 			logger4js.trace("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
@@ -660,10 +613,9 @@ router.route('/:vcid')
 				req.oneVC = oneVC;
 				logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
 				var updateQuery = {}
+				var deleteDate = new Date();
 				updateQuery.vcid = req.oneVC._id;
-				// updateQuery['deleted.deletedAt'] = {$exists: false};
-				updateQuery.deleted = {$exists: false};
-				var updateUpdate = {$set: {deleted: {deletedAt: new Date(), byParent: true }}};
+				var updateUpdate = {$set: {'vc.deletedAt': deleteDate}};
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 					if (err){
@@ -775,6 +727,13 @@ router.route('/:vcid')
 					logger4js.trace("VC Destroy: %s VC Audit Deleted", req.oneVC._id)
 				});
 				// Delete the VC  itself
+				var queryvc = {_id: req.oneVC._id};
+				VisboCenter.deleteOne(queryvc, function (err) {
+					if (err){
+						logger4js.error("VC Destroy: %s Problem deleting VC %O", req.oneVC._id, err);
+					}
+					logger4js.trace("VC Destroy: %s VC Deleted", req.oneVC._id)
+				});
 				return res.status(200).send({
 					state: 'success',
 					message: 'Visbo Center Destroyed'
@@ -899,7 +858,6 @@ router.route('/:vcid/group')
 	*     "name":"Group Name",
 	*     "vcid": "vc5c754feaa",
 	*     "global": true,
-	*     "vpids": ["vp5c754feaa","vp5c754febb"],
 	*     "permission": {vc: 307 },
 	*    "users":[
 	*     {"userId":"us5aaf992", "email":"example@visbo.de"},
@@ -1071,7 +1029,7 @@ router.route('/:vcid/group')
 			// query vpids to fill in if group is global
 			var query = {};
 			query.vcid = req.oneVC._id;
-			// query['deleted.deletedAt'] = {$exists: false};
+			query.deletedAt = {$exists: false};
 			var queryVP = VisboProject.find(query);
 			queryVP.select('_id'); // return only _id
 			queryVP.lean();
@@ -1301,7 +1259,7 @@ router.route('/:vcid/group/:groupid')
 		// query vpids to fill in if group is global
 		var query = {};
 		query.vcid = req.oneGroup.vcid;
-		// query['deleted.deletedAt'] = {$exists: false};
+		query.deletedAt = {$exists: false};
 		var queryVP = VisboProject.find(query);
 		queryVP.select('_id'); // return only _id
 		queryVP.lean();

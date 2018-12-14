@@ -27,17 +27,14 @@ var visboProjectSchema = new mongoose.Schema({
 	vpType: {type: Number, required: false},					// vpType: Project, Portfolio, ProjectTemplate
 	description: { type: String, required: false },
 	kundennummer: { type: String, required: false }, // customer project identifier
-	vpPublic: {type: Boolean, required: false}, 			// Public means visible for all VC Users
 	vc: {
-		name: { type: String, required: false, maxlength: 256}
+		name: { type: String, required: false, maxlength: 256},
+		deletedAt: {type: Date, required: false}	
 	},
 	vpvCount: { type: Number, required: true },
 	variant: [{type: variantSchema, required: false}],
 	lock: [{type: lockSchema, required: false}],
-	deleted: {
-		deletedAt: {type: Date, required: false },
-		byParent: {type: Boolean}
-	}
+	deletedAt: {type: Date, required: false }
 });
 // Set Creation and modification date automatically
 visboProjectSchema.set('timestamps', true);
