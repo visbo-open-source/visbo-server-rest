@@ -212,10 +212,10 @@ router.route('/')
 	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
 	* @apiParam (Parameter) {String} [vcid] Deliver only projects for a specific Visbo Center
 	* @apiParam (Parameter) {Number=0,1,2} [vpType] Deliver only projects of the specified Type, if not defined, deliver all types
-	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs
+	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs, only allowed for users with DeleteVP Permission.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  if true, request VPs for Appl. Admin User
 	*
-	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiPermission Permission: Authenticated, View Visbo Project, Delete Visbo Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
@@ -262,9 +262,14 @@ router.route('/')
 		var query = {};
 		// Get all VCs there the user Group is assigned to
 		if (!isSysAdmin) {
-			var vpidList = [];
+			var vpidList = []; var allowAccess;
 			for (var i=0; i < req.permGroups.length; i++) {
-				if (req.permGroups[i].vpids) {
+				allowAccess = false;
+				if (req.query.deleted && req.permGroups[i].permission && req.permGroups[i].permission.vp & constPermVP.Delete)
+					allowAccess = true;
+				else if (!req.query.deleted)
+					allowAccess = true;
+				if (allowAccess && req.permGroups[i].vpids) {
 					vpidList = vpidList.concat(req.permGroups[i].vpids)
 				}
 			}
@@ -316,8 +321,8 @@ router.route('/')
 	* @apiGroup Visbo Project
 	* @apiName CreateVisboProjects
 	* @apiDescription Post creates a new VP
-	* with a unique name inside VC and the users with their roles as defined in the body.
-	* If no user is specified for the project the current user is added as Admin.
+	* with a unique name inside VC and the admins as defined in the body.
+	* If no admin is specified for the project the current user is added as Admin.
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	* @apiHeader {String} access-key User authentication token.
   *
@@ -565,6 +570,12 @@ router.route('/:vpid')
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
+		if (req.query.deleted && !(req.combinedPerm.vp & constPermVP.Delete)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to deleted Visbo Projects'
+			});
+		}
 		// we have found the VP already in middleware
 		return res.status(200).send({
 			state: 'success',
@@ -1717,7 +1728,7 @@ router.route('/:vpid/lock')
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
 				logger4js.warn("POST Lock Visbo Project %s variant %s does not exists  ", req.params.vpid, variantName);
 				return res.status(400).send({
-				state: 'failiure',
+				state: 'failure',
 				message: 'Visbo Project Variant does not exist',
 				vp: [req.oneVP]
 			});
@@ -1725,7 +1736,7 @@ router.route('/:vpid/lock')
 
 		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
 			return res.status(409).send({
-				state: 'failiure',
+				state: 'failure',
 				message: 'Visbo Project already locked',
 				lock: req.oneVP.lock
 			});
@@ -1733,7 +1744,7 @@ router.route('/:vpid/lock')
 		if (expiredAt <= dateNow) {
 			logger4js.info("POST Lock new Lock already expired %s email %s and vp %s ", expiredAt, useremail, req.params.vpid);
 			return res.status(400).send({
-				state: 'failiure',
+				state: 'failure',
 				message: 'New Lock already expired',
 				lock: req.oneVP.lock
 			});
@@ -2055,9 +2066,17 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Visbo Project
 	*
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, varianName.
+	* to query only the main version of a project, use variantName= in the query string.
+	*
+	* @apiParam {Date} refDate only the latest version before the reference date for the project and variant is delivered
+	* Date Format is in the form: 2018-10-30T10:00:00Z
+	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
+	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aaf992/portfolio
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
+	*   url: http://localhost:3484/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2095,22 +2114,28 @@ router.route('/:vpid/portfolio')
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 
 		var query = {};
+		var latestOnly = false; 	// as default show all portfolio lists of the project
 		query.vpid = req.oneVP._id;
-		query.timestamp =  {$lt: new Date()};
-		query.deletedAt = {$exists: false};
 		if (req.query.refDate){
 			var refDate = new Date(req.query.refDate);
-			query.timestamp =  {$lt: refDate};
-			logger4js.debug("refDate Query String :%s:", refDate);
+			query.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
+			latestOnly = true;
+		} else {
+			query.timestamp =  {$lt: new Date()};
 		}
 		if (req.query.variantName != undefined){
 			logger4js.debug("Variant Query String :%s:", req.query.variantName);
 			query.variantName = req.query.variantName
 		}
+		query.deletedAt = {$exists: false};
 
 		logger4js.info("Get Portfolio Version for user %s with query parameters %O", userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
+		if (req.query.refNext)
+			queryVPF.sort('vpid variantName +timestamp')
+		else
+			queryVPF.sort('vpid variantName -timestamp')
 		queryVPF.lean();
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
@@ -2124,11 +2149,33 @@ router.route('/:vpid/portfolio')
 			logger4js.debug("Found %d Portfolios", listVPF.length);
 			logger4js.trace("Found Portfolios/n", listVPF);
 
-			return res.status(200).send({
-				state: 'success',
-				message: 'Returned Visbo Portfolios',
-				vpf: listVPF
-			});
+			if (listVPF.length > 1 && latestOnly){
+				var listVPFfiltered = [];
+				listVPFfiltered.push(listVPF[0]);
+				for (let i = 1; i < listVPF.length; i++){
+					//compare current item with previous and ignore if it is the same vpid & variantname
+					// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPF[i].vpid), JSON.stringify(listVPF[i-1].vpid), JSON.stringify(listVPF[i].variantName), JSON.stringify(listVPF[i-1].variantName) );
+					if (JSON.stringify(listVPF[i].vpid) != JSON.stringify(listVPF[i-1].vpid)
+					|| JSON.stringify(listVPF[i].variantName) != JSON.stringify(listVPF[i-1].variantName) ) {
+						listVPFfiltered.push(listVPF[i])
+						// logger4js.trace("compare unequal: ", listVPF[i].vpid != listVPF[i-1].vpid);
+					}
+				}
+				logger4js.debug("Found %d Portfolio Lists after Filtering", listVPFfiltered.length);
+				req.auditInfo = listVPFfiltered.length;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Portfolios',
+					vpv: listVPFfiltered
+				});
+			} else {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Portfolios',
+					count: listVPF.length,
+					vpf: listVPF
+				});
+			}
 		});
 	})
 
@@ -2195,7 +2242,7 @@ router.route('/:vpid/portfolio')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Create)';
 
-		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s", userId, useremail, req.params.vpid);
+		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
 
 		logger4js.debug("Variant %s Portfolio %O", variantName || "None", req.body);
 
@@ -2223,7 +2270,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
-		|| !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
+		&& !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Project Portfolio no Permission to create Portfolio List'
@@ -2409,6 +2456,12 @@ router.route('/:vpid/portfolio/:vpfid')
 		req.auditDescription = 'Visbo Portfolio List (Delete)';
 
 		logger4js.debug("DELETE Visbo Portfolio in Project %s", req.oneVP.name);
+		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Delete))) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'Visbo Project Portfolio no Permission to delete Portfolio List'
+			});
+		}
 		var query = {};
 		query._id = vpfid;
 		query.vpid = req.oneVP._id;

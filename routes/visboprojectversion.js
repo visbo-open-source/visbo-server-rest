@@ -122,10 +122,22 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
+		queryvpv.deletedAt = {$exists: false};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
 		if (req.query.vpid) {
 			vpidList.push(req.query.vpid);
+			if (req.query.deleted) {
+				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);
+				if (!(req.combinedPerm.vp & constPermVP.Delete)) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Permission to see deleted Versions'
+					});
+				} else {
+					queryvpv.deletedAt = {$exists: true};
+				}
+			}
 		} else {
 			for ( var i=0; i<req.permGroups.length; i++) {
 				vpidList = vpidList.concat(req.permGroups[i].vpids)
@@ -134,7 +146,6 @@ router.route('/')
 
 		logger4js.trace("Get VPV vpid List %O ", vpidList);
 
-		queryvpv.deletedAt = {$exists: false};
 		if (req.query) {
 			if (req.query.status) {
 				queryvpv.status = req.query.status;
@@ -460,6 +471,86 @@ router.route('/:vpvid')
 	})
 
 /**
+	* @api {put} /vpv/:vpvid Update Project Version
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo Project Version
+	* @apiName UpdateVisboProjectVersion
+	* @apiDescription Put updates a specific Visbo Project Version used for undelete
+	* the system checks if the user has Delete permission to the Visbo Project.
+	* @apiHeader {String} access-key User authentication token.
+	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
+	* @apiError {number} 400 not allowed to change Visbo Project Version
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Modify Visbo Project
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/vpv/vpv5cf3da025?deleted=1
+	* {
+	* }
+	* @apiSuccessExample {json} Success-Response:
+	*     HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"Successfully updated VisboProject Renamed",
+	*  "vpv":[{
+	*     "_id":"vpv5c754feaa",
+	*     "name":"My new Visbo Project Version",
+	*     "updatedAt":"2018-03-19T11:04:12.094Z",
+	*     "createdAt":"2018-03-19T11:04:12.094Z",
+	*     "vpid": "vp5c754feaa"
+	*     "allOthers": "all properties of visbo project version"
+	*  }]
+	* }
+	*/
+// Update Visbo Project Version (Undelete)
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+		req.auditDescription = 'Visbo Project Version (Update)';
+
+		logger4js.info("PUT/Save Visbo Project Version for userid %s email %s and vpv %s perm %O", userId, useremail, req.params.vpvid, req.combinedPerm);
+
+		var vpUndelete = false;
+		// undelete the VP in case of change
+		if (req.oneVPV.deletedAt) {
+			req.oneVPV.deletedAt = undefined;
+			vpUndelete = true;
+			logger4js.debug("Undelete VPV %s", req.oneVPV._id);
+		}
+		if (!vpUndelete) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'not possible to change Visbo Project Version'
+			});
+		}
+
+		if (!(req.combinedPerm.vp & constPermVP.Delete)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to Undelete Visbo Project Version'
+			});
+		}
+		logger4js.debug("PUT VPV: save now %s unDelete %s", req.oneVPV._id, vpUndelete);
+		req.oneVPV.save(function(err, oneVPV) {
+			if (err) {
+				logger4js.fatal("VPV PUT DB Connection ", err);
+				return res.status(500).send({
+					state: 'failure',
+					message: 'Error updating Visbo Project Version',
+					error: err
+				});
+			}
+			req.oneVPV = oneVPV;
+			updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1)
+			return res.status(200).send({
+				state: 'success',
+				message: 'Updated Visbo Project Version',
+				vpv: [ oneVPV ]
+			});
+		});
+	})
+
+/**
 	* @api {delete} /vpv/:vpvid Delete specific Version
 	* @apiVersion 1.0.0
 	* @apiGroup Visbo Project Version
@@ -528,26 +619,52 @@ router.route('/:vpvid')
 				message: 'Visbo Project Version no permission to delete Version'
 			});
 		}
-		logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
-		var variantName = req.oneVPV.variantName;
+		var destroyVPV = req.oneVPV.deletedAt
 
-		req.oneVPV.deletedAt = new Date();
-		req.oneVPV.save(function(err, oneVPV) {
-			if (err) {
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error deleting Visbo Project Version',
-					error: err
+		if (!destroyVPV) {
+			logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
+			var variantName = req.oneVPV.variantName;
+
+			req.oneVPV.deletedAt = new Date();
+			req.oneVPV.save(function(err, oneVPV) {
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error deleting Visbo Project Version',
+						error: err
+					});
+				}
+				req.oneVPV = oneVPV;
+
+				updateVPVCount(req.oneVPV.vpid, variantName, -1)
+				return res.status(200).send({
+					state: "success",
+					message: "Successfully deleted Project Version"
 				});
-			}
-			req.oneVPV = oneVPV;
-
-			updateVPVCount(req.oneVPV.vpid, variantName, -1)
-			return res.status(200).send({
-				state: "success",
-				message: "Successfully deleted Project Version"
 			});
-		});
+		} else {
+			// Destroy the Deleted Version
+			req.auditDescription = 'Visbo Project Version (Destroy)';
+			logger4js.info("Destroy Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
+			var queryVPV = {};
+			queryVPV._id = req.oneVPV._id
+			VisboProjectVersion.deleteOne(queryVPV, function(err) {
+				if (err) {
+					logger4js.fatal("VPV Destroy DB Connection ", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Error deleting Visbo Project Version',
+						error: err
+					});
+				}
+				// no need to update vpvCount in VP
+				return res.status(200).send({
+					state: "success",
+					message: "Destroyed Visbo Project Version"
+				});
+			});
+
+		}
 	})
 
 module.exports = router;

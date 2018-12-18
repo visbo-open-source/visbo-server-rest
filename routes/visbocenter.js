@@ -204,7 +204,7 @@ router.route('/')
 	 * @apiGroup Visbo Center
 	 * @apiName CreateVisboCenters
 	 * @apiDescription Post creates a new VC with a unique name and  a description.
-	 * Optinal an initial user can be defined who will get Visbo Center Administrator, if none is specified, the current user is added.
+	 * Optinal initial admin can be defined who will get Visbo Center Administrator, if none is specified, the current user is added.
 	 * In case of success it delivers an array of VCs. The array contains one element for the created VC.
 	 * @apiHeader {String} access-key User authentication token.
 	 * @apiPermission Authenticated and System Permission: View Sytem, Create Visbo Center.
@@ -421,7 +421,7 @@ router.route('/:vcid')
 			});
 		} else {
 			return res.status(200).send({
-				state: 'failiure',
+				state: 'failure',
 				message: 'Visbo Center not found',
 			});
 		}
@@ -434,7 +434,7 @@ router.route('/:vcid')
 	* @apiName UpdateVisboCenters
 	* @apiDescription Put updates a specific Visbo Center.
 	* the system checks if the user has access permission to it.
-	* Only basic properties of the Visbo Centers can be changed. The modification of users is done with special calls to add/delete users
+	* Only basic properties of the Visbo Centers can be changed. The modification of users is done with special calls to add/delete users to groups
 	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
 	*
 	* If the VC Name is changed, the VC Name is populated to the Visbo Projects.
@@ -720,6 +720,7 @@ router.route('/:vcid')
 
 				// Delete Audit Trail of VC
 				var queryaudit = {'vc.vcid': req.oneVC._id};
+				queryaudit.action = {$ne: 'DELETE'} // MS TODO: fine tune this to remove DELETE entries from Groups but not the Delete entry form VC
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
 						logger4js.error("VC Destroy: %s Problem deleting VC Audit %O", req.oneVC._id, err);

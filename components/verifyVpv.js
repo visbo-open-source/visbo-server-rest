@@ -35,7 +35,10 @@ function getAllVPVGroups(req, res, next) {
 				acceptEmpty = false;
 			} else {
 				if (req.query.vcid) query.vcid = req.query.vcid;
-				if (req.query.vpid) query.vpids = req.query.vpid;
+				if (req.query.vpid) {
+					query.vpids = req.query.vpid;
+					combinedPermStatus = true;
+				}
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 			}

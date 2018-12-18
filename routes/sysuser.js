@@ -74,7 +74,7 @@ router.route('/')
 		var userId = req.query && req.query.userid ? req.query.userid : undefined;
 		var maxcount = req.query && req.query.maxcount ? Number(req.query.maxcount) : 100;
 
-		logger4js.info("Get System User List email: %s, userid: %s, macount: %s", email, userId, maxcount);
+		logger4js.info("Get System User List email: %s, userid: %s, maxcount: %s", email, userId, maxcount);
 
 		var query = {};
 		// acting user was already checked to have sysAdmin Permission

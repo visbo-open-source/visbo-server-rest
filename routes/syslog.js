@@ -58,6 +58,9 @@ router.route('/')
 		logger4js.info("Get Log File List Perm system: %O ", req.combinedPerm);
 
 		var dir = path.join(__dirname, '../logging');
+		if (process.env.LOGPATH != undefined) {
+		  dir = process.env.LOGPATH;
+		}
 		var fileList = [];
 
 		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
