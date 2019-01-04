@@ -3,7 +3,7 @@
 // Version 2018-12-01T00:00:00  Upgrade Permission System for System/VC/VP
 // Version 2018-12-02T00:00:00  Upgrade Deleted Flags
 print ("Visbo DB Upgrade Process")
-quit();
+var dateBlock = ""
 
 var continueFlag = true
 var vcList = db.visbocenters.find({system: true}).toArray();
@@ -23,13 +23,15 @@ if (continueFlag) {
   if (!setting) {
     print ("System DB Version not set")
     currentVersion = '2018-01-01T00:00:00'
+    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "Internal", value: {version: currentVersion}, createdAt: new Date(), updatedAt: new Date()})
   } else {
     currentVersion = setting.value.version;
   }
   print("Upgrade DB from Version ", currentVersion)
 }
 
-if (continueFlag && currentVersion < "2018-12-01T00:00:00") {
+dateBlock = "2018-12-01T00:00:00";
+if (continueFlag && currentVersion < dateBlock) {
   // DB Collection and Index Checks
   var collectionName = 'visbogroups';
   var collection = db.getCollectionInfos({name: collectionName});
@@ -135,16 +137,16 @@ if (continueFlag && currentVersion < "2018-12-01T00:00:00") {
     print("VC List Length ", vcList.length)
     for (var j=0; j < vcList.length; j++) {
       var vc = vcList[j];
-      print ("Check  ", vc._id, vc.name)
+      // print ("Check  ", vc._id, vc.name)
       // check the groups now
       var groupList = db.visbogroups.find({vcid: vc._id}).toArray();
       if (!groupList ) {
           print ("VC group issue ", vc._id)
           continueFlag = false;
       } else if (groupList.length != 0) {
-        print ("VC Group exists, _id & count  ", vc._id, groupList.length)
+        // print ("VC Group exists, _id & count  ", vc._id, groupList.length)
       } else {
-        print ("VC has to Create Groups ", vc._id, groupList.length)
+        // print ("VC has to Create Groups ", vc._id, groupList.length)
 
         var groupAdminMembers = [];
         var groupUserMembers = [];
@@ -209,16 +211,16 @@ if (continueFlag && currentVersion < "2018-12-01T00:00:00") {
   if (continueFlag) {
     for (var j=0; j < vpList.length; j++) {
       var vp = vpList[j];
-      print ("Check  ", vp._id, vp.name)
+      // print ("Check  ", vp._id, vp.name)
       // check the groups now
       var groupList = db.visbogroups.find({groupType: 'VP', vpids: vp._id}).toArray();
       if (!groupList ) {
           print ("VP group issue ", vp._id)
           continueFlag = false;
       } else if (groupList.length != 0) {
-        print ("VP Group exists, _id & count  ", vp._id, groupList.length)
+        // print ("VP Group exists, _id & count  ", vp._id, groupList.length)
       } else {
-        print ("VP has to Create Groups ", vp._id)
+        // print ("VP has to Create Groups ", vp._id)
 
         var groupAdminMembers = [];
         var groupUserMembers = [];
@@ -265,11 +267,13 @@ if (continueFlag && currentVersion < "2018-12-01T00:00:00") {
     print("VP Groups created")
   }
   // VP Permission Migration done
-  // TODO: Set the currentVersion in Script and in DB
-
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
 } // Permission Migration done
 
-if (currentVersion < "2018-12-02T00:00:00") {
+dateBlock = "2018-12-02T00:00:00"
+if (currentVersion < dateBlock) {
   // Migrate DeletedAt Flag from VC
 
   var vcListAll = db.visbocenters.find({deleted: {$exists: true}, deletedAt: {$exists: false}}).toArray();
@@ -312,4 +316,8 @@ if (currentVersion < "2018-12-02T00:00:00") {
   db.visbocenters.updateMany({deleted: {$exists: true}, deletedAt: {$exists: true}}, {$unset: {deleted: ''}})
   db.visboprojects.updateMany({deleted: {$exists: true}, deletedAt: {$exists: true}}, {$unset: {deleted: ''}})
   db.visboprojectversions.updateMany({deleted: {$exists: true}, deletedAt: {$exists: true}}, {$unset: {deleted: ''}})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
 }
