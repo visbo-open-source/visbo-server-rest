@@ -71,7 +71,7 @@ router.route('/')
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
 	* has to specify the query parameter longList.
 	*
-	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, refDate, varianName, status.
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, refDate, refNext, varianName, status.
 	* to query only the main version of a project, use variantName= in the query string.
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
