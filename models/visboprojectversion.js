@@ -20,6 +20,7 @@ var clsBewertung = new Schema({
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
 	name: { type: String },
+	teamID: {type: Number},
 	farbe: { type: Number },
 	startkapa: { type: Number },
 	tagessatzIntern: { type: Number },
