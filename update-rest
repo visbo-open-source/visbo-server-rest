@@ -46,13 +46,13 @@ else
 fi
 
 echo "06: Manage NODE Process with PM2"
-pm2 list
-pm2 restart VisboReST
+sudo pm2 list
+sudo pm2 restart VisboReST
 if [ $? -ne 0 ]
 then
   echo "FATAL: PM2 Restart failed to Restart Visbo-Server-Rest."
   exit
 fi
-pm2 reset VisboReST
+sudo pm2 reset VisboReST
 
 echo "ReST Server Updated Successfully"
