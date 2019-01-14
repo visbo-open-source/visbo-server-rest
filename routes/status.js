@@ -32,14 +32,19 @@ router.route('/')
 		req.auditDescription = 'Status (Read)';
 
 		logger4js.info("Get Satus ReST Server ");
+		if (req.query.error) {
+			var err = {"code": "500", "errtext": "Long explanation"}
+			logger4js.info("Get Status: %O ", req.query, errorDetail);
 
-		return res.status(200).send({
-			state: 'success',
-			message: 'Status of ReST Server',
-			status: {
-				version: process.env.VERSION_REST
-			}
-		});
+		} else {
+			return res.status(200).send({
+				state: 'success',
+				message: 'Status of ReST Server',
+				status: {
+					version: process.env.VERSION_REST
+				}
+			});
+		}
 	})
 
 module.exports = router;

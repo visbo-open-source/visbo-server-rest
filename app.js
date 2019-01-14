@@ -92,12 +92,10 @@ function dbConnect(dbconnection) {
       dbconnection,
       dbOptions
     ).then(function() {
-      //mongoose.set('debug', true);
       logger4js.mark('Server is fully functional DB Connected');
-      // mongoose.set('debug', true);
-      mongoose.set('debug', function (coll, method, query, doc, options) {
-         logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
-      });
+      // mongoose.set('debug', function (coll, method, query, doc, options) {
+      //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
+      // });
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
@@ -116,7 +114,7 @@ function dbConnect(dbconnection) {
 
 // CORS Config, whitelist is an array
 var whitelist = [
-  undefined, // POSTMAN Support
+  undefined, // Postman Support
   'http://localhost:3484', // DEV Support
   'https://my.visbo.net', // Production Support
   'https://staging.visbo.net', // Staging Support
@@ -204,7 +202,6 @@ app.use(logger(function (tokens, req, res) {
 }));
 
 dbConnect(process.env.NODE_VISBODB);
-mongoose.set('debug', true);
 
 var sysVC = systemVC.createSystemVC(
     { users: [
@@ -269,8 +266,8 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
-//if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
+    logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
     res.status(err.status || 500);
     res.send({
       state: 'failure',
@@ -283,11 +280,11 @@ if (process.env.NODE_ENV === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
+  logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
   res.status(err.status || 500);
   res.send({
     state: 'failure',
-    message: err.message,
-    error: err
+    message: 'Internal Server Error'
   });
 });
 

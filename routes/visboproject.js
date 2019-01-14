@@ -135,7 +135,7 @@ var updateVPName = function(vpid, name, type){
 	var updatePFQuery = { allItems: {$elemMatch: {vpid: vpid }}};
 	var updatePFUpdate = { $set: { "allItems.$[elem].name" : name } };
 	var updatePFOption = {arrayFilters: [ { "elem.vpid": vpid } ], upsert: false, multi: "true"};
-	VisboPortfolio.update(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
+	VisboPortfolio.updateMany(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
 		if (err){
 			logger4js.error("Problem updating Portfolio References for VP %s", vpid);
 			return res.status(500).send({
@@ -153,7 +153,7 @@ var updateVPName = function(vpid, name, type){
 			var updateUpdate = {$set: {"name": name}};
 			var updateOption = {upsert: false, multi: "true"};
 
-			VisboPortfolio.update(updateQuery, updateUpdate, updateOption, function (err, result) {
+			VisboPortfolio.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
 					logger4js.error("Problem updating Portfolio Name for VP %s", vpid);
 					return res.status(500).send({
