@@ -4,6 +4,7 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
+var validate = require('./../components/validate');
 var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
@@ -23,6 +24,9 @@ var constPermSystem = Const.constPermSystem
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
+var validateName = validate.validateName;
+var validateDate = validate.validateDate;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -362,11 +366,26 @@ router.route('/')
 					}
 				}
 
+				if (!validateName(req.body.status, true)
+				|| !validateName(req.body.leadPerson, true)
+				|| !validateName(req.body.variantDescription, true)
+				|| !validateName(req.body.ampelErlaeuterung, true)
+				|| !validateName(req.body.VorlagenName, true)
+				|| !validateName(req.body.description, true)
+				|| !validateName(req.body.businessUnit, true)
+				) {
+					logger4js.info("POST Visbo Project Version contains illegal strings body %O", req.body);
+					return res.status(400).send({
+						state: "failure",
+						message: "Visbo Project Version Body contains invalid strings"
+					});
+				}
+
 				// keep unchangable attributes
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				newVPV.timestamp = req.body.timestamp || new Date();
+				newVPV.timestamp = req.body.timestamp;
 
 				// copy all attributes
 				newVPV.variantDescription = req.body.variantDescription;
@@ -382,6 +401,7 @@ router.route('/')
 				newVPV.tfZeile = req.body.tfZeile;
 				newVPV.startDate = req.body.startDate;
 				newVPV.endDate = req.body.endDate;
+
 				newVPV.earliestStart = req.body.earliestStart;
 				newVPV.earliestStartDate = req.body.earliestStartDate;
 				newVPV.latestStart = req.body.latestStart;

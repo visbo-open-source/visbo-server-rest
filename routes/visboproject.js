@@ -7,6 +7,7 @@ var bCrypt = require('bcrypt-nodejs');
 var assert = require('assert');
 var auth = require('./../components/auth');
 var lockVP = require('./../components/lock');
+var validate = require('./../components/validate');
 var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
@@ -35,6 +36,8 @@ var read = require('fs').readFileSync;
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
+var validateName = validate.validateName;
 
 var constVPTypes = Object.freeze({"project":0, "portfolio":1, "projecttemplate":2});
 
@@ -337,8 +340,9 @@ router.route('/')
 	*   url: http://localhost:3484/vp
 	* {
 	*  "name":"My first Visbo Project",
+	*  "description":"Visbo Project Description",
 	*  "vcid": "vc5aaf992",
-	*  "vpType": "0",
+	*  "kundennummer": "customer project identifier"
 	*  "users":[
 	*    { "email":"example1@visbo.de" },
 	*    { "email":"example2@visbo.de" }]
@@ -380,10 +384,21 @@ router.route('/')
 		var vcid = req.body.vcid
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
+		var kundennummer = (req.body.kundennummer || "").trim();
 		var vpUsers = req.body.users || [];
 		var vpCustomerID = (req.body.kundennummer != undefined) ? req.body.kundennummer.trim() : undefined;
 		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s with %d Users. Perm: %O", useremail, req.body.name, vcid, vpUsers.length, req.combinedPerm);
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
+
+		if (!validateName(vpname, false)
+		|| !validateName(vpdescription, true)
+		|| !validateName(kundennummer, true)) {
+			logger4js.info("POST Visbo Project contains illegal strings body %O", req.body);
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Project Body contains invalid strings"
+			});
+		}
 		var newVP = new VisboProject();
 
 		logger4js.debug("Check VC Permission %O", req.combinedPerm);
@@ -644,6 +659,19 @@ router.route('/:vpid')
 				message: 'No Body provided for update'
 			});
 		}
+		var name = (req.body.name || '').trim();
+		var vpdescription = (req.body.description || "").trim();
+		var kundennummer = (req.body.kundennummer || "").trim();
+		if (!validateName(name, true)
+		|| !validateName(vpdescription, true)
+		|| !validateName(kundennummer, true)) {
+			logger4js.info("PUT Visbo Project contains illegal strings body %O", req.body);
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Project Body contains invalid strings"
+			});
+		}
+
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVP.deletedAt) {
@@ -666,7 +694,7 @@ router.route('/:vpid')
 				vp: [req.oneVP]
 			});
 		}
-		var name = (req.body.name || '').trim();
+
 		if (name == '') name = req.oneVP.name;
 		var vpPopulate = req.oneVP.name != name ? true : false;
 		req.oneVP.name = name;
@@ -1082,14 +1110,21 @@ router.route('/:vpid/audit')
 			var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
 			var groupType = 'VP';
 
-			var vgName = req.body.name ? req.body.name.trim() : '';
+			var vgName = (req.body.name || '').trim();
+			if (!validateName(vgName, false)) {
+				logger4js.info("POST Visbo Project Group contains illegal strings body %O", req.body);
+				return res.status(400).send({
+					state: "failure",
+					message: "Visbo Project Group Body contains invalid strings"
+				});
+			}
+
 			var newPerm = {};
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
 				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 			}
-			if (req.body.name) req.body.name = req.body.name.trim();
 
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Create)';
@@ -1276,7 +1311,7 @@ router.route('/:vpid/audit')
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Update)';
 
-			var vgName = req.body.name ? req.body.name.trim() : '';
+			var vgName = (req.body.name || '').trim();
 			var newPerm = {};
 			var vgGlobal = false;
 			if (req.body.global != undefined)
@@ -1287,6 +1322,13 @@ router.route('/:vpid/audit')
 			}
 
 			logger4js.info("PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vpid, req.params.groupid, req.combinedPerm);
+			if (!validateName(vgName, true)) {
+				logger4js.info("PUT Visbo Project Group contains illegal strings body %O", req.body);
+				return res.status(400).send({
+					state: "failure",
+					message: "Visbo Project Group Body contains invalid strings"
+				});
+			}
 
 			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
@@ -1332,7 +1374,7 @@ router.route('/:vpid/audit')
 			});
 		})
 
-		router.route('/:vpid/group/:groupid/user')
+	router.route('/:vpid/group/:groupid/user')
 
 		/**
 			* @api {post} /vp/:vpid/group/:groupid/user Add User to Group
@@ -1381,7 +1423,7 @@ router.route('/:vpid/audit')
 			req.auditDescription = 'Visbo Project User (Add)';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
-			if (!req.body.email) {
+			if (!req.body.email || !validateName(req.body.email, false)) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid user definition'
@@ -1903,8 +1945,15 @@ router.route('/:vpid/variant')
 		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O", userId, useremail, req.params.vpid, req.body, req.combinedPerm);
 
 		var variantList = req.oneVP.variant;
-		var variantName = req.body.variantName == undefined ? "" : req.body.variantName;
+		var variantName = (req.body.variantName || "").trim();
 
+		if (!validateName(variantName, false)) {
+			logger4js.info("POST Visbo Project Variant contains illegal strings body %O", req.body);
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Project Variant Body contains invalid strings"
+			});
+		}
 		if (!(req.combinedPerm.vp & constPermVP.Modify
 				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
 			return res.status(403).send({

@@ -6,6 +6,7 @@ var bCrypt = require('bcrypt-nodejs');
 
 var assert = require('assert');
 var auth = require('./../components/auth');
+var validate = require('./../components/validate');
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
 var User = mongoose.model('User');
@@ -35,6 +36,8 @@ var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+var validateName = validate.validateName;
 
 // Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -243,16 +246,17 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var name = (req.body.name || '').trim();
+		var description = (req.body.description || '').trim();
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Create)';
 
 		logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
 		logger4js.info("Post a new Visbo Center with name %s executed by user %s Perm %O ", name, useremail, req.combinedPerm);
 
-		if (name == '') {
+		if (!validateName(name, false) || !validateName(description, true)) {
 			return res.status(400).send({
 				state: "failure",
-				message: "Empty Visbo Center Name not allowed"
+				message: "Visbo Center: Body contains illegal characters"
 			});
 		}
 		if (!(req.combinedPerm.system & constPermSystem.CreateVC)) {
@@ -483,6 +487,15 @@ router.route('/:vcid')
 				message: 'No Body provided for update'
 			});
 		}
+		var name = (req.body.name || '').trim();
+		var description = req.body.description ? (req.body.description || '').trim() : undefined;
+		if (!validateName(name, true) || (description && !validateName(description, true))) {
+			logger4js.info("PUT/Save Visbo Center name :%s: %s description :%s: %s contains illegal characters", name, validateName(name, true), description, validateName(description, true));
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Center Body contains illegal characters"
+			});
+		}
 		var vcUndelete = false;
 		// undelete the VC in case of change
 		// TODO check correct undelete Permission
@@ -499,7 +512,6 @@ router.route('/:vcid')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		var name = (req.body.name || '').trim();
 		if (name == '') name = req.oneVC.name;
 		var vpPopulate = req.oneVC.name != name ? true : false;
 
@@ -968,6 +980,13 @@ router.route('/:vcid/group')
 		var groupType;
 
 		var vgName = req.body.name ? req.body.name.trim() : '';
+		if (!validateName(vgName, false)) {
+			logger4js.info("Body is inconsistent VC Group %s Body %O", req.oneVC._id, req.body);
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Center Group Name not allowed"
+			});
+		}
 		var newPerm = {};
 		var vgGlobal = req.body.global == true;
 		groupType = req.oneVC.system ? 'System' : 'VC';
@@ -998,13 +1017,6 @@ router.route('/:vcid/group')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-		}
-		if (!req.body.name) {
-			logger4js.info("Body is inconsistent VC %s Body %O", req.oneVC._id, req.body);
-			return res.status(400).send({
-				state: 'failure',
-				message: 'No valid Group Definition'
-			});
 		}
 		logger4js.debug("Post Group to VC %s Permission is ok, check unique name", req.params.vcid);
 		var queryVCGroup = VisboGroup.findOne({'vcid': req.params.vcid, 'name': req.body.name});
@@ -1210,7 +1222,14 @@ router.route('/:vcid/group/:groupid')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Group (Update)';
 
-		var vgName = req.body.name ? req.body.name.trim() : '';
+		var vgName = (req.body.name || '').trim();
+		if (!validateName(vgName, true)) {
+			logger4js.info("Body is inconsistent VC Group %s Body %O", req.oneVC._id, req.body);
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Center Group Name not allowed"
+			});
+		}
 		var newPerm = {};
 		var vgGlobal = req.oneGroup.global == true;
 		if (req.body.global != undefined)
@@ -1368,13 +1387,14 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.combinedPerm);
 		req.auditDescription = 'Visbo Center User (Add)';
 
-		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
-		if (!req.body.email) {
+		var name = (req.body.email || '').trim();
+		if (!validateName(name, false)) {
 			return res.status(400).send({
-				state: 'failure',
-				message: 'No valid user definition'
+				state: "failure",
+				message: "Visbo Center User Name not allowed"
 			});
 		}
+		if (req.body.email) req.body.email = name.toLowerCase();
 
 		req.auditInfo = req.body.email;
 		// verify check for System VC & SysAdmin
@@ -2499,6 +2519,14 @@ router.route('/:vcid/cost')
 					message: 'No valid setting definition'
 				});
 			}
+			var name = (req.body.name || '').trim();
+			var value = req.body.value
+			if (!validateName(name, false)) {
+				return res.status(400).send({
+					state: "failure",
+					message: "Visbo Center Setting Name or Value not allowed"
+				});
+			}
 			if ((!req.query.sysadmin && !(req.combinedPerm.vc & constPermVC.Modify))
 			|| (req.query.sysadmin && !(req.combinedPerm.system & constPermSystem.Modify))) {
 				return res.status(403).send({
@@ -2678,6 +2706,14 @@ router.route('/:vcid/cost')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
+		var name = (req.body.name || '').trim();
+		var value = req.body.value
+		if (!validateName(name, false)) {
+			return res.status(400).send({
+				state: "failure",
+				message: "Visbo Center Setting Name or Value not allowed"
+			});
+		}
 		logger4js.debug("Update Visbo Center Setting after premission check %s", req.params.vcid);
 		var query = {};
 		query._id =  req.params.settingid;
@@ -2701,7 +2737,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			logger4js.info("Found the Setting for VC");
-			if (req.body.name) oneVCSetting.name = req.body.name;
+			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
 			oneVCSetting.save(function(err, oneVcSetting) {
 				if (err) {
