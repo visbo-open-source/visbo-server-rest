@@ -1871,7 +1871,7 @@ router.route('/:vpid/lock')
 			});
 		}
 		if (resultLock.locked && !(req.combinedPerm.vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
-			logger4js.warn("Delete Lock for VP :%s: Project is locked by another user Locks \n %O", req.oneVP.name, req.oneVP.lock);
+			logger4js.warn("Delete Lock for VP :%s: Project is locked by another user", req.oneVP.name);
 			return res.status(403).send({
 				state: 'failure',
 				message: 'VP locked for another user',
@@ -2178,7 +2178,7 @@ router.route('/:vpid/portfolio')
 		}
 		query.deletedAt = {$exists: false};
 
-		logger4js.info("Get Portfolio Version for user %s with query parameters %O", userId, query);
+		logger4js.debug("Get Portfolio Version for user %s with query parameters %O", userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
 		if (req.query.refNext)

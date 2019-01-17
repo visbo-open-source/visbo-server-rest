@@ -360,7 +360,7 @@ router.route('/user/pwforgotten')
 					});
 				}
 				user.password = undefined;
-				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s token encoded %O", user.email, jwtSecret.register.expiresIn);
+				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s", user.email, jwtSecret.register.expiresIn);
 				// logger4js.debug("Requested Password Reset Request %O", req);
 				// delete user.profile;
 				// delete user.status;
@@ -384,7 +384,7 @@ router.route('/user/pwforgotten')
 						}
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
-						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl);
+						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
 								logger4js.fatal("E-Mail Rendering failed %O", err);
