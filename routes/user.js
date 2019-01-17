@@ -258,10 +258,18 @@ router.route('/passwordchange')
 					message: "password mismatch"
 				});
 			} else {
+				if (!auth.isAllowedPassword(req.body.password)) {
+					logger4js.info("Password Change: new passowrd does not match password rules");
+					return res.status(409).send({
+						state: "failure",
+						message: "Pasword does not match password rules"
+					});
+				}
 				logger4js.debug("Try to Change Password %s username&password accepted", user.email);
 				user.password = createHash(req.body.password);
 				if (!user.status) user.status = {};
 				user.status.loginRetries = 0;
+				user.status.expiresAt = undefined;
 				user.save(function(err, user) {
 					if (err) {
 						logger4js.error("Change Password Update DB Connection %O", err);

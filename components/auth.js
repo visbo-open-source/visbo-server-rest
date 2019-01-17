@@ -5,6 +5,25 @@ var logger4js = log4js.getLogger(logModule);
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 
+var pwPolicy = undefined;
+var pwPolicyPattern = undefined;
+
+var isAllowedPassword = function(password){
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	if (!pwPolicy) {
+		if (process.env.PWPOLICY != undefined) {
+			pwPolicy = process.env.PWPOLICY;
+		} else {
+			pwPolicy = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
+		}
+		pwPolicyPattern = new RegExp(pwPolicy);
+		logger4js.debug("Initialise Password Policy %s", pwPolicy);
+	}
+	var result = password.match(pwPolicyPattern)
+	logger4js.info("Check Password Policy against %s result %s", pwPolicy, result != null);
+	return result;
+};
+
 // Verify User Authentication
 function verifyUser(req, res, next) {
 
@@ -40,5 +59,6 @@ function verifyUser(req, res, next) {
 };
 
 module.exports = {
-	verifyUser: verifyUser
+	verifyUser: verifyUser,
+	isAllowedPassword: isAllowedPassword
 };

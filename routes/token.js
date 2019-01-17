@@ -14,16 +14,17 @@ var logger4js = log4js.getLogger(logModule);
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
-var read = require('fs').readFileSync;
 
 var visbouser = mongoose.model('User');
 
 var isValidHash = function(hash, secret){
 	return bCrypt.compareSync(secret, hash);
 };
+
 var isValidPassword = function(user, password){
 	return bCrypt.compareSync(password, user.password);
 };
+
 // Generates hash using bCrypt
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
@@ -38,7 +39,7 @@ router.route('/user/login')
 	* @apiName UserLogin
 	* @apiPermission none
 	* @apiError {number} 401 user & password do not match
-	* @apiError {number} 400 User or password missing, email not registered,
+	* @apiError {number} 400 User or password missing
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/token/user/login
@@ -55,8 +56,8 @@ router.route('/user/login')
 	*   "token":"eyJhbG...brDI",
 	*   "user":{
 	*     "_id":"UID5a96787976294c5417f0e49",
-	*     "updatedAt":"2018-02-28T09:38:04.774Z",
-	*     "createdAt":"2018-02-28T09:38:04.774Z",
+	*     "updatedAt":"2018-02-28T09:00:00.000Z",
+	*     "createdAt":"2018-02-28T10:00:00.000Z",
 	*     "email":"example@example.com",
 	*     "profile": {
 	*       "firstname": "First",
@@ -70,6 +71,13 @@ router.route('/user/login')
 	*         "state": "State",
 	*         "country": "Country",
 	*       }
+	*     },
+	*     "status": {
+	*       "registeredAt": "2018-06-01T13:00:00.000Z",
+	*       "lastLoginAt": "2019-01-01T14:00:00.001Z",
+	*       "loginRetries": 0,
+	*       "lastLoginFailedAt": "2018-11-01T09:00:00.001Z",
+	*       "lastPWResetAt": "2018-12-01T14:00:00.001ZZ"
 	*     }
 	*   }
 	* }
@@ -90,7 +98,7 @@ router.route('/user/login')
 				message: "email or password missing"
 			});
 		}
-		req.body.email = req.body.email.toLowerCase();
+		req.body.email = req.body.email.toLowerCase().trim();
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
@@ -155,6 +163,71 @@ router.route('/user/login')
 					});
 				});
 			} else {
+				var currenDate = new Date();
+				var expiresAt = new Date();
+				var message = "Successfully logged in."
+				if (!auth.isAllowedPassword(req.body.password)) {
+					logger4js.info("Login Password: current password does not match password rules");
+					if (!user.status) user.status = {};
+					if (!user.status.expiresAt) {
+						expiresAt.setDate(expiresAt.getDate() + 1) // allow 1 day to change
+						user.status.expiresAt = expiresAt;
+					}
+					expiresAt = user.status.expiresAt;
+					if (currenDate.getTime() > expiresAt.getTime()) {
+						logger4js.info("Login Password expired at: %s", expiresAt.toISOString());
+						// Send Mail to password forgotten
+						var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs')
+						var uiUrl =  'http://localhost:4200'
+						if (process.env.UI_URL != undefined) {
+							uiUrl = process.env.UI_URL;
+						}
+						uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
+						ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+							if (err) {
+								logger4js.fatal("E-Mail Rendering failed %O", err);
+							} else {
+								// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+								var message = {
+										to: user.email,
+										subject: 'Your password has expired!',
+										html: '<p> '.concat(emailHtml, " </p>")
+								};
+								logger4js.info("Now send expiration mail to %s", message.to);
+								mail.VisboSendMail(message);
+							}
+						});
+						return res.status(401).send({
+							state: "failure",
+							message: "email or password mismatch"
+						});
+					}
+					// show expiration in Hours / Minutes
+					var expiresHour = Math.trunc((expiresAt.getTime() - currenDate.getTime())/1000/3600)
+					var expiresMin = '00'.concat(Math.trunc((expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+					message = message.concat(` Your password expires in ${expiresHour}:${expiresMin} h`);
+					// send Mail to User about Password expiration
+					var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
+					var uiUrl =  'http://localhost:4200'
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+					uiUrl = uiUrl.concat('/login', '?email=', user.email);
+					ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: expiresAt}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %O", err);
+						} else {
+							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+							var message = {
+									to: user.email,
+									subject: 'Your password expires soon!',
+									html: '<p> '.concat(emailHtml, " </p>")
+							};
+							logger4js.info("Now send expiration soon mail to %s", message.to);
+							mail.VisboSendMail(message);
+						}
+					});
+				}
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
 				user.password = undefined;
@@ -191,7 +264,7 @@ router.route('/user/login')
 							user.password = undefined;
 							return res.status(200).send({
 								state: "success",
-								message: "Successfully logged in",
+								message: message,
 								token: token,
 								user: user
 							});
@@ -235,6 +308,7 @@ router.route('/user/pwforgotten')
 				message: "No eMail specified"
 			});
 		}
+		req.body.email = req.body.email.toLowerCase().trim();
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
@@ -294,7 +368,7 @@ router.route('/user/pwforgotten')
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.fatal("forgot Password Sign Error ", err);
+							logger4js.fatal("Forgot Password Sign Error ", err);
 							return res.status(500).send({
 								state: "failure",
 								message: "token generation failed",
@@ -401,9 +475,18 @@ router.route('/user/pwreset')
 							message: "invalid token"
 						});
 					}
+					if (!auth.isAllowedPassword(req.body.password)) {
+						logger4js.info("Password forgotten: new password does not match password rules");
+						return res.status(409).send({
+							state: "failure",
+							message: "Pasword does not match password rules"
+						});
+					}
 					user.password = createHash(req.body.password);
 					if (!user.status) user.status = {};
 					user.status.loginRetries = 0;
+					user.status.lastPWResetAt = undefined; // Reset the Date, so that the user can ask for password reset again without a time limit
+					user.status.expiresAt = undefined;
 					user.save(function(err, user) {
 						if (err) {
 							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
@@ -496,7 +579,7 @@ router.route('/user/signup')
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
-		if (req.body.email) req.body.email = req.body.email.toLowerCase();
+		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
 		var query = {};
 		if (req.body.email) {
@@ -549,6 +632,13 @@ router.route('/user/signup')
 				}
 			}
 			if (!user.email) user.email = req.body.email;
+			if (!auth.isAllowedPassword(req.body.password)) {
+				logger4js.info("Signup: New password does not match password rules");
+				return res.status(409).send({
+					state: "failure",
+					message: "Pasword does not match password rules"
+				});
+			}
 			user.password = createHash(req.body.password);
 			//  if a hash is available check correctness and skip confirm e-Mail or in case the hash is incorrect deliver error
 			if (hash) {

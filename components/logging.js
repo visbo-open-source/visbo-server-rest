@@ -1,6 +1,3 @@
-var fs = require('fs');
-var util = require('util');
-var moment = require('moment');
 var log4js = require('log4js');
 var logger = log4js.getLogger();
 
