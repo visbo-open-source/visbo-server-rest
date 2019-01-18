@@ -2533,7 +2533,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 			var variantExists = false;
 			var variantIndex;
-			var variantName = req.oneVPF.variantName
+			var variantName = oneVPF.variantName
 			if (variantName != "") {
 				// check that the Variant exists
 				variantExists = true;
