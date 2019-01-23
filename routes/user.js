@@ -8,6 +8,10 @@ var bCrypt = require('bcrypt-nodejs');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 
+var mail = require('../components/mail');
+var ejs = require('ejs');
+var useragent = require('useragent');
+
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -72,7 +76,6 @@ router.route('/profile')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Profile (Read)';
 
-		logger4js.info("Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
 				logger4js.fatal("User Get Profile DB Connection ", err);
@@ -262,7 +265,7 @@ router.route('/passwordchange')
 					logger4js.info("Password Change: new passowrd does not match password rules");
 					return res.status(409).send({
 						state: "failure",
-						message: "Pasword does not match password rules"
+						message: "Password does not match password rules"
 					});
 				}
 				logger4js.debug("Try to Change Password %s username&password accepted", user.email);
@@ -280,11 +283,50 @@ router.route('/passwordchange')
 						});
 					}
 					user.password = undefined;
-					return res.status(200).send({
-						state: "success",
-						message: "You changed your password successfully",
-						user: user
+					// now send an e-Mail to the user for pw change
+					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs')
+					var uiUrl =  'http://localhost:4200'
+					if (process.env.UI_URL != undefined) {
+						uiUrl = process.env.UI_URL;
+					}
+					uiUrl = uiUrl.concat('/pwforgotten/');
+					var eMailSubject = 'Your password has been changed';
+					var info = {};
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					info.changedAt = new Date();
+					info.ip = req.headers["x-real-ip"] || req.ip;
+					// Check User userAgent
+					// var agent = useragent.parse(req.headers['user-agent']);
+					// logger4js.info("User Agent Browser %s ", agent.toAgent());
+					// logger4js.info("User Agent String %s ", agent.toString());
+					// logger4js.info("User Agent OS %s ", agent.os.toString());
+					// logger4js.info("User Agent JSON %s", JSON.stringify(agent));
+					// logger4js.info("Get Profile ");
+					info.userAgent = useragent.parse(req.get('User-Agent')).toString();
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
+						if (err) {
+							logger4js.fatal("E-Mail Rendering failed %O", err);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						var message = {
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from || 'System', message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "You changed your password successfully",
+							user: user
+						});
 					});
+
 				});
 			}
 		});

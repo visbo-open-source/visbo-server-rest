@@ -8,11 +8,17 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 
+var moment = require('moment');
+moment.locale('de');
+
+var useragent = require('useragent');
+
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var mail = require('./../components/mail');
+var sendMail = require('./../components/sendMail');
 var ejs = require('ejs');
 
 var visbouser = mongoose.model('User');
@@ -111,42 +117,45 @@ router.route('/user/login')
 			}
 			if (!user) {
 				logger4js.warn("User not Found", req.body.email);
-				return res.status(400).send({
+				return res.status(401).send({
 					state: "failure",
-					message: "email not registered"
+					message: "email or password mismatch"
 				});
 			}
 			logger4js.debug("Try to Login User Found %s", user.email);
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
-				return res.status(400).send({
+				// MS TODO: Send Mail to User with Register Link
+				return res.status(401).send({
 					state: "failure",
-					message: "email not registered"
+					message: "email or password mismatch"
 				});
 			}
-			logger4js.debug("Login: Check Login Retries", req.body.email);
-			if (!user.status || user.status.loginRetries > 5) {
-				// if the lastLoginFailedAt was in the last 15 Minutes than ignore login
-				if ((currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60 <= 15) {
-					logger4js.warn("Login: Retry Count for %s too high %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
-					return res.status(401).send({
-						state: "failure",
-						message: "email or password mismatch"
-					});
-				}
-			}
-
+			logger4js.debug("Login: User %s Check Login Retries %s", req.body.email, user.status.loginRetries);
+			var loginRetries = 3
+			var lockMinutes = 15;
+			var loginFailedIntervalMinute = 4 * 60;
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
-				if (!user.status) user.status = {};
 				if (!user.status.loginRetries) user.status.loginRetries = 0
-				// count the login failed only if the last failed one was in the last 4 hours
-				if (!user.status.lastLoginFailedAt || (currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60/60 < 4 )
-					user.status.loginRetries += 1;
+				if ((currentDate.getTime() - (user.status.lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
+					// reset retry count if last login failed is older than loginFailedIntervalMinute
+					user.status.loginRetries = 0;
+				}
+				user.status.loginRetries += 1;
 				user.status.lastLoginFailedAt = currentDate;
+				if (user.status.loginRetries > loginRetries) {
+					if (!user.status.lockedUntil || user.status.lockedUntil.getTime() < currentDate.getTime()) {
+						logger4js.info("Login: Retry Count for %s now reached. Send Mail", req.body.email);
+						user.status.lockedUntil = new Date();
+						user.status.lockedUntil.setTime(currentDate.getTime() + lockMinutes*60*1000);
+						logger4js.debug("Login: Retry Count New LockedUntil %s", user.status.lockedUntil.toISOString());
+						sendMail.accountLocked(req, user);
+					}
+				}
 				user.save(function(err, user) {
 					if (err) {
 						logger4js.error("Login User Update DB Connection %O", err);
@@ -156,13 +165,14 @@ router.route('/user/login')
 							error: err
 						});
 					}
-					logger4js.debug("Login: Retry Count for %s incremented %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
+					logger4js.debug("Login: Retry Count for %s incremented %s last failed %s locked until %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt, user.status.lockedUntil);
 					return res.status(401).send({
 						state: "failure",
 						message: "email or password mismatch"
 					});
 				});
 			} else {
+				// Login Successful
 				var currenDate = new Date();
 				var expiresAt = new Date();
 				var message = "Successfully logged in."
@@ -174,59 +184,15 @@ router.route('/user/login')
 						user.status.expiresAt = expiresAt;
 					}
 					expiresAt = user.status.expiresAt;
-					if (currenDate.getTime() > expiresAt.getTime()) {
+					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info("Login Password expired at: %s", expiresAt.toISOString());
-						// Send Mail to password forgotten
-						var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs')
-						var uiUrl =  'http://localhost:4200'
-						if (process.env.UI_URL != undefined) {
-							uiUrl = process.env.UI_URL;
-						}
-						uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
-						ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
-							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %O", err);
-							} else {
-								// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
-								var message = {
-										to: user.email,
-										subject: 'Your password has expired!',
-										html: '<p> '.concat(emailHtml, " </p>")
-								};
-								logger4js.info("Now send expiration mail to %s", message.to);
-								mail.VisboSendMail(message);
-							}
-						});
+						sendMail.passwordExpired(req, user)
 						return res.status(401).send({
 							state: "failure",
 							message: "email or password mismatch"
 						});
 					}
-					// show expiration in Hours / Minutes
-					var expiresHour = Math.trunc((expiresAt.getTime() - currenDate.getTime())/1000/3600)
-					var expiresMin = '00'.concat(Math.trunc((expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
-					message = message.concat(` Your password expires in ${expiresHour}:${expiresMin} h`);
-					// send Mail to User about Password expiration
-					var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
-					var uiUrl =  'http://localhost:4200'
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
-					uiUrl = uiUrl.concat('/login', '?email=', user.email);
-					ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: expiresAt}, function(err, emailHtml) {
-						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %O", err);
-						} else {
-							// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
-							var message = {
-									to: user.email,
-									subject: 'Your password expires soon!',
-									html: '<p> '.concat(emailHtml, " </p>")
-							};
-							logger4js.info("Now send expiration soon mail to %s", message.to);
-							mail.VisboSendMail(message);
-						}
-					});
+					sendMail.passwordExpiresSoon(req, user);
 				}
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
@@ -251,6 +217,7 @@ router.route('/user/login')
 						if (!user.status.loginRetries) user.status.loginRetries = 0
 						user.status.lastLoginAt = currentDate;
 						user.status.loginRetries = 0;
+						user.status.lockedUntil = undefined;
 						user.password = passwordCopy;
 						user.save(function(err, user) {
 							if (err) {
@@ -485,6 +452,7 @@ router.route('/user/pwreset')
 					user.password = createHash(req.body.password);
 					if (!user.status) user.status = {};
 					user.status.loginRetries = 0;
+					user.status.lockedUntil = undefined;
 					user.status.lastPWResetAt = undefined; // Reset the Date, so that the user can ask for password reset again without a time limit
 					user.status.expiresAt = undefined;
 					user.save(function(err, user) {
