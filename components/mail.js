@@ -20,7 +20,7 @@ function VisboSendMail(message) {
 	var smtpConfig = undefined;
 	logger4js.debug("MAIL Send Mail to :%s:", message.to);
 
-	// MS Todo: move mail inititialisation make only once or refresh if closed later
+	// make mail inititialisation only once or refresh if closed later
 	if (!initialised) {
 		logger4js.debug("MAIL Evaluate SMTP Config");
 		if (process.env.SMTP != undefined) {
@@ -40,7 +40,6 @@ function VisboSendMail(message) {
 		        var content = fs.readFileSync(dkimPrivKeyFile);
 						logger4js.debug("MAIL SMTP Config has DKIM Key Start %s ", content.toString().substring(0,50));
 						dkimPrivKey = content.toString();
-						// MS TODO: do we have to replace new lines so it gets a one liner?
 						keyStatusOk = true
 			    }
 				}

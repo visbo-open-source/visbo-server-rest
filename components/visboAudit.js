@@ -20,14 +20,16 @@ function visboAudit(tokens, req, res) {
 	var auditEntry = new VisboAudit();
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
+	var baseUrl = auditEntry.url.split("?")[0]
+	var urlComponent = baseUrl.split("/")
+	var addJSON = urlComponent.length > 3 ? undefined : urlComponent[1];
+
 	if (req.auditDescription) {
 		auditEntry.actionDescription = req.auditDescription
 	} else {
 		auditEntry.actionDescription = auditEntry.action
-		var command = auditEntry.url.slice(0, auditEntry.url.indexOf("/", 1));
-		command = command.slice(0, command.indexOf("?", 0));
-		logger4js.debug("VisboAudit Description %s %s", auditEntry.url, command);
 	}
+	logger4js.trace("VisboAudit Description %s url add %s %s %O", auditEntry.url, addJSON, urlComponent.length, urlComponent);
 	if (req.auditInfo) {
 		auditEntry.actionInfo = req.auditInfo
 	}
@@ -41,23 +43,26 @@ function visboAudit(tokens, req, res) {
 		auditEntry.user.email = 'Unknown'
 	}
 	auditEntry.vpv = {};
+	auditEntry.vp = {};
+	auditEntry.vc = {};
 	if (req.oneVPV) {
 			auditEntry.vpv.vpvid = req.oneVPV._id;
+			auditEntry.vp.vpid = req.oneVPV.vpid;
 			auditEntry.vpv.name = req.oneVPV.name;
 			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vpv.name
 	}
-	auditEntry.vp = {};
 	if (req.oneVP) {
 			auditEntry.vp.vpid = req.oneVP._id;
+			auditEntry.vc.vcid = req.oneVP.vcid;
 			auditEntry.vp.name = req.oneVP.name;
-			if (auditEntry.action != 'GET') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
+			auditEntry.vc.name = req.oneVP.vc.name;
+			if (addJSON == 'vp' && auditEntry.action != 'GET') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
 			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name
 	}
-	auditEntry.vc = {};
 	if (req.oneVC) {
 			auditEntry.vc.vcid = req.oneVC._id;
 			auditEntry.vc.name = req.oneVC.name;
-			if (auditEntry.action != 'GET') auditEntry.vc.vcjson = JSON.stringify(req.oneVC);
+			if (addJSON == 'vc' && auditEntry.action != 'GET') auditEntry.vc.vcjson = JSON.stringify(req.oneVC);
 			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vc.name
 	}
 
@@ -74,7 +79,7 @@ function visboAudit(tokens, req, res) {
 		}
 	});
 
-	logger4js.debug("VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
+	logger4js.trace("VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
 }
 
 module.exports = {

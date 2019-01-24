@@ -12,10 +12,11 @@ var moment = require('moment');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
 var logger4jsRest = log4js.getLogger("REST");
-
+var logging = require('./components/logging');
 
 //initialize mongoose schemas
 require('./models/users');
+require('./models/visbogroup');
 require('./models/visboaudit');
 require('./models/visbocenter');
 require('./models/visboproject');
@@ -23,8 +24,9 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcrole');
 require('./models/vccost');
+require('./models/vcsetting');
 
-var systemVC = require('./components/sytemVC');
+var systemVC = require('./components/systemVC');
 
 // include the route modules
 var user = require('./routes/user');
@@ -90,8 +92,10 @@ function dbConnect(dbconnection) {
       dbconnection,
       dbOptions
     ).then(function() {
-      //mongoose.set('debug', true);
       logger4js.mark('Server is fully functional DB Connected');
+      // mongoose.set('debug', function (coll, method, query, doc, options) {
+      //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
+      // });
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
@@ -108,14 +112,13 @@ function dbConnect(dbconnection) {
   }
 }
 
-// dbConnect();
-
 // CORS Config, whitelist is an array
 var whitelist = [
-  undefined, // POSTMAN Support
+  undefined, // Postman Support
   'http://localhost:3484', // DEV Support
   'https://my.visbo.net', // Production Support
-  'http://localhost:4200' // MS Todo UI Support DEV Support
+  'https://staging.visbo.net', // Staging Support
+  'http://localhost:4200' // UI Support DEV Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
 var corsOptions = {
@@ -143,8 +146,8 @@ if (process.env.LOGPATH != undefined) {
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -160,7 +163,9 @@ log4js.configure({
   }
 });
 logger4js.level = 'info';
-
+// initialise with default debug
+var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "All": "debug"}
+logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
@@ -200,7 +205,7 @@ dbConnect(process.env.NODE_VISBODB);
 
 var sysVC = systemVC.createSystemVC(
     { users: [
-        { "email":"support@visbo.de", "role": "Admin" }
+        { "email":"support@visbo.de" }
      ]}
    )
 
@@ -261,8 +266,8 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
-//if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
+    logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
     res.status(err.status || 500);
     res.send({
       state: 'failure',
@@ -275,11 +280,11 @@ if (process.env.NODE_ENV === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
+  logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
   res.status(err.status || 500);
   res.send({
     state: 'failure',
-    message: err.message,
-    error: err
+    message: 'Internal Server Error'
   });
 });
 

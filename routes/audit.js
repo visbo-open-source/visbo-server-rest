@@ -6,13 +6,19 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
+var verifyVc = require('./../components/verifyVc');
+
+var Const = require('../models/constants')
+var constPermSystem = Const.constPermSystem
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
-router.use('/', auth.verifySysAdmin);
+router.use('/', auth.verifyUser);
+// Register the VC middleware to check that the user has access to the System Admin
+router.use('/', verifyVc.getSystemGroups);
 
 /////////////////
 // Audit API
@@ -21,16 +27,18 @@ router.use('/', auth.verifySysAdmin);
 
 router.route('/')
 	/**
-	* @api {get} /vc Get Audit Trail
+	* @api {get} /audit Get Audit Trail
 	* @apiVersion 1.0.0
-	* @apiGroup Audit
+	* @apiGroup Visbo System
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
 	* @apiPermission user must be authenticated and needs to have System Admin Permission
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NotPermission user is not member of system Admin HTTP 403
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
+	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & Audit Permission
+	* @apiError {number} 500 ServerIssue No DB Connection
 	* @apiExample Example usage:
 	* url: http://localhost:3484/audit
 	* url: http://localhost:3484/audit?from="2018-09-01"&to="2018-09-15"
@@ -51,13 +59,19 @@ router.route('/')
 .get(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	var sysAdminRole = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
 	req.auditInfo = 'System';
 
-	logger4js.info("Get Audit Trail for userid %s email %s Admin %s", userId, useremail, sysAdminRole);
+	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
+	if (!(req.combinedPerm.system & constPermSystem.ViewAudit)) {
+		logger4js.debug("No Permission to View System Audit for user %s", userId);
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to View System Audit'
+		});
+	}
 	// now fetch all entries system wide
 	var query = {};
 	var from, to, maxcount = 1000;
@@ -82,6 +96,7 @@ router.route('/')
 	VisboAudit.find(query)
 	.limit(maxcount)
 	.sort({createdAt: -1})
+	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
 			logger4js.fatal("System Audit Get DB Connection ", err);
@@ -105,6 +120,7 @@ router.route('/')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned System Audit',
+			count: listVCAudit.length,
 			audit: listVCAudit
 		});
 	});
