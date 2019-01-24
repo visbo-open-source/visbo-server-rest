@@ -87,17 +87,13 @@ function passwordExpired(req, user) {
 };
 
 // Send Mail about password expires soon
-function passwordExpiresSoon(req, user) {
+function passwordExpiresSoon(req, user, expiresAt) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	// show expiration in Hours / Minutes
-	var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
-	var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
-	message = message.concat(` Your password expires in ${expiresHour}:${expiresMin} h`);
 	// send Mail to User about Password expiration
 	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
-	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: expiresAt}, function(err, emailHtml) {
+	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
 		if (err) {
 			logger4js.fatal("E-Mail Rendering failed %O", err);
 		} else {
@@ -113,8 +109,31 @@ function passwordExpiresSoon(req, user) {
 	});
 };
 
+// Send Mail about user not registered
+function accountNotRegistered(req, user) {
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs')
+	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	uiUrl = uiUrl.concat('/register', '?email=', user.email);
+	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+		if (err) {
+			logger4js.fatal("E-Mail Rendering failed %O", err);
+		} else {
+			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+			var message = {
+					to: user.email,
+					subject: 'You have to regsiter first!',
+					html: '<p> '.concat(emailHtml, " </p>")
+			};
+			logger4js.info("Now send register mail to %s", message.to);
+			mail.VisboSendMail(message);
+		}
+	});
+};
+
 module.exports = {
 	accountLocked: accountLocked,
 	passwordExpired: passwordExpired,
-	passwordExpiresSoon: passwordExpiresSoon
+	passwordExpiresSoon: passwordExpiresSoon,
+	accountNotRegistered: accountNotRegistered
 };

@@ -1,0 +1,21 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
+<h1>
+  You have to register first
+</h1>
+<p>
+  Before you can login to Visbo, you have to regsiter your account first.
+</p>
+<h4>
+  Register by following this link: <a href="<%= url %>">Register</a>
+</h4>
+<p>
+  Your e-Mail address <%= userTo.email %> was used for the invitation.
+</p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

@@ -127,6 +127,7 @@ router.route('/user/login')
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
 				// MS TODO: Send Mail to User with Register Link
+				sendMail.accountNotRegistered(req, user);
 				return res.status(401).send({
 					state: "failure",
 					message: "email or password mismatch"
@@ -174,25 +175,26 @@ router.route('/user/login')
 			} else {
 				// Login Successful
 				var currenDate = new Date();
-				var expiresAt = new Date();
 				var message = "Successfully logged in."
 				if (!auth.isAllowedPassword(req.body.password)) {
 					logger4js.info("Login Password: current password does not match password rules");
 					if (!user.status) user.status = {};
 					if (!user.status.expiresAt) {
-						expiresAt.setDate(expiresAt.getDate() + 1) // allow 1 day to change
-						user.status.expiresAt = expiresAt;
+						user.status.expiresAt.setDate(currenDate.getDate() + 1) // allow 1 day to change
 					}
-					expiresAt = user.status.expiresAt;
-					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
-						logger4js.info("Login Password expired at: %s", expiresAt.toISOString());
+						// show expiration in Hours / Minutes
+						var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
+						var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+						message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
+						if (currenDate.getTime() > user.status.expiresAt.getTime()) {
+						logger4js.info("Login Password expired at: %s", user.status.expiresAt.toISOString());
 						sendMail.passwordExpired(req, user)
 						return res.status(401).send({
 							state: "failure",
 							message: "email or password mismatch"
 						});
 					}
-					sendMail.passwordExpiresSoon(req, user);
+					sendMail.passwordExpiresSoon(req, user, user.status.expiresAt);
 				}
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
