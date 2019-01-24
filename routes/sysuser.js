@@ -26,10 +26,11 @@ router.route('/')
 	* @api {get} /sysuser Get users list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysUsers
+	* @apiGroup Visbo System
 	* @apiName GetSysUsers
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and has System View Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/sysuser
 	*   url: http://localhost:3484/sysuser?email='visbo'&userid=us5c754feac&maxcount=100
@@ -73,7 +74,7 @@ router.route('/')
 		var userId = req.query && req.query.userid ? req.query.userid : undefined;
 		var maxcount = req.query && req.query.maxcount ? Number(req.query.maxcount) : 100;
 
-		logger4js.info("Get System User List email: %s, userid: %s, macount: %s", email, userId, maxcount);
+		logger4js.info("Get System User List email: %s, userid: %s, maxcount: %s", email, userId, maxcount);
 
 		var query = {};
 		// acting user was already checked to have sysAdmin Permission
@@ -85,6 +86,7 @@ router.route('/')
 		.limit(maxcount)
 		.select('-password')
 		.sort({updatedAt: -1})
+		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
 				logger4js.fatal("SysUser Get DB Connection ", err);

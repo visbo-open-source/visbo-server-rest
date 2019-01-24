@@ -6,8 +6,9 @@ var util = require('util');
 var path = require('path');
 
 // var assert = require('assert');
-var auth = require('./../components/auth');
-var verifyVc = require('./../components/verifyVc');
+var auth = require('../components/auth');
+var verifyVc = require('../components/verifyVc');
+var systemVC = require('../components/systemVC')
 
 var Const = require('../models/constants')
 var constPermSystem = Const.constPermSystem
@@ -27,10 +28,11 @@ router.route('/')
 	* @api {get} /syslog Get log file list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName GetSysLogs
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and access to System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog
 	* @apiSuccessExample {json} Success-Response:
@@ -56,6 +58,9 @@ router.route('/')
 		logger4js.info("Get Log File List Perm system: %O ", req.combinedPerm);
 
 		var dir = path.join(__dirname, '../logging');
+		if (process.env.LOGPATH != undefined) {
+		  dir = process.env.LOGPATH;
+		}
 		var fileList = [];
 
 		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
@@ -86,10 +91,11 @@ router.route('/file/:filename')
 	* @api {get} /syslog/filename Get log file
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
+	* @apiGroup Visbo System Log
 	* @apiName GetSysLogFile
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
+	* @apiPermission user must be authenticated and has System View and ViewLog Permission
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/syslog/all-the-logs.log
 	* @apiSuccessExample {json} Success-Response:
@@ -138,111 +144,6 @@ router.route('/file/:filename')
 	    }
 		});
 		// res.download(dir, fileName);
-	})
-
-router.route('/config')
-/**
-	* @api {get} /syslog/config Get log levels
-	* @apiVersion 1.0.0
-	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
-	* @apiName GetSysLogConfig
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiExample Example usage:
-	*   url: http://localhost:3484/syslog/config
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*  "state":"success",
-	*  "message":"Log Level Configuration",
-	*  "config":{
-	*    "VC": "fatal",
-	*    "VP": "warn",
-	*    "VPV": "info",
-	*    "USER": "debug",
-	*    "MAIL": "trace",
-	*    "ALL": "info",
-	*    "OTHER "trace"
-	*  }
-	*}
-	*/
-// get syslog config
-	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		req.auditDescription = 'SysLog Config (Read)';
-
-		var sysLogConfig = getLogLevelConfig();
-		logger4js.info("Get Log Config ");
-
-		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
-			logger4js.debug("No Permission to View System Log for user %s", userId);
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Permission to View System Log'
-			});
-		}
-		return res.status(200).send({
-			state: 'success',
-			message: 'Log Level Configuration',
-			config: sysLogConfig
-		});
-	})
-
-/**
-	* @api {put} /syslog/config Save log levels
-	* @apiVersion 1.0.0
-	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup SysLog
-	* @apiName PutSysLogConfig
-	* @apiPermission user must be authenticated and sysadmin
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiExample Example usage:
-	*   url: http://localhost:3484/syslog/config
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*  "state":"success",
-	*  "message":"Log Level Configuration Changed",
-	*  "config":{
-	*    "VC": "fatal",
-	*    "VP": "warn",
-	*    "VPV": "info",
-	*    "USER": "debug",
-	*    "MAIL": "trace",
-	*    "ALL": "info",
-	*    "OTHER "trace"
-	*  }
-	*}
-	*/
-// put syslog config
-	.put(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-		req.auditDescription = 'SysLog Config (Change)';
-
-		logger4js.info("Put SysLogConfig Log Config ");
-		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
-			logger4js.debug("No Permission to View System Log for user %s", userId);
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Permission to View System Log'
-			});
-		}
-		var sysLogConfig = getLogLevelConfig();
-		if (req.body.VC) sysLogConfig.VC = req.body.VC
-		if (req.body.VP) sysLogConfig.VP = req.body.VP
-		if (req.body.VPV) sysLogConfig.VPV = req.body.VPV
-		if (req.body.USER) sysLogConfig.USER = req.body.USER
-		if (req.body.MAIL) sysLogConfig.MAIL = req.body.MAIL
-		if (req.body.OTHER) sysLogConfig.OTHER = req.body.OTHER
-		logger4js.debug("PutSysLogConfig Log Config %O ", req.body);
-		setLogLevelConfig(sysLogConfig)
-
-		return res.status(200).send({
-			state: 'success',
-			message: 'Log Level Configuration',
-			config: sysLogConfig
-		});
 	})
 
 module.exports = router;

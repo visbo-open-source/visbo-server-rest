@@ -27,16 +27,18 @@ router.use('/', verifyVc.getSystemGroups);
 
 router.route('/')
 	/**
-	* @api {get} /vc Get Audit Trail
+	* @api {get} /audit Get Audit Trail
 	* @apiVersion 1.0.0
-	* @apiGroup Audit
+	* @apiGroup Visbo System
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
 	* @apiPermission user must be authenticated and needs to have System Admin Permission
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NotPermission user is not member of system Admin HTTP 403
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
+	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & Audit Permission
+	* @apiError {number} 500 ServerIssue No DB Connection
 	* @apiExample Example usage:
 	* url: http://localhost:3484/audit
 	* url: http://localhost:3484/audit?from="2018-09-01"&to="2018-09-15"
@@ -94,6 +96,7 @@ router.route('/')
 	VisboAudit.find(query)
 	.limit(maxcount)
 	.sort({createdAt: -1})
+	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
 			logger4js.fatal("System Audit Get DB Connection ", err);
@@ -117,6 +120,7 @@ router.route('/')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned System Audit',
+			count: listVCAudit.length,
 			audit: listVCAudit
 		});
 	});

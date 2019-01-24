@@ -139,7 +139,7 @@ function getVcidGroups(req, res, next, vcid) {
 		}
 		var checkDeletedVC = false;
 		// allow access to GET, PUT & DELETE for VC of deleted VCs if user is sysadmin
-		if ((req.method == "GET" || req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2) {
+		if (req.method == "GET" || ((req.method == "DELETE" || req.method == "PUT") &&  urlComponent.length == 2)) {
 			if (sysAdmin && req.query.deleted) checkDeletedVC = true;
 		}
 		var query = {};
@@ -153,10 +153,9 @@ function getVcidGroups(req, res, next, vcid) {
 			combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
 		}
 		if (!sysAdmin) delete combinedPerm.system
-		logger4js.debug("Get Visbo Center with %d VC Groups Perm Combined %O", vcidList.length, combinedPerm);
+		logger4js.debug("Get Visbo Center with %d VC Groups Perm Combined %O checkDeletedVC %s", vcidList.length, combinedPerm, checkDeletedVC);
 		query._id = vcid;
-		// query['deleted.deletedAt'] =  {$exists: checkDeletedVC};
-		query.deleted =  {$exists: checkDeletedVC};
+		query.deletedAt =  {$exists: checkDeletedVC};
 		var queryVC = VisboCenter.findOne(query);
 		// queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
