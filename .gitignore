@@ -10,3 +10,5 @@ logging/
 .env2
 env-dev
 env-prod
+package-lock.json
+package-lock.json

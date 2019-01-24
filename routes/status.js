@@ -11,8 +11,8 @@ router.route('/')
 /**
 	* @api {get} /status Get status of ReST Server
 	* @apiVersion 1.0.0
-	* @apiGroup SysLog
-	* @apiName GetStatus
+	* @apiGroup Visbo System
+	* @apiName GetReSTStatus
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/status
 	* @apiSuccessExample {json} Success-Response:
@@ -32,14 +32,48 @@ router.route('/')
 		req.auditDescription = 'Status (Read)';
 
 		logger4js.info("Get Satus ReST Server ");
-
-		return res.status(200).send({
-			state: 'success',
-			message: 'Status of ReST Server',
-			status: {
-				version: process.env.VERSION_REST
+		if (req.query.error) {
+			var status = ''
+			var err = {"code": "500", "errtext": "Long explanation"}
+			if (req.query.date != undefined) {
+				var dateValue = req.query.date ? new Date(req.query.date) : new Date();
+				status = "Get Status Date native ".concat(req.query.date, " converted ", dateValue.toISOString(), " is Date ", !isNaN(dateValue))
+				logger4js.info(status);
+				err = '';
 			}
-		});
+			if (req.query.number != undefined) {
+				var numberValue = req.query.number;
+				status = "Get Status Number native ".concat(req.query.number, " is Number ", !isNaN(numberValue))
+				logger4js.info(status);
+				err = '';
+			}
+			if (req.query.string != undefined) {
+				var stringValue = req.query.string;
+				status = "Get Status String native ".concat(req.query.string, " is String ", stringValue)
+				logger4js.info(status);
+				err = '';
+			}
+
+			if (err) {
+				logger4js.info("Get Status: %O ", req.query, errorDetail);
+			} else {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Status Check',
+					status: status
+				});
+
+			}
+
+		} else {
+			return res.status(200).send({
+				state: 'success',
+				message: 'Status of ReST Server',
+				status: {
+					version: process.env.VERSION_REST
+				}
+			});
+		}
 	})
 
 module.exports = router;

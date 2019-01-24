@@ -20,6 +20,7 @@ var clsBewertung = new Schema({
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
 	name: { type: String },
+	teamID: {type: Number},
 	farbe: { type: Number },
 	startkapa: { type: Number },
 	tagessatzIntern: { type: Number },
@@ -79,10 +80,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256},
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
 	variantName: { type: String, required: false, maxlength: 256},
-	deleted: {
-		deletedAt: {type: Date, required: false },
-		byParent: {type: Boolean}
-	},
+	deletedAt: {type: Date, required: false },
 	variantDescription: { type: String, required: false, maxlength: 500},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},
