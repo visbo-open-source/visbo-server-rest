@@ -29,7 +29,23 @@ apidoc -i routes -o public/apidoc
 sudo rm -rf /var/www/apidoc
 sudo cp -r public/apidoc /var/www
 
-echo "05: Manage NODE Process with PM2"
+echo "05: Run Upgrade Script against DB"
+# get the DB Connection string
+if [ -f update-db.js ]; then
+    echo "Upgrade Script Found!"
+    CONF=`grep '^ *NODE_VISBODB' .env`
+    eval $CONF
+    mongo "$NODE_VISBODB" update-db.js
+    if [ $? -ne 0 ]
+    then
+      echo "FATAL: Database Update Script Failed."
+      exit
+    fi
+else
+  echo "No Upgrade Script available!"
+fi
+
+echo "06: Manage NODE Process with PM2"
 pm2 list
 pm2 restart VisboReST
 if [ $? -ne 0 ]

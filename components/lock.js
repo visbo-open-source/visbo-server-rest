@@ -11,7 +11,7 @@ lockStatus = function(vp, useremail, variantName) {
 	var nowDate = new Date();
 	if (vp.lock) {
 		for (i = 0; i < vp.lock.length; i++) {
-			// logger4js.debug("Check Lock: Nr. %d %s", i, vp.lock[i]);
+			logger4js.debug("Check Lock: Nr. %d %O %s", i, vp.lock[i], variantName);
 			if (vp.lock[i].expiresAt >= nowDate){	// lock is valid
 				if (vp.lock[i].variantName == variantName){ // lock for the specific variant
 					//lock for the current variant found

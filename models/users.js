@@ -22,11 +22,11 @@ var userSchema = new mongoose.Schema({
 	status: {
 		registeredAt: {type: Date, required: false},
 		lockedUntil: {type: Date, required: false},
-		lastLoginAt: {type: Date},
+		lastLoginAt: {type: Date, required: false},
 		lastLoginFailedAt: {type: Date},
 		loginRetries: {type: Number, required: false},
-		lastPWResetAt: {type: Date},
-		sysAdminRole: {type: String}
+		lastPWResetAt: {type: Date, required: false},
+		expiresAt: {type: Date, required: false}
 	}
 });
 // Set Creation and modification date automatically

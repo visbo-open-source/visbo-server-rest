@@ -6,32 +6,35 @@ mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
-var authSysAdmin = require('./../components/authSysAdmin');
 var auth = require('./../components/auth');
+
+var moment = require('moment');
+moment.locale('de');
+
+var useragent = require('useragent');
 
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var mail = require('./../components/mail');
+var sendMail = require('./../components/sendMail');
 var ejs = require('ejs');
-var read = require('fs').readFileSync;
 
 var visbouser = mongoose.model('User');
 
 var isValidHash = function(hash, secret){
 	return bCrypt.compareSync(secret, hash);
 };
+
 var isValidPassword = function(user, password){
 	return bCrypt.compareSync(password, user.password);
 };
+
 // Generates hash using bCrypt
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
-
-//Register the sysadmin permission middleware for login url
-router.use('/user/login', authSysAdmin.calculateSysAdmin);
 
 router.route('/user/login')
 
@@ -41,9 +44,9 @@ router.route('/user/login')
 	* @apiGroup Authentication
 	* @apiName UserLogin
 	* @apiPermission none
-	* @apiError UserNamePasswordMismatch User not found or user &password do not match HTTP 401
-	* @apiError ParameterMissing required parameters email, password missing HTTP 400
-	* @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
+	* @apiError {number} 401 user & password do not match
+	* @apiError {number} 400 User or password missing
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/token/user/login
 	*   body:
@@ -58,9 +61,9 @@ router.route('/user/login')
 	*   "message":"Successfully logged in",
 	*   "token":"eyJhbG...brDI",
 	*   "user":{
-	*     "_id":"5a96787976294c5417f0e409",
-	*     "updatedAt":"2018-02-28T09:38:04.774Z",
-	*     "createdAt":"2018-02-28T09:38:04.774Z",
+	*     "_id":"UID5a96787976294c5417f0e49",
+	*     "updatedAt":"2018-02-28T09:00:00.000Z",
+	*     "createdAt":"2018-02-28T10:00:00.000Z",
 	*     "email":"example@example.com",
 	*     "profile": {
 	*       "firstname": "First",
@@ -74,6 +77,13 @@ router.route('/user/login')
 	*         "state": "State",
 	*         "country": "Country",
 	*       }
+	*     },
+	*     "status": {
+	*       "registeredAt": "2018-06-01T13:00:00.000Z",
+	*       "lastLoginAt": "2019-01-01T14:00:00.001Z",
+	*       "loginRetries": 0,
+	*       "lastLoginFailedAt": "2018-11-01T09:00:00.001Z",
+	*       "lastPWResetAt": "2018-12-01T14:00:00.001ZZ"
 	*     }
 	*   }
 	* }
@@ -94,8 +104,8 @@ router.route('/user/login')
 				message: "email or password missing"
 			});
 		}
-		req.body.email = req.body.email.toLowerCase();
-		
+		req.body.email = req.body.email.toLowerCase().trim();
+
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Post Login DB Connection ", err);
@@ -107,42 +117,46 @@ router.route('/user/login')
 			}
 			if (!user) {
 				logger4js.warn("User not Found", req.body.email);
-				return res.status(400).send({
+				return res.status(401).send({
 					state: "failure",
-					message: "email not registered"
+					message: "email or password mismatch"
 				});
 			}
 			logger4js.debug("Try to Login User Found %s", user.email);
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
-				return res.status(400).send({
+				// MS TODO: Send Mail to User with Register Link
+				sendMail.accountNotRegistered(req, user);
+				return res.status(401).send({
 					state: "failure",
-					message: "email not registered"
+					message: "email or password mismatch"
 				});
 			}
-			logger4js.debug("Login: Check Login Retries", req.body.email);
-			if (!user.status || user.status.loginRetries > 5) {
-				// if the lastLoginFailedAt was in the last 15 Minutes than ignore login
-				if ((currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60 <= 15) {
-					logger4js.warn("Login: Retry Count for %s too high %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
-					return res.status(401).send({
-						state: "failure",
-						message: "email or password mismatch"
-					});
-				}
-			}
-
+			logger4js.debug("Login: User %s Check Login Retries %s", req.body.email, user.status.loginRetries);
+			var loginRetries = 3
+			var lockMinutes = 15;
+			var loginFailedIntervalMinute = 4 * 60;
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
-				if (!user.status) user.status = {};
 				if (!user.status.loginRetries) user.status.loginRetries = 0
-				// count the login failed only if the last failed one was in the last 4 hours
-				if (!user.status.lastLoginFailedAt || (currentDate.getTime() - user.status.lastLoginFailedAt.getTime())/1000/60/60 < 4 )
-					user.status.loginRetries += 1;
+				if ((currentDate.getTime() - (user.status.lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
+					// reset retry count if last login failed is older than loginFailedIntervalMinute
+					user.status.loginRetries = 0;
+				}
+				user.status.loginRetries += 1;
 				user.status.lastLoginFailedAt = currentDate;
+				if (user.status.loginRetries > loginRetries) {
+					if (!user.status.lockedUntil || user.status.lockedUntil.getTime() < currentDate.getTime()) {
+						logger4js.info("Login: Retry Count for %s now reached. Send Mail", req.body.email);
+						user.status.lockedUntil = new Date();
+						user.status.lockedUntil.setTime(currentDate.getTime() + lockMinutes*60*1000);
+						logger4js.debug("Login: Retry Count New LockedUntil %s", user.status.lockedUntil.toISOString());
+						sendMail.accountLocked(req, user);
+					}
+				}
 				user.save(function(err, user) {
 					if (err) {
 						logger4js.error("Login User Update DB Connection %O", err);
@@ -152,19 +166,41 @@ router.route('/user/login')
 							error: err
 						});
 					}
-					logger4js.debug("Login: Retry Count for %s incremented %s last try %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt);
+					logger4js.debug("Login: Retry Count for %s incremented %s last failed %s locked until %s", req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt, user.status.lockedUntil);
 					return res.status(401).send({
 						state: "failure",
 						message: "email or password mismatch"
 					});
 				});
 			} else {
+				// Login Successful
+				var currenDate = new Date();
+				var message = "Successfully logged in."
+				if (!auth.isAllowedPassword(req.body.password)) {
+					logger4js.info("Login Password: current password does not match password rules");
+					if (!user.status) user.status = {};
+					if (!user.status.expiresAt) {
+						user.status.expiresAt.setDate(currenDate.getDate() + 1) // allow 1 day to change
+					}
+						// show expiration in Hours / Minutes
+						var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
+						var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+						message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
+						if (currenDate.getTime() > user.status.expiresAt.getTime()) {
+						logger4js.info("Login Password expired at: %s", user.status.expiresAt.toISOString());
+						sendMail.passwordExpired(req, user)
+						return res.status(401).send({
+							state: "failure",
+							message: "email or password mismatch"
+						});
+					}
+					sendMail.passwordExpiresSoon(req, user, user.status.expiresAt);
+				}
 				logger4js.debug("Try to Login %s username&password accepted", req.body.email);
 				var passwordCopy = user.password;
 				user.password = undefined;
 				if (!user.status) user.status = {};
-				user.status.sysAdminRole = req.sysAdminRole;
-				logger4js.trace("User accepted sysAdminRole %s Token: %O", req.sysAdminRole, user.toJSON());
+				logger4js.trace("User accepted User: %O", user.toJSON());
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
@@ -183,6 +219,7 @@ router.route('/user/login')
 						if (!user.status.loginRetries) user.status.loginRetries = 0
 						user.status.lastLoginAt = currentDate;
 						user.status.loginRetries = 0;
+						user.status.lockedUntil = undefined;
 						user.password = passwordCopy;
 						user.save(function(err, user) {
 							if (err) {
@@ -196,7 +233,7 @@ router.route('/user/login')
 							user.password = undefined;
 							return res.status(200).send({
 								state: "success",
-								message: "Successfully logged in",
+								message: message,
 								token: token,
 								user: user
 							});
@@ -217,7 +254,9 @@ router.route('/user/pwforgotten')
 	* @apiDescription Post pwforgotten initiates the setting of a new password. To avoid user & password probing, this function delivers always success
 	* but send a Mail with the Reset Link only if the user was found and the last Reset Password was not done in the last 15 minutes.
 	* in case the user does a successful login, the timer is ignored
-	* @apiError InternalServerError If the Dtabase is not reachable or delivers an error
+	* @apiPermission none
+	* @apiError {number} 400 email missing
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/forgottenpw
 	*  body: {
@@ -231,6 +270,15 @@ router.route('/user/pwforgotten')
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
+		if (!req.body.email || !req.body.email.trim()) {
+			logger4js.info("No eMail specified");
+			return res.status(400).send({
+				state: "failure",
+				message: "No eMail specified"
+			});
+		}
+		req.body.email = req.body.email.toLowerCase().trim();
+
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
 				logger4js.fatal("Forgot Password DB Connection ", err);
@@ -281,7 +329,7 @@ router.route('/user/pwforgotten')
 					});
 				}
 				user.password = undefined;
-				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s token encoded %O", user.email, jwtSecret.register.expiresIn);
+				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s", user.email, jwtSecret.register.expiresIn);
 				// logger4js.debug("Requested Password Reset Request %O", req);
 				// delete user.profile;
 				// delete user.status;
@@ -289,7 +337,7 @@ router.route('/user/pwforgotten')
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.fatal("forgot Password Sign Error ", err);
+							logger4js.fatal("Forgot Password Sign Error ", err);
 							return res.status(500).send({
 								state: "failure",
 								message: "token generation failed",
@@ -305,7 +353,7 @@ router.route('/user/pwforgotten')
 						}
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
-						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl);
+						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
 								logger4js.fatal("E-Mail Rendering failed %O", err);
@@ -344,6 +392,11 @@ router.route('/user/pwreset')
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName PasswordReset
+	* @apiPermission none
+	* @apiError {number} 400 email or token missing
+	* @apiError {number} 401 token no longer valid
+	* @apiError {number} 404 user not found or user already changed
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/pwreset
 	*  body: {
@@ -368,7 +421,7 @@ router.route('/user/pwreset')
 		// verifies secret and checks exp
     jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
       if (err) {
-        return res.status(409).send({
+        return res.status(401).send({
         	state: 'failure',
         	message: 'Token is dead'
         });
@@ -386,14 +439,24 @@ router.route('/user/pwreset')
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
-						return res.status(409).send({
+						return res.status(404).send({
 							state: "failure",
 							message: "invalid token"
+						});
+					}
+					if (!auth.isAllowedPassword(req.body.password)) {
+						logger4js.info("Password forgotten: new password does not match password rules");
+						return res.status(409).send({
+							state: "failure",
+							message: "Pasword does not match password rules"
 						});
 					}
 					user.password = createHash(req.body.password);
 					if (!user.status) user.status = {};
 					user.status.loginRetries = 0;
+					user.status.lockedUntil = undefined;
+					user.status.lastPWResetAt = undefined; // Reset the Date, so that the user can ask for password reset again without a time limit
+					user.status.expiresAt = undefined;
 					user.save(function(err, user) {
 						if (err) {
 							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
@@ -421,20 +484,21 @@ router.route('/user/signup')
   * @apiVersion 1.0.0
   * @apiGroup Authentication
   * @apiName UserSignup
-  * @apiPermission none
+	* @apiPermission none
+	* @apiError {number} 400 email or userid missing in body
+	* @apiError {number} 401 token no longer valid
+	* @apiError {number} 404 unknown userID
+	* @apiError {number} 409 email already registered
 	* @apiDescription signup a user with Profile Details and a new password.
 	* Signup can be called with an e-mail address or an _id. The system refuses the registration if an _id is specified and there is no user with this _id to be registered
 	* If called with an e-mail, the system returns an error if a user with this e-mail already exists and is registered.
 	* The hash is optional and if delivered correct, the system does not ask for e-mail confirmation.
-  * @apiError UserEsists User does already exist HTTP 401
-	* @apiError ParameterMissing required parameters email, password missing HTTP 400
-  * @apiError ServerIssue No DB Connection or Token Generation failed HTTP 500
   * @apiExample Example usage:
   *   url: http://localhost:3484/token/user/signup
   *   body:
   *   {
   *     "email": "example@example.com",
-	*     "_id": "UID294c5417f0e409",
+	*     "_id": "UID294c5417f0e49",
   *     "password": "thisIsPassword",
 	*     "profile": {
 	*       "firstName": "First",
@@ -457,7 +521,7 @@ router.route('/user/signup')
   *   "message":"Successfully logged in",
   *   "token":"eyJhbG...brDI",
   *   "user":{
-  *    "_id":"UID294c5417f0e409",
+  *    "_id":"UID294c5417f0e49",
   *    "updatedAt":"2018-02-28T09:38:04.774Z",
   *    "createdAt":"2018-02-28T09:38:04.774Z",
   *    "email":"example@example.com",
@@ -485,7 +549,7 @@ router.route('/user/signup')
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
-		if (req.body.email) req.body.email = req.body.email.toLowerCase();
+		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
 		var query = {};
 		if (req.body.email) {
@@ -517,7 +581,7 @@ router.route('/user/signup')
 			}
 			// if user does not exist already refuse to register with id
 			if (!user && req.body._id) {
-				return res.status(400).send({
+				return res.status(404).send({
 					state: "failure",
 					message: "User ID incorrect"
 				});
@@ -538,6 +602,13 @@ router.route('/user/signup')
 				}
 			}
 			if (!user.email) user.email = req.body.email;
+			if (!auth.isAllowedPassword(req.body.password)) {
+				logger4js.info("Signup: New password does not match password rules");
+				return res.status(409).send({
+					state: "failure",
+					message: "Pasword does not match password rules"
+				});
+			}
 			user.password = createHash(req.body.password);
 			//  if a hash is available check correctness and skip confirm e-Mail or in case the hash is incorrect deliver error
 			if (hash) {
@@ -623,9 +694,10 @@ router.route('/user/signup')
 	  * @apiVersion 1.0.0
 	  * @apiGroup Authentication
 	  * @apiName emailConfirm
-	  * @apiPermission none
-		* @apiError ParameterMissing required parameters userId & hash missing HTTP 400
-	  * @apiError ServerIssue No DB Connection HTTP 500
+		* @apiPermission none
+		* @apiError {number} 400 no userid or hash missing
+		* @apiError {number} 401 hash no longer valid for user
+		* @apiError {number} 500 Internal Server Error
 	  * @apiExample Example usage:
 	  *   url: http://localhost:3484/token/user/confirm
 	  *   body:

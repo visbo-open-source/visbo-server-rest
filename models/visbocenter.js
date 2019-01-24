@@ -10,12 +10,8 @@ var vcUserSchema = new Schema({
 var visboCenterSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256 },
 	description: { type: String, required: false },
-	users: [{type: vcUserSchema, required: true }],
 	vpCount: { type: Number, reuqired: false },
-	deleted: {
-		deletedAt: {type: Date, required: false },
-		byParent: {type: Boolean}
-	},
+	deletedAt: {type: Date, required: false },
 	system: {type: Boolean}
 });
 // Set Creation and modification date automatically
