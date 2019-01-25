@@ -10,12 +10,10 @@ var pwPolicyPattern = undefined;
 
 var isAllowedPassword = function(password){
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 	if (!pwPolicy) {
-		if (process.env.PWPOLICY != undefined) {
-			pwPolicy = process.env.PWPOLICY;
-		} else {
-			pwPolicy = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
-		}
+		logger4js.debug("Check Password Policy from .env %s", process.env.PWPOLICY);
+		pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
 		pwPolicyPattern = new RegExp(pwPolicy);
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
