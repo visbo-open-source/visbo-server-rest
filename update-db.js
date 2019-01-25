@@ -44,7 +44,7 @@ if (continueFlag && currentVersion < dateBlock) {
     db.visbogroups.createIndex( { 'users.userId': 1 }, { name: "userId" } );
     print ("Visbo Groups Collection Created")
   }
-  var collectionName = 'vcsettings1';
+  var collectionName = 'vcsettings';
   var collection = db.getCollectionInfos({name: collectionName});
   // print ("VisboGroup Collection  ", JSON.stringify(collection))
   if (!collectionName || collection.length == 0) {
@@ -321,3 +321,49 @@ if (currentVersion < dateBlock) {
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
 }
+
+dateBlock = "2019-01-25T00:00:00"
+if (currentVersion < dateBlock) {
+  // Remove Users from VC & VP afetr they were migrated to groups
+
+  var vcListConverted = db.visbogroups.find({groupType: {$in: ['VC', 'System']}}).toArray()
+  var vcidList = [];
+  for (var i=0; i<vcListConverted.length; i++) {
+    vcidList.push(vcListConverted[i].vcid)
+  }
+  var vcListAll = db.visbocenters.find({}).toArray();
+  var vcList = db.visbocenters.find({users: {$exists: true}, _id: {$in: vcidList}}).toArray();
+  var vcListUsers = db.visbocenters.find({users: {$exists: true}}).toArray();
+  print("VC List Converted Length All VC ", vcListAll.length, ' VCs with Users & Groups ', vcList.length, ' Total VCs with Users ', vcListUsers.length)
+
+  db.visbocenters.updateMany({users: {$exists: true}, _id: {$in: vcidList}}, {$unset: {users: ''}})
+
+  var vpListConverted = db.visbogroups.find({groupType: {$in: ['VC', 'VP']}}).toArray()
+  var vpidList = [];
+  for (var i=0; i<vpListConverted.length; i++) {
+    if (vpListConverted[i].vpids && vpListConverted[i].vpids.length > 0) {
+      for (var j=0; j<vpListConverted[i].vpids.length; j++) {
+        vpidList.push(vpListConverted[i].vpids[j]);
+      }
+    }
+  }
+
+  var vpListAll = db.visboprojects.find({}).toArray();
+  var vpList = db.visboprojects.find({users: {$exists: true}, _id: {$in: vpidList}}).toArray();
+  var vpListUsers = db.visboprojects.find({users: {$exists: true}}).toArray();
+  print("VP List Converted Length All VP ", vpListAll.length, ' VPs with Users & Groups ', vpList.length, ' Total VPs with Users ', vpListUsers.length)
+
+  db.visboprojects.updateMany({users: {$exists: true}, _id: {$in: vpidList}}, {$unset: {users: ''}})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+// dateBlock = "2018-01-01T00:00:00"
+// if (currentVersion < dateBlock) {
+//   // Prototype Block for additional upgrade topics run only once
+//   // Set the currentVersion in Script and in DB
+//   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+//   currentVersion = dateBlock
+// }
