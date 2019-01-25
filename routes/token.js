@@ -201,6 +201,11 @@ router.route('/user/login')
 				user.password = undefined;
 				if (!user.status) user.status = {};
 				logger4js.trace("User accepted User: %O", user.toJSON());
+				// add info about the session ip and userAgent to verify during further requests to avoid session steeling
+				user.session = {};
+				user.session.ip = req.headers["x-real-ip"] || req.ip;
+				user.session.ticket = req.get('User-Agent');
+
 				jwt.sign(user.toJSON(), jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
@@ -221,6 +226,7 @@ router.route('/user/login')
 						user.status.loginRetries = 0;
 						user.status.lockedUntil = undefined;
 						user.password = passwordCopy;
+						user.session = undefined;
 						user.save(function(err, user) {
 							if (err) {
 								logger4js.error("Login User Update DB Connection %O", err);

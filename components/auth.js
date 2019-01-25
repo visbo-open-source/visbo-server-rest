@@ -40,8 +40,23 @@ function verifyUser(req, res, next) {
         	message: 'Token is dead'
         });
       } else {
-        // if everything is good, save to request for use in other routes
-				// console.log("Auth Check for User %s and _id %s", decoded.email, decoded._id);
+        // if everything is good, check IP and User Agent to prevent session steeling
+				var sessionValid = true;
+				if (decoded.session.ip != req.headers["x-real-ip"] || req.ip) {
+					logger4js.warn("User %s: Different IPs for Session %s vs %s", decoded.email, decoded.session.ip, req.headers["x-real-ip"] || req.ip);
+					sessionValid = false;
+				}
+				if (decoded.session.ticket != req.get('User-Agent')) {
+					logger4js.warn("User %s: Different UserAgents for Session %s vs %s", decoded.email, decoded.session.ticket, req.get('User-Agent'));
+					sessionValid = false;
+				}
+				if (!sessionValid) {
+					return res.status(401).send({
+	        	state: 'failure',
+	        	message: 'Token is dead'
+	        });
+				}
+				// if everything is good, save to request for use in other routes
 				req.decoded = decoded;
         return next();
       }

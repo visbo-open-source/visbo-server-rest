@@ -27,6 +27,10 @@ var userSchema = new mongoose.Schema({
 		loginRetries: {type: Number, required: false},
 		lastPWResetAt: {type: Date, required: false},
 		expiresAt: {type: Date, required: false}
+	},
+	session: {
+		ip: {type: String, required: false},
+		ticket: {type: String, required: false}
 	}
 });
 // Set Creation and modification date automatically
