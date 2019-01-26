@@ -42,7 +42,7 @@ function verifyUser(req, res, next) {
       } else {
         // if everything is good, check IP and User Agent to prevent session steeling
 				var sessionValid = true;
-				if (decoded.session.ip != req.headers["x-real-ip"] || req.ip) {
+				if (decoded.session.ip != (req.headers["x-real-ip"] || req.ip)) {
 					logger4js.warn("User %s: Different IPs for Session %s vs %s", decoded.email, decoded.session.ip, req.headers["x-real-ip"] || req.ip);
 					sessionValid = false;
 				}

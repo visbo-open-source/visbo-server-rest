@@ -1,6 +1,12 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
+var userAgentSchema = new Schema({
+	userAgent: { type: String, reuqired: true },
+	createdAt: { type: Date, reuqired: true },
+	lastUsedAt: { type: Date, reuqired: true }
+});
+
 var userSchema = new mongoose.Schema({
 	email: {type: String, required: true},
 	name: {type: String, required: false, maxlength: 100},
@@ -28,6 +34,7 @@ var userSchema = new mongoose.Schema({
 		lastPWResetAt: {type: Date, required: false},
 		expiresAt: {type: Date, required: false}
 	},
+	userAgents: [{type: userAgentSchema, required: false}],
 	session: {
 		ip: {type: String, required: false},
 		ticket: {type: String, required: false}
