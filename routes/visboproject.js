@@ -675,6 +675,7 @@ router.route('/:vpid')
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVP.deletedAt) {
+			req.auditDescription = 'Visbo Project (Undelete)';
 			req.oneVP.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
@@ -2215,7 +2216,8 @@ router.route('/:vpid/portfolio')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
-					vpv: listVPFfiltered
+					count: listVPFfiltered.length,
+					vpf: listVPFfiltered
 				});
 			} else {
 				return res.status(200).send({
@@ -2382,6 +2384,7 @@ router.route('/:vpid/portfolio')
 						error: err
 					});
 				}
+				req.oneVPF = onePortfolio;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Visbo Portfolio Version',

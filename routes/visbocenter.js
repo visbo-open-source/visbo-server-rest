@@ -500,6 +500,7 @@ router.route('/:vcid')
 		// undelete the VC in case of change
 		// TODO check correct undelete Permission
 		if (req.oneVC.deletedAt) {
+			req.auditDescription = 'Visbo Center (Undelete)';
 			req.oneVC.deletedAt = undefined;
 			vcUndelete = true;
 			logger4js.debug("Undelete VC %s flag %s", req.oneVC._id, req.oneVC.deletedAt);
@@ -647,8 +648,8 @@ router.route('/:vcid')
 			});
 		} else {
 			// VC is already marked as deleted, now destory it including VP and VPV
-			// MS TODO: Destroy VC
 			// Collect all ProjectIDs of this VC
+			req.auditDescription = 'Visbo Center (Destroy)';
 			var query = {};
 			query.vcid = req.oneVC._id
 			var queryVP = VisboProject.find(query);
@@ -2543,7 +2544,7 @@ router.route('/:vcid/cost')
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
-			vcSetting.save(function(err, oneVcSetting) {
+			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					logger4js.fatal("VC Post Role DB Connection ", err);
 					if (err.code == 11000) {
@@ -2558,10 +2559,11 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Inserted Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		})
@@ -2629,6 +2631,7 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				if (oneVCSetting.type == 'Internal') {
 					return res.status(400).send({
 						state: 'failure',
@@ -2739,7 +2742,7 @@ router.route('/:vcid/cost')
 			logger4js.info("Found the Setting for VC");
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
-			oneVCSetting.save(function(err, oneVcSetting) {
+			oneVCSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
@@ -2747,16 +2750,17 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
-				if (oneVcSetting.type == 'Internal') {
-					if (oneVcSetting.name == 'DEBUG') {
+				if (oneVCSetting.type == 'Internal') {
+					if (oneVCSetting.name == 'DEBUG') {
 						logger4js.info("Update System Log Setting");
-						logging.setLogLevelConfig(oneVcSetting.value)
+						logging.setLogLevelConfig(oneVCSetting.value)
 					}
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Updated Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		});

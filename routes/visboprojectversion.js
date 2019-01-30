@@ -165,6 +165,7 @@ router.route('/')
 			}
 			if (req.query.longList != undefined){ // user can specify to get the long list with all details for a project version
 				longList = true;
+				req.auditNoTTL = true;
 			}
 		}
 		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
@@ -175,6 +176,8 @@ router.route('/')
 		if (!longList) {
 			// deliver only the short info about project versions
 			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
+		} else {
+			req.auditNoTTL = true;	// Real Download of Visbo Project Versions
 		}
 		if (req.query.refNext)
 			queryVPV.sort('vpid name variantName +timestamp')
@@ -207,6 +210,7 @@ router.route('/')
 				}
 				logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
 				req.auditInfo = listVPVfiltered.length;
+				req.listVPV = listVPVfiltered;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Versions',
@@ -215,6 +219,7 @@ router.route('/')
 				});
 			} else {
 				req.auditInfo = listVPV.length;
+				req.listVPV = listVPV;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Versions',
@@ -481,6 +486,7 @@ router.route('/:vpvid')
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Version (Read)';
+		req.auditNoTTL = true;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
@@ -533,6 +539,7 @@ router.route('/:vpvid')
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVPV.deletedAt) {
+			req.auditDescription = 'Visbo Project Version (Undelete)';
 			req.oneVPV.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VPV %s", req.oneVPV._id);
