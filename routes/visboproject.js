@@ -894,6 +894,9 @@ router.route('/:vpid/audit')
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View Visbo Project, View Project Audit
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Project Audit
@@ -933,19 +936,35 @@ router.route('/:vpid/audit')
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
 		// no date is set to set to to current Date and recalculate from afterwards
-		if (!from && !to) to = new Date();
+		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
 			from.setDate(from.getDate()-1)
 		}
-		if (!to) {
-			to = new Date(from);
-			to.setDate(to.getDate()+1)
-		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
+		if (req.query.text) {
+			var list = [];
+			var text = req.query.text;
+			var expr = new RegExp(text, "i");
+			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+				logger4js.debug("Get Audit Search for ObjectID %s", text);
+				list.push({"vpv.vpvid": text});
+				list.push({"user.userId": text});
+			} else {
+				list.push({"user.email": expr});
+				list.push({"vp.name": expr});
+				list.push({"vpv.name": expr});
+				list.push({"action": expr});
+				list.push({"actionDescription": expr});
+				list.push({"userAgent": expr});
+			}
+			list.push({"vp.vpjson": expr});
+			list.push({"url": expr});
+			query["$or"] = list;
+		}
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)

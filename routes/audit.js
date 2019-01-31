@@ -36,6 +36,7 @@ router.route('/')
 	* @apiPermission user must be authenticated and needs to have System Admin Permission
 	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
 	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View & Audit Permission
 	* @apiError {number} 500 ServerIssue No DB Connection
@@ -80,18 +81,37 @@ router.route('/')
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
 	// no date is set to set to to current Date and recalculate from afterwards
-	if (!from && !to) to = new Date();
-	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+	if (!to) to = new Date();
 	if (!from) {
 		from = new Date(to);
 		from.setDate(from.getDate()-1)
 	}
-	if (!to) {
-		to = new Date(from);
-		to.setDate(to.getDate()+1)
-	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};
+	if (req.query.text) {
+		var list = [];
+		var text = req.query.text;
+		var expr = new RegExp(text, "i");
+		if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+			logger4js.debug("Get Audit Search for ObjectID %s", text);
+			list.push({"vc.vcid": text});
+			list.push({"vp.vpid": text});
+			list.push({"vpv.vpvid": text});
+			list.push({"user.userId": text});
+		} else {
+			list.push({"user.email": expr});
+			list.push({"vc.name": expr});
+			list.push({"vp.name": expr});
+			list.push({"vpv.name": expr});
+			list.push({"action": expr});
+			list.push({"actionDescription": expr});
+			list.push({"userAgent": expr});
+		}
+		list.push({"vc.vcjson": expr});
+		list.push({"vp.vpjson": expr});
+		list.push({"url": expr});
+		query["$or"] = list;
+	}
 
 	VisboAudit.find(query)
 	.limit(maxcount)
