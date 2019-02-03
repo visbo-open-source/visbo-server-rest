@@ -354,6 +354,45 @@ if (currentVersion < dateBlock) {
   print("VP List Converted Length All VP ", vpListAll.length, ' VPs with Users & Groups ', vpList.length, ' Total VPs with Users ', vpListUsers.length)
 
   db.visboprojects.updateMany({users: {$exists: true}, _id: {$in: vpidList}}, {$unset: {users: ''}})
+  print("VP Users updated ")
+
+  // Set TTL for old Audit trail entries
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/v[cp]$/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Base URL " + auditArray.length)
+
+  // find all items with base url /vc or /vp with query parameter
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/v[cp]\?/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Query URL " + auditArray.length)
+
+  // find all items with base url /status
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/status/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Status URL " + auditArray.length)
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vc/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vp/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vpv/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/status/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/json/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/apidoc/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.deleteMany({ttl: {$lt: new Date()}})
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})

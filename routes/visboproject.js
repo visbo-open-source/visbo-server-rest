@@ -945,26 +945,35 @@ router.route('/:vpid/audit')
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
+		var queryListCondition = [];
 		if (req.query.text) {
-			var list = [];
+			var textCondition = [];
 			var text = req.query.text;
 			var expr = new RegExp(text, "i");
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
-				list.push({"vpv.vpvid": text});
-				list.push({"user.userId": text});
+				textCondition.push({"vpv.vpvid": text});
+				textCondition.push({"user.userId": text});
 			} else {
-				list.push({"user.email": expr});
-				list.push({"vp.name": expr});
-				list.push({"vpv.name": expr});
-				list.push({"action": expr});
-				list.push({"actionDescription": expr});
-				list.push({"userAgent": expr});
+				textCondition.push({"user.email": expr});
+				textCondition.push({"vp.name": expr});
+				textCondition.push({"vpv.name": expr});
+				textCondition.push({"action": expr});
+				textCondition.push({"actionDescription": expr});
+				textCondition.push({"userAgent": expr});
 			}
-			list.push({"vp.vpjson": expr});
-			list.push({"url": expr});
-			query["$or"] = list;
+			textCondition.push({"vp.vpjson": expr});
+			textCondition.push({"url": expr});
+			queryListCondition.push({"$or": textCondition})
 		}
+		var ttlCondition = [];
+		ttlCondition.push({"ttl": {$exists: false}});
+		ttlCondition.push({"ttl": {$gt: new Date()}});
+		queryListCondition.push({"$or": ttlCondition})
+
+		query["$and"] = queryListCondition;
+		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
+
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)

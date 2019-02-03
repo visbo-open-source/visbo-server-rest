@@ -818,29 +818,37 @@ router.route('/:vcid/audit')
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
+		var queryListCondition = [];
 		if (req.query.text) {
-			var list = [];
+			var textCondition = [];
 			var text = req.query.text;
 			var expr = new RegExp(text, "i");
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
-				list.push({"vp.vpid": text});
-				list.push({"vpv.vpvid": text});
-				list.push({"user.userId": text});
+				textCondition.push({"vp.vpid": text});
+				textCondition.push({"vpv.vpvid": text});
+				textCondition.push({"user.userId": text});
 			} else {
-				list.push({"user.email": expr});
-				list.push({"vc.name": expr});
-				list.push({"vp.name": expr});
-				list.push({"vpv.name": expr});
-				list.push({"action": expr});
-				list.push({"actionDescription": expr});
-				list.push({"userAgent": expr});
+				textCondition.push({"user.email": expr});
+				textCondition.push({"vc.name": expr});
+				textCondition.push({"vp.name": expr});
+				textCondition.push({"vpv.name": expr});
+				textCondition.push({"action": expr});
+				textCondition.push({"actionDescription": expr});
+				textCondition.push({"userAgent": expr});
 			}
-			list.push({"vc.vcjson": expr});
-			list.push({"vp.vpjson": expr});
-			list.push({"url": expr});
-			query["$or"] = list;
+			textCondition.push({"vc.vcjson": expr});
+			textCondition.push({"vp.vpjson": expr});
+			textCondition.push({"url": expr});
+			queryListCondition.push({"$or": textCondition})
 		}
+		var ttlCondition = [];
+		ttlCondition.push({"ttl": {$exists: false}});
+		ttlCondition.push({"ttl": {$gt: new Date()}});
+		queryListCondition.push({"$or": ttlCondition})
+
+		query["$and"] = queryListCondition;
+		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)
@@ -2690,6 +2698,7 @@ router.route('/:vcid/cost')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Update a Visbo Center Setting
 		* @apiError {number} 404 Visbo Center Setting does not exists
+		* @apiError {number} 409 Visbo Center Setting was updated in between. The delivered updatetAt date is different from current setting
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2761,7 +2770,15 @@ router.route('/:vcid/cost')
 					error: err
 				});
 			}
-			logger4js.info("Found the Setting for VC");
+			logger4js.info("Found the Setting for VC Updated");
+			if (req.body.updatedAt && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
+				logger4js.info("VC Setting: Conflict with updatedAt %s %s", oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Visbo Center Setting already updated inbetween',
+					vcsetting: [ oneVCSetting ]
+				});
+			}
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
 			oneVCSetting.save(function(err, oneVCSetting) {
