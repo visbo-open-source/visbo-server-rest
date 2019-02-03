@@ -131,6 +131,7 @@ function getVpidGroups(req, res, next, vpid) {
 		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
 		req.permGroups = listVG;
+		req.auditDescription = 'Visbo Project (Read)';
 		if (listVG.length == 0) {
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({

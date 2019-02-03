@@ -40,14 +40,13 @@ function accountLocked(req, user) {
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
 	var eMailSubject = 'Your account has been locked';
 	var info = {};
-	logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+	logger4js.trace("E-Mail template %s, url %s", template, uiUrl);
 	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
 	info.ip = req.headers["x-real-ip"] || req.ip;
 	var agent = useragent.parse(req.get('User-Agent'));
 	visboParseUA(agent, req.headers['user-agent']);
 	info.userAgent = agent.toString();
 	info.lockedUntil = moment(user.status.lockedUntil).format('HH:mm');
-	logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
 			logger4js.fatal("E-Mail Rendering failed %O", err);
@@ -61,7 +60,6 @@ function accountLocked(req, user) {
 		mail.VisboSendMail(message);
 	});
 };
-
 
 // Send Mail about password expired
 function passwordExpired(req, user) {
@@ -131,9 +129,39 @@ function accountNotRegistered(req, user) {
 	});
 };
 
+// Send Mail about account locked
+function accountNewLogin(req, user) {
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	// now send an e-Mail to the user for pw change
+	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs')
+	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	uiUrl = uiUrl.concat('/login', '?email=', user.email);
+	var eMailSubject = 'New Login from a new device or programm';
+	var info = {};
+	logger4js.trace("E-Mail template %s, url %s", template, uiUrl);
+	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
+	info.ip = req.headers["x-real-ip"] || req.ip;
+	var agent = useragent.parse(req.get('User-Agent'));
+	visboParseUA(agent, req.headers['user-agent']);
+	info.userAgent = agent.toString();
+	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
+		if (err) {
+			logger4js.fatal("E-Mail Rendering failed %O", err);
+		}
+		var message = {
+				to: user.email,
+				subject: eMailSubject,
+				html: '<p> '.concat(emailHtml, " </p>")
+		};
+		logger4js.info("Now send mail from %s to %s", message.from || 'System', message.to);
+		mail.VisboSendMail(message);
+	});
+};
+
 module.exports = {
 	accountLocked: accountLocked,
 	passwordExpired: passwordExpired,
 	passwordExpiresSoon: passwordExpiresSoon,
-	accountNotRegistered: accountNotRegistered
+	accountNotRegistered: accountNotRegistered,
+	accountNewLogin: accountNewLogin
 };

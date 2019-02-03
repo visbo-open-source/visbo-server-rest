@@ -1,4 +1,4 @@
-var express = require('express');
+var express = require('express'); 
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
@@ -500,6 +500,7 @@ router.route('/:vcid')
 		// undelete the VC in case of change
 		// TODO check correct undelete Permission
 		if (req.oneVC.deletedAt) {
+			req.auditDescription = 'Visbo Center (Undelete)';
 			req.oneVC.deletedAt = undefined;
 			vcUndelete = true;
 			logger4js.debug("Undelete VC %s flag %s", req.oneVC._id, req.oneVC.deletedAt);
@@ -647,8 +648,8 @@ router.route('/:vcid')
 			});
 		} else {
 			// VC is already marked as deleted, now destory it including VP and VPV
-			// MS TODO: Destroy VC
 			// Collect all ProjectIDs of this VC
+			req.auditDescription = 'Visbo Center (Destroy)';
 			var query = {};
 			query.vcid = req.oneVC._id
 			var queryVP = VisboProject.find(query);
@@ -766,6 +767,9 @@ router.route('/:vcid/audit')
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View Visbo Center, View Visbo Center Audit.
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Center Audit or Visbo Center does not exists
@@ -805,19 +809,46 @@ router.route('/:vcid/audit')
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
 		// no date is set to set to to current Date and recalculate from afterwards
-		if (!from && !to) to = new Date();
+		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
 			from.setDate(from.getDate()-1)
 		}
-		if (!to) {
-			to = new Date(from);
-			to.setDate(to.getDate()+1)
-		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
+		var queryListCondition = [];
+		if (req.query.text) {
+			var textCondition = [];
+			var text = req.query.text;
+			var expr = new RegExp(text, "i");
+			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+				logger4js.debug("Get Audit Search for ObjectID %s", text);
+				textCondition.push({"vp.vpid": text});
+				textCondition.push({"vpv.vpvid": text});
+				textCondition.push({"user.userId": text});
+			} else {
+				textCondition.push({"user.email": expr});
+				textCondition.push({"vc.name": expr});
+				textCondition.push({"vp.name": expr});
+				textCondition.push({"vpv.name": expr});
+				textCondition.push({"action": expr});
+				textCondition.push({"actionDescription": expr});
+				textCondition.push({"userAgent": expr});
+			}
+			textCondition.push({"vc.vcjson": expr});
+			textCondition.push({"vp.vpjson": expr});
+			textCondition.push({"url": expr});
+			queryListCondition.push({"$or": textCondition})
+		}
+		var ttlCondition = [];
+		ttlCondition.push({"ttl": {$exists: false}});
+		ttlCondition.push({"ttl": {$gt: new Date()}});
+		queryListCondition.push({"$or": ttlCondition})
+
+		query["$and"] = queryListCondition;
+		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)
@@ -2543,7 +2574,7 @@ router.route('/:vcid/cost')
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
-			vcSetting.save(function(err, oneVcSetting) {
+			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					logger4js.fatal("VC Post Role DB Connection ", err);
 					if (err.code == 11000) {
@@ -2558,10 +2589,11 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Inserted Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		})
@@ -2629,6 +2661,7 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				if (oneVCSetting.type == 'Internal') {
 					return res.status(400).send({
 						state: 'failure',
@@ -2665,6 +2698,7 @@ router.route('/:vcid/cost')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Update a Visbo Center Setting
 		* @apiError {number} 404 Visbo Center Setting does not exists
+		* @apiError {number} 409 Visbo Center Setting was updated in between. The delivered updatetAt date is different from current setting
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2736,10 +2770,18 @@ router.route('/:vcid/cost')
 					error: err
 				});
 			}
-			logger4js.info("Found the Setting for VC");
+			logger4js.info("Found the Setting for VC Updated");
+			if (req.body.updatedAt && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
+				logger4js.info("VC Setting: Conflict with updatedAt %s %s", oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Visbo Center Setting already updated inbetween',
+					vcsetting: [ oneVCSetting ]
+				});
+			}
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
-			oneVCSetting.save(function(err, oneVcSetting) {
+			oneVCSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
@@ -2747,16 +2789,17 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
-				if (oneVcSetting.type == 'Internal') {
-					if (oneVcSetting.name == 'DEBUG') {
+				if (oneVCSetting.type == 'Internal') {
+					if (oneVCSetting.name == 'DEBUG') {
 						logger4js.info("Update System Log Setting");
-						logging.setLogLevelConfig(oneVcSetting.value)
+						logging.setLogLevelConfig(oneVCSetting.value)
 					}
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Updated Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		});

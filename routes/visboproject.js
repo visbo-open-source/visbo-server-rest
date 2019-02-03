@@ -675,6 +675,7 @@ router.route('/:vpid')
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVP.deletedAt) {
+			req.auditDescription = 'Visbo Project (Undelete)';
 			req.oneVP.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
@@ -893,6 +894,9 @@ router.route('/:vpid/audit')
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View Visbo Project, View Project Audit
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Project Audit
@@ -932,19 +936,44 @@ router.route('/:vpid/audit')
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
 		// no date is set to set to to current Date and recalculate from afterwards
-		if (!from && !to) to = new Date();
+		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
 			from.setDate(from.getDate()-1)
 		}
-		if (!to) {
-			to = new Date(from);
-			to.setDate(to.getDate()+1)
-		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
+		var queryListCondition = [];
+		if (req.query.text) {
+			var textCondition = [];
+			var text = req.query.text;
+			var expr = new RegExp(text, "i");
+			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+				logger4js.debug("Get Audit Search for ObjectID %s", text);
+				textCondition.push({"vpv.vpvid": text});
+				textCondition.push({"user.userId": text});
+			} else {
+				textCondition.push({"user.email": expr});
+				textCondition.push({"vp.name": expr});
+				textCondition.push({"vpv.name": expr});
+				textCondition.push({"action": expr});
+				textCondition.push({"actionDescription": expr});
+				textCondition.push({"userAgent": expr});
+			}
+			textCondition.push({"vp.vpjson": expr});
+			textCondition.push({"url": expr});
+			queryListCondition.push({"$or": textCondition})
+		}
+		var ttlCondition = [];
+		ttlCondition.push({"ttl": {$exists: false}});
+		ttlCondition.push({"ttl": {$gt: new Date()}});
+		queryListCondition.push({"$or": ttlCondition})
+
+		query["$and"] = queryListCondition;
+		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
+
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)
@@ -2215,7 +2244,8 @@ router.route('/:vpid/portfolio')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
-					vpv: listVPFfiltered
+					count: listVPFfiltered.length,
+					vpf: listVPFfiltered
 				});
 			} else {
 				return res.status(200).send({
@@ -2382,6 +2412,7 @@ router.route('/:vpid/portfolio')
 						error: err
 					});
 				}
+				req.oneVPF = onePortfolio;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Visbo Portfolio Version',

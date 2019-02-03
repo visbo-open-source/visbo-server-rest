@@ -90,6 +90,7 @@ function getVcidGroups(req, res, next, vcid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	req.auditDescription = 'Visbo Center (Read)';
 
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")

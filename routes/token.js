@@ -23,6 +23,38 @@ var ejs = require('ejs');
 
 var visbouser = mongoose.model('User');
 
+var visboParseUA = function(agent, stringUA) {
+	var shortUA = stringUA;
+	logger4js.trace("User Agent %s", JSON.stringify(agent), shortUA);
+	var index = stringUA.indexOf("(")
+	if (index >= 0) shortUA = shortUA.substring(0, index-1)
+	logger4js.trace("User Agent Shortened1 %s to %s", stringUA, shortUA);
+
+	if (agent.family == "Other") {
+		index = shortUA.indexOf("/")
+		if (index >= 0) {
+			agent.family = shortUA.substring(0, index)
+			shortUA = shortUA.substring(index+1, shortUA.length )
+			logger4js.trace("User Agent Shortened2 %s to %s", agent.family, shortUA);
+			index = shortUA.indexOf(".")
+			if (index >= 0) {
+				agent.major = shortUA.substring(0, index)
+				agent.minor = shortUA.substring(index+1, shortUA.length )
+				logger4js.trace("User Agent Major %s Minor %s", agent.major, agent.minor);
+			}
+		}
+	}
+	// agent.patch = 0;
+	// agent.family.patch = 0;
+	// agent.os.patch = 0;
+	logger4js.debug("User Agent %s, %s", JSON.stringify(agent), agent.toString());
+}
+
+var findUserAgent = function(currentUserAgent) {
+	logger4js.info("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
+	return currentUserAgent.userAgent == this.userAgent;
+}
+
 var isValidHash = function(hash, secret){
 	return bCrypt.compareSync(secret, hash);
 };
@@ -105,6 +137,10 @@ router.route('/user/login')
 			});
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
+		var agent = useragent.parse(req.get('User-Agent'));
+		visboParseUA(agent, req.headers['user-agent']);
+		req.visboUserAgent = agent.toString();
+		logger4js.trace("Shortened User Agent ", req.visboUserAgent);
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
@@ -200,8 +236,20 @@ router.route('/user/login')
 				var passwordCopy = user.password;
 				user.password = undefined;
 				if (!user.status) user.status = {};
-				logger4js.trace("User accepted User: %O", user.toJSON());
-				jwt.sign(user.toJSON(), jwtSecret.user.secret,
+				// add info about the session ip and userAgent to verify during further requests to avoid session steeling
+				user.session = {};
+				user.session.ip = req.headers["x-real-ip"] || req.ip;
+				user.session.ticket = req.get('User-Agent');
+
+				var userReduced = {};
+				userReduced._id = user._id;
+				userReduced.email = user.email;
+				userReduced.profile = user.profile;
+				userReduced.status = user.status;
+				userReduced.session = user.session;
+				logger4js.trace("User Reduced User: %O", JSON.stringify(userReduced));
+				// jwt.sign(user.toJSON(), jwtSecret.user.secret,
+				jwt.sign(userReduced, jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
 						if (err) {
@@ -212,7 +260,7 @@ router.route('/user/login')
 								error: err
 							});
 						}
-						logger4js.trace("JWT Signing Success %s ", err);
+						logger4js.trace("JWT Signing Success ");
 						// set the last login and reset the password retries
 
 						if (!user.status) user.status = {};
@@ -221,6 +269,36 @@ router.route('/user/login')
 						user.status.loginRetries = 0;
 						user.status.lockedUntil = undefined;
 						user.password = passwordCopy;
+						user.session = undefined;
+						// Check user Agent and update or add it and send e-Mail about new login
+						var curAgent = {};
+						curAgent.userAgent = req.headers['user-agent'];
+						curAgent.createdAt = new Date();
+						curAgent.lastUsedAt = curAgent.createdAt;
+						logger4js.warn("DEBUG: User Agent prepared %s", JSON.stringify(user.userAgents));
+
+						if (!user.userAgents || user.userAgents.length == 0) {
+							user.userAgents = [];
+							user.userAgents.push(curAgent)
+							logger4js.debug("Init User Agent first Login %s", JSON.stringify(user.userAgents));
+						} else {
+							// Check List of User Agents and add or updated
+							var index = user.userAgents.findIndex(findUserAgent, curAgent)
+							if (index >= 0) {
+								user.userAgents[index].lastUsedAt = curAgent.lastUsedAt
+							} else {
+								user.userAgents.push(curAgent)
+								// Send Mail about new Login with unknown User Agent
+								sendMail.accountNewLogin(req, user);
+								logger4js.warn("New Login with new User Agent %s", req.visboUserAgent);
+							}
+							// Cleanup old User Agents older than 1 year
+							var expiredAt = new Date()
+							expiredAt.setFullYear(expiredAt.getFullYear()-1)
+							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
+							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
+						}
+						logger4js.trace("User before Save User Agents %s", JSON.stringify(user.userAgents));
 						user.save(function(err, user) {
 							if (err) {
 								logger4js.error("Login User Update DB Connection %O", err);
