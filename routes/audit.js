@@ -37,6 +37,8 @@ router.route('/')
 	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
 	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View & Audit Permission
 	* @apiError {number} 500 ServerIssue No DB Connection
@@ -75,11 +77,12 @@ router.route('/')
 	}
 	// now fetch all entries system wide
 	var query = {};
-	var from, to, maxcount = 1000;
+	var from, to, maxcount = 1000, action;
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
+	if (req.query.action) action = req.query.action.trim();
 	// no date is set to set to to current Date and recalculate from afterwards
 	if (!to) to = new Date();
 	if (!from) {
@@ -88,6 +91,9 @@ router.route('/')
 	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};
+	if (action) {
+		query.action = action;
+	}
 	var queryListCondition = [];
 	if (req.query.text) {
 		var textCondition = [];
