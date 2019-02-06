@@ -81,13 +81,13 @@ router.route('/')
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
+	if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 	if (req.query.action) action = req.query.action.trim();
 	// no date is set to set to to current Date and recalculate from afterwards
 	if (!to) to = new Date();
 	if (!from) {
 		from = new Date(to);
-		from.setDate(from.getDate()-1)
+		from.setDate(from.getDate()-7)
 	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};
