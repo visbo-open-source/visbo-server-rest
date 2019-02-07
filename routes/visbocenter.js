@@ -1,4 +1,4 @@
-var express = require('express'); 
+var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
@@ -84,6 +84,7 @@ var updateVCName = function(vcid, name){
 
 // undelete the VPs after undelete VC and set the actual VC Name
 var unDeleteVP = function(vcid, name){
+
 	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}, $set: {"vc.name": name}};
@@ -94,6 +95,21 @@ var unDeleteVP = function(vcid, name){
 			logger4js.error("Problem updating VPs for VC %s set undelete", vcid, err);
 		}
 		logger4js.trace("Updated VP for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
+	})
+}
+
+// undelete the Groups after undelete VC
+var unDeleteGroup = function(vcid){
+	var updateQuery = {vcid: vcid, 'deletedByParent': 'VC'};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'deletedByParent': ''}};
+
+	logger4js.debug("Update Groups for VC %s", vcid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating Groups for VC %s set undelete", vcid, err);
+		}
+		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
 	})
 }
 
@@ -561,6 +577,7 @@ router.route('/:vcid')
 				if (vcUndelete){
 					logger4js.debug("VC PUT %s: Undelete VC and VPs", oneVC._id);
 					unDeleteVP(oneVC._id, oneVC.name);
+					unDeleteGroup(oneVC._id);
 				}
 				return res.status(200).send({
 					state: 'success',
@@ -640,9 +657,23 @@ router.route('/:vcid')
 						});
 					}
 					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Center'
+					updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};
+					updateUpdate = {$set: {'deletedByParent': 'VC'}};
+					var updateOption = {upsert: false, multi: "true"};
+					VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+						if (err){
+							logger4js.fatal("VC Delete DB Connection ", err);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Groups',
+								error: err
+							});
+						}
+						logger4js.debug("VC Delete found %d Groups and updated %d Groups", result.n, result.nModified)
+						return res.status(200).send({
+							state: 'success',
+							message: 'Deleted Visbo Center'
+						});
 					});
 				});
 			});
@@ -770,6 +801,8 @@ router.route('/:vcid/audit')
 	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Center Audit or Visbo Center does not exists
@@ -803,21 +836,25 @@ router.route('/:vcid/audit')
 				});
 		}
 
-		var from, to, maxcount = 1000;
+		var from, to, maxcount = 1000, action;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
+		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
+		if (req.query.action) action = req.query.action.trim();
 		// no date is set to set to to current Date and recalculate from afterwards
 		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
-			from.setDate(from.getDate()-1)
+			from.setDate(from.getDate()-7)
 		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
+		if (action) {
+			query.action = action;
+		}
 		var queryListCondition = [];
 		if (req.query.text) {
 			var textCondition = [];

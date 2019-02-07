@@ -24,6 +24,7 @@ function getAllVPGroups(req, res, next) {
 		logger4js.debug("Generate VP Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
 		var acceptEmpty = true;
+		var checkDeleted = req.query.deleted == true;
 		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC
 		query = {'users.userId': userId};	// search for VP groups where user is member
 		// Permission check for GET & POST
@@ -36,6 +37,7 @@ function getAllVPGroups(req, res, next) {
 				if (req.query.vcid) query.vcid = req.query.vcid;
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				query.deletedByParent = {$exists: checkDeleted};
 			}
 		}
 		if (req.method == "POST") {
@@ -44,6 +46,7 @@ function getAllVPGroups(req, res, next) {
 			combinedPermStatus = true;
 			query.groupType = 'VC';						// search for VC permission to create a VP
 			query.vcid = req.body && req.body.vcid
+			query.deletedByParent = {$exists: false};		// do not allow to create a VP in a deleted VC
 			acceptEmpty = false;
 			query['permission.vc'] = { $bitsAnySet: constPermVC.View + constPermVC.CreateVP }
 		}
@@ -99,6 +102,7 @@ function getVpidGroups(req, res, next, vpid) {
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
+	var checkDeleted = req.query.deleted == true;
 
 	// get the VP Groups of this VP if the user is member of
 	// handle sysadmin case by getting the system groups
@@ -114,6 +118,7 @@ function getVpidGroups(req, res, next, vpid) {
 		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 		// check that vpid is in the group list
 		query.vpids = vpid;
+		query.deletedByParent = {$exists: checkDeleted};
 	}
 	logger4js.trace("Search VGs %O", query);
 

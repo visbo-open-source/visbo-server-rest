@@ -88,7 +88,6 @@ var updateVPCount = function(vcid, increment){
 	})
 }
 
-
 // updates the VC Name in the VP after undelete as the name could have changed in between
 var updateVCName = function(vp){
 	logger4js.trace("Start Update VP%s with correct VC Name ", vp._id)
@@ -182,6 +181,36 @@ var updatePermAddVP = function(vcid, vpid){
 			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
 		}
 		logger4js.trace("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
+	})
+}
+
+// undelete the Groups after undelete Vp
+var unDeleteGroup = function(vpid){
+	var updateQuery = {groupType: 'VP', vpids: vpid, 'deletedByParent': 'VP'};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'deletedByParent': ''}};
+
+	logger4js.debug("Update Groups for VP %s", vpid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating Groups for VC %s set undelete", vpid, err);
+		}
+		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vpid, result.n, result.nModified)
+	})
+}
+
+// mark the Groups as deleted after delete Vp
+var markDeleteGroup = function(vpid){
+	var updateQuery = {groupType: 'VP', vpids: vpid};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$set: {'deletedByParent': 'VP'}};
+
+	logger4js.debug("Update Groups for VP %s", vpid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating Groups for VP %s set undelete", vpid, err);
+		}
+		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified)
 	})
 }
 
@@ -749,6 +778,7 @@ router.route('/:vpid')
 				if (vpUndelete) {
 					logger4js.trace("VP PUT %s: UnDelete Update vpCount in VC %s", oneVP._id, oneVP.vcid);
 					updateVPCount(req.oneVP.vcid, 1); // async
+					unDeleteGroup(req.oneVP._id)
 					updateVCName(req.oneVP); //async
 				}
 				return res.status(200).send({
@@ -819,6 +849,7 @@ router.route('/:vpid')
 				}
 				req.oneVP = oneVP;
 				updateVPCount(req.oneVP.vcid, -1); // async
+				markDeleteGroup(req.oneVP._id); // async
 				return res.status(200).send({
 					state: "success",
 					message: "Deleted Visbo Project"
@@ -897,6 +928,8 @@ router.route('/:vpid/audit')
 	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Project Audit
@@ -930,21 +963,25 @@ router.route('/:vpid/audit')
 				});
 		}
 
-		var from, to, maxcount = 1000;
+		var from, to, maxcount = 1000, action;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
+		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
+		if (req.query.action) action = req.query.action.trim();
 		// no date is set to set to to current Date and recalculate from afterwards
 		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
-			from.setDate(from.getDate()-1)
+			from.setDate(from.getDate()-7)
 		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
+		if (action) {
+			query.action = action;
+		}
 		var queryListCondition = [];
 		if (req.query.text) {
 			var textCondition = [];

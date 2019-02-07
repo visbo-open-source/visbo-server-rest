@@ -275,7 +275,7 @@ router.route('/user/login')
 						curAgent.userAgent = req.headers['user-agent'];
 						curAgent.createdAt = new Date();
 						curAgent.lastUsedAt = curAgent.createdAt;
-						logger4js.warn("DEBUG: User Agent prepared %s", JSON.stringify(user.userAgents));
+						logger4js.trace("User Agent prepared %s", JSON.stringify(user.userAgents));
 
 						if (!user.userAgents || user.userAgents.length == 0) {
 							user.userAgents = [];
