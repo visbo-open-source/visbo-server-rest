@@ -390,7 +390,16 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				newVPV.timestamp = req.body.timestamp;
+				if (req.body.timestamp) {
+					var timestamp = new Date(req.body.timestamp)
+					if (isNaN(timestamp)) {
+						newVPV.timestamp = new Date();
+					} else {
+						newVPV.timestamp = timestamp
+					}
+				} else {
+					newVPV.timestamp = new Date();
+			}
 
 				// copy all attributes
 				newVPV.variantDescription = req.body.variantDescription;
