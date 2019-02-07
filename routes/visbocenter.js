@@ -84,6 +84,7 @@ var updateVCName = function(vcid, name){
 
 // undelete the VPs after undelete VC and set the actual VC Name
 var unDeleteVP = function(vcid, name){
+
 	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}, $set: {"vc.name": name}};
@@ -94,6 +95,21 @@ var unDeleteVP = function(vcid, name){
 			logger4js.error("Problem updating VPs for VC %s set undelete", vcid, err);
 		}
 		logger4js.trace("Updated VP for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
+	})
+}
+
+// undelete the Groups after undelete VC
+var unDeleteGroup = function(vcid){
+	var updateQuery = {vcid: vcid, 'deletedByParent': 'VC'};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'deletedByParent': ''}};
+
+	logger4js.debug("Update Groups for VC %s", vcid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating Groups for VC %s set undelete", vcid, err);
+		}
+		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
 	})
 }
 
@@ -561,6 +577,7 @@ router.route('/:vcid')
 				if (vcUndelete){
 					logger4js.debug("VC PUT %s: Undelete VC and VPs", oneVC._id);
 					unDeleteVP(oneVC._id, oneVC.name);
+					unDeleteGroup(oneVC._id);
 				}
 				return res.status(200).send({
 					state: 'success',
@@ -640,9 +657,23 @@ router.route('/:vcid')
 						});
 					}
 					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Center'
+					updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};
+					updateUpdate = {$set: {'deletedByParent': 'VC'}};
+					var updateOption = {upsert: false, multi: "true"};
+					VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+						if (err){
+							logger4js.fatal("VC Delete DB Connection ", err);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Groups',
+								error: err
+							});
+						}
+						logger4js.debug("VC Delete found %d Groups and updated %d Groups", result.n, result.nModified)
+						return res.status(200).send({
+							state: 'success',
+							message: 'Deleted Visbo Center'
+						});
 					});
 				});
 			});

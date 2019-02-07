@@ -22,6 +22,7 @@ function getAllGroups(req, res, next) {
 		logger4js.trace("Generate VC Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
 		var acceptEmpty = true;
+		var checkDeleted = req.query.deleted == true;
 		query = {'users.userId': userId};	// search for VC groups where user is member
 		// Permission check for GET & POST
 		if (req.method == "GET") {
@@ -36,6 +37,7 @@ function getAllGroups(req, res, next) {
 			} else {
 				query.groupType = 'VC';				// search for VC Groups only
 				query['permission.vc'] = { $bitsAllSet: constPermVC.View }
+				query.deletedByParent = {$exists: checkDeleted};
 			}
 		}
 		if (req.method == "POST") {
@@ -95,6 +97,7 @@ function getVcidGroups(req, res, next, vcid) {
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
+	var checkDeleted = req.query.deleted == true;
 
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
@@ -109,6 +112,7 @@ function getVcidGroups(req, res, next, vcid) {
 		query.groupType = 'VC';				// search for VC Groups only
 		query['permission.vc'] = { $bitsAllSet: constPermVC.View }
 		query.vcid = vcid;
+		query.deletedByParent = {$exists: checkDeleted};
 	}
 	// if (req.query.systemvc) {
 	// 	query.groupType = 'System';						// search for System Groups only

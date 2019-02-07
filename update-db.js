@@ -392,7 +392,31 @@ if (currentVersion < dateBlock) {
     {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
   )
 
-  db.visboaudits.deleteMany({ttl: {$lt: new Date()}})
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-02-07T00:00:00"
+if (currentVersion < dateBlock) {
+  // Set deletedByParent Flag in Visbo groups for Deleted VCs and VPs
+  var vpArray = db.visboprojects.find( {deletedAt: {$exists: true}}, {_id:1} ).toArray()
+  print("Check Deleted VPs: Count Base " + vpArray.length)
+  var vpidList = [];
+  for (var i=0; i<vpArray.length; i++) {
+    vpidList.push(vpArray[i]._id)
+  }
+  print("VP List Converted Length Deleted VP ", vpidList.length)
+  db.visbogroups.updateMany({groupType: 'VP', vpids: {$in: vpidList}}, {$set: {deletedByParent: 'VP'}})
+
+  var vcArray = db.visbocenters.find( {deletedAt: {$exists: true}}, {_id:1} ).toArray()
+  print("Check Deleted VCs: Count Base " + vcArray.length)
+  var vcidList = [];
+  for (var i=0; i<vcArray.length; i++) {
+    vcidList.push(vcArray[i]._id)
+  }
+  print("VC List Converted Length Deleted VC ", vcidList.length)
+  db.visbogroups.updateMany({vcid: {$in: vcidList}, deletedByParent: {$exists: false}}, {$set: {deletedByParent: 'VC'}})
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
@@ -406,3 +430,6 @@ if (currentVersion < dateBlock) {
 //   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
 //   currentVersion = dateBlock
 // }
+
+// Delete outdated AuditLog Entries, should be done later once per day/week
+db.visboaudits.deleteMany({ttl: {$lt: new Date()}})

@@ -76,7 +76,6 @@ var clsPhase = new Schema({
 
 
 var visboProjectVersionSchema = new mongoose.Schema({
-//	_id: { type: String },												//MS is required as the ID was originally created manually and has self generated ids
 	name: { type: String, required: true, maxlength: 256},
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
 	variantName: { type: String, required: false, maxlength: 256},
