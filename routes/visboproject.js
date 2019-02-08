@@ -172,6 +172,7 @@ var updateVPName = function(vpid, name, type){
 
 // updates the Global VC Groups to add the VPID to the list
 var updatePermAddVP = function(vcid, vpid){
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var updateQuery = {vcid: vcid, global: true};
 	var updateUpdate = {$push: {vpids: vpid}};
 	var updateOption = {upsert: false};
@@ -180,7 +181,23 @@ var updatePermAddVP = function(vcid, vpid){
 		if (err){
 			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
 		}
-		logger4js.trace("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
+		logger4js.debug("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
+	})
+}
+
+// updates the Global VC Groups to remove the VPID from the list
+var updatePermRemoveVP = function(vcid, vpid){
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var updateQuery = {vcid: vcid, global: true};
+	var updateUpdate = {$pull: {vpids: vpid}};
+	var updateOption = {upsert: false};
+
+	logger4js.debug("Updated VC %s Groups removed VP %s changed", vcid, vpid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
+		}
+		logger4js.debug("Updated VC %s Groups removed VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
 	})
 }
 
@@ -778,7 +795,8 @@ router.route('/:vpid')
 				if (vpUndelete) {
 					logger4js.trace("VP PUT %s: UnDelete Update vpCount in VC %s", oneVP._id, oneVP.vcid);
 					updateVPCount(req.oneVP.vcid, 1); // async
-					unDeleteGroup(req.oneVP._id)
+					unDeleteGroup(req.oneVP._id); // async
+					updatePermAddVP(req.oneVP.vcid, req.oneVP._id); // async
 					updateVCName(req.oneVP); //async
 				}
 				return res.status(200).send({
@@ -850,6 +868,7 @@ router.route('/:vpid')
 				req.oneVP = oneVP;
 				updateVPCount(req.oneVP.vcid, -1); // async
 				markDeleteGroup(req.oneVP._id); // async
+				updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
 				return res.status(200).send({
 					state: "success",
 					message: "Deleted Visbo Project"
