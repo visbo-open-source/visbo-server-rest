@@ -423,12 +423,13 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
-dateBlock = "2019-02-08T00:00:00"
+dateBlock = "2019-02-08T01:00:00"
 if (currentVersion < dateBlock) {
   // Remove deleted VPs from global VC Groups
 
   var vpArray = db.visboprojects.find({deletedAt: {$exists: true}}, {_id:1, name:1, vcid:1}).toArray()
   print("Handle Deleted VPs in global VC Groups: " + vpArray.length)
+  var vpidList = [];
   for (var i=0; i<vpArray.length; i++) {
     vpidList.push(vpArray[i]._id)
   }
