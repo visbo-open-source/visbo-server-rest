@@ -5,10 +5,10 @@
     <% include ../emailTemplates/partials/header %>
 </header>
 <h1>
-  There was a Login from a new device or program
+  A new login was detected
 </h1>
 <p>
- A new Device or a new program was used to access the Visbo System from your Account <%= userTo.email %></br>
+ A new Device or a new program was used to access the Visbo System with your User Name <%= userTo.email %></br>
  Please verify if you have done this on your own.
 </p>
 <p><b>
@@ -23,7 +23,7 @@
   please login and change your password by following the Link: <a href="<%= url %>">Login Visbo</a>
 </p>
 <p>
-  Your e-Mail address <%= userTo.email %> related to the password change.
+  Your e-Mail address <%= userTo.email %> is related to the password change.
 </p>
 <footer>
     <% include ../emailTemplates/partials/footer %>
