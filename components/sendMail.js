@@ -141,9 +141,10 @@ function accountNewLogin(req, user) {
 	logger4js.trace("E-Mail template %s, url %s", template, uiUrl);
 	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
 	info.ip = req.headers["x-real-ip"] || req.ip;
-	var agent = useragent.parse(req.get('User-Agent'));
-	visboParseUA(agent, req.headers['user-agent']);
-	info.userAgent = agent.toString();
+	// var agent = useragent.parse(req.get('User-Agent'));
+	// visboParseUA(agent, req.headers['user-agent']);
+	// info.userAgent = agent.toString();
+	info.userAgent = req.visboUserAgent;
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
 			logger4js.fatal("E-Mail Rendering failed %O", err);
