@@ -28,8 +28,8 @@ function getAllVPVGroups(req, res, next) {
 		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC
 		query = {'users.userId': userId};	// search for VP groups where user is member
 		// independent of the delete Flag the VP must be undeleted
-		// var checkDeleted = req.query.deleted == true;
-		// query.deletedByParent = {$exists: checkDeleted};
+		var checkDeleted = req.query.deleted == true;
+		query.deletedByParent = {$exists: checkDeleted};
 		// Permission check for GET & POST
 		if (req.method == "GET") {
 			if (req.query.sysadmin) {
