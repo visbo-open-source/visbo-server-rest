@@ -140,7 +140,7 @@ router.route('/user/login')
 		var agent = useragent.parse(req.get('User-Agent'));
 		visboParseUA(agent, req.headers['user-agent']);
 		req.visboUserAgent = agent.toString();
-		logger4js.trace("Shortened User Agent ", req.visboUserAgent);
+		logger4js.debug("Shortened User Agent ", req.visboUserAgent);
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
