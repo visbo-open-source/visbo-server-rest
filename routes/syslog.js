@@ -120,6 +120,9 @@ router.route('/file/:filename')
 			});
 		}
 		var dir = path.join(__dirname, '../logging');
+		if (process.env.LOGPATH != undefined) {
+		  dir = process.env.LOGPATH;
+		}
 		var fileName = path.join(dir, req.params.filename);
 		stats = fs.statSync(fileName)
 		if (!stats) {
