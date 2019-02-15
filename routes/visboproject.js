@@ -2080,7 +2080,7 @@ router.route('/:vpid/variant')
 					error: err
 				});
 			}
-			newVariant = req.oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
+			newVariant = oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Visbo Project Variant',
