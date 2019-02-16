@@ -119,6 +119,7 @@ router.route('/')
 		var useremail = req.decoded.email;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
+		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
 		var queryvpv = {};
@@ -126,7 +127,7 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
-		queryvpv.deletedAt = {$exists: false};
+		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
 		if (req.query.vpid) {
