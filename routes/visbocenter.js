@@ -1898,7 +1898,9 @@ router.route('/:vcid/group/:groupid')
 				vcRole.tagessatzIntern = req.body.tagessatzIntern;
 				vcRole.kapazitaet = req.body.kapazitaet;
 				vcRole.startOfCal = req.body.startOfCal;
-				vcRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
+				var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+				if (isNaN(dateValue)) dateValue = new Date()
+				vcRole.timestamp = dateValue;
 				vcRole.save(function(err, oneVcRole) {
 					if (err) {
 						logger4js.fatal("VC Post Role DB Connection ", err);
@@ -2083,7 +2085,9 @@ router.route('/:vcid/group/:groupid')
 				oneVCRole.tagessatzIntern = req.body.tagessatzIntern;
 				oneVCRole.kapazitaet = req.body.kapazitaet;
 				oneVCRole.startOfCal = req.body.startOfCal;
-				oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
+				var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+				if (isNaN(dateValue)) dateValue = new Date()
+				oneVCRole.timestamp = dateValue;
 				oneVCRole.save(function(err, oneVcRole) {
 					if (err) {
 						logger4js.fatal("VC Put Role DB Connection ", err);
@@ -2226,10 +2230,12 @@ router.route('/:vcid/cost')
 		vcCost.vcid = req.params.vcid;
 		vcCost.uid = req.body.uid;
 		vcCost.farbe = req.body.farbe;
-		vcCost.timestamp = new Date();
+		var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+		if (isNaN(dateValue)) dateValue = new Date()
+		vcCost.timestamp = dateValue;
 		vcCost.save(function(err, oneVcCost) {
 			if (err) {
-				logger4js.fatal("VC Post Role DB Connection ", err);
+				logger4js.fatal("VC Post Cost DB Connection ", err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Center Cost',
@@ -2401,7 +2407,9 @@ router.route('/:vcid/cost')
 			oneVCCost.name = req.body.name;
 			oneVCCost.uid = req.body.uid;
 			oneVCCost.farbe = req.body.farbe;
-			oneVCCost.timestamp = new Date();
+			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+			if (isNaN(dateValue)) dateValue = new Date()
+			oneVCCost.timestamp = dateValue;
 			oneVCCost.save(function(err, oneVcCost) {
 				if (err) {
 					return res.status(500).send({
@@ -2605,14 +2613,16 @@ router.route('/:vcid/cost')
 			var vcSetting = new VCSetting();
 			vcSetting.name = req.body.name;
 			vcSetting.vcid = req.params.vcid;
-			if (req.body.timestamp) vcSetting.timestamp = req.body.timestamp;
+			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+			if (isNaN(dateValue)) dateValue = new Date()
+			if (req.body.timestamp) vcSetting.timestamp = dateValue;
 			if (req.body.userId) vcSetting.userId = req.body.userId;
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
 			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Post Role DB Connection ", err);
+					logger4js.fatal("VC Post Setting DB Connection ", err);
 					if (err.code == 11000) {
 						return res.status(409).send({
 							state: 'failure',
@@ -2817,6 +2827,9 @@ router.route('/:vcid/cost')
 			}
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
+			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+			if (isNaN(dateValue)) dateValue = new Date()
+			if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
 			oneVCSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					return res.status(500).send({
