@@ -2080,7 +2080,7 @@ router.route('/:vpid/variant')
 					error: err
 				});
 			}
-			newVariant = req.oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
+			newVariant = oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Visbo Project Variant',
@@ -2167,7 +2167,7 @@ router.route('/:vpid/variant/:vid')
 		}
 		logger4js.trace("DELETE Visbo Project Variant List after %O", req.oneVP.variant);
 
-		// MS TODO Remove the Variant Versions of the Project or mark them as deleted
+		// MS TODO Destroy the Deleted Variant Versions of the Project
 
 		req.oneVP.save(function(err, empty) {
 			if (err) {

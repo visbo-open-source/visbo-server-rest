@@ -27,9 +27,8 @@ function getAllVPVGroups(req, res, next) {
 		var acceptEmpty = true;
 		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC
 		query = {'users.userId': userId};	// search for VP groups where user is member
-		// independent of the delete Flag the VP must be undeleted
-		var checkDeleted = req.query.deleted == true;
-		query.deletedByParent = {$exists: checkDeleted};
+		// independent of the delete Flag the VP (or the related groups) must be undeleted
+		query.deletedByParent = {$exists: false};
 		// Permission check for GET & POST
 		if (req.method == "GET") {
 			if (req.query.sysadmin) {
@@ -111,12 +110,12 @@ function getVpvidGroups(req, res, next, vpvid) {
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
-	var checkDeletedVP = req.query.deleted == true;
+	var checkDeleted = req.query.deleted == true;
 
 	// get the VPV without checks to find the corresponding VP
-	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deletedAt: {$exists: checkDeletedVP}});
+	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deletedAt: {$exists: checkDeleted}});
 
-	queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
+	// queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
 			logger4js.fatal("VPV Get with ID DB Connection %O", err);

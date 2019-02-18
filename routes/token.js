@@ -387,7 +387,7 @@ router.route('/user/pwforgotten')
 			var currentDate = new Date();
 			if (user.status.lastPWResetAt
 			&& user.status.lastPWResetAt > user.status.lastLoginAt
-			&& (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60 < 15) {
+			&& (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60 < 5) {
 				logger4js.warn("Multiple Password Resets for User %s ", user._id);
 				return res.status(200).send({
 					// state: "failure",
@@ -407,11 +407,18 @@ router.route('/user/pwforgotten')
 					});
 				}
 				user.password = undefined;
+				var userShort = new visbouser();
+				userShort.email = user.email;
+				userShort.status = user.status;
+				userShort.updatedAt = user.updatedAt;
+				userShort.createdAt = user.createdAt;
+				userShort._id = user._id;
+
 				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s", user.email, jwtSecret.register.expiresIn);
 				// logger4js.debug("Requested Password Reset Request %O", req);
 				// delete user.profile;
 				// delete user.status;
-				jwt.sign(user.toJSON(), jwtSecret.register.secret,
+				jwt.sign(userShort.toJSON(), jwtSecret.register.secret,
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
@@ -422,8 +429,8 @@ router.route('/user/pwforgotten')
 								error: err
 							});
 						};
-						// MS TODO send mail to register if user is not registered
-						// Send e-Mail with Token to the Users
+						// MS TODO: Send mail to non registered users how to register
+						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
