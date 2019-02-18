@@ -115,7 +115,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 	// get the VPV without checks to find the corresponding VP
 	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deletedAt: {$exists: checkDeleted}});
 
-	queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
+	// queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
 			logger4js.fatal("VPV Get with ID DB Connection %O", err);

@@ -514,7 +514,6 @@ router.route('/:vcid')
 		}
 		var vcUndelete = false;
 		// undelete the VC in case of change
-		// TODO check correct undelete Permission
 		if (req.oneVC.deletedAt) {
 			req.auditDescription = 'Visbo Center (Undelete)';
 			req.oneVC.deletedAt = undefined;
@@ -764,7 +763,7 @@ router.route('/:vcid')
 
 				// Delete Audit Trail of VC
 				var queryaudit = {'vc.vcid': req.oneVC._id};
-				queryaudit.action = {$ne: 'DELETE'} // MS TODO: fine tune this to remove DELETE entries from Groups but not the Delete entry form VC
+				queryaudit.action = {$ne: 'DELETE'}
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
 						logger4js.error("VC Destroy: %s Problem deleting VC Audit %O", req.oneVC._id, err);
