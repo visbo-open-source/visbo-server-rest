@@ -409,7 +409,6 @@ router.route('/user/pwforgotten')
 				user.password = undefined;
 				var userShort = new visbouser();
 				userShort.email = user.email;
-				userShort.profile = user.profile;
 				userShort.status = user.status;
 				userShort.updatedAt = user.updatedAt;
 				userShort.createdAt = user.createdAt;
