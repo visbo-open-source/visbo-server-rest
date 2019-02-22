@@ -18,7 +18,7 @@ var isAllowedPassword = function(password){
 		pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
 		pwPolicyPattern = new RegExp(pwPolicy);
 
-		pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\])"
+		pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\\\])"
 		pwPolicyExcludePattern = new RegExp(pwPolicyExclude);
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
