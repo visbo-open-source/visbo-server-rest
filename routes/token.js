@@ -216,13 +216,14 @@ router.route('/user/login')
 					logger4js.info("Login Password: current password does not match password rules");
 					if (!user.status) user.status = {};
 					if (!user.status.expiresAt) {
+						user.status.expiresAt = currenDate;
 						user.status.expiresAt.setDate(currenDate.getDate() + 1) // allow 1 day to change
 					}
-						// show expiration in Hours / Minutes
-						var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
-						var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
-						message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
-						if (currenDate.getTime() > user.status.expiresAt.getTime()) {
+					// show expiration in Hours / Minutes
+					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
+					var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+					message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
+					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info("Login Password expired at: %s", user.status.expiresAt.toISOString());
 						sendMail.passwordExpired(req, user)
 						return res.status(401).send({

@@ -7,6 +7,8 @@ var jwtSecret = require('./../secrets/jwt');
 
 var pwPolicy = undefined;
 var pwPolicyPattern = undefined;
+var pwPolicyExclude = undefined;
+var pwPolicyExcludePattern = undefined;
 
 var isAllowedPassword = function(password){
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
@@ -15,10 +17,15 @@ var isAllowedPassword = function(password){
 		logger4js.debug("Check Password Policy from .env %s", process.env.PWPOLICY);
 		pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
 		pwPolicyPattern = new RegExp(pwPolicy);
+
+		pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\])"
+		pwPolicyExcludePattern = new RegExp(pwPolicyExclude);
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
-	var result = password.match(pwPolicyPattern)
-	logger4js.info("Check Password Policy against %s result %s", pwPolicy, result != null);
+
+	logger4js.info("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
+	logger4js.info("Check Password Policy against Exclude %s result %s", pwPolicyExclude, password.match(pwPolicyExcludePattern) || 'NULL');
+	var result = password.match(pwPolicyPattern) && password.match(pwPolicyExcludePattern)
 	return result;
 };
 
