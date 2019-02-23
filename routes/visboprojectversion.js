@@ -180,10 +180,12 @@ router.route('/')
 		} else {
 			req.auditNoTTL = true;	// Real Download of Visbo Project Versions
 		}
-		if (req.query.refNext)
-			queryVPV.sort('vpid name variantName +timestamp')
-		else
-			queryVPV.sort('vpid name variantName -timestamp')
+		if (latestOnly) {
+			if (req.query.refNext)
+				queryVPV.sort('vpid variantName +timestamp')
+			else
+				queryVPV.sort('vpid variantName -timestamp')
+		}
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
