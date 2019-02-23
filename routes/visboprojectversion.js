@@ -117,6 +117,13 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		// mongoose.set('debug', true);
+		mongoose.set('debug', function (coll, method, query, doc) {
+			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+			if (coll == 'visboprojectversions') {
+				logger4js.debug(`Mongoose Coll: ${coll} Method: ${method} Query: ${JSON.stringify(query)} Doc: ${JSON.stringify(doc)} `)
+			}
+		});
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 		var checkDeleted = req.query.deleted == true;
@@ -181,7 +188,7 @@ router.route('/')
 			else
 				queryVPV.sort('vpid variantName deletedAt -timestamp')
 		}
-		queryVPV.select('_id vpid variantName timestamp');
+		queryVPV.select('_id vpid variantName deletedAt timestamp');
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
