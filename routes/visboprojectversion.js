@@ -177,9 +177,9 @@ router.route('/')
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (latestOnly) {
 			if (req.query.refNext)
-				queryVPV.sort('vpid variantName +timestamp')
+				queryVPV.sort('vpid variantName deletedAt +timestamp')
 			else
-				queryVPV.sort('vpid variantName -timestamp')
+				queryVPV.sort('vpid variantName deletedAt -timestamp')
 		}
 		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
