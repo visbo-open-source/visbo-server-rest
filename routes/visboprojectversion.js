@@ -123,6 +123,7 @@ router.route('/')
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
 		var queryvpv = {};
+		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
@@ -174,18 +175,13 @@ router.route('/')
 		logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
 		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
-		if (!longList) {
-			// deliver only the short info about project versions
-			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
-		} else {
-			req.auditNoTTL = true;	// Real Download of Visbo Project Versions
-		}
 		if (latestOnly) {
 			if (req.query.refNext)
 				queryVPV.sort('vpid variantName +timestamp')
 			else
 				queryVPV.sort('vpid variantName -timestamp')
 		}
+		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
@@ -199,28 +195,40 @@ router.route('/')
 			var timeMongoEnd = new Date();
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
-			if (listVPV.length > 1 && latestOnly){
-				var listVPVfiltered = [];
-				listVPVfiltered.push(listVPV[0]);
-				for (let i = 1; i < listVPV.length; i++){
-					//compare current item with previous and ignore if it is the same vpid & variantname
-					// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
-					if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-					|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
-						listVPVfiltered.push(listVPV[i])
-						// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
-					}
+			var vpidsList = [];
+			if (listVPV.length > 0) {
+				vpidsList.push(listVPV[0]._id);
+			}
+			// if (listVPV.length > 1 && latestOnly){
+			for (let i = 1; i < listVPV.length; i++){
+				//compare current item with previous and ignore if it is the same vpid & variantname
+				// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
+				if (!latestOnly || JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
+				|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
+					vpidsList.push(listVPV[i]._id)
+					// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 				}
-				logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
-				req.auditInfo = listVPVfiltered.length;
-				req.listVPV = listVPVfiltered;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Project Versions',
-					count: listVPVfiltered.length,
-					vpv: listVPVfiltered
-				});
+			}
+			logger4js.debug("Found %d Project Version IDs", vpidsList.length);
+
+			queryvpvids._id = {$in: vpidsList};
+			queryVPV = VisboProjectVersion.find(queryvpvids);
+			if (!longList) {
+				// deliver only the short info about project versions
+				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
 			} else {
+				req.auditNoTTL = true;	// Real Download of Visbo Project Versions
+			}
+			queryVPV.lean();
+			queryVPV.exec(function (err, listVPV) {
+				if (err) {
+					logger4js.fatal("Error connecting to DB during Get VPV with IDs: %O", err);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Internal Server Error with DB Connection',
+						error: err
+					});
+				};
 				req.auditInfo = listVPV.length;
 				req.listVPV = listVPV;
 				return res.status(200).send({
@@ -229,7 +237,7 @@ router.route('/')
 					count: listVPV.length,
 					vpv: listVPV
 				});
-			}
+			});
 		});
 	})
 
