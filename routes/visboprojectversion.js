@@ -179,7 +179,7 @@ router.route('/')
 		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (latestOnly) {
-			queryVPV.sort('vpid variantName deletedAt -timestamp')
+			queryVPV.sort('vpid variantName -timestamp')
 		}
 		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
