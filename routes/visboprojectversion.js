@@ -135,7 +135,7 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
-		queryvpv.deletedAt = {$exists: checkDeleted};
+		// queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
 		if (req.query.vpid) {
@@ -148,7 +148,7 @@ router.route('/')
 						message: 'No Permission to see deleted Versions'
 					});
 				} else {
-					queryvpv.deletedAt = {$exists: true};
+					// queryvpv.deletedAt = {$exists: true};
 				}
 			}
 		} else {
@@ -212,7 +212,7 @@ router.route('/')
 				//compare current item with previous and ignore if it is the same vpid & variantname
 				// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 				if (!latestOnly || JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-					// || JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) 
+					// || JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName)
 				) {
 					vpidsList.push(listVPV[i]._id)
 					// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
