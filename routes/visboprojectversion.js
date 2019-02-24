@@ -172,10 +172,6 @@ router.route('/')
 				logger4js.debug("Variant Query String :%s:", req.query.variantName);
 				queryvpv.variantName = req.query.variantName
 			}
-			if (req.query.longList != undefined){ // user can specify to get the long list with all details for a project version
-				longList = true;
-				req.auditNoTTL = true;
-			}
 		}
 		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 		queryvpv.vpid = {$in: vpidList};
@@ -183,11 +179,7 @@ router.route('/')
 		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (latestOnly) {
-			if (req.query.refNext)
-				// queryVPV.sort('vpid variantName deletedAt +timestamp')
-				queryVPV.sort('vpid variantName +timestamp')
-			else
-				queryVPV.sort('vpid variantName -timestamp')
+			queryVPV.sort('vpid variantName deletedAt -timestamp')
 		}
 		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
@@ -204,20 +196,46 @@ router.route('/')
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
 			var vpidsList = [];
-			if (listVPV.length > 0) {
-				vpidsList.push(listVPV[0]._id);
-			}
-			// if (listVPV.length > 1 && latestOnly){
-			for (let i = 1; i < listVPV.length; i++){
-				//compare current item with previous and ignore if it is the same vpid & variantname
-				// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
-				if (!latestOnly || JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-					// || JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName)
-				) {
+			if (!latestOnly) {
+				// psuh all vpvids to search for more details
+				for (let i = 0; i < listVPV.length; i++){
 					vpidsList.push(listVPV[i]._id)
-					// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+				}
+			} else {
+				if (req.query.refNext != true) {
+					if (listVPV.length > 0) {
+						vpidsList.push(listVPV[0]._id);
+					}
+					for (let i = 1; i < listVPV.length; i++){
+						//compare current item with previous and ignore if it is the same vpid & variantname
+						logger4js.trace("compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s", i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+						if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+							|| listVPV[i].variantName != listVPV[i-1].variantName
+						) {
+							vpidsList.push(listVPV[i]._id)
+							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+						}
+					}
+				} else {
+					if (listVPV.length == 1) {
+						vpidsList.push(listVPV[0]._id);
+					}
+					for (let i = 0; i < listVPV.length - 1; i++){
+						//compare current item with previous and ignore if it is the same vpid & variantname
+						logger4js.trace("compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s", i, listVPV[i].vpid, listVPV[i+1].vpid, listVPV[i].variantName, listVPV[i+1].variantName, listVPV[i].timestamp, listVPV[i+1].timestamp);
+						if (listVPV[i].vpid.toString() != listVPV[i+1].vpid.toString()
+							|| listVPV[i].variantName != listVPV[i+1].variantName
+						) {
+							vpidsList.push(listVPV[i]._id)
+							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i+1].vpid, listVPV[i].timestamp, listVPV[i+1].timestamp);
+						}
+					}
+					if (listVPV.length > 0) {
+						vpidsList.push(listVPV[listVPV.length-1]._id);
+					}
 				}
 			}
+			// if (listVPV.length > 1 && latestOnly){
 			logger4js.debug("Found %d Project Version IDs", vpidsList.length);
 
 			queryvpvids._id = {$in: vpidsList};
