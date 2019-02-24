@@ -167,7 +167,7 @@ router.route('/')
 			}
 			if (req.query.longList != undefined){
 				logger4js.debug("longList Query String :%s:", req.query.variantName);
-				longList = req.query.longList == true
+				longList = req.query.longList
 			}
 		}
 		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
