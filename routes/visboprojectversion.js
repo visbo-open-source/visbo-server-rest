@@ -185,11 +185,11 @@ router.route('/')
 		if (latestOnly) {
 			if (req.query.refNext)
 				// queryVPV.sort('vpid variantName deletedAt +timestamp')
-				queryVPV.sort('vpid +timestamp')
+				queryVPV.sort('vpid variantName +timestamp')
 			else
-				queryVPV.sort('vpid -timestamp')
+				queryVPV.sort('vpid variantName -timestamp')
 		}
-		queryVPV.select('_id vpid timestamp');
+		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
