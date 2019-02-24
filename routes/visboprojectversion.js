@@ -117,13 +117,6 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		// mongoose.set('debug', true);
-		mongoose.set('debug', function (coll, method, query, doc) {
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-			if (coll == 'visboprojectversions') {
-				logger4js.debug(`Mongoose Coll: ${coll} Method: ${method} Query: ${JSON.stringify(query)} Doc: ${JSON.stringify(doc)} `)
-			}
-		});
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 		var checkDeleted = req.query.deleted == true;
@@ -239,7 +232,7 @@ router.route('/')
 			logger4js.debug("Found %d Project Version IDs", vpidsList.length);
 
 			queryvpvids._id = {$in: vpidsList};
-			queryVPV = VisboProjectVersion.find(queryvpvids);
+			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (!longList) {
 				// deliver only the short info about project versions
 				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
