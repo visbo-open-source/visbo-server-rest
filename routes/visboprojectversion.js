@@ -184,11 +184,12 @@ router.route('/')
 		var queryVPV = VisboProjectVersion.find(queryvpv);
 		if (latestOnly) {
 			if (req.query.refNext)
-				queryVPV.sort('vpid variantName deletedAt +timestamp')
+				// queryVPV.sort('vpid variantName deletedAt +timestamp')
+				queryVPV.sort('vpid +timestamp')
 			else
-				queryVPV.sort('vpid variantName deletedAt -timestamp')
+				queryVPV.sort('vpid -timestamp')
 		}
-		queryVPV.select('_id vpid variantName deletedAt timestamp');
+		queryVPV.select('_id vpid timestamp');
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
@@ -211,7 +212,8 @@ router.route('/')
 				//compare current item with previous and ignore if it is the same vpid & variantname
 				// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
 				if (!latestOnly || JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-				|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
+					// || JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) 
+				) {
 					vpidsList.push(listVPV[i]._id)
 					// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
 				}
