@@ -101,19 +101,27 @@ function saveAuditEntry(tokens, req, res, factor) {
 function visboAudit(tokens, req, res) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-	if (tokens.method(req, res) == "GET" && req.query.longList != undefined) {
-		if (req.listVPV ) {
+	if (tokens.method(req, res) == "GET" && req.listVPV) {
+		if (req.query.longList != undefined) {
 			// generate multiple audit entries per VisboProjectVersion
+			// and save it to the project Audit
 			req.auditInfo = undefined;
 			logger4js.debug("saveVisboAudit Multiple Audits for VPVs %s", req.listVPV.length);
 			for (var i = 0; i < req.listVPV.length; i++) {
 				req.oneVPV = req.listVPV[i];
+				req.oneVP = {_id: req.oneVPV.vpid, name: req.oneVPV.name, vc: {}};
 				saveAuditEntry(tokens, req, res, req.listVPV.length);
 			}
-			return;
+		} else {
+			// save it to the VC is only one is specified
+			if (req.query.vcid) {
+				req.oneVC = {_id: req.query.vcid, name: ''}
+			}
+			saveAuditEntry(tokens, req, res, 1);
 		}
+	} else {
+		saveAuditEntry(tokens, req, res, 1);
 	}
-	saveAuditEntry(tokens, req, res, 1);
 }
 
 module.exports = {

@@ -1163,6 +1163,7 @@ router.route('/:vcid/group')
 							error: err
 						});
 					}
+					req.oneGroup = oneVcGroup;
 					var resultGroup = {};
 					resultGroup._id = oneVcGroup._id;
 					resultGroup.name = oneVcGroup.name;

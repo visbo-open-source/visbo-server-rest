@@ -1280,6 +1280,7 @@ router.route('/:vpid/audit')
 							error: err
 						});
 					}
+					req.oneGroup = oneGroup;
 					var resultGroup = {};
 					resultGroup._id = oneGroup._id;
 					resultGroup.name = oneGroup.name;
