@@ -33,6 +33,7 @@ if (continueFlag) {
 dateBlock = "2018-12-01T00:00:00";
 if (continueFlag && currentVersion < dateBlock) {
   // DB Collection and Index Checks
+  print ("Upgrade DB: Migrate to Group Permission System")
   var collectionName = 'visbogroups';
   var collection = db.getCollectionInfos({name: collectionName});
   // print ("VisboGroup Collection  ", JSON.stringify(collection))
@@ -275,6 +276,7 @@ if (continueFlag && currentVersion < dateBlock) {
 dateBlock = "2018-12-02T00:00:00"
 if (currentVersion < dateBlock) {
   // Migrate DeletedAt Flag from VC
+  print ("Upgrade DB: Change Deleted Flag for VC/VP")
 
   var vcListAll = db.visbocenters.find({deleted: {$exists: true}, deletedAt: {$exists: false}}).toArray();
   print("VC List Deleted Length ", vcListAll.length)
@@ -325,6 +327,7 @@ if (currentVersion < dateBlock) {
 dateBlock = "2019-01-25T00:00:00"
 if (currentVersion < dateBlock) {
   // Remove Users from VC & VP afetr they were migrated to groups
+  print ("Upgrade DB: Remove Users from VC & VP documents, Set TTL for Audit Trail")
 
   var vcListConverted = db.visbogroups.find({groupType: {$in: ['VC', 'System']}}).toArray()
   var vcidList = [];
@@ -440,7 +443,7 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
-dateBlock = "2018-02-24T00:00:00"
+dateBlock = "2019-02-24T00:00:00"
 if (currentVersion < dateBlock) {
   // Create the vpv index to get versions sorted
 
@@ -464,7 +467,7 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
-// dateBlock = "2018-01-01T00:00:00"
+// dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
 //   // Set the currentVersion in Script and in DB
