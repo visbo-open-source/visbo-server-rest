@@ -444,6 +444,7 @@ dateBlock = "2018-02-24T00:00:00"
 if (currentVersion < dateBlock) {
   // Create the vpv index to get versions sorted
 
+  print ("Check if VPV Index Exists")
   indexes = db.visboprojectversions.getIndexes();
   var found = false;
   for (var i=0; i<indexes.length; i++) {
@@ -457,7 +458,7 @@ if (currentVersion < dateBlock) {
     print ("Create VPV Index")
     db.visboprojectversions.createIndex( { vpid: 1, variantName: 1, timestamp: -1 }, { name: "vpv", unique: false } );
   }
-  
+
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
@@ -472,4 +473,5 @@ if (currentVersion < dateBlock) {
 // }
 
 // Delete outdated AuditLog Entries, should be done later once per day/week
+print ("Delete Outdated Audit Trail Entries")
 db.visboaudits.deleteMany({ttl: {$lt: new Date()}})
