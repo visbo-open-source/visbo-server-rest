@@ -9,19 +9,31 @@ then
 fi
 
 echo "02: Pull Branch from Repository Server"
+updateCmdOrg=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+updatePackageOrg=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
 git pull
 if [ $? -ne 0 ]
 then
   echo "FATAL: Pull Failed to update ReST Server Branch."
   exit
 fi
-
-echo "03: Install subcomponents from NODE environment"
-npm install
-if [ $? -ne 0 ]
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
-  echo "FATAL: Install of NODE components failed."
+  echo "WARN: Update Script has changed in between, please restart update again."
   exit
+fi
+
+updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updatePackageOrg" != "$updatePackageAct" ]
+then
+  echo "03: Install subcomponents from NODE environment"
+  npm install
+  if [ $? -ne 0 ]
+  then
+    echo "FATAL: Install of NODE components failed."
+    exit
+  fi
 fi
 
 echo "04: Update API Documentation"
