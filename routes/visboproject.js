@@ -306,6 +306,7 @@ router.route('/')
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Read)';
+		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
 		var query = {};
@@ -628,6 +629,7 @@ router.route('/:vpid')
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Read)';
+		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
@@ -971,8 +973,11 @@ router.route('/:vpid/audit')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Audit (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
 		if (!(req.combinedPerm.vp & constPermVP.ViewAudit)) {
@@ -1000,6 +1005,9 @@ router.route('/:vpid/audit')
 		var query = {'vp.vpid': req.oneVP._id, "createdAt": {"$gte": from, "$lt": to}};
 		if (action) {
 			query.action = action;
+		}
+		if (!sysAdmin) {
+			query.sysAdmin = {$exists: false};
 		}
 		var queryListCondition = [];
 		if (req.query.text) {
@@ -1097,8 +1105,11 @@ router.route('/:vpid/audit')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Read)';
+			req.auditSysAdmin = sysAdmin;
 
 			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
 
@@ -2244,8 +2255,11 @@ router.route('/:vpid/portfolio')
 
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		var query = {};
 		var latestOnly = false; 	// as default show all portfolio lists of the project
@@ -2526,8 +2540,11 @@ router.route('/:vpid/portfolio/:vpfid')
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.trace("Get Portfolio Versions");
 		var query = {}

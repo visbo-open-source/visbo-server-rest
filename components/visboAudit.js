@@ -10,12 +10,13 @@ var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-function saveAuditEntry(tokens, req, res) {
+function saveAuditEntry(tokens, req, res, factor) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	var auditEntry = new VisboAudit();
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
+	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
 	var baseUrl = auditEntry.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var addJSON = undefined;
@@ -85,9 +86,9 @@ function saveAuditEntry(tokens, req, res) {
 	auditEntry.ip = req.headers["x-real-ip"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
-	auditEntry.result.time = Math.round(tokens['response-time'](req, res))
+	auditEntry.result.time = Math.round(Number(tokens['response-time'](req, res))/factor)
 	auditEntry.result.status = tokens.status(req, res);
-	auditEntry.result.size = tokens.res(req, res, 'content-length')||0;
+	auditEntry.result.size = Math.round(Number(tokens.res(req, res, 'content-length')||0)/factor);
 	auditEntry.save(function(err, auditEntryResult) {
 		if (err) {
 			logger4js.error("Save VisboAudit failed to save %O", auditEntry);
@@ -104,15 +105,15 @@ function visboAudit(tokens, req, res) {
 		if (req.listVPV ) {
 			// generate multiple audit entries per VisboProjectVersion
 			req.auditInfo = undefined;
-			logger4js.debug("saveVisboAudit Multiple Audits for VPVs");
+			logger4js.debug("saveVisboAudit Multiple Audits for VPVs %s", req.listVPV.length);
 			for (var i = 0; i < req.listVPV.length; i++) {
 				req.oneVPV = req.listVPV[i];
-				saveAuditEntry(tokens, req, res);
+				saveAuditEntry(tokens, req, res, req.listVPV.length);
 			}
 			return;
 		}
 	}
-	saveAuditEntry(tokens, req, res);
+	saveAuditEntry(tokens, req, res, 1);
 }
 
 module.exports = {

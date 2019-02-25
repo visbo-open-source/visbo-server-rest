@@ -64,6 +64,7 @@ router.route('/')
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
+	req.auditSysAdmin = true;
 	req.auditInfo = 'System';
 
 	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
@@ -110,7 +111,9 @@ router.route('/')
 			textCondition.push({"vc.name": expr});
 			textCondition.push({"vp.name": expr});
 			textCondition.push({"vpv.name": expr});
+			textCondition.push({"url": expr});
 			textCondition.push({"action": expr});
+			textCondition.push({"actionInfo": expr});
 			textCondition.push({"actionDescription": expr});
 			textCondition.push({"userAgent": expr});
 		}

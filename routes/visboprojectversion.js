@@ -117,8 +117,11 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
+		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
@@ -166,7 +169,7 @@ router.route('/')
 				queryvpv.variantName = req.query.variantName
 			}
 			if (req.query.longList != undefined){
-				logger4js.debug("longList Query String :%s:", req.query.variantName);
+				logger4js.debug("longList Query String :%s:", req.query.longList);
 				longList = true;
 			}
 		}
@@ -528,8 +531,11 @@ router.route('/:vpvid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Version (Read)';
+		req.auditSysAdmin = sysAdmin;
 		req.auditNoTTL = true;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);

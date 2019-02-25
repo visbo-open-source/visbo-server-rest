@@ -27,6 +27,7 @@ var visboAuditSchema = new mongoose.Schema({
 	ip: {type: String, required: false},
 	userAgent: {type: String, required: false},
 	ttl: {type: Date, required: false},
+	sysAdmin: {type: Boolean, required: false},
 	result: {
 		time: {type: Number, required: true},
 		status: {type: String, required: true},
