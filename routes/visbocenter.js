@@ -160,6 +160,7 @@ router.route('/')
 
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center (Read)';
+			req.auditSysAdmin = isSysAdmin;
 
 			logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
 
@@ -421,6 +422,7 @@ router.route('/:vcid')
 
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
+		req.auditSysAdmin = isSysAdmin;
 
 		// check for deleted only for sysAdmins
 		var found = false;
@@ -824,8 +826,11 @@ router.route('/:vcid/audit')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Audit (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
@@ -853,6 +858,9 @@ router.route('/:vcid/audit')
 		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
 		if (action) {
 			query.action = action;
+		}
+		if (!sysAdmin) {
+			query.sysAdmin = {$exists: false};
 		}
 		var queryListCondition = [];
 		if (req.query.text) {
@@ -951,8 +959,11 @@ router.route('/:vcid/group')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Group (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Group for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -1152,6 +1163,7 @@ router.route('/:vcid/group')
 							error: err
 						});
 					}
+					req.oneGroup = oneVcGroup;
 					var resultGroup = {};
 					resultGroup._id = oneVcGroup._id;
 					resultGroup.name = oneVcGroup.name;
@@ -1778,8 +1790,11 @@ router.route('/:vcid/group/:groupid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Role (Read)';
+			req.auditSysAdmin = sysAdmin;
 
 			logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -2140,8 +2155,11 @@ router.route('/:vcid/cost')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Cost (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Cost for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
@@ -2473,9 +2491,11 @@ router.route('/:vcid/cost')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
+			var sysAdmin = req.query.sysadmin ? true : false;
 
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Setting (Read)';
+			req.auditSysAdmin = sysAdmin;
 
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 

@@ -92,13 +92,14 @@ function getVcidGroups(req, res, next, vcid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	req.auditDescription = 'Visbo Center (Read)';
 
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
+	req.auditDescription = 'Visbo Center (Read)';
+	req.auditSysAdmin = sysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
 	logger4js.debug("Generate VC Groups for vcid %s user %s for url %s sysAdmin %s", vcid, req.decoded.email, req.url, sysAdmin);

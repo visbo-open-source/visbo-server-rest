@@ -54,6 +54,7 @@ router.route('/')
 
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLog (Read)';
+		req.auditSysAdmin = true;
 
 		logger4js.info("Get Log File List Perm system: %O ", req.combinedPerm);
 
@@ -110,6 +111,7 @@ router.route('/file/:filename')
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLogs (Read)';
+		req.auditSysAdmin = true;
 
 		logger4js.info("Get Logfile %s ", req.params.filename);
 		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {

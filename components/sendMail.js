@@ -120,7 +120,7 @@ function accountNotRegistered(req, user) {
 			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 			var message = {
 					to: user.email,
-					subject: 'You have to regsiter first!',
+					subject: 'You have to register first!',
 					html: '<p> '.concat(emailHtml, " </p>")
 			};
 			logger4js.info("Now send register mail to %s", message.to);
