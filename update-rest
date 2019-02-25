@@ -40,6 +40,8 @@ echo "04: Update API Documentation"
 apidoc -i routes -o public/apidoc
 rm -rf /var/www/apidoc/*
 cp -r public/apidoc/* /var/www/apidoc
+find /var/www/apidoc -type d -exec chmod 755 {} +
+find /var/www/apidoc -type f -exec chmod 644 {} +
 
 echo "05: Run Upgrade Script against DB"
 # get the DB Connection string
