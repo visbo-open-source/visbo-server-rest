@@ -38,8 +38,8 @@ fi
 
 echo "04: Update API Documentation"
 apidoc -i routes -o public/apidoc
-rm -rf /var/www/apidoc
-cp -r public/apidoc /var/www
+rm -rf /var/www/apidoc/*
+cp -r public/apidoc/* /var/www/apidoc
 
 echo "05: Run Upgrade Script against DB"
 # get the DB Connection string
