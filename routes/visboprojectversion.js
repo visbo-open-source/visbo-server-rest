@@ -282,7 +282,7 @@ router.route('/')
 	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create Visbo Project Version
-	* @apiError {number} 404 Visbo Project Variant does not exists
+	* @apiError {number} 409 Visbo Project Variant does not exists
 	* @apiError {number} 409 Visbo Project (Portfolio) Version was alreaddy updated in between (Checked updatedAt Flag)
 	* @apiError {number} 423 Visbo Project (Portfolio) is locked by another user
 	*
@@ -359,7 +359,7 @@ router.route('/')
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Project variant does not exist',
 						vp: [req.oneVP]

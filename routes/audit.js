@@ -115,6 +115,7 @@ router.route('/')
 			textCondition.push({"action": expr});
 			textCondition.push({"actionInfo": expr});
 			textCondition.push({"actionDescription": expr});
+			textCondition.push({"result.statusText": expr});
 			textCondition.push({"userAgent": expr});
 		}
 		textCondition.push({"vc.vcjson": expr});
@@ -136,7 +137,7 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection ", err);
+			logger4js.fatal("System Audit Get DB Connection \nVisboAudit.find(%s)\n %O ", query, err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting System Audit',

@@ -28,7 +28,7 @@ function getGroupId(req, res, next, groupId) {
 	// queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("Group Param check Get DB Connection %O", err);
+			logger4js.fatal("Group Param check Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboGroups',

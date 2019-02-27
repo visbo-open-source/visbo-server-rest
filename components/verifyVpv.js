@@ -64,7 +64,7 @@ function getAllVPVGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection %O", err);
+				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -118,7 +118,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 	// queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
-			logger4js.fatal("VPV Get with ID DB Connection %O", err);
+			logger4js.fatal("VPV Get with ID DB Connection \nVisboProjectVersion.findOne()\n%O", err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting Visbo Project Versions',
@@ -154,7 +154,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 		queryVG.select('name permission vpid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection %O", err);
+				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -191,7 +191,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 			// queryVP.select('name users updatedAt createdAt');
 			queryVP.exec(function (err, oneVP) {
 				if (err) {
-					logger4js.fatal("VP Get with ID DB Connection %O", err);
+					logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s)\n%O", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Visbo Projects',
