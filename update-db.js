@@ -467,6 +467,40 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2019-02-27T00:00:00"
+if (currentVersion < dateBlock) {
+  // Reduce Audit Trail (Portfolio JSON removed from Audit)
+  db.visboaudits.updateMany(
+    {actionDescription: /Visbo Portfolio/, action: {$ne: "GET"}, "vp.vpjson": {$exists: true}},
+    {$unset: {"vp.vpjson": true}}
+  )
+
+  // remove Component vcjson for very large settings (organisation)
+  var first = true;
+  var auditIDs = ''
+  db.visboaudits.find({actionDescription: /Visbo Center Setting/, "vc.vcjson": {$exists: true}}).forEach(function(obj)
+  {
+    if (Object.bsonsize(obj) >= 2048) {
+      if (first) {first = false; auditIDs = auditIDs.concat(''+obj._id) }
+      else auditIDs = auditIDs.concat(',', ''+obj._id)
+    }
+  })
+  var auditIDArray = []
+  auditIDArray = auditIDs.split(',')
+  print("Check Long Audit Settings: Count " + auditIDArray.length + ' Array ' + auditIDArray)
+
+  var auditObjectIDArray = [];
+  for (var i=0; i<auditIDArray.length; i++) {
+    auditObjectIDArray.push(ObjectId(auditIDArray[i]))
+  }
+  db.visboaudits.updateMany({_id: {$in: auditObjectIDArray}}, {$unset: {"vc.vcjson": true}})
+  db.visboaudits.find({_id: {$in: auditObjectIDArray}}, {_id:1, actionDescription:1}).sort({createdAt:-1})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

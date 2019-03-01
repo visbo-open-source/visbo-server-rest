@@ -90,7 +90,7 @@ router.route('/')
 		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
-				logger4js.fatal("SysUser Get DB Connection ", err);
+				logger4js.fatal("SysUser Get DB Connection \nUser.find(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Sys Users',

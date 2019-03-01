@@ -31,6 +31,7 @@ var visboAuditSchema = new mongoose.Schema({
 	result: {
 		time: {type: Number, required: true},
 		status: {type: String, required: true},
+		statusText: {type: String, required: false},
 		size: {type: Number, required: false}
 	}
 });

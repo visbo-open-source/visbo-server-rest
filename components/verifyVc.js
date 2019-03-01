@@ -51,7 +51,7 @@ function getAllGroups(req, res, next) {
 		queryVG.select('name permission vcid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VC Groups Get DB Connection %O", err);
+				logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -126,7 +126,7 @@ function getVcidGroups(req, res, next, vcid) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection %O", err);
+			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',
@@ -166,7 +166,7 @@ function getVcidGroups(req, res, next, vcid) {
 		// queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {
-				logger4js.fatal("VC Get with ID DB Connection %O", err);
+				logger4js.fatal("VC Get with ID DB Connection \nVisboCenter.findOne(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Centers',
@@ -206,7 +206,7 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection %O", err);
+			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',

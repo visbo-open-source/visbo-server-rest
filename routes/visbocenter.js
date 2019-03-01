@@ -189,7 +189,7 @@ router.route('/')
 			queryVC.lean();
 			queryVC.exec(function (err, listVC) {
 				if (err) {
-					logger4js.fatal("VC Get DB Connection ", err);
+					logger4js.fatal("VC Get DB Connection \nVisboCenter.find(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenters',
@@ -288,7 +288,7 @@ router.route('/')
 		query.deletedAt = {$exists: false};
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				logger4js.fatal("VC Post DB Connection ", err);
+				logger4js.fatal("VC Post DB Connection \nVisboCenter.findOne(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -320,12 +320,13 @@ router.route('/')
 				};
 			};
 			logger4js.debug("Check users if they exist %s", JSON.stringify(vcUsers));
-			var queryUsers = User.find({'email': {'$in': vcUsers}});
+			var query = {'email': {'$in': vcUsers}}
+			var queryUsers = User.find(query);
 			queryUsers.select('_id email');
 			queryUsers.lean();
 			queryUsers.exec(function (err, listUsers) {
 				if (err) {
-					logger4js.fatal("VC Post DB Connection ", err);
+					logger4js.fatal("VC Post DB Connection \nUser.find(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Users for VisboCenters',
@@ -546,7 +547,7 @@ router.route('/:vcid')
 
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				logger4js.fatal("VC Put DB Connection ", err);
+				logger4js.fatal("VC Put DB Connection \nVisboCenter.findOne(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -689,7 +690,7 @@ router.route('/:vcid')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					logger4js.fatal("VC Destroy: VP GET DB Connection ", err);
+					logger4js.fatal("VC Destroy: VP GET DB Connection \nVisboProject.find(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -866,7 +867,17 @@ router.route('/:vcid/audit')
 		if (req.query.text) {
 			var textCondition = [];
 			var text = req.query.text;
-			var expr = new RegExp(text, "i");
+			var expr;
+			try {
+			    expr = new RegExp(text, "i");
+			} catch(e) {
+					logger4js.info("System Audit RegEx corrupt: %s ", text);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Regular Expression'
+					});
+			}
+			logger4js.fatal("Get Audit Search RegEx corrupt: ", text);
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
 				textCondition.push({"vp.vpid": text});
@@ -900,7 +911,7 @@ router.route('/:vcid/audit')
 		.lean()
 		.exec(function (err, listVCAudit) {
 			if (err) {
-				logger4js.fatal("VC Audit Get DB Connection ", err);
+				logger4js.fatal("VC Audit Get DB Connection \nVisboAudit.find(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Audit',
@@ -976,7 +987,7 @@ router.route('/:vcid/group')
 		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, listVCGroup) {
 			if (err) {
-				logger4js.fatal("VC Get Group DB Connection ", err);
+				logger4js.fatal("VC Get Group DB Connection \nVisboGroup.find(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Groups',
@@ -1126,7 +1137,7 @@ router.route('/:vcid/group')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					logger4js.fatal("VC Create Group: GET DB Connection ", err);
+					logger4js.fatal("VC Create Group: GET DB Connection \nVisboProject.find(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -1364,7 +1375,7 @@ router.route('/:vcid/group/:groupid')
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				logger4js.fatal("VP GET DB Connection ", err);
+				logger4js.fatal("VP GET DB Connection \nVisboProject.find(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -1475,7 +1486,7 @@ router.route('/:vcid/group/:groupid')
 		}
 		if (req.body.email) req.body.email = name.toLowerCase();
 
-		req.auditInfo = req.body.email;
+		req.auditInfo = req.body.email + ' / ' + req.oneGroup.name;
 		// verify check for System VC & SysAdmin
 		if ((req.oneGroup.groupType == 'VC' && !(req.combinedPerm.vc & constPermVC.ManagePerm))
 		|| (req.oneGroup.groupType != 'VC' && !(req.combinedPerm.system & constPermSystem.ManagePerm))) {
@@ -1509,11 +1520,12 @@ router.route('/:vcid/group/:groupid')
 			});
 		}
 		// check if the user exists and get the UserId or create the user
-		var queryUsers = User.findOne({'email': vcUser.email});
+		var query = {'email': vcUser.email}
+		var queryUsers = User.findOne(query);
 		//queryUsers.select('email');
 		queryUsers.exec(function (err, user) {
 			if (err) {
-				logger4js.fatal("Post User to Group cannot find User, DB Connection %s", err);
+				logger4js.fatal("Post User to Group cannot find User, DB Connection \nUser.findOne(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Users for VisboCenters',
@@ -1680,7 +1692,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 400 no Admin user will be left in internal Visbo Center Group
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a user from Visbo Center Group
-		* @apiError {number} 404 user is not member of the Visbo Center Group
+		* @apiError {number} 409 user is not member of the Visbo Center Group
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/group/:groupid/user/:userid
 		* @apiSuccessExample {json} Success-Response:
@@ -1699,10 +1711,9 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info("DELETE Visbo Center User by userid %s email %s for user %s Group %s ", userId, useremail, req.params.userid, req.oneGroup._id);
 
 		req.auditDescription = 'Visbo Center User (Delete)';
-		req.auditInfo = req.params.userid + ' from ' + req.oneGroup.name;
 
 		var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
-		if (delUser) req.auditInfo = delUser.email  + ' from ' + req.oneGroup.name;
+		if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
 		if ((req.oneGroup.groupType == 'VC' && !(req.combinedPerm.vc & constPermVC.ManagePerm))
 		|| (req.oneGroup.groupType != 'VC' && !(req.combinedPerm.system & constPermSystem.ManagePerm))) {
@@ -1721,7 +1732,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 		logger4js.trace("DELETE Visbo Center Filtered User List %O ", newUserList);
 		if (newUserList.length == req.oneGroup.users.length) {
-			return res.status(404).send({
+			return res.status(409).send({
 				state: 'failure',
 				message: 'User is not member of Group',
 				groups: [req.oneGroup]
@@ -1948,7 +1959,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Visbo Center Role
-		* @apiError {number} 404 Visbo Center Role does not exists
+		* @apiError {number} 409 Visbo Center Role does not exists
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
@@ -1991,7 +2002,7 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 				if (!oneVCRole) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role not found',
 						error: err
@@ -2026,7 +2037,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Modify a Visbo Center Role
-		* @apiError {number} 404 Visbo Center Role does not exists
+		* @apiError {number} 409 Visbo Center Role does not exists
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
@@ -2083,7 +2094,7 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 				if (!oneVCRole) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role not found',
 						error: err
@@ -2281,7 +2292,7 @@ router.route('/:vcid/cost')
 	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete a Visbo Center Cost
-	* @apiError {number} 404 Visbo Center Cost does not exists
+	* @apiError {number} 409 Visbo Center Cost does not exists
 	*
   * @apiExample Example usage:
   *   url: http://localhost:3484/vc/:vcid/cost/:costid
@@ -2324,7 +2335,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCCost) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Cost not found',
 					error: err
@@ -2359,7 +2370,7 @@ router.route('/:vcid/cost')
 	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Update a Visbo Center Cost
-	* @apiError {number} 404 Visbo Center Cost does not exists
+	* @apiError {number} 409 Visbo Center Cost does not exists
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/cost/:costid
@@ -2415,7 +2426,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCCost) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Cost not found',
 					error: err
@@ -2520,7 +2531,7 @@ router.route('/:vcid/cost')
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Get Setting DB Connection ", err);
+					logger4js.fatal("VC Get Setting DB Connection \nVCSetting.find(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Settings',
@@ -2677,7 +2688,7 @@ router.route('/:vcid/cost')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Visbo Center Setting
-		* @apiError {number} 404 Visbo Center Setting does not exists
+		* @apiError {number} 409 Visbo Center Setting does not exists
 		*
 	  * @apiExample Example usage:
 	  *   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2713,7 +2724,7 @@ router.route('/:vcid/cost')
 			// queryVCSetting.select('_id vcid name');
 			queryVCSetting.exec(function (err, oneVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Delete Role DB Connection ", err);
+					logger4js.fatal("VC Delete Setting DB Connection ", err);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Settings',
@@ -2721,7 +2732,7 @@ router.route('/:vcid/cost')
 					});
 				}
 				if (!oneVCSetting) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Setting not found',
 						error: err
@@ -2737,7 +2748,7 @@ router.route('/:vcid/cost')
 				logger4js.info("Found the Setting for VC");
 				oneVCSetting.remove(function(err, empty) {
 					if (err) {
-						logger4js.fatal("VC Delete Role DB Connection ", err);
+						logger4js.fatal("VC Delete Setting DB Connection ", err);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error deleting Visbo Center Setting',
@@ -2763,8 +2774,7 @@ router.route('/:vcid/cost')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Update a Visbo Center Setting
-		* @apiError {number} 404 Visbo Center Setting does not exists
-		* @apiError {number} 409 Visbo Center Setting was updated in between. The delivered updatetAt date is different from current setting
+		* @apiError {number} 409 Visbo Center Setting does not exists or was updated in between.
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2830,7 +2840,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCSetting) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Setting not found',
 					error: err

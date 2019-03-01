@@ -51,7 +51,7 @@ var visboParseUA = function(agent, stringUA) {
 }
 
 var findUserAgent = function(currentUserAgent) {
-	logger4js.info("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
+	// logger4js.trace("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
 	return currentUserAgent.userAgent == this.userAgent;
 }
 
@@ -128,7 +128,7 @@ router.route('/user/login')
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
-		logger4js.trace("Login Headers %O", req.headers);
+		logger4js.debug("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
@@ -144,7 +144,7 @@ router.route('/user/login')
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
-				logger4js.fatal("Post Login DB Connection ", err);
+				logger4js.fatal("Post Login DB Connection \nUser.findOne(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -195,7 +195,7 @@ router.route('/user/login')
 				}
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Login User Update DB Connection %O", err);
+						logger4js.error("Login User Update DB Connection  \nUser.save()\n%O", err);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -291,7 +291,7 @@ router.route('/user/login')
 								user.userAgents.push(curAgent)
 								// Send Mail about new Login with unknown User Agent
 								sendMail.accountNewLogin(req, user);
-								logger4js.warn("New Login with new User Agent %s", req.visboUserAgent);
+								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
 							// Cleanup old User Agents older than 1 year
 							var expiredAt = new Date()
@@ -358,9 +358,10 @@ router.route('/user/pwforgotten')
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
 
-		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
+		var query = { "email" : req.body.email };
+		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("Forgot Password DB Connection ", err);
+				logger4js.fatal("Forgot Password DB Connection  \nUser.findOne(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -481,7 +482,7 @@ router.route('/user/pwreset')
 	* @apiPermission none
 	* @apiError {number} 400 email or token missing
 	* @apiError {number} 401 token no longer valid
-	* @apiError {number} 404 user not found or user already changed
+	* @apiError {number} 409 user not found or user already changed
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/pwreset
@@ -514,9 +515,10 @@ router.route('/user/pwreset')
       } else {
         // if everything is good, save to request for use in other routes
 				logger4js.debug("Forgot PW Token Check for User %s and _id %s", decoded.email, decoded._id);
-				visbouser.findOne({ "email" : decoded.email, "updatedAt": decoded.updatedAt }, function(err, user) {
+				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt }
+				visbouser.findOne(query, function(err, user) {
 					if (err) {
-						logger4js.fatal("Forgot Password Change DB Connection ", err);
+						logger4js.fatal("Forgot Password Change DB Connection \nUser.findOne(%s)\n%O ", query, err);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error",
@@ -525,7 +527,7 @@ router.route('/user/pwreset')
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
-						return res.status(404).send({
+						return res.status(409).send({
 							state: "failure",
 							message: "invalid token"
 						});
@@ -573,7 +575,7 @@ router.route('/user/signup')
 	* @apiPermission none
 	* @apiError {number} 400 email or userid missing in body
 	* @apiError {number} 401 token no longer valid
-	* @apiError {number} 404 unknown userID
+	* @apiError {number} 409 unknown userID
 	* @apiError {number} 409 email already registered
 	* @apiDescription signup a user with Profile Details and a new password.
 	* Signup can be called with an e-mail address or an _id. The system refuses the registration if an _id is specified and there is no user with this _id to be registered
@@ -650,7 +652,7 @@ router.route('/user/signup')
 		}
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("user Signup DB Connection ", err);
+				logger4js.fatal("user Signup DB Connection \nUser.find(%s)\n%O ", query, err);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -667,7 +669,7 @@ router.route('/user/signup')
 			}
 			// if user does not exist already refuse to register with id
 			if (!user && req.body._id) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "User ID incorrect"
 				});
@@ -834,7 +836,7 @@ router.route('/user/signup')
 			var query = {_id: req.body._id};
 			visbouser.findOne(query, function(err, user) {
 				if (err) {
-					logger4js.fatal("e-Mail confirmation DB Connection ", err);
+					logger4js.fatal("e-Mail confirmation DB Connection \nUser.findOne(%s)\n%O ", query, err);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error",

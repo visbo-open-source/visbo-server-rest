@@ -56,7 +56,7 @@ function getAllVPGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection %O", err);
+				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -126,7 +126,7 @@ function getVpidGroups(req, res, next, vpid) {
 	queryVG.select('name permission vpid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VP Groups Get DB Connection %O", err);
+			logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',
@@ -166,7 +166,7 @@ function getVpidGroups(req, res, next, vpid) {
 		// queryVP.select('name users updatedAt createdAt');
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP Get with ID DB Connection %O", err);
+				logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s)\n%O", query, err);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Project',
