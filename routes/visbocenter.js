@@ -877,7 +877,6 @@ router.route('/:vcid/audit')
 						message: 'No Valid Regular Expression'
 					});
 			}
-			logger4js.fatal("Get Audit Search RegEx corrupt: ", text);
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
 				textCondition.push({"vp.vpid": text});

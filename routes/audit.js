@@ -99,10 +99,9 @@ router.route('/')
 	if (req.query.text) {
 		var textCondition = [];
 		var text = req.query.text;
-
 		var expr;
 		try {
-		    expr = new RegExp(text, "i");
+				expr = new RegExp(text, "i");
 		} catch(e) {
 				logger4js.info("System Audit RegEx corrupt: %s ", text);
 				return res.status(400).send({
@@ -110,8 +109,6 @@ router.route('/')
 					message: 'No Valid Regular Expression'
 				});
 		}
-		logger4js.fatal("Get Audit Search RegEx corrupt: ", text);
-
 		if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 			logger4js.debug("Get Audit Search for ObjectID %s", text);
 			textCondition.push({"vc.vcid": text});
@@ -127,7 +124,6 @@ router.route('/')
 			textCondition.push({"action": expr});
 			textCondition.push({"actionInfo": expr});
 			textCondition.push({"actionDescription": expr});
-			textCondition.push({"result.statusText": expr});
 			textCondition.push({"userAgent": expr});
 		}
 		textCondition.push({"vc.vcjson": expr});
@@ -149,7 +145,7 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection \nVisboAudit.find(%s)\n %O ", query, err);
+			logger4js.fatal("System Audit Get DB Connection ", err);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting System Audit',
