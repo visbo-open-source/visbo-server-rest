@@ -23,8 +23,8 @@ var isAllowedPassword = function(password){
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
 
-	logger4js.info("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
-	logger4js.info("Check Password Policy against Exclude %s result %s", pwPolicyExclude, password.match(pwPolicyExcludePattern) || 'NULL');
+	logger4js.trace("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
+	logger4js.trace("Check Password Policy against Exclude %s result %s", pwPolicyExclude, password.match(pwPolicyExcludePattern) || 'NULL');
 	var result = password.match(pwPolicyPattern) && password.match(pwPolicyExcludePattern)
 	return result;
 };

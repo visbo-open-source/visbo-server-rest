@@ -1015,7 +1015,16 @@ router.route('/:vpid/audit')
 		if (req.query.text) {
 			var textCondition = [];
 			var text = req.query.text;
-			var expr = new RegExp(text, "i");
+			var expr;
+			try {
+			    expr = new RegExp(text, "i");
+			} catch(e) {
+					logger4js.info("System Audit RegEx corrupt: %s ", text);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Regular Expression'
+					});
+			}
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
 				textCondition.push({"vpv.vpvid": text});
@@ -1963,7 +1972,7 @@ router.route('/:vpid/lock')
 
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
-			logger4js.warn("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
+			logger4js.info("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
 			return res.status(409).send({
 				state: 'failure',
 				message: 'VP no Lock exists for Deletion',
@@ -1971,7 +1980,7 @@ router.route('/:vpid/lock')
 			});
 		}
 		if (resultLock.locked && !(req.combinedPerm.vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
-			logger4js.warn("Delete Lock for VP :%s: Project is locked by another user", req.oneVP.name);
+			logger4js.info("Delete Lock for VP :%s: Project is locked by another user", req.oneVP.name);
 			return res.status(403).send({
 				state: 'failure',
 				message: 'VP locked for another user',

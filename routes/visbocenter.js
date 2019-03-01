@@ -867,7 +867,17 @@ router.route('/:vcid/audit')
 		if (req.query.text) {
 			var textCondition = [];
 			var text = req.query.text;
-			var expr = new RegExp(text, "i");
+			var expr;
+			try {
+			    expr = new RegExp(text, "i");
+			} catch(e) {
+					logger4js.info("System Audit RegEx corrupt: %s ", text);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Regular Expression'
+					});
+			}
+			logger4js.fatal("Get Audit Search RegEx corrupt: ", text);
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
 				textCondition.push({"vp.vpid": text});

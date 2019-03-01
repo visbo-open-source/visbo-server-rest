@@ -51,7 +51,7 @@ var visboParseUA = function(agent, stringUA) {
 }
 
 var findUserAgent = function(currentUserAgent) {
-	logger4js.info("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
+	// logger4js.trace("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
 	return currentUserAgent.userAgent == this.userAgent;
 }
 
@@ -128,7 +128,7 @@ router.route('/user/login')
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
-		logger4js.trace("Login Headers %O", req.headers);
+		logger4js.debug("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
@@ -291,7 +291,7 @@ router.route('/user/login')
 								user.userAgents.push(curAgent)
 								// Send Mail about new Login with unknown User Agent
 								sendMail.accountNewLogin(req, user);
-								logger4js.warn("New Login with new User Agent %s", req.visboUserAgent);
+								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
 							// Cleanup old User Agents older than 1 year
 							var expiredAt = new Date()
