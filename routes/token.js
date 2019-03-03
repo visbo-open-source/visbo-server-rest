@@ -175,10 +175,11 @@ router.route('/user/login')
 			var loginFailedIntervalMinute = 4 * 60;
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
+				var lastLoginFailedAt = user.status.lastLoginFailedAt || new Date(0);
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
 				if (!user.status.loginRetries) user.status.loginRetries = 0
-				if ((currentDate.getTime() - (user.status.lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
+				if ((currentDate.getTime() - (lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
 					// reset retry count if last login failed is older than loginFailedIntervalMinute
 					user.status.loginRetries = 0;
 				}
