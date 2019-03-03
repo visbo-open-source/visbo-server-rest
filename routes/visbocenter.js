@@ -889,6 +889,7 @@ router.route('/:vcid/audit')
 				textCondition.push({"vpv.name": expr});
 				textCondition.push({"action": expr});
 				textCondition.push({"actionDescription": expr});
+				textCondition.push({"result.statusText": expr});
 				textCondition.push({"userAgent": expr});
 			}
 			textCondition.push({"vc.vcjson": expr});
