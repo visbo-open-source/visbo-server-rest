@@ -124,6 +124,7 @@ router.route('/')
 			textCondition.push({"action": expr});
 			textCondition.push({"actionInfo": expr});
 			textCondition.push({"actionDescription": expr});
+			textCondition.push({"result.statusText": expr});
 			textCondition.push({"userAgent": expr});
 		}
 		textCondition.push({"vc.vcjson": expr});

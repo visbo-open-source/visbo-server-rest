@@ -1035,6 +1035,7 @@ router.route('/:vpid/audit')
 				textCondition.push({"vpv.name": expr});
 				textCondition.push({"action": expr});
 				textCondition.push({"actionDescription": expr});
+				textCondition.push({"result.statusText": expr});
 				textCondition.push({"userAgent": expr});
 			}
 			textCondition.push({"vp.vpjson": expr});
