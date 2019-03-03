@@ -126,7 +126,7 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.fatal("CorsOptions deny  %s", origin);
+      logger4js.fatal("CorsOptions deny  %s ", origin);
       //callback(null, true) // temporary enable cors for all sites
       callback(origin + ' is not allowed to access', null)
       // callback(new Error(origin + ' is not allowed to access'))
@@ -178,29 +178,36 @@ app.engine('.html', require('ejs').renderFile);
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
-// set CORS Options (Cross Origin Ressource Sharing)
-app.use(cors(corsOptions));
-
 // define the log entry for processing pages
-//app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  visboAudit.visboAudit(tokens, req, res);
-  var webLog = [
-    tokens.method(req, res),
-    // 'base url', req.baseUrl,
-    //'Url', req.originalUrl,
-    tokens.url(req, res),
-    tokens.status(req, res),
-    tokens.res(req, res, 'content-length')||0+' Bytes',
-    Math.round(tokens['response-time'](req, res))+'ms',
-    req.headers["x-real-ip"] || req.ip,
-    req.get('User-Agent'),
-    ''
-  ].join(' ');
-  logger4jsRest.info(webLog);
-  webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  // ignore calls for OPTIONS
+  if (["GET", "POST", "PUT", "DELETE"].indexOf(tokens.method(req, res)) >= 0 ) {
+    visboAudit.visboAudit(tokens, req, res);
+    var webLog = [
+      tokens.method(req, res),
+      // 'base url', req.baseUrl,
+      //'Url', req.originalUrl,
+      tokens.url(req, res),
+      tokens.status(req, res),
+      tokens.res(req, res, 'content-length')||0+' Bytes',
+      Math.round(tokens['response-time'](req, res))+'ms',
+      req.headers["x-real-ip"] || req.ip,
+      req.get('User-Agent'),
+      ''
+    ].join(' ');
+    logger4jsRest.info(webLog);
+    webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  }
+  if (tokens.status(req, res) == 500) {
+    var headers = JSON.parse(JSON.stringify(req.headers));
+    headers["access-key"] = undefined;
+    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers));
+  }
   return webLog
 }));
+
+// set CORS Options (Cross Origin Ressource Sharing)
+app.use(cors(corsOptions));
 
 dbConnect(process.env.NODE_VISBODB);
 
