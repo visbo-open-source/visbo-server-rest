@@ -170,6 +170,7 @@ logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
+logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -201,7 +202,7 @@ app.use(logger(function (tokens, req, res) {
   if (tokens.status(req, res) == 500) {
     var headers = JSON.parse(JSON.stringify(req.headers));
     headers["access-key"] = undefined;
-    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers));
+    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
   }
   return webLog
 }));
