@@ -159,7 +159,7 @@ router.route('/')
 			if (req.query.status) {
 				queryvpv.status = req.query.status;
 			}
-			if (req.query.refDate){
+			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				queryvpv.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				latestOnly = true;

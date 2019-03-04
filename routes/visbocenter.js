@@ -2511,7 +2511,7 @@ router.route('/:vcid/cost')
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
 			var query = {};
-			if (req.query.refDate){
+			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };

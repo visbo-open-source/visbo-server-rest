@@ -35,8 +35,8 @@ router.route('/')
 		if (req.query.error) {
 			var status = ''
 			var err = {"code": "500", "errtext": "Long explanation"}
-			if (req.query.date != undefined) {
-				var dateValue = req.query.date ? new Date(req.query.date) : new Date();
+			if (req.query.date != undefined && Date.parse(req.query.date)) {
+				var dateValue = new Date(req.query.date);
 				status = "Get Status Date native ".concat(req.query.date, " converted ", isNaN(dateValue) ? dateValue : dateValue.toISOString(), " is Date ", !isNaN(dateValue))
 				logger4js.info(status);
 				err = '';
