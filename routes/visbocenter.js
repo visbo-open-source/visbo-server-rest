@@ -2644,10 +2644,9 @@ router.route('/:vcid/cost')
 			var vcSetting = new VCSetting();
 			vcSetting.name = req.body.name;
 			vcSetting.vcid = req.params.vcid;
-			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
-			if (isNaN(dateValue)) dateValue = new Date()
+			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
 			if (req.body.timestamp) vcSetting.timestamp = dateValue;
-			if (req.body.userId) vcSetting.userId = req.body.userId;
+			if (req.body.userId && mongoose.Types.ObjectId.isValid(req.body.userId)) vcSetting.userId = req.body.userId;
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
@@ -2847,7 +2846,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			logger4js.info("Found the Setting for VC Updated");
-			if (req.body.updatedAt && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
+			if (req.body.updatedAt && Date.parse(req.body.updatedAt) && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
 				logger4js.info("VC Setting: Conflict with updatedAt %s %s", oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
 				return res.status(409).send({
 					state: 'failure',
@@ -2857,8 +2856,7 @@ router.route('/:vcid/cost')
 			}
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
-			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
-			if (isNaN(dateValue)) dateValue = new Date()
+			var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
 			if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
 			oneVCSetting.save(function(err, oneVCSetting) {
 				if (err) {

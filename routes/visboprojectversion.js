@@ -316,7 +316,7 @@ router.route('/')
 		req.auditDescription = 'Visbo Project Versions (Create)';
 		var queryvpv = {};
 
-		var vpid = req.body.vpid || 0;
+		var vpid = (req.body.vpid && mongoose.Types.ObjectId.isValid(req.body.vpid)) ? req.body.vpid : 0;
 		var variantName = req.body.variantName.trim() || '';
 		var variantIndex = -1;
 
@@ -379,7 +379,7 @@ router.route('/')
 			logger4js.debug("User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
 			queryvpv.deletedAt = {$exists: false};
-			queryvpv.vpid = req.body.vpid
+			queryvpv.vpid = vpid
 			queryvpv.variantName = req.body.variantName || '';
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
 			queryVPV.sort('-timestamp');
@@ -394,7 +394,7 @@ router.route('/')
 						error: err
 					});
 				};
-				if (req.body.updatedAt) {
+				if (req.body.updatedAt && Date.parse(req.query.updatedAt)) {
 					// check that the last VPV has the same date
 					var updatedAt = new Date(req.body.updatedAt);
 					if (lastVPV) {
@@ -428,16 +428,11 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				if (req.body.timestamp) {
-					var timestamp = new Date(req.body.timestamp)
-					if (isNaN(timestamp)) {
-						newVPV.timestamp = new Date();
-					} else {
-						newVPV.timestamp = timestamp
-					}
+				if (req.body.timestamp && Date.parse(req.query.timestamp)) {
+					newVPV.timestamp = new Date(req.body.timestamp)
 				} else {
 					newVPV.timestamp = new Date();
-			}
+				}
 
 				// copy all attributes
 				newVPV.variantDescription = req.body.variantDescription;

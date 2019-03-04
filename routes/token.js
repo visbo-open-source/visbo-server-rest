@@ -643,7 +643,7 @@ router.route('/user/signup')
 		var query = {};
 		if (req.body.email) {
 			query.email = req.body.email;
-		} else if (req.body._id) {
+		} else if (req.body._id && mongoose.Types.ObjectId.isValid(req.body._id)) {
 			query._id = req.body._id;
 		} else {
 			return res.status(400).send({
@@ -827,7 +827,7 @@ router.route('/user/signup')
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
-			if (!req.body._id || !req.body.hash) {
+			if (!req.body._id || !mongoose.Types.ObjectId.isValid(req.body._id) || !req.body.hash) {
 				return res.status(400).send({
 					state: "failure",
 					message: "No User ID or hash in body"

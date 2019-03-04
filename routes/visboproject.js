@@ -423,7 +423,7 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Create)';
 
-		if (req.body.vcid == undefined || req.body.name == undefined) {
+		if (req.body.vcid == undefined || !mongoose.Types.ObjectId.isValid(req.body.vcid) || req.body.name == undefined) {
 				logger4js.warn("No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
@@ -1869,7 +1869,7 @@ router.route('/:vpid/lock')
 
 		logger4js.info("POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
 		var variantName = req.body.variantName || "";
-		var expiredAt = new Date(req.body.expiresAt);
+		var expiredAt = (req.body.expiresAt  && Date.parse(req.body.expiresAt)) ? new Date(req.body.expiresAt) : undefined;
 		var dateNow = new Date();
 
 		if (expiredAt == undefined) {

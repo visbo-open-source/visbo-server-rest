@@ -48,7 +48,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 		} else if (req.method == "POST") {
 			// Only Create VP Request, check vpid from Body
-			if (!req.body.vpid) {
+			if (!req.body.vpid || !mongoose.Types.ObjectId.isValid(req.body.vpid)) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No Visbo Project ID defined'
@@ -56,7 +56,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 			combinedPermStatus = true;
 			query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
-			query.vpids = req.body && req.body.vpid
+			query.vpids = req.body.vpid
 			acceptEmpty = false;
 			query['permission.vp'] = { $bitsAnySet: constPermVP.View + constPermVP.Modify + constPermVP.CreateVariant }
 		}
