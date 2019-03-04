@@ -32,9 +32,9 @@ router.route('/')
 		req.auditDescription = 'Status (Read)';
 
 		logger4js.info("Get Satus ReST Server ");
+		var err = {"code": "400", "errtext": "Long explanation"}
 		if (req.query.error) {
 			var status = ''
-			var err = {"code": "500", "errtext": "Long explanation"}
 			if (req.query.date != undefined && Date.parse(req.query.date)) {
 				var dateValue = new Date(req.query.date);
 				status = "Get Status Date native ".concat(req.query.date, " converted ", isNaN(dateValue) ? dateValue : dateValue.toISOString(), " is Date ", !isNaN(dateValue))
@@ -55,7 +55,11 @@ router.route('/')
 			}
 
 			if (err) {
-				logger4js.info("Get Status: %O ", req.query, errorDetail);
+				logger4js.info("Get Status: %O %s ", req.query, err);
+				return res.status(400).send({
+					state: 'failiure',
+					message: err
+				});
 			} else {
 				return res.status(200).send({
 					state: 'success',
@@ -64,7 +68,6 @@ router.route('/')
 				});
 
 			}
-
 		} else {
 			return res.status(200).send({
 				state: 'success',
