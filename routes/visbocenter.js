@@ -2520,7 +2520,7 @@ router.route('/:vcid/cost')
 			query.vcid = req.oneVC._id
 			if (req.query.name) query.name = req.query.name;
 			if (req.query.type) query.type = req.query.type;
-			if (req.query.userId) query.userId = req.query.userId;
+			if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) query.userId = req.query.userId;
 
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');

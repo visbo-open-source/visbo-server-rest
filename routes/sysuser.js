@@ -72,7 +72,7 @@ router.route('/')
 		req.auditDescription = 'SysUsers (Read)';
 		req.auditSysAdmin = true;
 		var email = (req.query && req.query.email) ? req.query.email : undefined;
-		var userId = req.query && req.query.userid ? req.query.userid : undefined;
+		var userId = req.query && req.query.userid && mongoose.Types.ObjectId.isValid(req.query.userid) ? req.query.userid : undefined;
 		var maxcount = req.query && req.query.maxcount ? Number(req.query.maxcount) : 100;
 
 		logger4js.info("Get System User List email: %s, userid: %s, maxcount: %s", email, userId, maxcount);
