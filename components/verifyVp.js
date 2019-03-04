@@ -34,7 +34,7 @@ function getAllVPGroups(req, res, next) {
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
-				if (req.query.vcid) query.vcid = req.query.vcid;
+				if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) query.vcid = req.query.vcid;
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				query.deletedByParent = {$exists: checkDeleted};
@@ -45,7 +45,7 @@ function getAllVPGroups(req, res, next) {
 			// Check VC Permission insead of system
 			combinedPermStatus = true;
 			query.groupType = 'VC';						// search for VC permission to create a VP
-			query.vcid = req.body && req.body.vcid
+			if (req.body.vcid && mongoose.Types.ObjectId.isValid(req.body.vcid)) query.vcid = req.body.vcid
 			query.deletedByParent = {$exists: false};		// do not allow to create a VP in a deleted VC
 			acceptEmpty = false;
 			query['permission.vc'] = { $bitsAnySet: constPermVC.View + constPermVC.CreateVP }

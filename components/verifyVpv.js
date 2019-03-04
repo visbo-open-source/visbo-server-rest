@@ -36,8 +36,10 @@ function getAllVPVGroups(req, res, next) {
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
-				if (req.query.vcid) query.vcid = req.query.vcid;
-				if (req.query.vpid) {
+				if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
+					query.vcid = req.query.vcid;
+				}
+				if (req.query.vpid && mongoose.Types.ObjectId.isValid(req.query.vpid)) {
 					query.vpids = req.query.vpid;
 					combinedPermStatus = true;
 				}

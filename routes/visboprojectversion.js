@@ -134,7 +134,7 @@ router.route('/')
 		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
-		if (req.query.vpid) {
+		if (req.query.vpid && mongoose.Types.ObjectId.isValid(req.query.vpid)) {
 			vpidList.push(req.query.vpid);
 			if (req.query.deleted) {
 				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);

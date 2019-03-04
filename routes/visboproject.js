@@ -335,7 +335,9 @@ router.route('/')
 		}
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
-		if (req.query && req.query.vcid) query.vcid = req.query.vcid;
+		if (req.query && req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
+			query.vcid = req.query.vcid;
+		}
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
 		if (req.query && req.query.vpType) query.vpType = req.query.vpType;
 
@@ -2565,9 +2567,6 @@ router.route('/:vpid/portfolio/:vpfid')
 		query._id = req.params.vpfid
 		query.vpid = req.oneVP._id;
 		query.deletedAt = {$exists: false};
-		// check if query string is used to restrict to a specific VC
-		// if (req.query && req.query.vcid) query.vcid = req.query.vcid;
-		// logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {

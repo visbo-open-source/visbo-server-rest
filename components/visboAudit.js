@@ -128,8 +128,8 @@ function visboAudit(tokens, req, res) {
 				saveAuditEntry(tokens, req, res, req.listVPV.length);
 			}
 		} else {
-			// save it to the VC is only one is specified
-			if (req.query.vcid) {
+			// save it to the VC if only one is specified
+			if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
 				req.oneVC = {_id: req.query.vcid, name: ''}
 			}
 			saveAuditEntry(tokens, req, res, 1);
