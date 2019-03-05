@@ -237,8 +237,12 @@ router.use('/', auth.verifyUser);
 router.use('/', verifyVp.getAllVPGroups);
 // register the VP middleware to check that the user has access to the VP
 router.param('vpid', verifyVp.getVpidGroups);
+// register the VP middleware to check that the vpfid is valid
+router.param('vpfid', verifyVp.checkVpfid);
 // Register the Group middleware to check the groupid param
 router.param('groupid', verifyVg.getGroupId);
+// Register the UserId middleware to check the userid param
+router.param('userid', verifyVg.checkUserId);
 
 /////////////////
 // Visbo Projects API
@@ -309,6 +313,14 @@ router.route('/')
 		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
+
+		if (req.query.vcid && !validate.validateObjectId(req.query.vcid, false)) {
+			logger4js.warn("Get VP mal formed query parameter %O ", req.query);
+			return res.status(400).send({
+				state: "failure",
+				message: "Bad Content in Query Parameters"
+			})
+		}
 		var query = {};
 		// Get all VCs there the user Group is assigned to
 		if (!isSysAdmin) {
@@ -335,7 +347,7 @@ router.route('/')
 		}
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
-		if (req.query.vcid && validate.validateObjectId(req.query.vcid, false)) {
+		if (req.query.vcid) {
 			query.vcid = req.query.vcid;
 		}
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
@@ -427,7 +439,7 @@ router.route('/')
 				logger4js.warn("No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
-				message: 'No VCID or Name in Body'
+				message: 'No valid Visbo Center'
 			});
 		}
 		var vcid = req.body.vcid
@@ -1535,7 +1547,7 @@ router.route('/:vpid/audit')
 			req.auditDescription = 'Visbo Project User (Add)';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
-			if (!req.body.email || !validateName(req.body.email, false)) {
+			if (!req.body.email || !validate.validateEmail(req.body.email, false)) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid user definition'
@@ -2451,7 +2463,7 @@ router.route('/:vpid/portfolio')
 		var listVPid = new Array();
 		for (var i = 0; i < req.body.allItems.length; i++) {
 			// build up unique project list to check that they exist
-			if (!listVPid.find(findVP, req.body.allItems[i].vpid)){
+			if (validate.validateObjectId(req.body.allItems[i].vpid, false) && !listVPid.find(findVP, req.body.allItems[i].vpid)){
 				listVPid.push(req.body.allItems[i].vpid)
 			}
 		};
@@ -2461,15 +2473,15 @@ router.route('/:vpid/portfolio')
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				logger4js.fatal("VPF Post DB Connection VisboProject.find(%s) %s ", query, err.message);
+				logger4js.fatal("VPF Post DB Connection VisboProject.find() %s ", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Projects for Portfolio',
 					error: err
 				});
 			}
-			if (listVP.length != listVPid.length) {
-				logger4js.warn("Found only %d of %d VP IDs", listVP.length, listVPid.length);
+			if (listVP.length != req.body.allItems.length) {
+				logger4js.warn("Found only %d of %d VP IDs", listVP.length, req.body.allItems.length);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'Not all Projects exists or User has permission to',
@@ -2485,7 +2497,7 @@ router.route('/:vpid/portfolio')
 				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}
-			logger4js.debug("Replaced in List (%d) correct VP Names %s", newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
+			logger4js.warn("Replaced in List (%d) correct VP Names %s", newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
 			newPortfolio.sortType = req.body.sortType;
 			newPortfolio.sortList = req.body.sortList;
 

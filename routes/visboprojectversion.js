@@ -25,9 +25,6 @@ var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-var validateName = validate.validateName;
-var validateDate = validate.validateDate;
-
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
@@ -131,6 +128,15 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
+		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
+		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
+		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
+			logger4js.warn("Get VPV mal formed query parameter %O ", req.query);
+			return res.status(400).send({
+				state: "failure",
+				message: "Bad Content in Query Parameters"
+			})
+		}
 		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
@@ -409,13 +415,13 @@ router.route('/')
 					}
 				}
 
-				if (!validateName(req.body.status, true)
-				|| !validateName(req.body.leadPerson, true)
-				|| !validateName(req.body.variantDescription, true)
-				|| !validateName(req.body.ampelErlaeuterung, true)
-				|| !validateName(req.body.VorlagenName, true)
-				|| !validateName(req.body.description, true)
-				|| !validateName(req.body.businessUnit, true)
+				if (!validate.validateName(req.body.status, true)
+				|| !validate.validateName(req.body.leadPerson, true)
+				|| !validate.validateName(req.body.variantDescription, true)
+				|| !validate.validateName(req.body.ampelErlaeuterung, true)
+				|| !validate.validateName(req.body.VorlagenName, true)
+				|| !validate.validateName(req.body.description, true)
+				|| !validate.validateName(req.body.businessUnit, true)
 				) {
 					logger4js.info("POST Visbo Project Version contains illegal strings body %O", req.body);
 					return res.status(400).send({

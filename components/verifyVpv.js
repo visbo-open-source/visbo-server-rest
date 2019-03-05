@@ -38,10 +38,17 @@ function getAllVPVGroups(req, res, next) {
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
-				if (req.query.vcid && validate.validateObjectId(req.query.vcid, false)) {
+				if (!validate.validateObjectId(req.query.vcid, true) || !validate.validateObjectId(req.query.vpid, true)) {
+					logger4js.warn("VC Bad Query Parameter vcid %s vpid %s", req.query.vcid, req.query.vpid);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No valid Parameter for Visbo Center / Visbo Project'
+					});
+				}
+				if (req.query.vcid) {
 					query.vcid = req.query.vcid;
 				}
-				if (req.query.vpid && validate.validateObjectId(req.query.vpid, false)) {
+				if (req.query.vpid) {
 					query.vpids = req.query.vpid;
 					combinedPermStatus = true;
 				}
@@ -50,7 +57,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 		} else if (req.method == "POST") {
 			// Only Create VP Request, check vpid from Body
-			if (!req.body.vpid || !validate.validateObjectId(req.body.vpid, false)) {
+			if (!validate.validateObjectId(req.body.vpid, false)) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No Visbo Project ID defined'
@@ -116,6 +123,13 @@ function getVpvidGroups(req, res, next, vpvid) {
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
+	if (!validate.validateObjectId(vpvid, false)) {
+		logger4js.fatal("VPV Bad Parameter vpvid %s", vpvid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Visbo Project Version'
+		});
+	}
 	// get the VPV without checks to find the corresponding VP
 	var queryVPV = VisboProjectVersion.findOne({_id: vpvid, deletedAt: {$exists: checkDeleted}});
 

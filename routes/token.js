@@ -16,6 +16,7 @@ var useragent = require('useragent');
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+var validate = require('./../components/validate');
 
 var mail = require('./../components/mail');
 var sendMail = require('./../components/sendMail');
@@ -350,14 +351,14 @@ router.route('/user/pwforgotten')
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
-		if (!req.body.email || !req.body.email.trim()) {
-			logger4js.info("No eMail specified");
+		if (req.body.email)	req.body.email = req.body.email.toLowerCase().trim();
+		if (!validate.validateEmail(req.body.email, false)) {
+			logger4js.info("No valid eMail specified %s ", req.body.email);
 			return res.status(400).send({
 				state: "failure",
-				message: "No eMail specified"
+				message: "No valid eMail specified"
 			});
 		}
-		req.body.email = req.body.email.toLowerCase().trim();
 
 		var query = { "email" : req.body.email };
 		visbouser.findOne(query, function(err, user) {
@@ -640,6 +641,14 @@ router.route('/user/signup')
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
 		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
+		if (!validate.validateEmail(req.body.email, false)) {
+			logger4js.warn("Signup uses not allowed UserName %s ", req.body.email);
+			return res.status(400).send({
+				state: "failure",
+				message: "Signup User Name not allowed"
+			});
+		}
+
 		var query = {};
 		if (req.body.email) {
 			query.email = req.body.email;
@@ -827,10 +836,10 @@ router.route('/user/signup')
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
-			if (!req.body._id || !mongoose.Types.ObjectId.isValid(req.body._id) || !req.body.hash) {
+			if (!validate.validateObjectId(req.body._id, false)) || !req.body.hash) {
 				return res.status(400).send({
 					state: "failure",
-					message: "No User ID or hash in body"
+					message: "No valid User ID or hash in body"
 				});
 			}
 

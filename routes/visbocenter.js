@@ -37,8 +37,6 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-var validateName = validate.validateName;
-
 // Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // Register the VC middleware to check that the user has access to the VC
@@ -47,6 +45,8 @@ router.use('/', verifyVc.getAllGroups);
 router.param('vcid', verifyVc.getVcidGroups);
 // Register the Group middleware to check the groupid param
 router.param('groupid', verifyVg.getGroupId);
+// Register the UserId middleware to check the userid param
+router.param('userid', verifyVg.checkUserId);
 
 var findUser = function(currentUser) {
 		return currentUser == this;
@@ -186,7 +186,6 @@ router.route('/')
 
 			var queryVC = VisboCenter.find(query);
 			queryVC.select('-users');
-			queryVC.lean();
 			queryVC.exec(function (err, listVC) {
 				if (err) {
 					logger4js.fatal("VC Get DB Connection VisboCenter.find(%s) %s ", query, err.message);
@@ -270,7 +269,7 @@ router.route('/')
 		logger4js.trace("Post a new Visbo Center Req Body: %O Name %s", req.body, name);
 		logger4js.info("Post a new Visbo Center with name %s executed by user %s Perm %O ", name, useremail, req.combinedPerm);
 
-		if (!validateName(name, false) || !validateName(description, true)) {
+		if (!validate.validateName(name, false) || !validate.validateName(description, true)) {
 			return res.status(400).send({
 				state: "failure",
 				message: "Visbo Center: Body contains illegal characters"
@@ -508,8 +507,8 @@ router.route('/:vcid')
 		}
 		var name = (req.body.name || '').trim();
 		var description = req.body.description ? (req.body.description || '').trim() : undefined;
-		if (!validateName(name, true) || (description && !validateName(description, true))) {
-			logger4js.info("PUT/Save Visbo Center name :%s: %s description :%s: %s contains illegal characters", name, validateName(name, true), description, validateName(description, true));
+		if (!validate.validateName(name, true) || (description && !validate.validateName(description, true))) {
+			logger4js.info("PUT/Save Visbo Center name :%s: %s description :%s: %s contains illegal characters", name, validate.validateName(name, true), description, validate.validateName(description, true));
 			return res.status(400).send({
 				state: "failure",
 				message: "Visbo Center Body contains illegal characters"
@@ -1069,7 +1068,7 @@ router.route('/:vcid/group')
 		var groupType;
 
 		var vgName = req.body.name ? req.body.name.trim() : '';
-		if (!validateName(vgName, false)) {
+		if (!validate.validateName(vgName, false)) {
 			logger4js.info("Body is inconsistent VC Group %s Body %O", req.oneVC._id, req.body);
 			return res.status(400).send({
 				state: "failure",
@@ -1313,7 +1312,7 @@ router.route('/:vcid/group/:groupid')
 		req.auditDescription = 'Visbo Center Group (Update)';
 
 		var vgName = (req.body.name || '').trim();
-		if (!validateName(vgName, true)) {
+		if (!validate.validateName(vgName, true)) {
 			logger4js.info("Body is inconsistent VC Group %s Body %O", req.oneVC._id, req.body);
 			return res.status(400).send({
 				state: "failure",
@@ -1478,7 +1477,8 @@ router.route('/:vcid/group/:groupid')
 		req.auditDescription = 'Visbo Center User (Add)';
 
 		var name = (req.body.email || '').trim();
-		if (!validateName(name, false)) {
+		if (!validate.validateEmail(name, false)) {
+			logger4js.warn("Post a not allowed UserName %s to Visbo Center group executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.combinedPerm);
 			return res.status(400).send({
 				state: "failure",
 				message: "Visbo Center User Name not allowed"
@@ -2627,7 +2627,7 @@ router.route('/:vcid/cost')
 			}
 			var name = (req.body.name || '').trim();
 			var value = req.body.value
-			if (!validateName(name, false)) {
+			if (!validate.validateName(name, false)) {
 				return res.status(400).send({
 					state: "failure",
 					message: "Visbo Center Setting Name or Value not allowed"
@@ -2817,7 +2817,7 @@ router.route('/:vcid/cost')
 		}
 		var name = (req.body.name || '').trim();
 		var value = req.body.value
-		if (!validateName(name, false)) {
+		if (!validate.validateName(name, false)) {
 			return res.status(400).send({
 				state: "failure",
 				message: "Visbo Center Setting Name or Value not allowed"

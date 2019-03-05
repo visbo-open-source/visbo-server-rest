@@ -24,7 +24,7 @@ function getAllVPGroups(req, res, next) {
 		logger4js.warn("VC Bad Query Parameter vcid %s", req.query.vcid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid Visbo Center'
 		});
 	}
 	if (baseUrl == '/') {
@@ -102,6 +102,17 @@ function getAllVPGroups(req, res, next) {
 	}
 }
 
+function checkVpfid(req, res, next, vpfid) {
+	logger4js.debug("Check Portfolio ID vpfid %s user %s for url %s ", vpfid, req.decoded.email, req.url);
+	if (!validate.validateObjectId(vpfid, false)) {
+		logger4js.fatal("VC Groups Bad Parameter vpid %s", vpfid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Visbo Project Portfolio'
+		});
+	}
+}
+
 // Generate the Groups where the user is member of System / VP depending on the case
 function getVpidGroups(req, res, next, vpid) {
 	var userId = req.decoded._id;
@@ -120,7 +131,7 @@ function getVpidGroups(req, res, next, vpid) {
 		logger4js.fatal("VC Groups Bad Parameter vpid %s", vpid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid Visbo Project'
 		});
 	}
 	var query = {};
@@ -206,5 +217,6 @@ function getVpidGroups(req, res, next, vpid) {
 
 module.exports = {
 	getAllVPGroups: getAllVPGroups,
-	getVpidGroups: getVpidGroups
+	getVpidGroups: getVpidGroups,
+	checkVpfid: checkVpfid
 };
