@@ -2288,6 +2288,13 @@ router.route('/:vpid/portfolio')
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
 
+		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
+			logger4js.warn("Get VPF mal formed query parameter %O ", req.query);
+			return res.status(400).send({
+				state: "failure",
+				message: "Bad Content in Query Parameters"
+			})
+		}
 		var query = {};
 		var latestOnly = false; 	// as default show all portfolio lists of the project
 		query.vpid = req.oneVP._id;
