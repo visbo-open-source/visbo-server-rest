@@ -78,7 +78,7 @@ router.route('/profile')
 
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User Get Profile DB Connection ", err);
+				logger4js.fatal("User Get Profile DB Connection %s ", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting user',
@@ -155,7 +155,7 @@ router.route('/profile')
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Profile DB Connection ", err);
+				logger4js.fatal("User update Profile DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting user',
@@ -187,7 +187,7 @@ router.route('/profile')
 			user.save(function(err, user) {
 				logger4js.debug("Put/Update after Save");
 				if (err) {
-					logger4js.fatal("User update Profile to DB Connection ", err);
+					logger4js.fatal("User update Profile to DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating user',
@@ -238,7 +238,7 @@ router.route('/passwordchange')
 		logger4js.info("Put/Update user password %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Password DB Connection ", err);
+				logger4js.fatal("User update Password DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting user',
@@ -275,7 +275,7 @@ router.route('/passwordchange')
 				user.status.expiresAt = undefined;
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Change Password Update DB Connection %O", err);
+						logger4js.error("Change Password Update DB Connection %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -306,7 +306,7 @@ router.route('/passwordchange')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %O", err);
+							logger4js.fatal("E-Mail Rendering failed %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",

@@ -50,7 +50,7 @@ var updateVPVCount = function(vpid, variantName, increment){
 	logger4js.debug("Update VP %s with vpvCount inc %d update: %O with %O", vpid, increment, updateQuery, updateUpdate)
 	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err);
+			logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err.message);
 		}
 		logger4js.trace("Updated VP %s vpvCount inc %d changed %d %d", vpid, increment, result.n, result.nModified)
 	})
@@ -134,7 +134,7 @@ router.route('/')
 		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
-		if (req.query.vpid && mongoose.Types.ObjectId.isValid(req.query.vpid)) {
+		if (req.query.vpid && validate.validateObjectId(req.query.vpid, false)) {
 			vpidList.push(req.query.vpid);
 			if (req.query.deleted) {
 				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);
@@ -185,7 +185,7 @@ router.route('/')
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during Get VPV: %O", err);
+				logger4js.fatal("Error connecting to DB during Get VPV: %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -249,7 +249,7 @@ router.route('/')
 			queryVPV.lean();
 			queryVPV.exec(function (err, listVPV) {
 				if (err) {
-					logger4js.fatal("Error connecting to DB during Get VPV with IDs: %O", err);
+					logger4js.fatal("Error connecting to DB during Get VPV with IDs: %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -316,7 +316,7 @@ router.route('/')
 		req.auditDescription = 'Visbo Project Versions (Create)';
 		var queryvpv = {};
 
-		var vpid = (req.body.vpid && mongoose.Types.ObjectId.isValid(req.body.vpid)) ? req.body.vpid : 0;
+		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
 		var variantName = req.body.variantName.trim() || '';
 		var variantIndex = -1;
 
@@ -336,7 +336,7 @@ router.route('/')
 		queryVp.deletedAt = {$exists: false};				// Not deleted
 		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during POST VPV find VP: %O", err);
+				logger4js.fatal("Error connecting to DB during POST VPV find VP: %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -387,7 +387,7 @@ router.route('/')
 			queryVPV.lean();
 			queryVPV.exec(function (err, lastVPV) {
 				if (err) {
-					logger4js.fatal("Error connecting to DB during POST VPV: %O", err);
+					logger4js.fatal("Error connecting to DB during POST VPV: %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -605,7 +605,7 @@ router.route('/:vpvid')
 		logger4js.debug("PUT VPV: save now %s unDelete %s", req.oneVPV._id, vpUndelete);
 		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
-				logger4js.fatal("VPV PUT DB Connection ", err);
+				logger4js.fatal("VPV PUT DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Version',
@@ -722,7 +722,7 @@ router.route('/:vpvid')
 			queryVPV._id = req.oneVPV._id
 			VisboProjectVersion.deleteOne(queryVPV, function(err) {
 				if (err) {
-					logger4js.fatal("VPV Destroy DB Connection ", err);
+					logger4js.fatal("VPV Destroy DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Project Version',

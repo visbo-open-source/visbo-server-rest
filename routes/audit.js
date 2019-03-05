@@ -146,7 +146,7 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection ", err);
+			logger4js.fatal("System Audit Get DB Connection ", err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting System Audit',

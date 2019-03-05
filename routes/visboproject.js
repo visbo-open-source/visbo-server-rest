@@ -82,7 +82,7 @@ var updateVPCount = function(vcid, increment){
 
 	VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VC %s vpCount: %s", vcid, err);
+			logger4js.error("Problem updating VC %s vpCount: %s", vcid, err.message);
 		}
 		logger4js.trace("Updated VC %s vpCount inc %d changed %d %d", vcid, increment, result.n, result.nModified)
 	})
@@ -96,7 +96,7 @@ var updateVCName = function(vp){
 	queryVC.lean();
 	queryVC.exec(function (err, vc) {
 		if (err) {
-			logger4js.fatal("VP PUT: Update VC Name DB Connection ", err);
+			logger4js.fatal("VP PUT: Update VC Name DB Connection %s", err.message);
 			return;
 		}
 		if (vc) {
@@ -111,7 +111,7 @@ var updateVCName = function(vp){
 			logger4js.debug("Update VP %s for correct VC Name %s ", vp._id, vc.name)
 			VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					logger4js.error("Problem updating VP for correct VC Name: %s", vpid, err);
+					logger4js.error("Problem updating VP for correct VC Name: %s", vpid, err.message);
 				}
 				logger4js.trace("Updated VP %s for VC Name changed %d %d", vp._id, result.n, result.nModified)
 			})
@@ -128,7 +128,7 @@ var updateVPName = function(vpid, name, type){
 
 	VisboProjectVersion.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VP %s new Name in Versions Err: %s", vpid, err);
+			logger4js.error("Problem updating VP %s new Name in Versions Err: %s", vpid, err.message);
 		}
 		logger4js.trace("Updated VP %s New Name %s changed %d %d", vpid, name, result.n, result.nModified)
 	})
@@ -179,7 +179,7 @@ var updatePermAddVP = function(vcid, vpid){
 
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
+			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err.message);
 		}
 		logger4js.debug("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
 	})
@@ -195,7 +195,7 @@ var updatePermRemoveVP = function(vcid, vpid){
 	logger4js.debug("Updated VC %s Groups removed VP %s changed", vcid, vpid)
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err);
+			logger4js.error("Problem updating VC %s Gloabl Groups: %s", vcid, err.message);
 		}
 		logger4js.debug("Updated VC %s Groups removed VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
 	})
@@ -210,7 +210,7 @@ var unDeleteGroup = function(vpid){
 	logger4js.debug("Update Groups for VP %s", vpid)
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating Groups for VC %s set undelete", vpid, err);
+			logger4js.error("Problem updating Groups for VC %s set undelete", vpid, err.message);
 		}
 		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vpid, result.n, result.nModified)
 	})
@@ -225,7 +225,7 @@ var markDeleteGroup = function(vpid){
 	logger4js.debug("Update Groups for VP %s", vpid)
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating Groups for VP %s set undelete", vpid, err);
+			logger4js.error("Problem updating Groups for VP %s set undelete", vpid, err.message);
 		}
 		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified)
 	})
@@ -335,7 +335,7 @@ router.route('/')
 		}
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
-		if (req.query && req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
+		if (req.query.vcid && validate.validateObjectId(req.query.vcid, false)) {
 			query.vcid = req.query.vcid;
 		}
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
@@ -348,7 +348,7 @@ router.route('/')
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				logger4js.fatal("VP GET DB Connection \nVisboProject.find(%s)\n%O ", query, err);
+				logger4js.fatal("VP GET DB Connection VisboProject.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -423,7 +423,7 @@ router.route('/')
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project (Create)';
 
-		if (req.body.vcid == undefined || !mongoose.Types.ObjectId.isValid(req.body.vcid) || req.body.name == undefined) {
+		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
 				logger4js.warn("No VCID or Name in Body");
 				return res.status(400).send({
 				state: 'failure',
@@ -460,7 +460,7 @@ router.route('/')
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
 			if (err) {
-				logger4js.fatal("VP Post DB Connection \nVisboCenter.findOne(%s)\n%O ", query, err);
+				logger4js.fatal("VP Post DB Connection VisboCenter.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -483,7 +483,7 @@ router.route('/')
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
-					logger4js.fatal("VP Post DB Connection \nVisboProject.findOne(%s)\n%O ", query, err);
+					logger4js.fatal("VP Post DB Connection VisboProject.findOne(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -525,7 +525,7 @@ router.route('/')
 				queryUsers.lean();
 				queryUsers.exec(function (err, listUsers) {
 					if (err) {
-						logger4js.fatal("VP Post DB Connection \nUser.findOne(%s)\n%O ", query, err);
+						logger4js.fatal("VP Post DB Connection User.findOne(%s) %s ", query, err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error getting Users for VisboCenters',
@@ -556,7 +556,7 @@ router.route('/')
 					logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
 					newVG.save(function(err, vg) {
 						if (err) {
-							logger4js.fatal("VP Post Create 1. Group for vp %s DB Connection ", newVP._id, err);
+							logger4js.fatal("VP Post Create 1. Group for vp %s DB Connection ", newVP._id, err.message);
 						}
 					});
 					// set the VP Name
@@ -565,7 +565,7 @@ router.route('/')
 					logger4js.debug("Save VisboProject %s %s", newVP.name, newVP._id);
 					newVP.save(function(err, vp) {
 						if (err) {
-							logger4js.debug("Error Save VisboProject %s  with Error %s", newVP.name, err);
+							logger4js.debug("Error Save VisboProject %s  with Error %s", newVP.name, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to create visboproject",
@@ -767,7 +767,7 @@ router.route('/:vpid')
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
-				logger4js.fatal("VP Put DB Connection \nVisboProject.findOne(%s)\n%O ", query, err);
+				logger4js.fatal("VP Put DB Connection VisboProject.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -784,7 +784,7 @@ router.route('/:vpid')
 			logger4js.debug("PUT VP: save now %O populate %s unDelete %s", req.oneVP, vpPopulate, vpUndelete);
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					logger4js.fatal("VP PUT DB Connection ", err);
+					logger4js.fatal("VP PUT DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Project',
@@ -864,7 +864,7 @@ router.route('/:vpid')
 			req.oneVP.deletedAt = new Date();
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					logger4js.fatal("VP DELETE DB Connection ", err);
+					logger4js.fatal("VP DELETE DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Project',
@@ -888,7 +888,7 @@ router.route('/:vpid')
 			queryVPV.vpid = req.oneVP._id
 			VisboProjectVersion.deleteMany(queryVPV, function(err) {
 				if (err) {
-					logger4js.fatal("VPV Destroy DB Connection ", err);
+					logger4js.fatal("VPV Destroy DB Connection %s", err.message);
 				}
 				logger4js.debug("VP Destroy: Destroyed VP Versions");
 			});
@@ -896,7 +896,7 @@ router.route('/:vpid')
 			var queryvpf = {vpid: req.oneVP._id};
 			VisboPortfolio.deleteMany(queryvpf, function (err) {
 				if (err){
-					logger4js.error("VP Destroy: %s Problem deleting VP Portfolios %O", req.oneVP._id, err);
+					logger4js.error("VP Destroy: %s Problem deleting VP Portfolios %s", req.oneVP._id, err.message);
 				}
 				logger4js.trace("VP Destroy: %s VP Portfolios Deleted", req.oneVP._id)
 			})
@@ -905,7 +905,7 @@ router.route('/:vpid')
 			queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'}
 			VisboGroup.deleteMany(queryvpgroup, function (err) {
 				if (err){
-					logger4js.error("VC Destroy: %s Problem deleting VP Groups %O", req.oneVP._id, err);
+					logger4js.error("VC Destroy: %s Problem deleting VP Groups %s", req.oneVP._id, err.message);
 				}
 				logger4js.trace("VC Destroy: %s VP Groups Deleted", req.oneVP._id)
 			});
@@ -913,7 +913,7 @@ router.route('/:vpid')
 			var queryaudit = {'vp.vpid': req.oneVP._id};
 			VisboAudit.deleteMany(queryaudit, function (err) {
 				if (err){
-					logger4js.error("VP Destroy: %s Problem deleting Audit %O", req.oneVP._id, err);
+					logger4js.error("VP Destroy: %s Problem deleting Audit %s", req.oneVP._id, err.message);
 				}
 				logger4js.trace("VP Destroy: %s VP Audit Deleted", req.oneVP._id)
 			});
@@ -923,7 +923,7 @@ router.route('/:vpid')
 			queryVP._id = req.oneVP._id
 			VisboProject.deleteOne(queryVP, function(err) {
 				if (err) {
-					logger4js.fatal("VP DELETE DB Connection ", err);
+					logger4js.fatal("VP DELETE DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Project',
@@ -1059,7 +1059,7 @@ router.route('/:vpid/audit')
 		.lean()
 		.exec(function (err, listVPAudit) {
 			if (err) {
-				logger4js.fatal("VP Audit Get DB Connection \nVisboAudit.find(%s)\n%O ", query, err);
+				logger4js.fatal("VP Audit Get DB Connection VisboAudit.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboProject Audit',
@@ -1138,7 +1138,7 @@ router.route('/:vpid/audit')
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					logger4js.fatal("VC Get Group DB Connection \nVisboGroup.find(%s)\n%O ", query, err);
+					logger4js.fatal("VC Get Group DB Connection VisboGroup.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboProject Groups',
@@ -1262,7 +1262,7 @@ router.route('/:vpid/audit')
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, oneGroup) {
 				if (err) {
-					logger4js.fatal("VC Post Group DB Connection \nVisboGroup.findOne(%s)\n%O ", query, err);
+					logger4js.fatal("VC Post Group DB Connection VisboGroup.findOne(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Visbo Project Groups',
@@ -1288,7 +1288,7 @@ router.route('/:vpid/audit')
 				logger4js.debug("Post Group %s to VP %s now: %O", req.body.name, req.params.vpid, vgGroup);
 				vgGroup.save(function(err, oneGroup) {
 					if (err) {
-						logger4js.fatal("VC Post Group DB Connection ", err);
+						logger4js.fatal("VC Post Group DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error updating Visbo Project Group',
@@ -1365,7 +1365,7 @@ router.route('/:vpid/audit')
 			}
 			req.oneGroup.remove(function(err, empty) {
 				if (err) {
-					logger4js.fatal("VC Delete Group DB Connection ", err);
+					logger4js.fatal("VC Delete Group DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Project Group',
@@ -1463,7 +1463,7 @@ router.route('/:vpid/audit')
 			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 			req.oneGroup.save(function(err, oneGroup) {
 				if (err) {
-					logger4js.fatal("VC Put Group DB Connection ", err);
+					logger4js.fatal("VC Put Group DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Project Group',
@@ -1581,7 +1581,7 @@ router.route('/:vpid/audit')
 			//queryUsers.select('email');
 			queryUsers.exec(function (err, user) {
 				if (err) {
-					logger4js.fatal("Post User to Group cannot find User, DB Connection \nUser.findOne(%s)\n%O ", query, err);
+					logger4js.fatal("Post User to Group cannot find User, DB Connection User.findOne(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error adding User to VisboProject Group',
@@ -1594,7 +1594,7 @@ router.route('/:vpid/audit')
 					logger4js.debug("Create new User %s for VP as %s", vgUser.email, vgUser.groupName);
 					user.save(function(err, user) {
 						if (err) {
-							logger4js.error("Add User to VP: Error DB Connection %O", err);
+							logger4js.error("Add User to VP: Error DB Connection %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to create user",
@@ -1607,7 +1607,7 @@ router.route('/:vpid/audit')
 						req.oneGroup.users.push(vgUser)
 						req.oneGroup.save(function(err, vgGroup) {
 							if (err) {
-								logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+								logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "database error, failed to update Visbo Group",
@@ -1637,7 +1637,7 @@ router.route('/:vpid/audit')
 							} else {
 								ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vp: req.oneVP, message: eMailMessage}, function(err, emailHtml) {
 									if (err) {
-										logger4js.fatal("E-Mail Rendering failed %O", err);
+										logger4js.fatal("E-Mail Rendering failed %s", err.message);
 										return res.status(500).send({
 											state: "failure",
 											message: "E-Mail Rendering failed",
@@ -1667,7 +1667,7 @@ router.route('/:vpid/audit')
 					req.oneGroup.users.push(vgUser)
 					req.oneGroup.save(function(err, vgGroup) {
 						if (err) {
-							logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+							logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to update Visbo Group",
@@ -1706,7 +1706,7 @@ router.route('/:vpid/audit')
 						} else {
 							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vp: req.oneVP, message: eMailMessage}, function(err, emailHtml) {
 								if (err) {
-									logger4js.fatal("E-Mail Rendering failed %O", err);
+									logger4js.fatal("E-Mail Rendering failed %s", err.message);
 									return res.status(500).send({
 										state: "failure",
 										message: "E-Mail Rendering failed",
@@ -1806,7 +1806,7 @@ router.route('/:vpid/audit')
 			req.oneGroup.users = newUserList;
 			req.oneGroup.save(function(err, vg) {
 				if (err) {
-					logger4js.error("Error Update VisboProject Group %s with Error %s", req.oneVC.name, err);
+					logger4js.error("Error Update VisboProject Group %s with Error %s", req.oneVC.name, err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to update Visbo Project",
@@ -1920,7 +1920,7 @@ router.route('/:vpid/lock')
 		}
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP Lock DB Connection ", err);
+				logger4js.fatal("VP Lock DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Locks',
@@ -1999,7 +1999,7 @@ router.route('/:vpid/lock')
 
 		req.oneVP.save(function(err, empty) {
 			if (err) {
-				logger4js.fatal("VP DELETE Lock DB Connection ", err);
+				logger4js.fatal("VP DELETE Lock DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Project',
@@ -2100,7 +2100,7 @@ router.route('/:vpid/variant')
 		logger4js.trace("Variant List new %O ", variantList);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP POST Variant DB Connection ", err);
+				logger4js.fatal("VP POST Variant DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Variants',
@@ -2197,7 +2197,7 @@ router.route('/:vpid/variant/:vid')
 
 		req.oneVP.save(function(err, empty) {
 			if (err) {
-				logger4js.fatal("VP DELETE Variant DB Connection ", err);
+				logger4js.fatal("VP DELETE Variant DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Project Variants',
@@ -2302,7 +2302,7 @@ router.route('/:vpid/portfolio')
 		queryVPF.lean();
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
-				logger4js.fatal("VPF GET DB Connection \nVisboPortfolio.find(%s)\n%O ", query, err);
+				logger4js.fatal("VPF GET DB Connection VisboPortfolio.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -2461,7 +2461,7 @@ router.route('/:vpid/portfolio')
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				logger4js.fatal("VPF Post DB Connection \nVisboProject.find(%s)\n%O ", query, err);
+				logger4js.fatal("VPF Post DB Connection VisboProject.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Projects for Portfolio',
@@ -2491,7 +2491,7 @@ router.route('/:vpid/portfolio')
 
 			newPortfolio.save(function(err, onePortfolio) {
 				if (err) {
-					logger4js.fatal("VPF Post DB Connection ", err);
+					logger4js.fatal("VPF Post DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Portfolio',
@@ -2571,7 +2571,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
-				logger4js.fatal("VPF GET specific DB Connection \nVisboPortfolio.find(%s)\n%O ", query, err);
+				logger4js.fatal("VPF GET specific DB Connection VisboPortfolio.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -2635,7 +2635,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
-				logger4js.fatal("VPF DELETE DB Connection \nVisboPortfolio.findOne(%s)\n%O ", query, err);
+				logger4js.fatal("VPF DELETE DB Connection VisboPortfolio.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Portfolio',
@@ -2687,7 +2687,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			oneVPF.deletedAt = new Date();
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
-					logger4js.fatal("VPF Delete DB Connection ", err);
+					logger4js.fatal("VPF Delete DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Portfolio',

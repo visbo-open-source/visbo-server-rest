@@ -51,7 +51,7 @@ var createSystemVC = function (body) {
 			var queryVCSetting = VCSetting.findOne(query);
 			queryVCSetting.exec(function (err, item) {
 				if (err) {
-					logger4js.fatal("VC Get System Setting DB Connection ", err);
+					logger4js.fatal("VC Get System Setting DB Connection %s", err.message);
 				} else if (item) {
 					logger4js.debug("Setting found for System VC %O", item);
 					logging.setLogLevelConfig(item.value);
@@ -66,7 +66,7 @@ var createSystemVC = function (body) {
 					vcSetting.value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"};
 					vcSetting.save(function(err, oneVcSetting) {
 						if (err) {
-							logger4js.fatal("VC Define Initial Logging DB Connection ", err);
+							logger4js.fatal("VC Define Initial Logging DB Connection %s", err.message);
 						} else {
 							logger4js.info("Update System Log Setting");
 							logging.setLogLevelConfig(oneVcSetting.value)
@@ -84,7 +84,7 @@ var createSystemVC = function (body) {
 		newVC.vpCount = 0;
 		newVC.save(function(err, vc) {
 			if (err) {
-				logger4js.fatal("DB error during Creating System Visbo Center %s", err);
+				logger4js.fatal("DB error during Creating System Visbo Center %s", err.message);
 				return undefined
 			}
 			vcSystem = vc;
@@ -93,7 +93,7 @@ var createSystemVC = function (body) {
 			newUser.email = body.users[0].email;
 			newUser.save(function(err, user) {
 				if (err) {
-					logger4js.fatal("DB error during Creating System Visbo Center User: %s", err);
+					logger4js.fatal("DB error during Creating System Visbo Center User: %s", err.message);
 					return undefined
 				}
 				var newGroup = new VisboGroup();
@@ -105,7 +105,7 @@ var createSystemVC = function (body) {
 				newGroup.users.push({userId: user._id, email: user.email});
 				newGroup.save(function(err, group) {
 					if (err) {
-						logger4js.warn("System VisboCenter Group Created failed: %O", err);
+						logger4js.warn("System VisboCenter Group Created failed: %s", err.message);
 						return undefined;
 					}
 					logger4js.warn("System VisboCenter Group Created, group: %O", group);

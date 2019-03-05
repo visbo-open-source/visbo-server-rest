@@ -9,6 +9,8 @@ var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboGroup = mongoose.model('VisboGroup');
 
+var validate = require('./../components/validate');
+
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -36,10 +38,10 @@ function getAllVPVGroups(req, res, next) {
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
-				if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
+				if (req.query.vcid && validate.validateObjectId(req.query.vcid, false)) {
 					query.vcid = req.query.vcid;
 				}
-				if (req.query.vpid && mongoose.Types.ObjectId.isValid(req.query.vpid)) {
+				if (req.query.vpid && validate.validateObjectId(req.query.vpid, false)) {
 					query.vpids = req.query.vpid;
 					combinedPermStatus = true;
 				}
@@ -48,7 +50,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 		} else if (req.method == "POST") {
 			// Only Create VP Request, check vpid from Body
-			if (!req.body.vpid || !mongoose.Types.ObjectId.isValid(req.body.vpid)) {
+			if (!req.body.vpid || !validate.validateObjectId(req.body.vpid, false)) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No Visbo Project ID defined'
@@ -66,7 +68,7 @@ function getAllVPVGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
+				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -120,7 +122,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 	// queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName deletedAt');
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
-			logger4js.fatal("VPV Get with ID DB Connection \nVisboProjectVersion.findOne()\n%O", err);
+			logger4js.fatal("VPV Get with ID DB Connection \nVisboProjectVersion.findOne() %s", err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting Visbo Project Versions',
@@ -156,7 +158,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 		queryVG.select('name permission vpid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
+				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -193,7 +195,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 			// queryVP.select('name users updatedAt createdAt');
 			queryVP.exec(function (err, oneVP) {
 				if (err) {
-					logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s)\n%O", query, err);
+					logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s) %s", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Visbo Projects',

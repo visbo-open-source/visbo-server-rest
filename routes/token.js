@@ -144,7 +144,7 @@ router.route('/user/login')
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
-				logger4js.fatal("Post Login DB Connection \nUser.findOne(%s)\n%O", query, err);
+				logger4js.fatal("Post Login DB Connection \nUser.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -196,7 +196,7 @@ router.route('/user/login')
 				}
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Login User Update DB Connection  \nUser.save()\n%O", err);
+						logger4js.error("Login User Update DB Connection User.save() %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -255,7 +255,7 @@ router.route('/user/login')
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.error("JWT Signing error %s ", err);
+							logger4js.error("JWT Signing Error %s ", err.message);
 							return res.status(500)({
 								state: "failure",
 								message: "token generation failed",
@@ -303,7 +303,7 @@ router.route('/user/login')
 						logger4js.trace("User before Save User Agents %s", JSON.stringify(user.userAgents));
 						user.save(function(err, user) {
 							if (err) {
-								logger4js.error("Login User Update DB Connection %O", err);
+								logger4js.error("Login User Update DB Connection %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "database error, failed to update user",
@@ -362,7 +362,7 @@ router.route('/user/pwforgotten')
 		var query = { "email" : req.body.email };
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("Forgot Password DB Connection  \nUser.findOne(%s)\n%O", query, err);
+				logger4js.fatal("Forgot Password DB Connection User.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -402,7 +402,7 @@ router.route('/user/pwforgotten')
 			user.status.lastPWResetAt = currentDate;
 			user.save(function(err, user) {
 				if (err) {
-					logger4js.error("Forgot Password Save user Error DB Connection %O", err);
+					logger4js.error("Forgot Password Save user Error DB Connection %s", err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to update user",
@@ -425,7 +425,7 @@ router.route('/user/pwforgotten')
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.fatal("Forgot Password Sign Error ", err);
+							logger4js.fatal("Forgot Password Sign Error %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "token generation failed",
@@ -444,7 +444,7 @@ router.route('/user/pwforgotten')
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %O", err);
+								logger4js.fatal("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",
@@ -519,7 +519,7 @@ router.route('/user/pwreset')
 				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt }
 				visbouser.findOne(query, function(err, user) {
 					if (err) {
-						logger4js.fatal("Forgot Password Change DB Connection \nUser.findOne(%s)\n%O ", query, err);
+						logger4js.fatal("Forgot Password Change DB Connection User.findOne(%s) %s ", query, err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error",
@@ -548,7 +548,7 @@ router.route('/user/pwreset')
 					user.status.expiresAt = undefined;
 					user.save(function(err, user) {
 						if (err) {
-							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
+							logger4js.error("Forgot Password Save user Error DB Connection %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to update user",
@@ -653,7 +653,7 @@ router.route('/user/signup')
 		}
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("user Signup DB Connection \nUser.find(%s)\n%O ", query, err);
+				logger4js.fatal("user Signup DB Connection User.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -716,7 +716,7 @@ router.route('/user/signup')
 			}
 			user.save(function(err, user) {
 				if (err) {
-					logger4js.error("Signup Error DB Connection %O", err);
+					logger4js.error("Signup Error DB Connection %s", err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",
@@ -742,7 +742,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",
@@ -837,7 +837,7 @@ router.route('/user/signup')
 			var query = {_id: req.body._id};
 			visbouser.findOne(query, function(err, user) {
 				if (err) {
-					logger4js.fatal("e-Mail confirmation DB Connection \nUser.findOne(%s)\n%O ", query, err);
+					logger4js.fatal("e-Mail confirmation DB Connection User.findOne(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error",
@@ -871,7 +871,7 @@ router.route('/user/signup')
 				user.status.registeredAt = new Date();
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Confirm eMail  DB Connection %O", err);
+						logger4js.error("Confirm eMail  DB Connection %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -891,7 +891,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",

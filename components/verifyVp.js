@@ -8,6 +8,8 @@ var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
+var validate = require('./../components/validate');
+
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -18,6 +20,13 @@ function getAllVPGroups(req, res, next) {
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
+	if (!validate.validateObjectId(req.query.vcid, true)) {
+		logger4js.warn("VC Bad Query Parameter vcid %s", req.query.vcid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VisboCenter'
+		});
+	}
 	if (baseUrl == '/') {
 		// get the VP Groups the user is member of
 		// handle sysadmin case
@@ -34,7 +43,7 @@ function getAllVPGroups(req, res, next) {
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
 			} else {
-				if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) query.vcid = req.query.vcid;
+				if (req.query.vcid) query.vcid = req.query.vcid;
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				query.deletedByParent = {$exists: checkDeleted};
@@ -45,7 +54,7 @@ function getAllVPGroups(req, res, next) {
 			// Check VC Permission insead of system
 			combinedPermStatus = true;
 			query.groupType = 'VC';						// search for VC permission to create a VP
-			if (req.body.vcid && mongoose.Types.ObjectId.isValid(req.body.vcid)) query.vcid = req.body.vcid
+			if (validate.validateObjectId(req.body.vcid, false)) query.vcid = req.body.vcid
 			query.deletedByParent = {$exists: false};		// do not allow to create a VP in a deleted VC
 			acceptEmpty = false;
 			query['permission.vc'] = { $bitsAnySet: constPermVC.View + constPermVC.CreateVP }
@@ -56,7 +65,7 @@ function getAllVPGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
+				logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -107,6 +116,13 @@ function getVpidGroups(req, res, next, vpid) {
 	// get the VP Groups of this VP if the user is member of
 	// handle sysadmin case by getting the system groups
 	logger4js.debug("Generate VP Groups for vpid %s user %s for url %s sysAdmin %s", vpid, req.decoded.email, req.url, sysAdmin);
+	if (!validate.validateObjectId(vpid, false)) {
+		logger4js.fatal("VC Groups Bad Parameter vpid %s", vpid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VisboCenter'
+		});
+	}
 	var query = {};
 	query = {'users.userId': userId};	// search for VP groups where user is member
 	if (sysAdmin) {
@@ -120,13 +136,13 @@ function getVpidGroups(req, res, next, vpid) {
 		query.vpids = vpid;
 		query.deletedByParent = {$exists: checkDeleted};
 	}
-	logger4js.trace("Search VGs %O", query);
+	logger4js.debug("Search VGs %O", query);
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vpid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VP Groups Get DB Connection \nVisboGroup.find(%s)\n%O", query, err);
+			logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',
@@ -166,7 +182,7 @@ function getVpidGroups(req, res, next, vpid) {
 		// queryVP.select('name users updatedAt createdAt');
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s)\n%O", query, err);
+				logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Project',
