@@ -1581,7 +1581,7 @@ router.route('/:vcid/group/:groupid')
 						} else {
 							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
 								if (err) {
-									logger4js.fatal("E-Mail Rendering failed %s", err.message);
+									logger4js.warn("E-Mail Rendering failed %s", err.message);
 									return res.status(500).send({
 										state: "failure",
 										message: "E-Mail Rendering failed",
@@ -1650,7 +1650,7 @@ router.route('/:vcid/group/:groupid')
 					} else {
 						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %s", err.message);
+								logger4js.warn("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",

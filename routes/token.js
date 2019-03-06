@@ -445,7 +445,7 @@ router.route('/user/pwforgotten')
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %s", err.message);
+								logger4js.warn("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",
@@ -751,7 +751,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
+							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",
@@ -836,7 +836,7 @@ router.route('/user/signup')
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
-			if (!validate.validateObjectId(req.body._id, false)) || !req.body.hash) {
+			if (!validate.validateObjectId(req.body._id, false) || !req.body.hash) {
 				return res.status(400).send({
 					state: "failure",
 					message: "No valid User ID or hash in body"
@@ -900,7 +900,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
+							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",

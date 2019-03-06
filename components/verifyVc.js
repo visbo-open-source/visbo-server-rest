@@ -53,7 +53,7 @@ function getAllGroups(req, res, next) {
 		queryVG.select('name permission vcid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s)\n%s", query, err.message);
+				logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s)\n%s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -107,7 +107,7 @@ function getVcidGroups(req, res, next, vcid) {
 	logger4js.debug("Generate VC Groups for vcid %s user %s for url %s sysAdmin %s", vcid, req.decoded.email, req.url, sysAdmin);
 	var query = {};
 	if (!validate.validateObjectId(vcid, false)) {
-		logger4js.fatal("VC Groups Bad Parameter vcid %s", vcid);
+		logger4js.warn("VC Groups Bad Parameter vcid %s", vcid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid VisboCenter'
@@ -135,7 +135,7 @@ function getVcidGroups(req, res, next, vcid) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
+			logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s) %s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',
@@ -175,7 +175,7 @@ function getVcidGroups(req, res, next, vcid) {
 		// queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {
-				logger4js.fatal("VC Get with ID DB Connection \nVisboCenter.findOne(%s) %s", query, err.message);
+				logger4js.fatal("VC Get with ID DB Connection VisboCenter.findOne() %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Centers',
@@ -215,7 +215,7 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
+			logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s) %s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',

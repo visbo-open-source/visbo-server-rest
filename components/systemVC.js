@@ -28,7 +28,7 @@ var createSystemVC = function (body) {
 
 	logger4js.info("Create System Visbo Center if not existent");
 	if (!body && !body.users) {
-		logger4js.fatal("No Body or no users System VisboCenter %s", body);
+		logger4js.warn("No Body or no users System VisboCenter %s", body);
 		return undefined;
 	}
 	var users = body.users;

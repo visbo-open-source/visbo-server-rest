@@ -37,7 +37,7 @@ function getGroupId(req, res, next, groupId) {
 	// queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("Group Param check Get DB Connection \nVisboGroup.find(%s)\n%s", query, err.message);
+			logger4js.fatal("Group Param check Get DB Connection VisboGroup.find(%s) %s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboGroups',
@@ -63,12 +63,13 @@ function getGroupId(req, res, next, groupId) {
 function checkUserId(req, res, next, userid) {
 	logger4js.debug("Check UserID %s user %s for url %s ", userid, req.decoded.email, req.url);
 	if (!validate.validateObjectId(userid, false)) {
-		logger4js.fatal("UserID Bad Parameter vpid %s", userid);
+		logger4js.warn("UserID Bad Parameter vpid %s", userid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Visbo User'
 		});
 	}
+	return next();
 }
 
 module.exports = {

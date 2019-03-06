@@ -400,7 +400,7 @@ router.route('/')
 						error: err
 					});
 				};
-				if (req.body.updatedAt && Date.parse(req.query.updatedAt)) {
+				if (req.body.updatedAt && Date.parse(req.body.updatedAt)) {
 					// check that the last VPV has the same date
 					var updatedAt = new Date(req.body.updatedAt);
 					if (lastVPV) {
@@ -434,7 +434,7 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				if (req.body.timestamp && Date.parse(req.query.timestamp)) {
+				if (req.body.timestamp && Date.parse(req.body.timestamp)) {
 					newVPV.timestamp = new Date(req.body.timestamp)
 				} else {
 					newVPV.timestamp = new Date();
