@@ -6,6 +6,8 @@ var constPermVC = Const.constPermVC
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
+var validate = require('./../components/validate');
+
 var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -22,6 +24,7 @@ function getAllGroups(req, res, next) {
 		logger4js.trace("Generate VC Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
 		var acceptEmpty = true;
+		var checkDeleted = req.query.deleted == true;
 		query = {'users.userId': userId};	// search for VC groups where user is member
 		// Permission check for GET & POST
 		if (req.method == "GET") {
@@ -36,6 +39,7 @@ function getAllGroups(req, res, next) {
 			} else {
 				query.groupType = 'VC';				// search for VC Groups only
 				query['permission.vc'] = { $bitsAllSet: constPermVC.View }
+				query.deletedByParent = {$exists: checkDeleted};
 			}
 		}
 		if (req.method == "POST") {
@@ -49,7 +53,7 @@ function getAllGroups(req, res, next) {
 		queryVG.select('name permission vcid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VC Groups Get DB Connection %O", err);
+				logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s)\n%s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenters',
@@ -94,11 +98,21 @@ function getVcidGroups(req, res, next, vcid) {
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
+	var checkDeleted = req.query.deleted == true;
 
+	req.auditDescription = 'Visbo Center (Read)';
+	req.auditSysAdmin = sysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
 	logger4js.debug("Generate VC Groups for vcid %s user %s for url %s sysAdmin %s", vcid, req.decoded.email, req.url, sysAdmin);
 	var query = {};
+	if (!validate.validateObjectId(vcid, false)) {
+		logger4js.fatal("VC Groups Bad Parameter vcid %s", vcid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VisboCenter'
+		});
+	}
 	query = {'users.userId': userId};	// search for VC groups where user is member
 	if (sysAdmin) {
 		query.groupType = 'System';						// search for System Groups only
@@ -108,6 +122,7 @@ function getVcidGroups(req, res, next, vcid) {
 		query.groupType = 'VC';				// search for VC Groups only
 		query['permission.vc'] = { $bitsAllSet: constPermVC.View }
 		query.vcid = vcid;
+		query.deletedByParent = {$exists: checkDeleted};
 	}
 	// if (req.query.systemvc) {
 	// 	query.groupType = 'System';						// search for System Groups only
@@ -120,7 +135,7 @@ function getVcidGroups(req, res, next, vcid) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection %O", err);
+			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',
@@ -160,7 +175,7 @@ function getVcidGroups(req, res, next, vcid) {
 		// queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {
-				logger4js.fatal("VC Get with ID DB Connection %O", err);
+				logger4js.fatal("VC Get with ID DB Connection \nVisboCenter.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Centers',
@@ -200,7 +215,7 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection %O", err);
+			logger4js.fatal("VC Groups Get DB Connection \nVisboGroup.find(%s) %s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboCenters',

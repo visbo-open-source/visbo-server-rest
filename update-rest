@@ -9,25 +9,39 @@ then
 fi
 
 echo "02: Pull Branch from Repository Server"
+updateCmdOrg=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+updatePackageOrg=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
 git pull
 if [ $? -ne 0 ]
 then
   echo "FATAL: Pull Failed to update ReST Server Branch."
   exit
 fi
-
-echo "03: Install subcomponents from NODE environment"
-npm install
-if [ $? -ne 0 ]
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
-  echo "FATAL: Install of NODE components failed."
+  echo "WARN: Update Script has changed in between, please restart update again."
   exit
+fi
+
+updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updatePackageOrg" != "$updatePackageAct" ]
+then
+  echo "03: Install subcomponents from NODE environment"
+  npm install
+  if [ $? -ne 0 ]
+  then
+    echo "FATAL: Install of NODE components failed."
+    exit
+  fi
 fi
 
 echo "04: Update API Documentation"
 apidoc -i routes -o public/apidoc
-sudo rm -rf /var/www/apidoc
-sudo cp -r public/apidoc /var/www
+rm -rf /var/www/apidoc/*
+cp -r public/apidoc/* /var/www/apidoc
+find /var/www/apidoc -type d -exec chmod 755 {} +
+find /var/www/apidoc -type f -exec chmod 644 {} +
 
 echo "05: Run Upgrade Script against DB"
 # get the DB Connection string
@@ -35,7 +49,7 @@ if [ -f update-db.js ]; then
     echo "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo "$NODE_VISBODB" update-db.js
+    mongo --quiet "$NODE_VISBODB" update-db.js
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."

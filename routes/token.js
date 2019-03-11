@@ -23,6 +23,38 @@ var ejs = require('ejs');
 
 var visbouser = mongoose.model('User');
 
+var visboParseUA = function(agent, stringUA) {
+	var shortUA = stringUA;
+	logger4js.trace("User Agent %s", JSON.stringify(agent), shortUA);
+	var index = stringUA.indexOf("(")
+	if (index >= 0) shortUA = shortUA.substring(0, index-1)
+	logger4js.trace("User Agent Shortened1 %s to %s", stringUA, shortUA);
+
+	if (agent.family == "Other") {
+		index = shortUA.indexOf("/")
+		if (index >= 0) {
+			agent.family = shortUA.substring(0, index)
+			shortUA = shortUA.substring(index+1, shortUA.length )
+			logger4js.trace("User Agent Shortened2 %s to %s", agent.family, shortUA);
+			index = shortUA.indexOf(".")
+			if (index >= 0) {
+				agent.major = shortUA.substring(0, index)
+				agent.minor = shortUA.substring(index+1, shortUA.length )
+				logger4js.trace("User Agent Major %s Minor %s", agent.major, agent.minor);
+			}
+		}
+	}
+	// agent.patch = 0;
+	// agent.family.patch = 0;
+	// agent.os.patch = 0;
+	logger4js.debug("User Agent %s, %s", JSON.stringify(agent), agent.toString());
+}
+
+var findUserAgent = function(currentUserAgent) {
+	// logger4js.trace("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
+	return currentUserAgent.userAgent == this.userAgent;
+}
+
 var isValidHash = function(hash, secret){
 	return bCrypt.compareSync(secret, hash);
 };
@@ -96,7 +128,7 @@ router.route('/user/login')
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
-		logger4js.trace("Login Headers %O", req.headers);
+		logger4js.debug("Login Headers %O", req.headers);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug("Authentication Missing email or password %s", req.body.email);
 			return res.status(400).send({
@@ -105,10 +137,14 @@ router.route('/user/login')
 			});
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
+		var agent = useragent.parse(req.get('User-Agent'));
+		visboParseUA(agent, req.headers['user-agent']);
+		req.visboUserAgent = agent.toString();
+		logger4js.debug("Shortened User Agent ", req.visboUserAgent);
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
-				logger4js.fatal("Post Login DB Connection ", err);
+				logger4js.fatal("Post Login DB Connection \nUser.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -139,10 +175,11 @@ router.route('/user/login')
 			var loginFailedIntervalMinute = 4 * 60;
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
+				var lastLoginFailedAt = user.status.lastLoginFailedAt || new Date(0);
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
 				if (!user.status.loginRetries) user.status.loginRetries = 0
-				if ((currentDate.getTime() - (user.status.lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
+				if ((currentDate.getTime() - (lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
 					// reset retry count if last login failed is older than loginFailedIntervalMinute
 					user.status.loginRetries = 0;
 				}
@@ -159,7 +196,7 @@ router.route('/user/login')
 				}
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Login User Update DB Connection %O", err);
+						logger4js.error("Login User Update DB Connection User.save() %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -180,13 +217,14 @@ router.route('/user/login')
 					logger4js.info("Login Password: current password does not match password rules");
 					if (!user.status) user.status = {};
 					if (!user.status.expiresAt) {
+						user.status.expiresAt = currenDate;
 						user.status.expiresAt.setDate(currenDate.getDate() + 1) // allow 1 day to change
 					}
-						// show expiration in Hours / Minutes
-						var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
-						var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
-						message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
-						if (currenDate.getTime() > user.status.expiresAt.getTime()) {
+					// show expiration in Hours / Minutes
+					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
+					var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+					message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
+					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info("Login Password expired at: %s", user.status.expiresAt.toISOString());
 						sendMail.passwordExpired(req, user)
 						return res.status(401).send({
@@ -200,19 +238,31 @@ router.route('/user/login')
 				var passwordCopy = user.password;
 				user.password = undefined;
 				if (!user.status) user.status = {};
-				logger4js.trace("User accepted User: %O", user.toJSON());
-				jwt.sign(user.toJSON(), jwtSecret.user.secret,
+				// add info about the session ip and userAgent to verify during further requests to avoid session steeling
+				user.session = {};
+				user.session.ip = req.headers["x-real-ip"] || req.ip;
+				user.session.ticket = req.get('User-Agent');
+
+				var userReduced = {};
+				userReduced._id = user._id;
+				userReduced.email = user.email;
+				userReduced.profile = user.profile;
+				userReduced.status = user.status;
+				userReduced.session = user.session;
+				logger4js.trace("User Reduced User: %O", JSON.stringify(userReduced));
+				// jwt.sign(user.toJSON(), jwtSecret.user.secret,
+				jwt.sign(userReduced, jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.error("JWT Signing error %s ", err);
+							logger4js.error("JWT Signing Error %s ", err.message);
 							return res.status(500)({
 								state: "failure",
 								message: "token generation failed",
 								error: err
 							});
 						}
-						logger4js.trace("JWT Signing Success %s ", err);
+						logger4js.trace("JWT Signing Success ");
 						// set the last login and reset the password retries
 
 						if (!user.status) user.status = {};
@@ -221,9 +271,39 @@ router.route('/user/login')
 						user.status.loginRetries = 0;
 						user.status.lockedUntil = undefined;
 						user.password = passwordCopy;
+						user.session = undefined;
+						// Check user Agent and update or add it and send e-Mail about new login
+						var curAgent = {};
+						curAgent.userAgent = req.headers['user-agent'];
+						curAgent.createdAt = new Date();
+						curAgent.lastUsedAt = curAgent.createdAt;
+						logger4js.trace("User Agent prepared %s", JSON.stringify(user.userAgents));
+
+						if (!user.userAgents || user.userAgents.length == 0) {
+							user.userAgents = [];
+							user.userAgents.push(curAgent)
+							logger4js.debug("Init User Agent first Login %s", JSON.stringify(user.userAgents));
+						} else {
+							// Check List of User Agents and add or updated
+							var index = user.userAgents.findIndex(findUserAgent, curAgent)
+							if (index >= 0) {
+								user.userAgents[index].lastUsedAt = curAgent.lastUsedAt
+							} else {
+								user.userAgents.push(curAgent)
+								// Send Mail about new Login with unknown User Agent
+								sendMail.accountNewLogin(req, user);
+								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
+							}
+							// Cleanup old User Agents older than 1 year
+							var expiredAt = new Date()
+							expiredAt.setFullYear(expiredAt.getFullYear()-1)
+							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
+							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
+						}
+						logger4js.trace("User before Save User Agents %s", JSON.stringify(user.userAgents));
 						user.save(function(err, user) {
 							if (err) {
-								logger4js.error("Login User Update DB Connection %O", err);
+								logger4js.error("Login User Update DB Connection %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "database error, failed to update user",
@@ -279,9 +359,10 @@ router.route('/user/pwforgotten')
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
 
-		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
+		var query = { "email" : req.body.email };
+		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("Forgot Password DB Connection ", err);
+				logger4js.fatal("Forgot Password DB Connection User.findOne(%s) %s", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -309,7 +390,7 @@ router.route('/user/pwforgotten')
 			var currentDate = new Date();
 			if (user.status.lastPWResetAt
 			&& user.status.lastPWResetAt > user.status.lastLoginAt
-			&& (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60 < 15) {
+			&& (currentDate.getTime() - user.status.lastPWResetAt.getTime())/1000/60 < 5) {
 				logger4js.warn("Multiple Password Resets for User %s ", user._id);
 				return res.status(200).send({
 					// state: "failure",
@@ -321,7 +402,7 @@ router.route('/user/pwforgotten')
 			user.status.lastPWResetAt = currentDate;
 			user.save(function(err, user) {
 				if (err) {
-					logger4js.error("Forgot Password Save user Error DB Connection %O", err);
+					logger4js.error("Forgot Password Save user Error DB Connection %s", err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to update user",
@@ -329,23 +410,30 @@ router.route('/user/pwforgotten')
 					});
 				}
 				user.password = undefined;
+				var userShort = new visbouser();
+				userShort.email = user.email;
+				userShort.status = user.status;
+				userShort.updatedAt = user.updatedAt;
+				userShort.createdAt = user.createdAt;
+				userShort._id = user._id;
+
 				logger4js.debug("Requested Password Reset through e-Mail %s expires in %s", user.email, jwtSecret.register.expiresIn);
 				// logger4js.debug("Requested Password Reset Request %O", req);
 				// delete user.profile;
 				// delete user.status;
-				jwt.sign(user.toJSON(), jwtSecret.register.secret,
+				jwt.sign(userShort.toJSON(), jwtSecret.register.secret,
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.fatal("Forgot Password Sign Error ", err);
+							logger4js.fatal("Forgot Password Sign Error %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "token generation failed",
 								error: err
 							});
 						};
-						// MS TODO send mail to register if user is not registered
-						// Send e-Mail with Token to the Users
+						// MS TODO: Send mail to non registered users how to register
+						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  'http://localhost:4200'
 						if (process.env.UI_URL != undefined) {
@@ -356,7 +444,7 @@ router.route('/user/pwforgotten')
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %O", err);
+								logger4js.fatal("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",
@@ -395,7 +483,7 @@ router.route('/user/pwreset')
 	* @apiPermission none
 	* @apiError {number} 400 email or token missing
 	* @apiError {number} 401 token no longer valid
-	* @apiError {number} 404 user not found or user already changed
+	* @apiError {number} 409 user not found or user already changed
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/token/user/pwreset
@@ -428,9 +516,10 @@ router.route('/user/pwreset')
       } else {
         // if everything is good, save to request for use in other routes
 				logger4js.debug("Forgot PW Token Check for User %s and _id %s", decoded.email, decoded._id);
-				visbouser.findOne({ "email" : decoded.email, "updatedAt": decoded.updatedAt }, function(err, user) {
+				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt }
+				visbouser.findOne(query, function(err, user) {
 					if (err) {
-						logger4js.fatal("Forgot Password Change DB Connection ", err);
+						logger4js.fatal("Forgot Password Change DB Connection User.findOne(%s) %s ", query, err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error",
@@ -439,7 +528,7 @@ router.route('/user/pwreset')
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
-						return res.status(404).send({
+						return res.status(409).send({
 							state: "failure",
 							message: "invalid token"
 						});
@@ -459,7 +548,7 @@ router.route('/user/pwreset')
 					user.status.expiresAt = undefined;
 					user.save(function(err, user) {
 						if (err) {
-							logger4js.error("Forgot Password Save user Error DB Connection %O", err);
+							logger4js.error("Forgot Password Save user Error DB Connection %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to update user",
@@ -487,7 +576,7 @@ router.route('/user/signup')
 	* @apiPermission none
 	* @apiError {number} 400 email or userid missing in body
 	* @apiError {number} 401 token no longer valid
-	* @apiError {number} 404 unknown userID
+	* @apiError {number} 409 unknown userID
 	* @apiError {number} 409 email already registered
 	* @apiDescription signup a user with Profile Details and a new password.
 	* Signup can be called with an e-mail address or an _id. The system refuses the registration if an _id is specified and there is no user with this _id to be registered
@@ -554,7 +643,7 @@ router.route('/user/signup')
 		var query = {};
 		if (req.body.email) {
 			query.email = req.body.email;
-		} else if (req.body._id) {
+		} else if (req.body._id && mongoose.Types.ObjectId.isValid(req.body._id)) {
 			query._id = req.body._id;
 		} else {
 			return res.status(400).send({
@@ -564,7 +653,7 @@ router.route('/user/signup')
 		}
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("user Signup DB Connection ", err);
+				logger4js.fatal("user Signup DB Connection User.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -581,7 +670,7 @@ router.route('/user/signup')
 			}
 			// if user does not exist already refuse to register with id
 			if (!user && req.body._id) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "User ID incorrect"
 				});
@@ -627,7 +716,7 @@ router.route('/user/signup')
 			}
 			user.save(function(err, user) {
 				if (err) {
-					logger4js.error("Signup Error DB Connection %O", err);
+					logger4js.error("Signup Error DB Connection %s", err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error, failed to create user",
@@ -653,7 +742,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",
@@ -738,7 +827,7 @@ router.route('/user/signup')
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
-			if (!req.body._id || !req.body.hash) {
+			if (!req.body._id || !mongoose.Types.ObjectId.isValid(req.body._id) || !req.body.hash) {
 				return res.status(400).send({
 					state: "failure",
 					message: "No User ID or hash in body"
@@ -748,7 +837,7 @@ router.route('/user/signup')
 			var query = {_id: req.body._id};
 			visbouser.findOne(query, function(err, user) {
 				if (err) {
-					logger4js.fatal("e-Mail confirmation DB Connection ", err);
+					logger4js.fatal("e-Mail confirmation DB Connection User.findOne(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: "failure",
 						message: "database error",
@@ -782,7 +871,7 @@ router.route('/user/signup')
 				user.status.registeredAt = new Date();
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Confirm eMail  DB Connection %O", err);
+						logger4js.error("Confirm eMail  DB Connection %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update user",
@@ -802,7 +891,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %O", template, err);
+							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",

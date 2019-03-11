@@ -123,12 +123,13 @@ var whitelist = [
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
 var corsOptions = {
   origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.fatal("CorsOptions deny  %s", origin);
+      logger4js.fatal("CorsOptions deny  %s ", origin);
       //callback(null, true) // temporary enable cors for all sites
-      callback(new Error(origin + ' is not allowed to access'))
+      callback(origin + ' is not allowed to access', null)
+      // callback(new Error(origin + ' is not allowed to access'))
     }
   }
 }
@@ -147,7 +148,7 @@ log4js.configure({
   appenders: {
     out: { type: 'stdout' },
     everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -169,6 +170,7 @@ logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
+logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -177,29 +179,36 @@ app.engine('.html', require('ejs').renderFile);
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
-// set CORS Options (Cross Origin Ressource Sharing)
-app.use(cors(corsOptions));
-
 // define the log entry for processing pages
-//app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  visboAudit.visboAudit(tokens, req, res);
-  var webLog = [
-    tokens.method(req, res),
-    // 'base url', req.baseUrl,
-    //'Url', req.originalUrl,
-    tokens.url(req, res),
-    tokens.status(req, res),
-    tokens.res(req, res, 'content-length')||0+' Bytes',
-    Math.round(tokens['response-time'](req, res))+'ms',
-    req.headers["x-real-ip"] || req.ip,
-    req.get('User-Agent'),
-    ''
-  ].join(' ');
-  logger4jsRest.info(webLog);
-  webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  // ignore calls for OPTIONS
+  if (["GET", "POST", "PUT", "DELETE"].indexOf(tokens.method(req, res)) >= 0 ) {
+    visboAudit.visboAudit(tokens, req, res);
+    var webLog = [
+      tokens.method(req, res),
+      // 'base url', req.baseUrl,
+      //'Url', req.originalUrl,
+      tokens.url(req, res),
+      tokens.status(req, res),
+      tokens.res(req, res, 'content-length')||0+' Bytes',
+      Math.round(tokens['response-time'](req, res))+'ms',
+      req.headers["x-real-ip"] || req.ip,
+      req.get('User-Agent'),
+      ''
+    ].join(' ');
+    logger4jsRest.info(webLog);
+    webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  }
+  if (tokens.status(req, res) == 500) {
+    var headers = JSON.parse(JSON.stringify(req.headers));
+    headers["access-key"] = undefined;
+    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
+  }
   return webLog
 }));
+
+// set CORS Options (Cross Origin Ressource Sharing)
+app.use(cors(corsOptions));
 
 dbConnect(process.env.NODE_VISBODB);
 

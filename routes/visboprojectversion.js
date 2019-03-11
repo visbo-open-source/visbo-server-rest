@@ -50,7 +50,7 @@ var updateVPVCount = function(vpid, variantName, increment){
 	logger4js.debug("Update VP %s with vpvCount inc %d update: %O with %O", vpid, increment, updateQuery, updateUpdate)
 	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err);
+			logger4js.error("Problem updating VP %s vpvCount: %s", vpid, err.message);
 		}
 		logger4js.trace("Updated VP %s vpvCount inc %d changed %d %d", vpid, increment, result.n, result.nModified)
 	})
@@ -117,19 +117,24 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
+		req.auditSysAdmin = sysAdmin;
+		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
 		var queryvpv = {};
+		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
-		queryvpv.deletedAt = {$exists: false};
+		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
-		if (req.query.vpid) {
+		if (req.query.vpid && validate.validateObjectId(req.query.vpid, false)) {
 			vpidList.push(req.query.vpid);
 			if (req.query.deleted) {
 				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);
@@ -154,7 +159,7 @@ router.route('/')
 			if (req.query.status) {
 				queryvpv.status = req.query.status;
 			}
-			if (req.query.refDate){
+			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				queryvpv.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				latestOnly = true;
@@ -163,7 +168,8 @@ router.route('/')
 				logger4js.debug("Variant Query String :%s:", req.query.variantName);
 				queryvpv.variantName = req.query.variantName
 			}
-			if (req.query.longList != undefined){ // user can specify to get the long list with all details for a project version
+			if (req.query.longList != undefined){
+				logger4js.debug("longList Query String :%s:", req.query.longList);
 				longList = true;
 			}
 		}
@@ -172,18 +178,14 @@ router.route('/')
 		logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
 		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
-		if (!longList) {
-			// deliver only the short info about project versions
-			queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
+		if (latestOnly) {
+			queryVPV.sort('vpid variantName -timestamp')
 		}
-		if (req.query.refNext)
-			queryVPV.sort('vpid name variantName +timestamp')
-		else
-			queryVPV.sort('vpid name variantName -timestamp')
+		queryVPV.select('_id vpid variantName timestamp');
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during Get VPV: %O", err);
+				logger4js.fatal("Error connecting to DB during Get VPV: %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -193,35 +195,76 @@ router.route('/')
 			var timeMongoEnd = new Date();
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
-			if (listVPV.length > 1 && latestOnly){
-				var listVPVfiltered = [];
-				listVPVfiltered.push(listVPV[0]);
-				for (let i = 1; i < listVPV.length; i++){
-					//compare current item with previous and ignore if it is the same vpid & variantname
-					// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPV[i].vpid), JSON.stringify(listVPV[i-1].vpid), JSON.stringify(listVPV[i].variantName), JSON.stringify(listVPV[i-1].variantName) );
-					if (JSON.stringify(listVPV[i].vpid) != JSON.stringify(listVPV[i-1].vpid)
-					|| JSON.stringify(listVPV[i].variantName) != JSON.stringify(listVPV[i-1].variantName) ) {
-						listVPVfiltered.push(listVPV[i])
-						// logger4js.trace("compare unequal: ", listVPV[i].vpid != listVPV[i-1].vpid);
+			var vpidsList = [];
+			if (!latestOnly) {
+				// psuh all vpvids to search for more details
+				for (let i = 0; i < listVPV.length; i++){
+					vpidsList.push(listVPV[i]._id)
+				}
+			} else {
+				if (req.query.refNext != true) {
+					if (listVPV.length > 0) {
+						vpidsList.push(listVPV[0]._id);
+					}
+					for (let i = 1; i < listVPV.length; i++){
+						//compare current item with previous and ignore if it is the same vpid & variantname
+						logger4js.trace("compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s", i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+						if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+							|| listVPV[i].variantName != listVPV[i-1].variantName
+						) {
+							vpidsList.push(listVPV[i]._id)
+							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+						}
+					}
+				} else {
+					if (listVPV.length == 1) {
+						vpidsList.push(listVPV[0]._id);
+					}
+					for (let i = 0; i < listVPV.length - 1; i++){
+						//compare current item with previous and ignore if it is the same vpid & variantname
+						logger4js.trace("compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s", i, listVPV[i].vpid, listVPV[i+1].vpid, listVPV[i].variantName, listVPV[i+1].variantName, listVPV[i].timestamp, listVPV[i+1].timestamp);
+						if (listVPV[i].vpid.toString() != listVPV[i+1].vpid.toString()
+							|| listVPV[i].variantName != listVPV[i+1].variantName
+						) {
+							vpidsList.push(listVPV[i]._id)
+							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i+1].vpid, listVPV[i].timestamp, listVPV[i+1].timestamp);
+						}
+					}
+					if (listVPV.length > 0) {
+						vpidsList.push(listVPV[listVPV.length-1]._id);
 					}
 				}
-				logger4js.debug("Found %d Project Versions after Filtering", listVPVfiltered.length);
-				req.auditInfo = listVPVfiltered.length;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Project Versions',
-					count: listVPVfiltered.length,
-					vpv: listVPVfiltered
-				});
+			}
+			// if (listVPV.length > 1 && latestOnly){
+			logger4js.debug("Found %d Project Version IDs", vpidsList.length);
+
+			queryvpvids._id = {$in: vpidsList};
+			var queryVPV = VisboProjectVersion.find(queryvpvids);
+			if (!longList) {
+				// deliver only the short info about project versions
+				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
 			} else {
+				req.auditNoTTL = true;	// Real Download of Visbo Project Versions
+			}
+			queryVPV.lean();
+			queryVPV.exec(function (err, listVPV) {
+				if (err) {
+					logger4js.fatal("Error connecting to DB during Get VPV with IDs: %s", err.message);
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Internal Server Error with DB Connection',
+						error: err
+					});
+				};
 				req.auditInfo = listVPV.length;
+				req.listVPV = listVPV;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Versions',
 					count: listVPV.length,
 					vpv: listVPV
 				});
-			}
+			});
 		});
 	})
 
@@ -239,7 +282,7 @@ router.route('/')
 	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create Visbo Project Version
-	* @apiError {number} 404 Visbo Project Variant does not exists
+	* @apiError {number} 409 Visbo Project Variant does not exists
 	* @apiError {number} 409 Visbo Project (Portfolio) Version was alreaddy updated in between (Checked updatedAt Flag)
 	* @apiError {number} 423 Visbo Project (Portfolio) is locked by another user
 	*
@@ -273,7 +316,7 @@ router.route('/')
 		req.auditDescription = 'Visbo Project Versions (Create)';
 		var queryvpv = {};
 
-		var vpid = req.body.vpid || 0;
+		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
 		var variantName = req.body.variantName.trim() || '';
 		var variantIndex = -1;
 
@@ -293,7 +336,7 @@ router.route('/')
 		queryVp.deletedAt = {$exists: false};				// Not deleted
 		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during POST VPV find VP: %O", err);
+				logger4js.fatal("Error connecting to DB during POST VPV find VP: %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -316,7 +359,7 @@ router.route('/')
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Project variant does not exist',
 						vp: [req.oneVP]
@@ -336,7 +379,7 @@ router.route('/')
 			logger4js.debug("User has permission to create a new Version in %s Variant :%s:", oneVP.name, variantName);
 			// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
 			queryvpv.deletedAt = {$exists: false};
-			queryvpv.vpid = req.body.vpid
+			queryvpv.vpid = vpid
 			queryvpv.variantName = req.body.variantName || '';
 			var queryVPV = VisboProjectVersion.findOne(queryvpv);
 			queryVPV.sort('-timestamp');
@@ -344,14 +387,14 @@ router.route('/')
 			queryVPV.lean();
 			queryVPV.exec(function (err, lastVPV) {
 				if (err) {
-					logger4js.fatal("Error connecting to DB during POST VPV: %O", err);
+					logger4js.fatal("Error connecting to DB during POST VPV: %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
 						error: err
 					});
 				};
-				if (req.body.updatedAt) {
+				if (req.body.updatedAt && Date.parse(req.query.updatedAt)) {
 					// check that the last VPV has the same date
 					var updatedAt = new Date(req.body.updatedAt);
 					if (lastVPV) {
@@ -385,7 +428,11 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				newVPV.timestamp = req.body.timestamp;
+				if (req.body.timestamp && Date.parse(req.query.timestamp)) {
+					newVPV.timestamp = new Date(req.body.timestamp)
+				} else {
+					newVPV.timestamp = new Date();
+				}
 
 				// copy all attributes
 				newVPV.variantDescription = req.body.variantDescription;
@@ -479,8 +526,12 @@ router.route('/:vpvid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Version (Read)';
+		req.auditSysAdmin = sysAdmin;
+		req.auditNoTTL = true;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
@@ -533,6 +584,7 @@ router.route('/:vpvid')
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVPV.deletedAt) {
+			req.auditDescription = 'Visbo Project Version (Undelete)';
 			req.oneVPV.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug("Undelete VPV %s", req.oneVPV._id);
@@ -553,7 +605,7 @@ router.route('/:vpvid')
 		logger4js.debug("PUT VPV: save now %s unDelete %s", req.oneVPV._id, vpUndelete);
 		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
-				logger4js.fatal("VPV PUT DB Connection ", err);
+				logger4js.fatal("VPV PUT DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Project Version',
@@ -670,7 +722,7 @@ router.route('/:vpvid')
 			queryVPV._id = req.oneVPV._id
 			VisboProjectVersion.deleteOne(queryVPV, function(err) {
 				if (err) {
-					logger4js.fatal("VPV Destroy DB Connection ", err);
+					logger4js.fatal("VPV Destroy DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Project Version',

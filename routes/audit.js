@@ -36,6 +36,9 @@ router.route('/')
 	* @apiPermission user must be authenticated and needs to have System Admin Permission
 	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
 	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View & Audit Permission
 	* @apiError {number} 500 ServerIssue No DB Connection
@@ -61,6 +64,7 @@ router.route('/')
 	var useremail = req.decoded.email;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
+	req.auditSysAdmin = true;
 	req.auditInfo = 'System';
 
 	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
@@ -74,24 +78,67 @@ router.route('/')
 	}
 	// now fetch all entries system wide
 	var query = {};
-	var from, to, maxcount = 1000;
+	var from, to, maxcount = 1000, action;
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
+	if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
+	if (req.query.action) action = req.query.action.trim();
 	// no date is set to set to to current Date and recalculate from afterwards
-	if (!from && !to) to = new Date();
-	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+	if (!to) to = new Date();
 	if (!from) {
 		from = new Date(to);
-		from.setDate(from.getDate()-1)
-	}
-	if (!to) {
-		to = new Date(from);
-		to.setDate(to.getDate()+1)
+		from.setDate(from.getDate()-7)
 	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};
+	if (action) {
+		query.action = action;
+	}
+	var queryListCondition = [];
+	if (req.query.text) {
+		var textCondition = [];
+		var text = req.query.text;
+		var expr;
+		try {
+				expr = new RegExp(text, "i");
+		} catch(e) {
+				logger4js.info("System Audit RegEx corrupt: %s ", text);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Valid Regular Expression'
+				});
+		}
+		if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+			logger4js.debug("Get Audit Search for ObjectID %s", text);
+			textCondition.push({"vc.vcid": text});
+			textCondition.push({"vp.vpid": text});
+			textCondition.push({"vpv.vpvid": text});
+			textCondition.push({"user.userId": text});
+		} else {
+			textCondition.push({"user.email": expr});
+			textCondition.push({"vc.name": expr});
+			textCondition.push({"vp.name": expr});
+			textCondition.push({"vpv.name": expr});
+			textCondition.push({"url": expr});
+			textCondition.push({"action": expr});
+			textCondition.push({"actionInfo": expr});
+			textCondition.push({"actionDescription": expr});
+			textCondition.push({"result.statusText": expr});
+			textCondition.push({"userAgent": expr});
+		}
+		textCondition.push({"vc.vcjson": expr});
+		textCondition.push({"vp.vpjson": expr});
+		textCondition.push({"url": expr});
+		queryListCondition.push({"$or": textCondition})
+	}
+	var ttlCondition = [];
+	ttlCondition.push({"ttl": {$exists: false}});
+	ttlCondition.push({"ttl": {$gt: new Date()}});
+	queryListCondition.push({"$or": ttlCondition})
+
+	query["$and"] = queryListCondition;
+	logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
 
 	VisboAudit.find(query)
 	.limit(maxcount)
@@ -99,7 +146,7 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection ", err);
+			logger4js.fatal("System Audit Get DB Connection ", err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting System Audit',

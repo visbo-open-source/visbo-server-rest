@@ -33,6 +33,7 @@ if (continueFlag) {
 dateBlock = "2018-12-01T00:00:00";
 if (continueFlag && currentVersion < dateBlock) {
   // DB Collection and Index Checks
+  print ("Upgrade DB: Migrate to Group Permission System")
   var collectionName = 'visbogroups';
   var collection = db.getCollectionInfos({name: collectionName});
   // print ("VisboGroup Collection  ", JSON.stringify(collection))
@@ -44,7 +45,7 @@ if (continueFlag && currentVersion < dateBlock) {
     db.visbogroups.createIndex( { 'users.userId': 1 }, { name: "userId" } );
     print ("Visbo Groups Collection Created")
   }
-  var collectionName = 'vcsettings1';
+  var collectionName = 'vcsettings';
   var collection = db.getCollectionInfos({name: collectionName});
   // print ("VisboGroup Collection  ", JSON.stringify(collection))
   if (!collectionName || collection.length == 0) {
@@ -275,6 +276,7 @@ if (continueFlag && currentVersion < dateBlock) {
 dateBlock = "2018-12-02T00:00:00"
 if (currentVersion < dateBlock) {
   // Migrate DeletedAt Flag from VC
+  print ("Upgrade DB: Change Deleted Flag for VC/VP")
 
   var vcListAll = db.visbocenters.find({deleted: {$exists: true}, deletedAt: {$exists: false}}).toArray();
   print("VC List Deleted Length ", vcListAll.length)
@@ -321,3 +323,192 @@ if (currentVersion < dateBlock) {
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
 }
+
+dateBlock = "2019-01-25T00:00:00"
+if (currentVersion < dateBlock) {
+  // Remove Users from VC & VP afetr they were migrated to groups
+  print ("Upgrade DB: Remove Users from VC & VP documents, Set TTL for Audit Trail")
+
+  var vcListConverted = db.visbogroups.find({groupType: {$in: ['VC', 'System']}}).toArray()
+  var vcidList = [];
+  for (var i=0; i<vcListConverted.length; i++) {
+    vcidList.push(vcListConverted[i].vcid)
+  }
+  var vcListAll = db.visbocenters.find({}).toArray();
+  var vcList = db.visbocenters.find({users: {$exists: true}, _id: {$in: vcidList}}).toArray();
+  var vcListUsers = db.visbocenters.find({users: {$exists: true}}).toArray();
+  print("VC List Converted Length All VC ", vcListAll.length, ' VCs with Users & Groups ', vcList.length, ' Total VCs with Users ', vcListUsers.length)
+
+  db.visbocenters.updateMany({users: {$exists: true}, _id: {$in: vcidList}}, {$unset: {users: ''}})
+
+  var vpListConverted = db.visbogroups.find({groupType: {$in: ['VC', 'VP']}}).toArray()
+  var vpidList = [];
+  for (var i=0; i<vpListConverted.length; i++) {
+    if (vpListConverted[i].vpids && vpListConverted[i].vpids.length > 0) {
+      for (var j=0; j<vpListConverted[i].vpids.length; j++) {
+        vpidList.push(vpListConverted[i].vpids[j]);
+      }
+    }
+  }
+
+  var vpListAll = db.visboprojects.find({}).toArray();
+  var vpList = db.visboprojects.find({users: {$exists: true}, _id: {$in: vpidList}}).toArray();
+  var vpListUsers = db.visboprojects.find({users: {$exists: true}}).toArray();
+  print("VP List Converted Length All VP ", vpListAll.length, ' VPs with Users & Groups ', vpList.length, ' Total VPs with Users ', vpListUsers.length)
+
+  db.visboprojects.updateMany({users: {$exists: true}, _id: {$in: vpidList}}, {$unset: {users: ''}})
+  print("VP Users updated ")
+
+  // Set TTL for old Audit trail entries
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/v[cp]$/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Base URL " + auditArray.length)
+
+  // find all items with base url /vc or /vp with query parameter
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/v[cp]\?/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Query URL " + auditArray.length)
+
+  // find all items with base url /status
+  var auditArray = db.visboaudits.find( { action: "GET", url: { $regex: /^\/status/ } }, {url:1} ).toArray()
+  print("Check TTL Items: Count Status URL " + auditArray.length)
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vc/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vp/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/vpv/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/status/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/json/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  db.visboaudits.updateMany({ action: "GET", url: { $regex: /^\/apidoc/ } },
+    {$set: {ttl: new Date()}}, {upsert: false, multi: "true"}
+  )
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-02-07T00:00:00"
+if (currentVersion < dateBlock) {
+  // Set deletedByParent Flag in Visbo groups for Deleted VCs and VPs
+  var vpArray = db.visboprojects.find( {deletedAt: {$exists: true}}, {_id:1} ).toArray()
+  print("Check Deleted VPs: Count Base " + vpArray.length)
+  var vpidList = [];
+  for (var i=0; i<vpArray.length; i++) {
+    vpidList.push(vpArray[i]._id)
+  }
+  print("VP List Converted Length Deleted VP ", vpidList.length)
+  db.visbogroups.updateMany({groupType: 'VP', vpids: {$in: vpidList}}, {$set: {deletedByParent: 'VP'}})
+
+  var vcArray = db.visbocenters.find( {deletedAt: {$exists: true}}, {_id:1} ).toArray()
+  print("Check Deleted VCs: Count Base " + vcArray.length)
+  var vcidList = [];
+  for (var i=0; i<vcArray.length; i++) {
+    vcidList.push(vcArray[i]._id)
+  }
+  print("VC List Converted Length Deleted VC ", vcidList.length)
+  db.visbogroups.updateMany({vcid: {$in: vcidList}, deletedByParent: {$exists: false}}, {$set: {deletedByParent: 'VC'}})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-02-08T01:00:00"
+if (currentVersion < dateBlock) {
+  // Remove deleted VPs from global VC Groups
+
+  var vpArray = db.visboprojects.find({deletedAt: {$exists: true}}, {_id:1, name:1, vcid:1}).toArray()
+  print("Handle Deleted VPs in global VC Groups: " + vpArray.length)
+  var vpidList = [];
+  for (var i=0; i<vpArray.length; i++) {
+    vpidList.push(vpArray[i]._id)
+  }
+  db.visbogroups.updateMany({groupType: 'VC', global: true}, {$pull: {vpids: {$in: vpidList}}})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-02-24T00:00:00"
+if (currentVersion < dateBlock) {
+  // Create the vpv index to get versions sorted
+
+  print ("Check if VPV Index Exists")
+  indexes = db.visboprojectversions.getIndexes();
+  var found = false;
+  for (var i=0; i<indexes.length; i++) {
+    if (indexes[i].name == 'vpv') {
+      found = true
+      break
+    }
+  }
+  if (!found) {
+    // create the indexes
+    print ("Create VPV Index")
+    db.visboprojectversions.createIndex( { vpid: 1, variantName: 1, timestamp: -1 }, { name: "vpv", unique: false } );
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-02-27T00:00:00"
+if (currentVersion < dateBlock) {
+  // Reduce Audit Trail (Portfolio JSON removed from Audit)
+  db.visboaudits.updateMany(
+    {actionDescription: /Visbo Portfolio/, action: {$ne: "GET"}, "vp.vpjson": {$exists: true}},
+    {$unset: {"vp.vpjson": true}}
+  )
+
+  // remove Component vcjson for very large settings (organisation)
+  var first = true;
+  var auditIDs = ''
+  db.visboaudits.find({actionDescription: /Visbo Center Setting/, "vc.vcjson": {$exists: true}}).forEach(function(obj)
+  {
+    if (Object.bsonsize(obj) >= 2048) {
+      if (first) {first = false; auditIDs = auditIDs.concat(''+obj._id) }
+      else auditIDs = auditIDs.concat(',', ''+obj._id)
+    }
+  })
+  var auditIDArray = []
+  auditIDArray = auditIDs.split(',')
+  print("Check Long Audit Settings: Count " + auditIDArray.length + ' Array ' + auditIDArray)
+
+  var auditObjectIDArray = [];
+  for (var i=0; i<auditIDArray.length; i++) {
+    auditObjectIDArray.push(ObjectId(auditIDArray[i]))
+  }
+  db.visboaudits.updateMany({_id: {$in: auditObjectIDArray}}, {$unset: {"vc.vcjson": true}})
+  db.visboaudits.find({_id: {$in: auditObjectIDArray}}, {_id:1, actionDescription:1}).sort({createdAt:-1})
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+// dateBlock = "2000-01-01T00:00:00"
+// if (currentVersion < dateBlock) {
+//   // Prototype Block for additional upgrade topics run only once
+//   // Set the currentVersion in Script and in DB
+//   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+//   currentVersion = dateBlock
+// }
+
+// Delete outdated AuditLog Entries, should be done later once per day/week
+print ("Delete Outdated Audit Trail Entries")
+db.visboaudits.deleteMany({ttl: {$lt: new Date()}})

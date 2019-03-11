@@ -5,6 +5,8 @@ var constPermVC = Const.constPermVC
 
 var VisboGroup = mongoose.model('VisboGroup');
 
+var validate = require('./../components/validate');
+
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -17,7 +19,14 @@ function getGroupId(req, res, next, groupId) {
 	var vpid = req.params.vpid ? req.params.vpid : undefined;
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
-	logger4js.debug("Check GroupId %s for vcid %s vpid %s ", groupId, vcid);
+	logger4js.debug("Check GroupId %s for vcid %s vpid %s ", groupId, vcid, vpid);
+	if (!validate.validateObjectId(groupId, false) || !validate.validateObjectId(vcid, true) || !validate.validateObjectId(vpid, true)) {
+		logger4js.warn("Groups Bad Parameter groupid %s vcid %s vpid %s", groupId, vcid, vpid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Group'
+		});
+	}
 	var query = {};
 	if (vcid) query.vcid = vcid;
 	if (vpid)  { query.vpids = vpid }
@@ -28,7 +37,7 @@ function getGroupId(req, res, next, groupId) {
 	// queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("Group Param check Get DB Connection %O", err);
+			logger4js.fatal("Group Param check Get DB Connection \nVisboGroup.find(%s)\n%s", query, err.message);
 			return res.status(500).send({
 				state: 'failure',
 				message: 'Error getting VisboGroups',

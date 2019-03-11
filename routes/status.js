@@ -6,6 +6,7 @@ var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+var validate = require('./../components/validate');
 
 router.route('/')
 /**
@@ -32,14 +33,16 @@ router.route('/')
 		req.auditDescription = 'Status (Read)';
 
 		logger4js.info("Get Satus ReST Server ");
+		var err = {"code": "400", "errtext": "Long explanation"}
 		if (req.query.error) {
 			var status = ''
-			var err = {"code": "500", "errtext": "Long explanation"}
-			if (req.query.date != undefined) {
-				var dateValue = req.query.date ? new Date(req.query.date) : new Date();
-				status = "Get Status Date native ".concat(req.query.date, " converted ", dateValue.toISOString(), " is Date ", !isNaN(dateValue))
-				logger4js.info(status);
-				err = '';
+			if (req.query.date) {
+				if (validate.validateDate(req.query.date, false)) {
+					var dateValue = new Date(req.query.date);
+					status = "Get Status Date native ".concat(req.query.date, " converted ", dateValue.toISOString(), " is Date ")
+					logger4js.info(status);
+					err = '';
+				}
 			}
 			if (req.query.number != undefined) {
 				var numberValue = req.query.number;
@@ -53,9 +56,29 @@ router.route('/')
 				logger4js.info(status);
 				err = '';
 			}
+			if (req.query.email != undefined) {
+				if (validate.validateEmail(req.query.email, false)) {
+					var email = req.query.email;
+					status = "Get Status eMail native ".concat(req.query.email, " is eMail ", email)
+					logger4js.info(status);
+					err = '';
+				}
+			}
+			if (req.query.objectid != undefined) {
+				if (validate.validateObjectId(req.query.objectid, false)) {
+					var id = req.query.objectid;
+					status = "Get Status String native ".concat(req.query.objectid, " is ObjectId ", id)
+					logger4js.info(status);
+					err = '';
+				}
+			}
 
 			if (err) {
-				logger4js.info("Get Status: %O ", req.query, errorDetail);
+				logger4js.info("Get Status: %O %s ", req.query, err.message);
+				return res.status(400).send({
+					state: 'failiure',
+					message: err
+				});
 			} else {
 				return res.status(200).send({
 					state: 'success',
@@ -64,7 +87,6 @@ router.route('/')
 				});
 
 			}
-
 		} else {
 			return res.status(200).send({
 				state: 'success',

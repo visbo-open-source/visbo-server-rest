@@ -10,19 +10,29 @@ var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-function visboAudit(tokens, req, res) {
+function saveAuditEntry(tokens, req, res, factor) {
 	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
-	if (tokens.method(req, res) == "GET") {
-		// return;
-	}
 
 	var auditEntry = new VisboAudit();
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
+	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
 	var baseUrl = auditEntry.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
-	var addJSON = urlComponent.length > 3 ? undefined : urlComponent[1];
+	var addJSON = undefined;
+	if (auditEntry.action != "GET") {
+		if (urlComponent.length >= 2) addJSON = urlComponent[1];
+		if (urlComponent.length >= 4 && urlComponent[3] == 'group') addJSON = urlComponent[3];
+		if (urlComponent.length >= 6 && urlComponent[3] == 'group' && urlComponent[5] == 'user') addJSON = undefined;
+		// if (urlComponent.length >= 4 && urlComponent[3] == 'portfolio') addJSON = urlComponent[3];
+		if (urlComponent.length >= 4 && urlComponent[3] == 'setting') addJSON = urlComponent[3];
+	} else {
+		var setTTL = req.auditNoTTL ? false : true;
+		if (setTTL) {
+			auditEntry.ttl = new Date();
+			auditEntry.ttl.setDate(auditEntry.ttl.getDate() + 30)
+		}
+	}
 
 	if (req.auditDescription) {
 		auditEntry.actionDescription = req.auditDescription
@@ -46,40 +56,87 @@ function visboAudit(tokens, req, res) {
 	auditEntry.vp = {};
 	auditEntry.vc = {};
 	if (req.oneVPV) {
-			auditEntry.vpv.vpvid = req.oneVPV._id;
-			auditEntry.vp.vpid = req.oneVPV.vpid;
-			auditEntry.vpv.name = req.oneVPV.name;
-			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vpv.name
+		auditEntry.vpv.vpvid = req.oneVPV._id;
+		auditEntry.vp.vpid = req.oneVPV.vpid;
+		auditEntry.vpv.name = req.oneVPV.name;
+		auditEntry.vp.name = req.oneVPV.name;
+		if (!auditEntry.actionInfo) {
+			auditEntry.actionInfo = req.oneVPV.timestamp ? req.oneVPV.timestamp.toISOString() : auditEntry.vpv.name;
+		}
 	}
 	if (req.oneVP) {
-			auditEntry.vp.vpid = req.oneVP._id;
-			auditEntry.vc.vcid = req.oneVP.vcid;
-			auditEntry.vp.name = req.oneVP.name;
-			auditEntry.vc.name = req.oneVP.vc.name;
-			if (addJSON == 'vp' && auditEntry.action != 'GET') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
-			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name
+		auditEntry.vp.vpid = req.oneVP._id;
+		auditEntry.vc.vcid = req.oneVP.vcid;
+		auditEntry.vp.name = req.oneVP.name;
+		auditEntry.vc.name = req.oneVP.vc.name;
+		if (addJSON == 'vp') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
+		if (addJSON == 'group') auditEntry.vp.vpjson = JSON.stringify(req.oneGroup);
+		// if (addJSON == 'portfolio') auditEntry.vp.vpjson = JSON.stringify(req.oneVPF);
+		if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name
 	}
 	if (req.oneVC) {
-			auditEntry.vc.vcid = req.oneVC._id;
-			auditEntry.vc.name = req.oneVC.name;
-			if (addJSON == 'vc' && auditEntry.action != 'GET') auditEntry.vc.vcjson = JSON.stringify(req.oneVC);
-			if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vc.name
+		auditEntry.vc.vcid = req.oneVC._id;
+		auditEntry.vc.name = req.oneVC.name;
+		if (addJSON == 'vc') auditEntry.vc.vcjson = JSON.stringify(req.oneVC);
+		if (addJSON == 'group') {
+			if (req.oneGroup && req.oneGroup.vpids) req.oneGroup.vpids = []; // to reduce audit size
+			auditEntry.vc.vcjson = JSON.stringify(req.oneGroup);
+		}
+		if (addJSON == 'setting' && req.oneVCSetting) auditEntry.vc.vcjson = JSON.stringify(req.oneVCSetting).substr(0, 512);
+		if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vc.name
 	}
 
 	// set the correct ip in case of NGINX Reverse Proxy
 	auditEntry.ip = req.headers["x-real-ip"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
-	auditEntry.result.time = Math.round(tokens['response-time'](req, res))
-	auditEntry.result.status = tokens.status(req, res);
-	auditEntry.result.size = tokens.res(req, res, 'content-length')||0;
+	auditEntry.result.time = Math.round(Number(tokens['response-time'](req, res))/factor)
+	var status = tokens.status(req, res);
+	auditEntry.result.status = status
+	if (status == 200) auditEntry.result.statusText = "Success"
+	if (status == 304) auditEntry.result.statusText = "Success"
+	if (status == 400) auditEntry.result.statusText = "Bad Request"
+	if (status == 401) auditEntry.result.statusText = "Not Authenticated"
+	if (status == 403) auditEntry.result.statusText = "Permission Denied"
+	if (status == 404) auditEntry.result.statusText = "URL not found"
+	if (status == 409) auditEntry.result.statusText = "Conflict"
+	if (status == 423) auditEntry.result.statusText = "Locked"
+	if (status == 500) auditEntry.result.statusText = "Server Error"
+
+	auditEntry.result.size = Math.round(Number(tokens.res(req, res, 'content-length')||0)/factor);
 	auditEntry.save(function(err, auditEntryResult) {
 		if (err) {
-			logger4js.error("VisboAudit failed to save %O", auditEntry);
+			logger4js.error("Save VisboAudit failed to save %O", auditEntry);
 		}
 	});
 
-	logger4js.trace("VisboAudit %s %s", auditEntry.url, auditEntry.result.status);
+	logger4js.trace("saveVisboAudit %s %s", auditEntry.url, auditEntry.result.status);
+}
+
+function visboAudit(tokens, req, res) {
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
+	if (tokens.method(req, res) == "GET" && req.listVPV) {
+		if (req.query.longList != undefined) {
+			// generate multiple audit entries per VisboProjectVersion
+			// and save it to the project Audit
+			req.auditInfo = undefined;
+			logger4js.debug("saveVisboAudit Multiple Audits for VPVs %s", req.listVPV.length);
+			for (var i = 0; i < req.listVPV.length; i++) {
+				req.oneVPV = req.listVPV[i];
+				req.oneVP = {_id: req.oneVPV.vpid, name: req.oneVPV.name, vc: {}};
+				saveAuditEntry(tokens, req, res, req.listVPV.length);
+			}
+		} else {
+			// save it to the VC if only one is specified
+			if (req.query.vcid && mongoose.Types.ObjectId.isValid(req.query.vcid)) {
+				req.oneVC = {_id: req.query.vcid, name: ''}
+			}
+			saveAuditEntry(tokens, req, res, 1);
+		}
+	} else {
+		saveAuditEntry(tokens, req, res, 1);
+	}
 }
 
 module.exports = {

@@ -18,7 +18,8 @@ var visboGroupSchema = new mongoose.Schema({
 		vc: { type: Number, required: false},
 		vp: { type: Number, required: false}
 	},
-	users: [{type: groupUserSchema, required: false}]
+	users: [{type: groupUserSchema, required: false}],
+	deletedByParent: {type: String, required: false}
 });
 // Set Creation and modification date automatically
 visboGroupSchema.set('timestamps', true);

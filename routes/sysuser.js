@@ -70,8 +70,9 @@ router.route('/')
 	.get(function(req, res) {
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysUsers (Read)';
+		req.auditSysAdmin = true;
 		var email = (req.query && req.query.email) ? req.query.email : undefined;
-		var userId = req.query && req.query.userid ? req.query.userid : undefined;
+		var userId = req.query && req.query.userid && mongoose.Types.ObjectId.isValid(req.query.userid) ? req.query.userid : undefined;
 		var maxcount = req.query && req.query.maxcount ? Number(req.query.maxcount) : 100;
 
 		logger4js.info("Get System User List email: %s, userid: %s, maxcount: %s", email, userId, maxcount);
@@ -89,7 +90,7 @@ router.route('/')
 		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
-				logger4js.fatal("SysUser Get DB Connection ", err);
+				logger4js.fatal("SysUser Get DB Connection \nUser.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Sys Users',

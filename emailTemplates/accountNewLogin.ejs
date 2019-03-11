@@ -1,0 +1,30 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
+<h1>
+  A new login was detected
+</h1>
+<p>
+ A new Device or a new program was used to access the Visbo System with your User Name <%= userTo.email %></br>
+ Please verify if you have done this on your own.
+</p>
+<p><b>
+  Login at: <%= info.changedAt %><br>
+  IP: <%= info.ip %><br>
+  Browser: <%= info.userAgent %><br>
+</b></p>
+<h4>
+  If you have not tried to login yourself:
+</h4>
+<p>
+  please login and change your password by following the Link: <a href="<%= url %>">Login Visbo</a>
+</p>
+<p>
+  Your e-Mail address <%= userTo.email %> is related to the password change.
+</p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

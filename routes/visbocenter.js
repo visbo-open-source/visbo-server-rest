@@ -76,7 +76,7 @@ var updateVCName = function(vcid, name){
 	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VPs for VC %s vpvCount: %s", vcid, err);
+			logger4js.error("Problem updating VPs for VC %s Error: %s", vcid, err.message);
 		}
 		logger4js.trace("Updated VP for VC %s Populate Name changed %d %d", vcid, result.n, result.nModified)
 	})
@@ -84,6 +84,7 @@ var updateVCName = function(vcid, name){
 
 // undelete the VPs after undelete VC and set the actual VC Name
 var unDeleteVP = function(vcid, name){
+
 	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}, $set: {"vc.name": name}};
@@ -91,9 +92,24 @@ var unDeleteVP = function(vcid, name){
 	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			logger4js.error("Problem updating VPs for VC %s set undelete", vcid, err);
+			logger4js.error("Problem updating VPs for VC %s set undelete %s", vcid, err.message);
 		}
 		logger4js.trace("Updated VP for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
+	})
+}
+
+// undelete the Groups after undelete VC
+var unDeleteGroup = function(vcid){
+	var updateQuery = {vcid: vcid, 'deletedByParent': 'VC'};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'deletedByParent': ''}};
+
+	logger4js.debug("Update Groups for VC %s", vcid)
+	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error("Problem updating Groups for VC %s set undelete %s", vcid, err.message);
+		}
+		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
 	})
 }
 
@@ -144,6 +160,7 @@ router.route('/')
 
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center (Read)';
+			req.auditSysAdmin = isSysAdmin;
 
 			logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
 
@@ -172,7 +189,7 @@ router.route('/')
 			queryVC.lean();
 			queryVC.exec(function (err, listVC) {
 				if (err) {
-					logger4js.fatal("VC Get DB Connection ", err);
+					logger4js.fatal("VC Get DB Connection VisboCenter.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenters',
@@ -271,7 +288,7 @@ router.route('/')
 		query.deletedAt = {$exists: false};
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				logger4js.fatal("VC Post DB Connection ", err);
+				logger4js.fatal("VC Post DB Connection VisboCenter.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -303,12 +320,13 @@ router.route('/')
 				};
 			};
 			logger4js.debug("Check users if they exist %s", JSON.stringify(vcUsers));
-			var queryUsers = User.find({'email': {'$in': vcUsers}});
+			var query = {'email': {'$in': vcUsers}}
+			var queryUsers = User.find(query);
 			queryUsers.select('_id email');
 			queryUsers.lean();
 			queryUsers.exec(function (err, listUsers) {
 				if (err) {
-					logger4js.fatal("VC Post DB Connection ", err);
+					logger4js.fatal("VC Post DB Connection \nUser.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Users for VisboCenters',
@@ -338,14 +356,14 @@ router.route('/')
 				logger4js.debug("VC Post Create 1. Group for vc %s group %O ", newVC._id, newVG);
 				newVG.save(function(err, vg) {
 					if (err) {
-						logger4js.fatal("VC Post Create 1. Group for vc %s DB Connection ", newVC._id, err);
+						logger4js.fatal("VC Post Create 1. Group for vc %s DB Connection %s ", newVC._id, err.message);
 					}
 				});
 
 				logger4js.debug("Save VisboCenter %s %s", newVC.name, newVC._id);
 				newVC.save(function(err, vc) {
 					if (err) {
-						logger4js.fatal("VC Post DB Connection ", err);
+						logger4js.fatal("VC Post DB Connection %s ", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to create visbocenter",
@@ -405,6 +423,7 @@ router.route('/:vcid')
 
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center (Read)';
+		req.auditSysAdmin = isSysAdmin;
 
 		// check for deleted only for sysAdmins
 		var found = false;
@@ -498,8 +517,8 @@ router.route('/:vcid')
 		}
 		var vcUndelete = false;
 		// undelete the VC in case of change
-		// TODO check correct undelete Permission
 		if (req.oneVC.deletedAt) {
+			req.auditDescription = 'Visbo Center (Undelete)';
 			req.oneVC.deletedAt = undefined;
 			vcUndelete = true;
 			logger4js.debug("Undelete VC %s flag %s", req.oneVC._id, req.oneVC.deletedAt);
@@ -528,7 +547,7 @@ router.route('/:vcid')
 
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				logger4js.fatal("VC Put DB Connection ", err);
+				logger4js.fatal("VC Put DB Connection VisboCenter.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error",
@@ -545,7 +564,7 @@ router.route('/:vcid')
 			logger4js.debug("PUT VC: save now");
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
-					logger4js.fatal("VC Put DB Connection ", err);
+					logger4js.fatal("VC Put DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Center',
@@ -560,6 +579,7 @@ router.route('/:vcid')
 				if (vcUndelete){
 					logger4js.debug("VC PUT %s: Undelete VC and VPs", oneVC._id);
 					unDeleteVP(oneVC._id, oneVC.name);
+					unDeleteGroup(oneVC._id);
 				}
 				return res.status(200).send({
 					state: 'success',
@@ -615,7 +635,7 @@ router.route('/:vcid')
 			logger4js.trace("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
-					logger4js.fatal("VC Delete DB Connection ", err);
+					logger4js.fatal("VC Delete DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Center',
@@ -631,7 +651,7 @@ router.route('/:vcid')
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 					if (err){
-						logger4js.fatal("VC Delete DB Connection ", err);
+						logger4js.fatal("VC Delete DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error updating Visbo Projects',
@@ -639,16 +659,30 @@ router.route('/:vcid')
 						});
 					}
 					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted Visbo Center'
+					updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};
+					updateUpdate = {$set: {'deletedByParent': 'VC'}};
+					var updateOption = {upsert: false, multi: "true"};
+					VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+						if (err){
+							logger4js.fatal("VC Delete DB Connection %s", err.message);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'Error updating Visbo Groups',
+								error: err
+							});
+						}
+						logger4js.debug("VC Delete found %d Groups and updated %d Groups", result.n, result.nModified)
+						return res.status(200).send({
+							state: 'success',
+							message: 'Deleted Visbo Center'
+						});
 					});
 				});
 			});
 		} else {
 			// VC is already marked as deleted, now destory it including VP and VPV
-			// MS TODO: Destroy VC
 			// Collect all ProjectIDs of this VC
+			req.auditDescription = 'Visbo Center (Destroy)';
 			var query = {};
 			query.vcid = req.oneVC._id
 			var queryVP = VisboProject.find(query);
@@ -656,7 +690,7 @@ router.route('/:vcid')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					logger4js.fatal("VC Destroy: VP GET DB Connection ", err);
+					logger4js.fatal("VC Destroy: VP GET DB Connection VisboProject.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -671,7 +705,7 @@ router.route('/:vcid')
 				var queryvpv = {vpid: {$in: vpidList}};
 				VisboProjectVersion.deleteMany(queryvpv, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VPVs %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VPVs %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VPVs Deleted", req.oneVC._id)
 				})
@@ -679,7 +713,7 @@ router.route('/:vcid')
 				var queryvpf = {vpid: {$in: vpidList}};
 				VisboPortfolio.deleteMany(queryvpf, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VP Portfolios %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VP Portfolios %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VP Portfolios Deleted", req.oneVC._id)
 				})
@@ -687,7 +721,7 @@ router.route('/:vcid')
 				var queryaudit = {'vp.vpid': {$in: vpidList}};
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting Audit %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting Audit %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VP Audit Deleted", req.oneVC._id)
 				});
@@ -695,7 +729,7 @@ router.route('/:vcid')
 				var queryvp = {_id: {$in: vpidList}};
 				VisboProject.deleteMany(queryvp, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VPs %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VPs %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VPs Deleted", req.oneVC._id)
 				});
@@ -703,21 +737,21 @@ router.route('/:vcid')
 				var queryvcid = {vcid: req.oneVC._id};
 				VCCost.deleteMany(queryvcid, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC Cost %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC Cost %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Costs Deleted", req.oneVC._id)
 				});
 				// Delete all VCRoles
 				VCRole.deleteMany(queryvcid, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC Role %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC Role %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id)
 				});
 				// Delete all VCSettings
 				VCSetting.deleteMany(queryvcid, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC Role %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC Role %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id)
 				});
@@ -725,17 +759,17 @@ router.route('/:vcid')
 				// Delete all Groups
 				VisboGroup.deleteMany(queryvcid, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC Groups %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC Groups %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Groups Deleted", req.oneVC._id)
 				});
 
 				// Delete Audit Trail of VC
 				var queryaudit = {'vc.vcid': req.oneVC._id};
-				queryaudit.action = {$ne: 'DELETE'} // MS TODO: fine tune this to remove DELETE entries from Groups but not the Delete entry form VC
+				queryaudit.action = {$ne: 'DELETE'}
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC Audit %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC Audit %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Audit Deleted", req.oneVC._id)
 				});
@@ -743,7 +777,7 @@ router.route('/:vcid')
 				var queryvc = {_id: req.oneVC._id};
 				VisboCenter.deleteOne(queryvc, function (err) {
 					if (err){
-						logger4js.error("VC Destroy: %s Problem deleting VC %O", req.oneVC._id, err);
+						logger4js.error("VC Destroy: %s Problem deleting VC %s", req.oneVC._id, err.message);
 					}
 					logger4js.trace("VC Destroy: %s VC Deleted", req.oneVC._id)
 				});
@@ -766,6 +800,11 @@ router.route('/:vcid/audit')
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View Visbo Center, View Visbo Center Audit.
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default Today -1.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Center Audit or Visbo Center does not exists
@@ -788,8 +827,11 @@ router.route('/:vcid/audit')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Audit (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 		if (!(req.combinedPerm.vc & constPermVC.ViewAudit)) {
@@ -799,25 +841,69 @@ router.route('/:vcid/audit')
 				});
 		}
 
-		var from, to, maxcount = 1000;
+		var from, to, maxcount = 1000, action;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-		if (parseInt(req.query.maxcount) > 0) maxcount = parseInt(req.query.maxcount);
+		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
+		if (req.query.action) action = req.query.action.trim();
 		// no date is set to set to to current Date and recalculate from afterwards
-		if (!from && !to) to = new Date();
+		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
-			from.setDate(from.getDate()-1)
-		}
-		if (!to) {
-			to = new Date(from);
-			to.setDate(to.getDate()+1)
+			from.setDate(from.getDate()-7)
 		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
 		var query = {'vc.vcid': req.oneVC._id, "createdAt": {"$gte": from, "$lt": to}};
+		if (action) {
+			query.action = action;
+		}
+		if (!sysAdmin) {
+			query.sysAdmin = {$exists: false};
+		}
+		var queryListCondition = [];
+		if (req.query.text) {
+			var textCondition = [];
+			var text = req.query.text;
+			var expr;
+			try {
+			    expr = new RegExp(text, "i");
+			} catch(e) {
+					logger4js.info("System Audit RegEx corrupt: %s ", text);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Valid Regular Expression'
+					});
+			}
+			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+				logger4js.debug("Get Audit Search for ObjectID %s", text);
+				textCondition.push({"vp.vpid": text});
+				textCondition.push({"vpv.vpvid": text});
+				textCondition.push({"user.userId": text});
+			} else {
+				textCondition.push({"user.email": expr});
+				textCondition.push({"vc.name": expr});
+				textCondition.push({"vp.name": expr});
+				textCondition.push({"vpv.name": expr});
+				textCondition.push({"action": expr});
+				textCondition.push({"actionDescription": expr});
+				textCondition.push({"result.statusText": expr});
+				textCondition.push({"userAgent": expr});
+			}
+			textCondition.push({"vc.vcjson": expr});
+			textCondition.push({"vp.vpjson": expr});
+			textCondition.push({"url": expr});
+			queryListCondition.push({"$or": textCondition})
+		}
+		var ttlCondition = [];
+		ttlCondition.push({"ttl": {$exists: false}});
+		ttlCondition.push({"ttl": {$gt: new Date()}});
+		queryListCondition.push({"$or": ttlCondition})
+
+		query["$and"] = queryListCondition;
+		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
 		// now fetch all entries related to this vc
 		VisboAudit.find(query)
 		.limit(maxcount)
@@ -825,7 +911,7 @@ router.route('/:vcid/audit')
 		.lean()
 		.exec(function (err, listVCAudit) {
 			if (err) {
-				logger4js.fatal("VC Audit Get DB Connection ", err);
+				logger4js.fatal("VC Audit Get DB Connection VisboAudit.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Audit',
@@ -884,8 +970,11 @@ router.route('/:vcid/group')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Group (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Group for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -898,7 +987,7 @@ router.route('/:vcid/group')
 		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, listVCGroup) {
 			if (err) {
-				logger4js.fatal("VC Get Group DB Connection ", err);
+				logger4js.fatal("VC Get Group DB Connection VisboGroup.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Groups',
@@ -1024,7 +1113,7 @@ router.route('/:vcid/group')
 		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, oneVCGroup) {
 			if (err) {
-				logger4js.fatal("VC Post Group DB Connection ", err);
+				logger4js.fatal("VC Post Group DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Visbo Center Groups',
@@ -1048,7 +1137,7 @@ router.route('/:vcid/group')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					logger4js.fatal("VC Create Group: GET DB Connection ", err);
+					logger4js.fatal("VC Create Group: GET DB Connection VisboProject.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Internal Server Error with DB Connection',
@@ -1078,13 +1167,14 @@ router.route('/:vcid/group')
 				}
 				vcGroup.save(function(err, oneVcGroup) {
 					if (err) {
-						logger4js.fatal("VC Post Group DB Connection ", err);
+						logger4js.fatal("VC Post Group DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error updating Visbo Center Group',
 							error: err
 						});
 					}
+					req.oneGroup = oneVcGroup;
 					var resultGroup = {};
 					resultGroup._id = oneVcGroup._id;
 					resultGroup.name = oneVcGroup.name;
@@ -1164,7 +1254,7 @@ router.route('/:vcid/group/:groupid')
 		}
 		req.oneGroup.remove(function(err, empty) {
 			if (err) {
-				logger4js.fatal("VC Delete Group DB Connection ", err);
+				logger4js.fatal("VC Delete Group DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error deleting Visbo Center Group',
@@ -1285,7 +1375,7 @@ router.route('/:vcid/group/:groupid')
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				logger4js.fatal("VP GET DB Connection ", err);
+				logger4js.fatal("VP GET DB Connection VisboProject.find(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Internal Server Error with DB Connection',
@@ -1315,7 +1405,7 @@ router.route('/:vcid/group/:groupid')
 			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 			req.oneGroup.save(function(err, oneVcGroup) {
 				if (err) {
-					logger4js.fatal("VC Put Group DB Connection ", err);
+					logger4js.fatal("VC Put Group DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error updating Visbo Center Group',
@@ -1396,7 +1486,7 @@ router.route('/:vcid/group/:groupid')
 		}
 		if (req.body.email) req.body.email = name.toLowerCase();
 
-		req.auditInfo = req.body.email;
+		req.auditInfo = req.body.email + ' / ' + req.oneGroup.name;
 		// verify check for System VC & SysAdmin
 		if ((req.oneGroup.groupType == 'VC' && !(req.combinedPerm.vc & constPermVC.ManagePerm))
 		|| (req.oneGroup.groupType != 'VC' && !(req.combinedPerm.system & constPermSystem.ManagePerm))) {
@@ -1430,11 +1520,12 @@ router.route('/:vcid/group/:groupid')
 			});
 		}
 		// check if the user exists and get the UserId or create the user
-		var queryUsers = User.findOne({'email': vcUser.email});
+		var query = {'email': vcUser.email}
+		var queryUsers = User.findOne(query);
 		//queryUsers.select('email');
 		queryUsers.exec(function (err, user) {
 			if (err) {
-				logger4js.fatal("Post User to Group cannot find User, DB Connection %s", err);
+				logger4js.fatal("Post User to Group cannot find User, DB Connection User.findOne(%s) %s ", query, err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting Users for VisboCenters',
@@ -1447,7 +1538,7 @@ router.route('/:vcid/group/:groupid')
 				logger4js.debug("Create new User %s for VC as %s", vcUser.email, vcUser.role);
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Add User to VC: Error DB Connection %O", err);
+						logger4js.error("Add User to VC: Error DB Connection %s", err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to create user",
@@ -1460,7 +1551,7 @@ router.route('/:vcid/group/:groupid')
 					req.oneGroup.users.push(vcUser)
 					req.oneGroup.save(function(err, vcGroup) {
 						if (err) {
-							logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+							logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "database error, failed to update Visbo Group",
@@ -1490,7 +1581,7 @@ router.route('/:vcid/group/:groupid')
 						} else {
 							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
 								if (err) {
-									logger4js.fatal("E-Mail Rendering failed %O", err);
+									logger4js.fatal("E-Mail Rendering failed %s", err.message);
 									return res.status(500).send({
 										state: "failure",
 										message: "E-Mail Rendering failed",
@@ -1520,7 +1611,7 @@ router.route('/:vcid/group/:groupid')
 				req.oneGroup.users.push(vcUser)
 				req.oneGroup.save(function(err, vcGroup) {
 					if (err) {
-						logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err);
+						logger4js.error("Error Update VisboGroup %s  with Error %s", req.oneGroup._id, err.message);
 						return res.status(500).send({
 							state: "failure",
 							message: "database error, failed to update Visbo Group",
@@ -1559,7 +1650,7 @@ router.route('/:vcid/group/:groupid')
 					} else {
 						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %O", err);
+								logger4js.fatal("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",
@@ -1601,7 +1692,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 400 no Admin user will be left in internal Visbo Center Group
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a user from Visbo Center Group
-		* @apiError {number} 404 user is not member of the Visbo Center Group
+		* @apiError {number} 409 user is not member of the Visbo Center Group
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/group/:groupid/user/:userid
 		* @apiSuccessExample {json} Success-Response:
@@ -1620,10 +1711,9 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info("DELETE Visbo Center User by userid %s email %s for user %s Group %s ", userId, useremail, req.params.userid, req.oneGroup._id);
 
 		req.auditDescription = 'Visbo Center User (Delete)';
-		req.auditInfo = req.params.userid + ' from ' + req.oneGroup.name;
 
 		var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
-		if (delUser) req.auditInfo = delUser.email  + ' from ' + req.oneGroup.name;
+		if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
 		if ((req.oneGroup.groupType == 'VC' && !(req.combinedPerm.vc & constPermVC.ManagePerm))
 		|| (req.oneGroup.groupType != 'VC' && !(req.combinedPerm.system & constPermSystem.ManagePerm))) {
@@ -1642,7 +1732,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 		logger4js.trace("DELETE Visbo Center Filtered User List %O ", newUserList);
 		if (newUserList.length == req.oneGroup.users.length) {
-			return res.status(404).send({
+			return res.status(409).send({
 				state: 'failure',
 				message: 'User is not member of Group',
 				groups: [req.oneGroup]
@@ -1660,7 +1750,7 @@ router.route('/:vcid/group/:groupid')
 		req.oneGroup.users = newUserList;
 		req.oneGroup.save(function(err, vg) {
 			if (err) {
-				logger4js.error("Error Update VisboCenter Group %s with Error %s", req.oneVC.name, err);
+				logger4js.error("Error Update VisboCenter Group %s with Error %s", req.oneVC.name, err.message);
 				return res.status(500).send({
 					state: "failure",
 					message: "database error, failed to update Visbo Center",
@@ -1711,8 +1801,11 @@ router.route('/:vcid/group/:groupid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Role (Read)';
+			req.auditSysAdmin = sysAdmin;
 
 			logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -1721,7 +1814,7 @@ router.route('/:vcid/group/:groupid')
 			queryVCRole.lean();
 			queryVCRole.exec(function (err, listVCRole) {
 				if (err) {
-					logger4js.fatal("VC Get Role DB Connection ", err);
+					logger4js.fatal("VC Get Role DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Roles',
@@ -1803,7 +1896,7 @@ router.route('/:vcid/group/:groupid')
 			queryVCRole.lean();
 			queryVCRole.exec(function (err, oneVCRole) {
 				if (err) {
-					logger4js.fatal("VC Post Role DB Connection ", err);
+					logger4js.fatal("VC Post Role DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting Visbo Center Roles',
@@ -1831,10 +1924,12 @@ router.route('/:vcid/group/:groupid')
 				vcRole.tagessatzIntern = req.body.tagessatzIntern;
 				vcRole.kapazitaet = req.body.kapazitaet;
 				vcRole.startOfCal = req.body.startOfCal;
-				vcRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
+				var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+				if (isNaN(dateValue)) dateValue = new Date()
+				vcRole.timestamp = dateValue;
 				vcRole.save(function(err, oneVcRole) {
 					if (err) {
-						logger4js.fatal("VC Post Role DB Connection ", err);
+						logger4js.fatal("VC Post Role DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error updating Visbo Center Role',
@@ -1864,7 +1959,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Visbo Center Role
-		* @apiError {number} 404 Visbo Center Role does not exists
+		* @apiError {number} 409 Visbo Center Role does not exists
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
@@ -1899,7 +1994,7 @@ router.route('/:vcid/group/:groupid')
 			// queryVCRole.select('_id vcid name');
 			queryVCRole.exec(function (err, oneVCRole) {
 				if (err) {
-					logger4js.fatal("VC Delete Role DB Connection ", err);
+					logger4js.fatal("VC Delete Role DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Roles',
@@ -1907,7 +2002,7 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 				if (!oneVCRole) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role not found',
 						error: err
@@ -1916,7 +2011,7 @@ router.route('/:vcid/group/:groupid')
 				logger4js.info("Found the Role for VC");
 				oneVCRole.remove(function(err, empty) {
 					if (err) {
-						logger4js.fatal("VC Delete Role DB Connection ", err);
+						logger4js.fatal("VC Delete Role DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error deleting Visbo Center Role',
@@ -1942,7 +2037,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Modify a Visbo Center Role
-		* @apiError {number} 404 Visbo Center Role does not exists
+		* @apiError {number} 409 Visbo Center Role does not exists
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/role/:roleid
@@ -1991,7 +2086,7 @@ router.route('/:vcid/group/:groupid')
 			// queryVCRole.select('_id vcid name');
 			queryVCRole.exec(function (err, oneVCRole) {
 				if (err) {
-					logger4js.fatal("VC Put Role DB Connection ", err);
+					logger4js.fatal("VC Put Role DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Roles',
@@ -1999,7 +2094,7 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 				if (!oneVCRole) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role not found',
 						error: err
@@ -2016,10 +2111,12 @@ router.route('/:vcid/group/:groupid')
 				oneVCRole.tagessatzIntern = req.body.tagessatzIntern;
 				oneVCRole.kapazitaet = req.body.kapazitaet;
 				oneVCRole.startOfCal = req.body.startOfCal;
-				oneVCRole.timestamp = req.body.timestamp ? req.body.timestamp : new Date();
+				var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+				if (isNaN(dateValue)) dateValue = new Date()
+				oneVCRole.timestamp = dateValue;
 				oneVCRole.save(function(err, oneVcRole) {
 					if (err) {
-						logger4js.fatal("VC Put Role DB Connection ", err);
+						logger4js.fatal("VC Put Role DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error updating Visbo Center Role',
@@ -2069,8 +2166,11 @@ router.route('/:vcid/cost')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var sysAdmin = req.query.sysadmin ? true : false;
+
 		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Center Cost (Read)';
+		req.auditSysAdmin = sysAdmin;
 
 		logger4js.info("Get Visbo Center Cost for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
@@ -2079,7 +2179,7 @@ router.route('/:vcid/cost')
 		queryVCCost.lean();
 		queryVCCost.exec(function (err, listVCCost) {
 			if (err) {
-				logger4js.fatal("VC Get Cost DB Connection ", err);
+				logger4js.fatal("VC Get Cost DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Costs',
@@ -2159,10 +2259,12 @@ router.route('/:vcid/cost')
 		vcCost.vcid = req.params.vcid;
 		vcCost.uid = req.body.uid;
 		vcCost.farbe = req.body.farbe;
-		vcCost.timestamp = new Date();
+		var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+		if (isNaN(dateValue)) dateValue = new Date()
+		vcCost.timestamp = dateValue;
 		vcCost.save(function(err, oneVcCost) {
 			if (err) {
-				logger4js.fatal("VC Post Role DB Connection ", err);
+				logger4js.fatal("VC Post Cost DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error updating Visbo Center Cost',
@@ -2190,7 +2292,7 @@ router.route('/:vcid/cost')
 	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete a Visbo Center Cost
-	* @apiError {number} 404 Visbo Center Cost does not exists
+	* @apiError {number} 409 Visbo Center Cost does not exists
 	*
   * @apiExample Example usage:
   *   url: http://localhost:3484/vc/:vcid/cost/:costid
@@ -2225,7 +2327,7 @@ router.route('/:vcid/cost')
 		// queryVCCost.select('_id vcid name');
 		queryVCCost.exec(function (err, oneVCCost) {
 			if (err) {
-				logger4js.fatal("VC Delete Role DB Connection ", err);
+				logger4js.fatal("VC Delete Role DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Costs',
@@ -2233,7 +2335,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCCost) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Cost not found',
 					error: err
@@ -2242,7 +2344,7 @@ router.route('/:vcid/cost')
 			logger4js.info("Found the Cost for VC");
 			oneVCCost.remove(function(err, empty) {
 				if (err) {
-					logger4js.fatal("VC Delete Role DB Connection ", err);
+					logger4js.fatal("VC Delete Role DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error deleting Visbo Center Cost',
@@ -2268,7 +2370,7 @@ router.route('/:vcid/cost')
 	* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Update a Visbo Center Cost
-	* @apiError {number} 404 Visbo Center Cost does not exists
+	* @apiError {number} 409 Visbo Center Cost does not exists
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vc/:vcid/cost/:costid
@@ -2316,7 +2418,7 @@ router.route('/:vcid/cost')
 		// queryVCCost.select('_id vcid name');
 		queryVCCost.exec(function (err, oneVCCost) {
 			if (err) {
-				logger4js.fatal("VC Put Cost DB Connection ", err);
+				logger4js.fatal("VC Put Cost DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Costs',
@@ -2324,7 +2426,7 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCCost) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Cost not found',
 					error: err
@@ -2334,7 +2436,9 @@ router.route('/:vcid/cost')
 			oneVCCost.name = req.body.name;
 			oneVCCost.uid = req.body.uid;
 			oneVCCost.farbe = req.body.farbe;
-			oneVCCost.timestamp = new Date();
+			var dateValue = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+			if (isNaN(dateValue)) dateValue = new Date()
+			oneVCCost.timestamp = dateValue;
 			oneVCCost.save(function(err, oneVcCost) {
 				if (err) {
 					return res.status(500).send({
@@ -2398,14 +2502,16 @@ router.route('/:vcid/cost')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
+			var sysAdmin = req.query.sysadmin ? true : false;
 
 			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Center Setting (Read)';
+			req.auditSysAdmin = sysAdmin;
 
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
 			var query = {};
-			if (req.query.refDate){
+			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
@@ -2414,7 +2520,7 @@ router.route('/:vcid/cost')
 			query.vcid = req.oneVC._id
 			if (req.query.name) query.name = req.query.name;
 			if (req.query.type) query.type = req.query.type;
-			if (req.query.userId) query.userId = req.query.userId;
+			if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) query.userId = req.query.userId;
 
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
@@ -2425,7 +2531,7 @@ router.route('/:vcid/cost')
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Get Setting DB Connection ", err);
+					logger4js.fatal("VC Get Setting DB Connection VCSetting.find(%s) %s ", query, err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Settings',
@@ -2538,14 +2644,15 @@ router.route('/:vcid/cost')
 			var vcSetting = new VCSetting();
 			vcSetting.name = req.body.name;
 			vcSetting.vcid = req.params.vcid;
-			if (req.body.timestamp) vcSetting.timestamp = req.body.timestamp;
-			if (req.body.userId) vcSetting.userId = req.body.userId;
+			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
+			if (req.body.timestamp) vcSetting.timestamp = dateValue;
+			if (req.body.userId && mongoose.Types.ObjectId.isValid(req.body.userId)) vcSetting.userId = req.body.userId;
 			vcSetting.type = 'Custom';
 			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
 			vcSetting.value = req.body.value;
-			vcSetting.save(function(err, oneVcSetting) {
+			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Post Role DB Connection ", err);
+					logger4js.fatal("VC Post Setting DB Connection %s", err.message);
 					if (err.code == 11000) {
 						return res.status(409).send({
 							state: 'failure',
@@ -2558,10 +2665,11 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Inserted Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		})
@@ -2579,7 +2687,7 @@ router.route('/:vcid/cost')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Visbo Center Setting
-		* @apiError {number} 404 Visbo Center Setting does not exists
+		* @apiError {number} 409 Visbo Center Setting does not exists
 		*
 	  * @apiExample Example usage:
 	  *   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2615,7 +2723,7 @@ router.route('/:vcid/cost')
 			// queryVCSetting.select('_id vcid name');
 			queryVCSetting.exec(function (err, oneVCSetting) {
 				if (err) {
-					logger4js.fatal("VC Delete Role DB Connection ", err);
+					logger4js.fatal("VC Delete Setting DB Connection %s", err.message);
 					return res.status(500).send({
 						state: 'failure',
 						message: 'Error getting VisboCenter Settings',
@@ -2623,12 +2731,13 @@ router.route('/:vcid/cost')
 					});
 				}
 				if (!oneVCSetting) {
-					return res.status(404).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Setting not found',
 						error: err
 					});
 				}
+				req.oneVCSetting = oneVCSetting;
 				if (oneVCSetting.type == 'Internal') {
 					return res.status(400).send({
 						state: 'failure',
@@ -2638,7 +2747,7 @@ router.route('/:vcid/cost')
 				logger4js.info("Found the Setting for VC");
 				oneVCSetting.remove(function(err, empty) {
 					if (err) {
-						logger4js.fatal("VC Delete Role DB Connection ", err);
+						logger4js.fatal("VC Delete Setting DB Connection %s", err.message);
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Error deleting Visbo Center Setting',
@@ -2664,7 +2773,7 @@ router.route('/:vcid/cost')
 		* @apiPermission Authenticated and Permission: View Visbo Center, Modify Visbo Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Update a Visbo Center Setting
-		* @apiError {number} 404 Visbo Center Setting does not exists
+		* @apiError {number} 409 Visbo Center Setting does not exists or was updated in between.
 		*
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
@@ -2722,7 +2831,7 @@ router.route('/:vcid/cost')
 		// queryVCSetting.select('_id vcid name');
 		queryVCSetting.exec(function (err, oneVCSetting) {
 			if (err) {
-				logger4js.fatal("VC Put Setting DB Connection ", err);
+				logger4js.fatal("VC Put Setting DB Connection %s", err.message);
 				return res.status(500).send({
 					state: 'failure',
 					message: 'Error getting VisboCenter Settings',
@@ -2730,16 +2839,26 @@ router.route('/:vcid/cost')
 				});
 			}
 			if (!oneVCSetting) {
-				return res.status(404).send({
+				return res.status(409).send({
 					state: 'failure',
 					message: 'Visbo Center Setting not found',
 					error: err
 				});
 			}
-			logger4js.info("Found the Setting for VC");
+			logger4js.info("Found the Setting for VC Updated");
+			if (req.body.updatedAt && Date.parse(req.body.updatedAt) && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
+				logger4js.info("VC Setting: Conflict with updatedAt %s %s", oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Visbo Center Setting already updated inbetween',
+					vcsetting: [ oneVCSetting ]
+				});
+			}
 			if (name) oneVCSetting.name = name;
 			if (req.body.value) oneVCSetting.value = req.body.value;
-			oneVCSetting.save(function(err, oneVcSetting) {
+			var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
+			if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
+			oneVCSetting.save(function(err, oneVCSetting) {
 				if (err) {
 					return res.status(500).send({
 						state: 'failure',
@@ -2747,16 +2866,17 @@ router.route('/:vcid/cost')
 						error: err
 					});
 				}
-				if (oneVcSetting.type == 'Internal') {
-					if (oneVcSetting.name == 'DEBUG') {
+				if (oneVCSetting.type == 'Internal') {
+					if (oneVCSetting.name == 'DEBUG') {
 						logger4js.info("Update System Log Setting");
-						logging.setLogLevelConfig(oneVcSetting.value)
+						logging.setLogLevelConfig(oneVCSetting.value)
 					}
 				}
+				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Updated Visbo Center Setting',
-					vcsetting: [ oneVcSetting ]
+					vcsetting: [ oneVCSetting ]
 				});
 			});
 		});
