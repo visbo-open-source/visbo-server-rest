@@ -9,6 +9,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
 var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = "VP";
 var log4js = require('log4js');
@@ -65,12 +66,8 @@ function getAllVPGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting VisboCenters',
-					error: err
-				});
+				errorHandler(err, res, `DB: VP Group all Find`, `Error getting Visbo Groups `)
+				return;
 			}
 			logger4js.debug("Found VGs %d", listVG.length);
 			// Convert the result to request
@@ -154,14 +151,10 @@ function getVpidGroups(req, res, next, vpid) {
 	queryVG.select('name permission vpid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboCenters',
-				error: err
-			});
+			errorHandler(err, res, `DB: VP Group specific find`, `Error getting Visbo Groups `)
+			return;
 		}
-		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
+		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
 		req.permGroups = listVG;
 		req.auditDescription = 'Visbo Project (Read)';
@@ -194,12 +187,8 @@ function getVpidGroups(req, res, next, vpid) {
 		// queryVP.select('name users updatedAt createdAt');
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP Get with ID DB Connection VisboProject.findOne(%s) %s", query, err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting Visbo Project',
-					error: err
-				});
+				errorHandler(err, res, `DB: VP Group Get VP`, `Error getting Visbo Project`)
+				return;
 			}
 			if (!oneVP) {
 				return res.status(403).send({

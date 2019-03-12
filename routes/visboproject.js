@@ -273,7 +273,7 @@ router.route('/')
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=1
+	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=0
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -286,7 +286,7 @@ router.route('/')
 	*      "name":"My new VisboProject",
 	*      "vcid": "vc5aaf992",
 	*      "vpvCount": "0",
-	*      "vpType": "1",
+	*      "vpType": "0",
 	*      "lock": [{
 	*        "variantName": "",
 	*        "email": "someone@visbo.de",
@@ -387,6 +387,7 @@ router.route('/')
 	* @apiDescription Post creates a new VP
 	* with a unique name inside VC and the admins as defined in the body.
 	* If no admin is specified for the project the current user is added as Admin.
+	* if no vpType is specified a normal Project (0) is created, for Portfolio use vpType = 1 and for Project Template vpType=2
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	* @apiHeader {String} access-key User authentication token.
   *
@@ -403,6 +404,7 @@ router.route('/')
 	*  "name":"My first Visbo Project",
 	*  "description":"Visbo Project Description",
 	*  "vcid": "vc5aaf992",
+	*  "vpType": 0,
 	*  "kundennummer": "customer project identifier"
 	*  "users":[
 	*    { "email":"example1@visbo.de" },

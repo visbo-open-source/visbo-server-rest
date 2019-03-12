@@ -6,6 +6,7 @@ var constPermVC = Const.constPermVC
 var VisboGroup = mongoose.model('VisboGroup');
 
 var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = "USER";
 var log4js = require('log4js');
@@ -37,12 +38,8 @@ function getGroupId(req, res, next, groupId) {
 	// queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("Group Param check Get DB Connection VisboGroup.find(%s) %s", query, err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboGroups',
-				error: err
-			});
+			errorHandler(err, res, `DB: Group Find`, `Error getting Visbo Groups `)
+			return;
 		}
 		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
 	 	// Convert the result to request

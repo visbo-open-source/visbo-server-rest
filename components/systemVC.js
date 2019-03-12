@@ -37,7 +37,7 @@ var createSystemVC = function (body) {
 	var query = {system: true};
 	VisboCenter.findOne(query, function(err, vc) {
 		if (err) {
-			logger4js.fatal("Could not access Database during System VC");
+			errorHandler(err, undefined, `DB: System VC Find error`, undefined)
 			return undefined;
 		}
 		if (vc) {
@@ -51,7 +51,7 @@ var createSystemVC = function (body) {
 			var queryVCSetting = VCSetting.findOne(query);
 			queryVCSetting.exec(function (err, item) {
 				if (err) {
-					logger4js.fatal("VC Get System Setting DB Connection %s", err.message);
+					errorHandler(err, undefined, `DB: Get System Setting Select `, undefined)
 				} else if (item) {
 					logger4js.debug("Setting found for System VC %O", item);
 					logging.setLogLevelConfig(item.value);
@@ -66,7 +66,7 @@ var createSystemVC = function (body) {
 					vcSetting.value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"};
 					vcSetting.save(function(err, oneVcSetting) {
 						if (err) {
-							logger4js.fatal("VC Define Initial Logging DB Connection %s", err.message);
+							errorHandler(err, undefined, `DB: Initial Logging save `, undefined)
 						} else {
 							logger4js.info("Update System Log Setting");
 							logging.setLogLevelConfig(oneVcSetting.value)
@@ -84,7 +84,7 @@ var createSystemVC = function (body) {
 		newVC.vpCount = 0;
 		newVC.save(function(err, vc) {
 			if (err) {
-				logger4js.fatal("DB error during Creating System Visbo Center %s", err.message);
+				errorHandler(err, undefined, `DB: System VC save error`, undefined)
 				return undefined
 			}
 			vcSystem = vc;
@@ -93,7 +93,7 @@ var createSystemVC = function (body) {
 			newUser.email = body.users[0].email;
 			newUser.save(function(err, user) {
 				if (err) {
-					logger4js.fatal("DB error during Creating System Visbo Center User: %s", err.message);
+					errorHandler(err, undefined, `DB: System VC User Create error`, undefined)
 					return undefined
 				}
 				var newGroup = new VisboGroup();

@@ -8,6 +8,7 @@ var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
+var process = require('process');
 
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
@@ -126,7 +127,7 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.fatal("CorsOptions deny  %s ", origin);
+      logger4js.warn("CorsOptions deny  %s ", origin);
       //callback(null, true) // temporary enable cors for all sites
       callback(origin + ' is not allowed to access', null)
       // callback(new Error(origin + ' is not allowed to access'))
@@ -138,11 +139,16 @@ environment.config();
 
 // start express app
 var app = express();
+var port = process.env.PORT ||'3484';
+// app.set('port', port);
+app.listen(port)
+
 // configure log4js
 var fsLogPath = __dirname + '/logging';
 if (process.env.LOGPATH != undefined) {
   fsLogPath = process.env.LOGPATH;
 }
+// console.log("Log Path " + fsLogPath + ' PID ' + process.pid)
 
 log4js.configure({
   appenders: {
@@ -161,7 +167,9 @@ log4js.configure({
     "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
-  }
+  },
+  pm2: true,
+  pm2InstanceVar: 'INSTANCE_ID'
 });
 logger4js.level = 'info';
 // initialise with default debug
@@ -170,7 +178,6 @@ logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
-logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -264,7 +271,7 @@ app.use('/status', status);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
+  logger4js.warn("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
   err.status = 404;
   res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
 });
@@ -276,11 +283,13 @@ app.use(function(req, res, next) {
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
   app.use(function(err, req, res, next) {
-    logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
-    res.status(err.status || 500);
+    var errCode = err.status || 500;
+    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    res.status(errCode);
     res.send({
       state: 'failure',
-      message: err.message,
+      message: errMessage,
       error: err
     });
   });
@@ -289,11 +298,13 @@ if (process.env.NODE_ENV === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-  logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
-  res.status(err.status || 500);
+  var errCode = err.status || 500;
+  var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+  logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+  res.status(errCode);
   res.send({
     state: 'failure',
-    message: 'Internal Server Error'
+    message: errMessage
   });
 });
 

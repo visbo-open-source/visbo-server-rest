@@ -53,12 +53,8 @@ function getAllGroups(req, res, next) {
 		queryVG.select('name permission vcid')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s)\n%s", query, err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting VisboCenters',
-					error: err
-				});
+				errorHandler(err, res, `DB: VC Groups get all`, `Error getting Visbo Centers`)
+				return;
 			}
 			logger4js.trace("Found VGs %d", listVG.length);
 			// Convert the result to request
@@ -135,14 +131,10 @@ function getVcidGroups(req, res, next, vcid) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s) %s", query, err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboCenters',
-				error: err
-			});
+			errorHandler(err, res, `DB: VC Groups get specific`, `Error getting Visbo Center`)
+			return;
 		}
-		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
+		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
 		req.permGroups = listVG;
 		if (listVG.length == 0) {
@@ -175,12 +167,8 @@ function getVcidGroups(req, res, next, vcid) {
 		// queryVC.select('name users updatedAt createdAt');
 		queryVC.exec(function (err, oneVC) {
 			if (err) {
-				logger4js.fatal("VC Get with ID DB Connection VisboCenter.findOne() %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting Visbo Centers',
-					error: err
-				});
+				errorHandler(err, res, `DB: VC Groups get specific VC`, `Error getting Visbo Center`)
+				return;
 			}
 			if (!oneVC) {
 				return res.status(403).send({
@@ -215,12 +203,8 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VC Groups Get DB Connection VisboGroup.find(%s) %s", query, err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboCenters',
-				error: err
-			});
+			errorHandler(err, res, `DB: System Groups get all`, `Error getting Visbo Centers`)
+			return;
 		}
 		logger4js.debug("Found System VGs %d", listVG.length);
 		req.permGroups = listVG;
