@@ -92,7 +92,8 @@ router.route('/')
 				state: 'success',
 				message: 'Status of ReST Server',
 				status: {
-					version: process.env.VERSION_REST
+					version: process.env.VERSION_REST,
+					versionUI: process.env.VERSION_UI
 				}
 			});
 		}

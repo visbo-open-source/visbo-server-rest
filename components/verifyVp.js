@@ -9,6 +9,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
 var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = "VP";
 var log4js = require('log4js');
@@ -24,7 +25,7 @@ function getAllVPGroups(req, res, next) {
 		logger4js.warn("VC Bad Query Parameter vcid %s", req.query.vcid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid Visbo Center'
 		});
 	}
 	if (baseUrl == '/') {
@@ -65,12 +66,8 @@ function getAllVPGroups(req, res, next) {
 		queryVG.select('name permission vcid vpids')
 		queryVG.exec(function (err, listVG) {
 			if (err) {
-				logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting VisboCenters',
-					error: err
-				});
+				errorHandler(err, res, `DB: VP Group all Find`, `Error getting Visbo Groups `)
+				return;
 			}
 			logger4js.debug("Found VGs %d", listVG.length);
 			// Convert the result to request
@@ -102,6 +99,18 @@ function getAllVPGroups(req, res, next) {
 	}
 }
 
+function checkVpfid(req, res, next, vpfid) {
+	logger4js.debug("Check Portfolio ID vpfid %s user %s for url %s ", vpfid, req.decoded.email, req.url);
+	if (!validate.validateObjectId(vpfid, false)) {
+		logger4js.warn("VC Groups Bad Parameter vpid %s", vpfid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Visbo Project Portfolio'
+		});
+	}
+	return next();
+}
+
 // Generate the Groups where the user is member of System / VP depending on the case
 function getVpidGroups(req, res, next, vpid) {
 	var userId = req.decoded._id;
@@ -117,10 +126,10 @@ function getVpidGroups(req, res, next, vpid) {
 	// handle sysadmin case by getting the system groups
 	logger4js.debug("Generate VP Groups for vpid %s user %s for url %s sysAdmin %s", vpid, req.decoded.email, req.url, sysAdmin);
 	if (!validate.validateObjectId(vpid, false)) {
-		logger4js.fatal("VC Groups Bad Parameter vpid %s", vpid);
+		logger4js.warn("VC Groups Bad Parameter vpid %s", vpid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid Visbo Project'
 		});
 	}
 	var query = {};
@@ -142,14 +151,10 @@ function getVpidGroups(req, res, next, vpid) {
 	queryVG.select('name permission vpid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			logger4js.fatal("VP Groups Get DB Connection VisboGroup.find() %s", err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting VisboCenters',
-				error: err
-			});
+			errorHandler(err, res, `DB: VP Group specific find`, `Error getting Visbo Groups `)
+			return;
 		}
-		logger4js.debug("Found VGs %d groups %O", listVG.length, listVG);
+		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
 		// Convert the result to request
 		req.permGroups = listVG;
 		req.auditDescription = 'Visbo Project (Read)';
@@ -182,12 +187,8 @@ function getVpidGroups(req, res, next, vpid) {
 		// queryVP.select('name users updatedAt createdAt');
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("VP Get with ID DB Connection \nVisboProject.findOne(%s) %s", query, err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting Visbo Project',
-					error: err
-				});
+				errorHandler(err, res, `DB: VP Group Get VP`, `Error getting Visbo Project`)
+				return;
 			}
 			if (!oneVP) {
 				return res.status(403).send({
@@ -206,5 +207,6 @@ function getVpidGroups(req, res, next, vpid) {
 
 module.exports = {
 	getAllVPGroups: getAllVPGroups,
-	getVpidGroups: getVpidGroups
+	getVpidGroups: getVpidGroups,
+	checkVpfid: checkVpfid
 };

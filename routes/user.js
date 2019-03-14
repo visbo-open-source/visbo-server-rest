@@ -7,6 +7,7 @@ var bCrypt = require('bcrypt-nodejs');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var mail = require('../components/mail');
 var ejs = require('ejs');
@@ -78,12 +79,8 @@ router.route('/profile')
 
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User Get Profile DB Connection %s ", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: GET Profile ${req.decoded._id} Find `, `Error get profile failed`)
+				return;
 			}
 			user.password = undefined;
 			return res.status(200).send({
@@ -155,12 +152,8 @@ router.route('/profile')
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Profile DB Connection %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Find `, `Error update profile failed`)
+				return;
 			}
 			if (!req.body.profile || !req.body.profile.firstName || !req.body.profile.lastName ) {
 				logger4js.debug("Put/Update user %s body %O", req.decoded._id, req.body);
@@ -187,12 +180,8 @@ router.route('/profile')
 			user.save(function(err, user) {
 				logger4js.debug("Put/Update after Save");
 				if (err) {
-					logger4js.fatal("User update Profile to DB Connection %s", err.message);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error updating user',
-						error: err
-					});
+					errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error update profile failed`)
+					return;
 				}
 				user.password = undefined;
 				return res.status(200).send({
@@ -238,12 +227,8 @@ router.route('/passwordchange')
 		logger4js.info("Put/Update user password %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Password DB Connection %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: PUT Change Password ${req.decoded._id} Find `, `Error change password failed`)
+				return;
 			}
 			if (!req.body.password || !req.body.oldpassword ) {
 				logger4js.debug("Put/Update user %s body incomplete %O", req.decoded._id, req.body);
@@ -275,12 +260,8 @@ router.route('/passwordchange')
 				user.status.expiresAt = undefined;
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Change Password Update DB Connection %s", err.message);
-						return res.status(500).send({
-							state: "failure",
-							message: "database error, failed to update user",
-							error: err
-						});
+						errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error chaneg password failed`)
+						return;
 					}
 					user.password = undefined;
 					// now send an e-Mail to the user for pw change
@@ -306,7 +287,7 @@ router.route('/passwordchange')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s", err.message);
+							logger4js.warn("E-Mail Rendering failed %s", err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",
