@@ -438,8 +438,8 @@ router.route('/')
 		req.auditDescription = 'Visbo Project (Create)';
 
 		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
-				logger4js.warn("No VCID or Name in Body");
-				return res.status(400).send({
+			logger4js.warn("No VCID or Name in Body");
+			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid Visbo Center'
 			});

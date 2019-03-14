@@ -272,7 +272,6 @@ app.use('/status', status);
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
   logger4js.warn("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
-  err.status = 404;
   return res.status(404).send({
     state: 'failure',
     message: "Sorry can't find the URL",
