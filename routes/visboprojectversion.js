@@ -317,7 +317,7 @@ router.route('/')
 		var queryvpv = {};
 
 		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
-		var variantName = req.body.variantName.trim() || '';
+		var variantName = (req.body.variantName  || '').trim();
 		var variantIndex = -1;
 
 		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.combinedPerm);
