@@ -153,8 +153,9 @@ if (process.env.LOGPATH != undefined) {
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    // everything: { type: 'file', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30, compress: true },
+    everything: {  type: 'dateFile', filename: fsLogPath + '/all-the-logs', backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -167,9 +168,10 @@ log4js.configure({
     "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
-  },
-  pm2: true,
-  pm2InstanceVar: 'INSTANCE_ID'
+  }
+  // ,
+  // pm2: true,
+  // pm2InstanceVar: 'INSTANCE_ID'
 });
 logger4js.level = 'info';
 // initialise with default debug
