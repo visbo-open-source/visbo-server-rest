@@ -139,23 +139,22 @@ environment.config();
 
 // start express app
 var app = express();
-var port = process.env.PORT ||'3484';
-// app.set('port', port);
-app.listen(port)
+// MS TODO: PM2 Setup for multi server
+// var port = process.env.PORT ||'3484';
+// // app.set('port', port);
+// app.listen(port)
 
 // configure log4js
 var fsLogPath = __dirname + '/logging';
 if (process.env.LOGPATH != undefined) {
   fsLogPath = process.env.LOGPATH;
 }
-// console.log("Log Path " + fsLogPath + ' PID ' + process.pid)
 
 log4js.configure({
   appenders: {
     out: { type: 'stdout' },
-    // everything: { type: 'file', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30, compress: true },
-    everything: {  type: 'dateFile', filename: fsLogPath + '/all-the-logs', backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', backups: 30, daysToKeep: 30 },
+    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
     'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
     'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
   },
@@ -180,6 +179,7 @@ logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
+logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
