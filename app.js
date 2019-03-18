@@ -139,16 +139,16 @@ environment.config();
 
 // start express app
 var app = express();
-var port = process.env.PORT ||'3484';
-// app.set('port', port);
-app.listen(port)
+// MS TODO: PM2 Setup for multi server
+// var port = process.env.PORT ||'3484';
+// // app.set('port', port);
+// app.listen(port)
 
 // configure log4js
 var fsLogPath = __dirname + '/logging';
 if (process.env.LOGPATH != undefined) {
   fsLogPath = process.env.LOGPATH;
 }
-// console.log("Log Path " + fsLogPath + ' PID ' + process.pid)
 
 log4js.configure({
   appenders: {
@@ -167,9 +167,10 @@ log4js.configure({
     "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
-  },
-  pm2: true,
-  pm2InstanceVar: 'INSTANCE_ID'
+  }
+  // ,
+  // pm2: true,
+  // pm2InstanceVar: 'INSTANCE_ID'
 });
 logger4js.level = 'info';
 // initialise with default debug
@@ -178,6 +179,7 @@ logging.setLogLevelConfig(settingDebugInit);
 logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
+logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
