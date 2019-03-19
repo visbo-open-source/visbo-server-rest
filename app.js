@@ -119,6 +119,7 @@ var whitelist = [
   'http://localhost:3484', // DEV Support
   'https://my.visbo.net', // Production Support
   'https://staging.visbo.net', // Staging Support
+  'https://dev.visbo.net', // Development AWS Support
   'http://localhost:4200' // UI Support DEV Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
