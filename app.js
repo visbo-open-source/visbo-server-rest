@@ -115,8 +115,6 @@ function dbConnect(dbconnection) {
 
 // CORS Config, whitelist is an array
 var whitelist = [
-  undefined, // Postman Support
-  'http://localhost:3484', // DEV Support
   'https://my.visbo.net', // Production Support
   'https://staging.visbo.net', // Staging Support
   'https://dev.visbo.net', // Development AWS Support
@@ -128,7 +126,9 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.warn("CorsOptions deny  %s ", origin);
+      logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+      logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
+      console.log(`Cors Options deny ${origin} index ${whitelist.indexOf(origin)}`);
       //callback(null, true) // temporary enable cors for all sites
       callback(origin + ' is not allowed to access', null)
       // callback(new Error(origin + ' is not allowed to access'))
