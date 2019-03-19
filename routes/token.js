@@ -626,20 +626,21 @@ router.route('/user/signup')
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
 		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
-		if (!validate.validateEmail(req.body.email, false)) {
-			logger4js.warn("Signup uses not allowed UserName %s ", req.body.email);
-			return res.status(400).send({
-				state: "failure",
-				message: "Signup User Name not allowed"
-			});
-		}
 
 		var query = {};
 		if (req.body.email) {
+			if (!validate.validateEmail(req.body.email, false)) {
+				logger4js.warn("Signup uses not allowed UserName %s ", req.body.email);
+				return res.status(400).send({
+					state: "failure",
+					message: "Signup User Name not allowed"
+				});
+			}
 			query.email = req.body.email;
-		} else if (req.body._id && mongoose.Types.ObjectId.isValid(req.body._id)) {
+		} else if (req.body._id && validate.validateObjectId(req.body._id, false)) {
 			query._id = req.body._id;
 		} else {
+			logger4js.warn("Signup no eMail or valid UserID %s found ", req.body._id);
 			return res.status(400).send({
 				state: "failure",
 				message: "No e-Mail or User ID in body"
