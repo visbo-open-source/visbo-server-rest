@@ -8,6 +8,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboGroup = mongoose.model('VisboGroup');
+var VisboPortfolio = mongoose.model('VisboPortfolio');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -74,6 +75,7 @@ function getAllVPVGroups(req, res, next) {
 		logger4js.debug("Query VGs %s", JSON.stringify(query));
 		var queryVG = VisboGroup.find(query);
 		queryVG.select('name permission vcid vpids')
+		queryVG.lean();
 		queryVG.exec(function (err, listVG) {
 			if (err) {
 				errorHandler(err, res, `DB: VPV Group all find`, `Error getting Visbo Project Versions `)
@@ -163,6 +165,7 @@ function getVpvidGroups(req, res, next, vpvid) {
 
 		var queryVG = VisboGroup.find(query);
 		queryVG.select('name permission vpid')
+		queryVG.lean();
 		queryVG.exec(function (err, listVG) {
 			if (err) {
 				logger4js.warn("VP Groups Get DB Connection VisboGroup.find(%s) %s", query, err.message);
@@ -221,7 +224,90 @@ function getVpvidGroups(req, res, next, vpvid) {
 	});
 }
 
+// Generate the Groups where the user is member of and has VP Permission
+function getPortfolioVPs(req, res, next) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	var baseUrl = req.url.split("?")[0]
+	if (baseUrl == '/' && req.method == "GET" && req.query.vpfid) {
+		// get the VP List of a VPF
+		logger4js.debug("Generate Project List of Portfolio for user %s for url %s", req.decoded.email, req.url);
+		if (!validate.validateObjectId(req.query.vpfid, false)) {
+			logger4js.warn("VC Bad Query Parameter vpfid %s ", req.query.vpfid);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid Parameter for Visbo Portfolio Version'
+			});
+		}
+
+		var query = {};
+		var acceptEmpty = true;
+		query._id = req.query.vpfid;
+
+		logger4js.debug("Query VPF %s", JSON.stringify(query));
+		// get the Project List from VPF
+		var queryVPF = VisboPortfolio.find(query);
+		queryVPF.select('_id vpid variantName allItems')
+		queryVPF.exec(function (err, listVPF) {
+			if (err) {
+				errorHandler(err, res, `DB: listVPF find`, `Error getting Visbo Project Versions `)
+				return;
+			}
+			if (listVPF.length == 0) {
+				// do not accept requests without an existing VPF ID
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Portfolio Project'
+				});
+			}
+			if (!listVPF[0].allItems) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid Portfolio'
+				});
+			}
+			logger4js.debug("Found VPF with Projects %d", listVPF[0].allItems.length);
+			// check if VP of Portfolio list is in the list of projects, to verify that the user has permission to View the Portfolio
+			var vpid = listVPF[0].vpid;
+			var found = false;
+			for (var i=0; i < req.permGroups.length; i++) {
+				logger4js.debug("Check Group %s", req.permGroups[i].name);
+				for (var j=0; j < req.permGroups[i].vpids.length; j++) {
+					logger4js.debug("Find VPID %s vs %s", vpid, req.permGroups[i].vpids[j]);
+					if (vpid.toString() == req.permGroups[i].vpids[j].toString()) {
+						logger4js.debug("Found VPID %s", req.permGroups[i].vpids[j]);
+						found = true;
+						break;
+					}
+				}
+			}
+			if (!found) {
+				logger4js.info("No Access to Portfolio VPID", vpid);
+				// do not accept requests without an existing VPF ID
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Visbo Portfolio Project'
+				});
+			}
+			// MS TODO: Add the Projects to a list, and filter on these projects later
+			var listVP = [], listVPVariant = [];
+			for (var i=0; i<listVPF[0].allItems.length; i++) {
+				listVP.push(listVPF[0].allItems[i].vpid);
+				listVPVariant.push({vpid: listVPF[0].allItems[i].vpid, variantName: listVPF[0].allItems[i].variantName});
+			}
+			req.listPortfolioVP = listVP;
+			req.listPortfolioVPVariant = listVPVariant
+			return next();
+		});
+	} else {
+		// not the baseUrl "/" do nothing
+		return next();
+	}
+}
+
 module.exports = {
 	getAllVPVGroups: getAllVPVGroups,
-	getVpvidGroups: getVpvidGroups
+	getVpvidGroups: getVpvidGroups,
+	getPortfolioVPs: getPortfolioVPs
 };

@@ -58,7 +58,7 @@ var findUserById = function(currentUser) {
 	return currentUser.userId.toString() == this.toString();
 }
 
-// find a user in a simple array of user names
+// find a project in a simple array of project ids
 var findVP = function(vpid) {
 		return vpid == this;
 }
@@ -2304,8 +2304,6 @@ router.route('/:vpid/portfolio')
 			var refDate = new Date(req.query.refDate);
 			query.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 			latestOnly = true;
-		} else {
-			query.timestamp =  {$lt: new Date()};
 		}
 		if (req.query.variantName != undefined){
 			logger4js.debug("Variant Query String :%s:", req.query.variantName);
