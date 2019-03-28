@@ -3,7 +3,7 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var cors = require('cors');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
+// var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
@@ -238,7 +238,7 @@ var options = {
   }
 }
 app.use(express.static(path.join(__dirname, 'public'), options));
-app.use(cookieParser());
+// app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));

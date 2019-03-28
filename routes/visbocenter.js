@@ -14,7 +14,6 @@ var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 var VCGroupUser = mongoose.model('VisboGroupUser');
-var VCUser = mongoose.model('VCUser');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
@@ -31,6 +30,7 @@ var constPermSystem = Const.constPermSystem
 var mail = require('../components/mail');
 var ejs = require('ejs');
 var read = require('fs').readFileSync;
+var sanitizeHtml = require('sanitize-html');
 
 var logging = require('../components/logging');
 var logModule = "VC";
@@ -234,10 +234,6 @@ router.route('/')
 	 * {
 	 *  "name":"My first Visbo Center",
 	 *  "description": "Visbo Center Descripton"
-	 *  "users":[
-	 *   { "email":"example1@visbo.de" },
-	 *   { "email":"example2@visbo.de" }
-	 *  ]
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
 	 * HTTP/1.1 200 OK
@@ -300,68 +296,36 @@ router.route('/')
 			newVC.name = req.body.name;
 			newVC.description = req.body.description;
 			newVC.vpCount = 0;
-			// Check for Valid User eMail remove non existing eMails
 
-			// check the users that they exist already, if not ignore the non existing users
-			var vcUsers = new Array();
-			if (req.body.users) {
-				for (var i=0; i < req.body.users.length; i++) {
-					req.body.users[i].email = req.body.users[i].email.toLowerCase();
-					// build up unique user list vcUsers to check that they exist
-					if (!vcUsers.find(findUser, req.body.users[i].email)){
-						vcUsers.push(req.body.users[i].email)
-					}
-				};
-			};
-			logger4js.debug("Check users if they exist %s", JSON.stringify(vcUsers));
-			var query = {'email': {'$in': vcUsers}}
-			var queryUsers = User.find(query);
-			queryUsers.select('_id email');
-			queryUsers.lean();
-			queryUsers.exec(function (err, listUsers) {
+			// Create new VC Group and add current user to the new Group
+			var newVG = new VisboGroup();
+			newVG.name = 'Visbo Center Admin'
+			newVG.groupType = 'VC';
+			newVG.internal = true;
+			newVG.global = true;
+			newVG.permission = {vc: Const.constPermVCAll }
+			newVG.vcid = newVC._id;
+			newVG.users = [];
+			newVG.users.push({email: useremail, userId: userId});
+
+			logger4js.trace("VC Post Create Admin Group for vc %s group %O ", newVC._id, newVG);
+			newVG.save(function(err, vg) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VC ${req.body.name} finding Users `, `Error create Visbo Center ${req.body.name}`)
+					errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined)
+				}
+			});
+
+			logger4js.debug("Save VisboCenter %s %s", newVC.name, newVC._id);
+			newVC.save(function(err, vc) {
+				if (err) {
+					errorHandler(err, res, `DB: POST VC ${req.body.name} Save`, `Failed to create Visbo Center ${req.body.name}`)
 					return;
 				}
-				if (listUsers.length != vcUsers.length)
-					logger4js.warn("Warning: Found only %d of %d Users, ignoring non existing users", listUsers.length, vcUsers.length);
-
-				// Create new VC Group and add all existing Admin Users to the new Group
-				var newVG = new VisboGroup();
-				newVG.name = 'Visbo Center Admin'
-				newVG.groupType = 'VC';
-				newVG.internal = true;
-				newVG.global = true;
-				newVG.permission = {vc: Const.constPermVCAll }
-				newVG.vcid = newVC._id;
-				newVG.users = [];
-				for (var i = 0; i < listUsers.length; i++) {
-					// build up user list for Visbo Project Admin Group
-					newVG.users.push({email: listUsers[i].email, userId: listUsers[i]._id});
-				};
-				// no admin defined, add current user as admin
-				if (newVG.users.length == 0)
-					newVG.users.push({email: useremail, userId: userId});
-
-				logger4js.trace("VC Post Create Admin Group for vc %s group %O ", newVC._id, newVG);
-				newVG.save(function(err, vg) {
-					if (err) {
-						errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined)
-					}
-				});
-
-				logger4js.debug("Save VisboCenter %s %s", newVC.name, newVC._id);
-				newVC.save(function(err, vc) {
-					if (err) {
-						errorHandler(err, res, `DB: POST VC ${req.body.name} Save`, `Failed to create Visbo Center ${req.body.name}`)
-						return;
-					}
-					req.oneVC = vc;
-					return res.status(200).send({
-						state: "success",
-						message: "Successfully created new VisboCenter",
-						vc: [ vc ]
-					});
+				req.oneVC = vc;
+				return res.status(200).send({
+					state: "success",
+					message: "Successfully created new VisboCenter",
+					vc: [ vc ]
 				});
 			});
 		});
@@ -955,12 +919,37 @@ router.route('/:vcid/group')
 														internal: listVCGroup[i].internal})
 					}
 				}
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Visbo Center Groups',
-					count: listVCGroup.length,
-					groups: listVCGroup,
-					users: listVCUsers
+				var aggregateQuery = [
+			    {$match: {vcid: req.oneVC._id, deletedByParent:{$exists:false}}},
+			    {$project: {_id: 1, groupType:1, name:1, vpids:1, users:1}},
+			    {$unwind: "$vpids"},
+			    {$unwind: "$users"},
+			    {$project: {_id: 1, groupType:1, name:1, vpids:1, "users.userId":1, "users.email":1}},
+			    {$lookup: {
+			         from: "visboprojects",
+			         localField: "vpids",    // field in the orders collection
+			         foreignField: "_id",  // field in the items collection
+			         as: "vp"
+			      }
+			    },
+			    {$unwind: "$vp"},
+			    {$match: {groupType: 'VP'}},
+			    {$project: {_id: 1, groupType:1, name:1, vpids:1, "users.userId":1, "users.email":1, "vp.name":1}},
+			  ];
+				var queryVCAllUsers = VisboGroup.aggregate(aggregateQuery);
+				queryVCAllUsers.exec(function (err, listVCAllUsers) {
+					if (err) {
+						errorHandler(err, res, `DB: GET VC All Users ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`)
+						return;
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned Visbo Center Groups',
+						count: listVCGroup.length,
+						groups: listVCGroup,
+						users: listVCUsers,
+						allusers: listVCAllUsers
+					});
 				});
 			} else {
 				return res.status(200).send({
@@ -1430,7 +1419,7 @@ router.route('/:vcid/group/:groupid')
 		var vcUser = new VCGroupUser();
 		var eMailMessage = undefined;
 		if (req.body.message) {
-			eMailMessage = req.body.message;
+			eMailMessage = sanitizeHtml(req.body.message, {allowedTags: [], allowedAttributes: {}});
 		}
 		vcUser.email = req.body.email;
 
@@ -1576,7 +1565,7 @@ router.route('/:vcid/group/:groupid')
 							return res.status(200).send({
 								state: "success",
 								message: "Successfully added User to Visbo Center",
-								users: [ vcUser ]
+								groups: [ vcGroup ]
 							});
 						});
 					}

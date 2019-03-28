@@ -149,6 +149,7 @@ router.route('/')
 			})
 		}
 		queryvpv.deletedAt = {$exists: checkDeleted};
+		queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
 		if (req.query.vpid) {

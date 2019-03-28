@@ -171,6 +171,13 @@ router.route('/user/login')
 			var loginRetries = 3
 			var lockMinutes = 15;
 			var loginFailedIntervalMinute = 4 * 60;
+			if (user.status.lockedUntil && user.status.lockedUntil.getTime() > currentDate.getTime()) {
+				logger4js.info("Login: User %s locked until %s", req.body.email, user.status.lockedUntil);
+				return res.status(401).send({
+					state: "failure",
+					message: "email or password mismatch"
+				});
+			}
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				var lastLoginFailedAt = user.status.lastLoginFailedAt || new Date(0);

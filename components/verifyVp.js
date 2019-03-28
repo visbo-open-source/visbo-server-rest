@@ -47,7 +47,8 @@ function getAllVPGroups(req, res, next) {
 				if (req.query.vcid) query.vcid = req.query.vcid;
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
 				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
-				query.deletedByParent = {$exists: checkDeleted};
+				// get only VC Groups and VP Groups deleted / undeleted
+				query["$or"] = [{groupType: "VC"}, {deletedByParent: {$exists: checkDeleted}}]
 			}
 		}
 		if (req.method == "POST") {
@@ -143,7 +144,7 @@ function getVpidGroups(req, res, next, vpid) {
 		query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 		// check that vpid is in the group list
 		query.vpids = vpid;
-		query.deletedByParent = {$exists: checkDeleted};
+		query["$or"] = [{groupType: "VC"}, {deletedByParent: {$exists: checkDeleted}}]
 	}
 	logger4js.debug("Search VGs %O", query);
 

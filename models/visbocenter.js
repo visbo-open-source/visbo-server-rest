@@ -1,15 +1,9 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var vcUserSchema = new Schema({
-	userId: {type: Schema.Types.ObjectId, ref: 'User'},
-	email: {type: String, required: true},
-	role: {type: String, required: false}
-});
-
 var visboCenterSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256 },
-	description: { type: String, required: false },
+	description: { type: String, required: false, maxlength: 4096 },
 	vpCount: { type: Number, reuqired: false },
 	deletedAt: {type: Date, required: false },
 	system: {type: Boolean}
@@ -18,5 +12,4 @@ var visboCenterSchema = new mongoose.Schema({
 visboCenterSchema.set('timestamps', true);
 
 // declare a model
-mongoose.model('VCUser', vcUserSchema);
 mongoose.model('VisboCenter', visboCenterSchema);
