@@ -934,10 +934,12 @@ router.route('/:vcid/group')
 			    },
 			    {$unwind: "$vp"},
 			    {$match: {groupType: 'VP'}},
-			    {$project: {_id: 1, groupType:1, name:1, vpids:1, "users.userId":1, "users.email":1, "vp.name":1}},
+					{$addFields: {vpid: '$vpids'}},
+			    {$addFields: {groupName: '$name'}},
+			    {$project: {_id: 1, groupType:1, groupName:1, vpid:1, "users.userId":1, "users.email":1, "vp.name":1}},
 			  ];
 				var queryVCAllUsers = VisboGroup.aggregate(aggregateQuery);
-				queryVCAllUsers.exec(function (err, listVCAllUsers) {
+				queryVCAllUsers.exec(function (err, listVPUsers) {
 					if (err) {
 						errorHandler(err, res, `DB: GET VC All Users ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`)
 						return;
@@ -948,7 +950,7 @@ router.route('/:vcid/group')
 						count: listVCGroup.length,
 						groups: listVCGroup,
 						users: listVCUsers,
-						allusers: listVCAllUsers
+						vpusers: listVPUsers
 					});
 				});
 			} else {
