@@ -1,4 +1,5 @@
 node_modules/
+postman/
 bin/
 apidoc/
 .DS_Store
@@ -10,3 +11,4 @@ logging/
 .env2
 env-dev
 env-prod
+VisboReST

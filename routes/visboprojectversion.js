@@ -5,6 +5,7 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
@@ -24,9 +25,6 @@ var constPermSystem = Const.constPermSystem
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-
-var validateName = validate.validateName;
-var validateDate = validate.validateDate;
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -88,6 +86,7 @@ router.route('/')
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	*
 	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
@@ -131,6 +130,15 @@ router.route('/')
 		var longList = false;		// show only specific columns instead of all
 		var nowDate = new Date();
 
+		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
+		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
+		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
+			logger4js.warn("Get VPV mal formed query parameter %O ", req.query);
+			return res.status(400).send({
+				state: "failure",
+				message: "Bad Content in Query Parameters"
+			})
+		}
 		queryvpv.deletedAt = {$exists: checkDeleted};
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
@@ -185,12 +193,8 @@ router.route('/')
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during Get VPV: %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Internal Server Error with DB Connection',
-					error: err
-				});
+				errorHandler(err, res, `DB: GET VPV Find Short`, `Error getting Visbo Project Versions `)
+				return;
 			};
 			var timeMongoEnd = new Date();
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
@@ -249,12 +253,8 @@ router.route('/')
 			queryVPV.lean();
 			queryVPV.exec(function (err, listVPV) {
 				if (err) {
-					logger4js.fatal("Error connecting to DB during Get VPV with IDs: %s", err.message);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
+					errorHandler(err, res, `DB: GET VPV Find Full`, `Error getting Visbo Project Versions `)
+					return;
 				};
 				req.auditInfo = listVPV.length;
 				req.listVPV = listVPV;
@@ -279,7 +279,7 @@ router.route('/')
 	* @apiHeader {String} access-key User authentication token.
 	*
 	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project or Create Variant.
-	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
+	* @apiError {number} 400 missing name or ID of Visbo Project during Creation, or other bad content in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create Visbo Project Version
 	* @apiError {number} 409 Visbo Project Variant does not exists
@@ -317,7 +317,7 @@ router.route('/')
 		var queryvpv = {};
 
 		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
-		var variantName = req.body.variantName.trim() || '';
+		var variantName = (req.body.variantName  || '').trim();
 		var variantIndex = -1;
 
 		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.combinedPerm);
@@ -336,12 +336,8 @@ router.route('/')
 		queryVp.deletedAt = {$exists: false};				// Not deleted
 		VisboProject.findOne(queryVp, function (err, oneVP) {
 			if (err) {
-				logger4js.fatal("Error connecting to DB during POST VPV find VP: %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Internal Server Error with DB Connection',
-					error: err
-				});
+				errorHandler(err, res, `DB: POST VPV Find VP`, `Error creating Visbo Project Versions `)
+				return;
 			};
 			if (!oneVP) {
 				return res.status(403).send({
@@ -387,14 +383,10 @@ router.route('/')
 			queryVPV.lean();
 			queryVPV.exec(function (err, lastVPV) {
 				if (err) {
-					logger4js.fatal("Error connecting to DB during POST VPV: %s", err.message);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Internal Server Error with DB Connection',
-						error: err
-					});
+					errorHandler(err, res, `DB: POST VPV Find VPV`, `Error creating Visbo Project Versions `)
+					return;
 				};
-				if (req.body.updatedAt && Date.parse(req.query.updatedAt)) {
+				if (req.body.updatedAt && Date.parse(req.body.updatedAt)) {
 					// check that the last VPV has the same date
 					var updatedAt = new Date(req.body.updatedAt);
 					if (lastVPV) {
@@ -409,13 +401,13 @@ router.route('/')
 					}
 				}
 
-				if (!validateName(req.body.status, true)
-				|| !validateName(req.body.leadPerson, true)
-				|| !validateName(req.body.variantDescription, true)
-				|| !validateName(req.body.ampelErlaeuterung, true)
-				|| !validateName(req.body.VorlagenName, true)
-				|| !validateName(req.body.description, true)
-				|| !validateName(req.body.businessUnit, true)
+				if (!validate.validateName(req.body.status, true)
+				|| !validate.validateName(req.body.leadPerson, true)
+				|| !validate.validateName(req.body.variantDescription, true)
+				|| !validate.validateName(req.body.ampelErlaeuterung, true)
+				|| !validate.validateName(req.body.VorlagenName, true)
+				|| !validate.validateName(req.body.description, true)
+				|| !validate.validateName(req.body.businessUnit, true)
 				) {
 					logger4js.info("POST Visbo Project Version contains illegal strings body %O", req.body);
 					return res.status(400).send({
@@ -428,7 +420,7 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				if (req.body.timestamp && Date.parse(req.query.timestamp)) {
+				if (req.body.timestamp && Date.parse(req.body.timestamp)) {
 					newVPV.timestamp = new Date(req.body.timestamp)
 				} else {
 					newVPV.timestamp = new Date();
@@ -471,11 +463,8 @@ router.route('/')
 				logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 				newVPV.save(function(err, oneVPV) {
 					if (err) {
-						return res.status(500).send({
-							state: "failure",
-							message: "database error, failed to create VisboProjectVersion",
-							error: err
-						});
+						errorHandler(err, res, `DB: POST VPV Save`, `Error creating Visbo Project Versions `)
+						return;
 					}
 					req.oneVPV = oneVPV;
 					// update the version count of the base version or the variant
@@ -502,6 +491,7 @@ router.route('/:vpvid')
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	*
 	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Visbo Project Version
 	*
@@ -550,7 +540,7 @@ router.route('/:vpvid')
 	* the system checks if the user has Delete permission to the Visbo Project.
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
-	* @apiError {number} 400 not allowed to change Visbo Project Version
+	* @apiError {number} 400 not allowed to change Visbo Project Version or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Visbo Project
 	* @apiExample Example usage:
@@ -605,12 +595,8 @@ router.route('/:vpvid')
 		logger4js.debug("PUT VPV: save now %s unDelete %s", req.oneVPV._id, vpUndelete);
 		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
-				logger4js.fatal("VPV PUT DB Connection %s", err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error updating Visbo Project Version',
-					error: err
-				});
+				errorHandler(err, res, `DB: PUT VPV Save`, `Error updating Visbo Project Versions `)
+				return;
 			}
 			req.oneVPV = oneVPV;
 			updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1)
@@ -631,6 +617,7 @@ router.route('/:vpvid')
 	* @apiHeader {String} access-key User authentication token.
 	*
 	* @apiPermission Permission: Authenticated, View Visbo Project, Delete Visbo Project.
+	* @apiError {number} 400 Bad Parameter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete Visbo Project Version or Project Version does not exists
 	* @apiError {number} 423 Visbo Project locked by another user
@@ -700,11 +687,8 @@ router.route('/:vpvid')
 			req.oneVPV.deletedAt = new Date();
 			req.oneVPV.save(function(err, oneVPV) {
 				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error deleting Visbo Project Version',
-						error: err
-					});
+					errorHandler(err, res, `DB: DELETE VPV Save`, `Error deleting Visbo Project Versions `)
+					return;
 				}
 				req.oneVPV = oneVPV;
 
@@ -722,12 +706,8 @@ router.route('/:vpvid')
 			queryVPV._id = req.oneVPV._id
 			VisboProjectVersion.deleteOne(queryVPV, function(err) {
 				if (err) {
-					logger4js.fatal("VPV Destroy DB Connection %s", err.message);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error deleting Visbo Project Version',
-						error: err
-					});
+					errorHandler(err, res, `DB: DELETE VPV Destroy`, `Error deleting Visbo Project Versions `)
+					return;
 				}
 				// no need to update vpvCount in VP
 				return res.status(200).send({

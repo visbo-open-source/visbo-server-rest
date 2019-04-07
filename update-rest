@@ -17,12 +17,6 @@ then
   echo "FATAL: Pull Failed to update ReST Server Branch."
   exit
 fi
-updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
-if [ "$updateCmdOrg" != "$updateCmdAct" ]
-then
-  echo "WARN: Update Script has changed in between, please restart update again."
-  exit
-fi
 
 updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updatePackageOrg" != "$updatePackageAct" ]
@@ -34,6 +28,13 @@ then
     echo "FATAL: Install of NODE components failed."
     exit
   fi
+fi
+
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
+then
+  echo "WARN: Update Script has changed in between, please restart update again."
+  exit
 fi
 
 echo "04: Update API Documentation"

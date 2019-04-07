@@ -7,6 +7,7 @@ var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var Const = require('../models/constants')
 var constPermSystem = Const.constPermSystem
@@ -146,12 +147,8 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection ", err.message);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting System Audit',
-				error: err
-			});
+			errorHandler(err, res, `DB: GET System Audit`, `Error getting System Audit`)
+			return;
 		}
 		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
 		for(var i = 0; i < listVCAudit.length; i++) {

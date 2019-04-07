@@ -11,6 +11,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = "USER";
 var log4js = require('log4js');
@@ -90,12 +91,8 @@ router.route('/')
 		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
-				logger4js.fatal("SysUser Get DB Connection \nUser.find(%s) %s ", query, err.message);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting Sys Users',
-					error: err
-				});
+				errorHandler(err, res, `DB: GET System User`, `Error getting Sys Users`)
+				return;
 			}
 			logger4js.debug("Found Users %d", listUsers.length);
 			return res.status(200).send({

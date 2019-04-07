@@ -49,7 +49,7 @@ function accountLocked(req, user) {
 	info.lockedUntil = moment(user.status.lockedUntil).format('HH:mm');
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
-			logger4js.fatal("E-Mail Rendering failed %s", err.message);
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
 		}
 		var message = {
 				to: user.email,
@@ -70,7 +70,7 @@ function passwordExpired(req, user) {
 	uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
-			logger4js.fatal("E-Mail Rendering failed %s", err.message);
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
 		} else {
 			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 			var message = {
@@ -93,7 +93,7 @@ function passwordExpiresSoon(req, user, expiresAt) {
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
 		if (err) {
-			logger4js.fatal("E-Mail Rendering failed %s", err.message);
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
 		} else {
 			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 			var message = {
@@ -115,7 +115,7 @@ function accountNotRegistered(req, user) {
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
-			logger4js.fatal("E-Mail Rendering failed %s", err.message);
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
 		} else {
 			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
 			var message = {
@@ -147,7 +147,7 @@ function accountNewLogin(req, user) {
 	info.userAgent = req.visboUserAgent;
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
-			logger4js.fatal("E-Mail Rendering failed %s", err.message);
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
 		}
 		var message = {
 				to: user.email,

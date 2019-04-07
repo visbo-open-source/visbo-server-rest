@@ -7,6 +7,7 @@ var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var moment = require('moment');
 moment.locale('de');
@@ -16,6 +17,7 @@ var useragent = require('useragent');
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+var validate = require('./../components/validate');
 
 var mail = require('./../components/mail');
 var sendMail = require('./../components/sendMail');
@@ -144,15 +146,11 @@ router.route('/user/login')
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
-				logger4js.fatal("Post Login DB Connection \nUser.findOne(%s) %s", query, err.message);
-				return res.status(500).send({
-					state: "failure",
-					message: "database error",
-					error: err
-				});
+				errorHandler(err, res, `DB: POST Login ${req.body.email} Find `, `Error Login Failed`)
+				return;
 			}
 			if (!user) {
-				logger4js.warn("User not Found", req.body.email);
+				logger4js.info("User not Found", req.body.email);
 				return res.status(401).send({
 					state: "failure",
 					message: "email or password mismatch"
@@ -350,24 +348,20 @@ router.route('/user/pwforgotten')
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
-		if (!req.body.email || !req.body.email.trim()) {
-			logger4js.info("No eMail specified");
+		if (req.body.email)	req.body.email = req.body.email.toLowerCase().trim();
+		if (!validate.validateEmail(req.body.email, false)) {
+			logger4js.info("No valid eMail specified %s ", req.body.email);
 			return res.status(400).send({
 				state: "failure",
-				message: "No eMail specified"
+				message: "No valid eMail specified"
 			});
 		}
-		req.body.email = req.body.email.toLowerCase().trim();
 
 		var query = { "email" : req.body.email };
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("Forgot Password DB Connection User.findOne(%s) %s", query, err.message);
-				return res.status(500).send({
-					state: "failure",
-					message: "database error",
-					error: err
-				});
+				errorHandler(err, res, `DB: POST Forgot PW ${req.body.email} Find `, `Password Forgotten Failed`)
+				return;
 			}
 			// we return success to prevent eMail probing and count the request to prevent eMail spamming
 			if (!user) {
@@ -425,12 +419,8 @@ router.route('/user/pwforgotten')
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							logger4js.fatal("Forgot Password Sign Error %s", err.message);
-							return res.status(500).send({
-								state: "failure",
-								message: "token generation failed",
-								error: err
-							});
+							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
+							return;
 						};
 						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
@@ -444,7 +434,7 @@ router.route('/user/pwforgotten')
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
-								logger4js.fatal("E-Mail Rendering failed %s", err.message);
+								logger4js.warn("E-Mail Rendering failed %s", err.message);
 								return res.status(500).send({
 									state: "failure",
 									message: "E-Mail Rendering failed",
@@ -519,12 +509,8 @@ router.route('/user/pwreset')
 				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt }
 				visbouser.findOne(query, function(err, user) {
 					if (err) {
-						logger4js.fatal("Forgot Password Change DB Connection User.findOne(%s) %s ", query, err.message);
-						return res.status(500).send({
-							state: "failure",
-							message: "database error",
-							error: err
-						});
+						errorHandler(err, res, `DB: POST PW Reset Find `, `Error password reset failed`)
+						return;
 					}
 					if (!user) {
 						logger4js.debug("Forgot Password user not found or different change date");
@@ -640,12 +626,21 @@ router.route('/user/signup')
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
 		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info("Signup Request for e-Mail %s or id %s hash %s", req.body.email, req.body._id, hash);
+
 		var query = {};
 		if (req.body.email) {
+			if (!validate.validateEmail(req.body.email, false)) {
+				logger4js.warn("Signup uses not allowed UserName %s ", req.body.email);
+				return res.status(400).send({
+					state: "failure",
+					message: "Signup User Name not allowed"
+				});
+			}
 			query.email = req.body.email;
-		} else if (req.body._id && mongoose.Types.ObjectId.isValid(req.body._id)) {
+		} else if (req.body._id && validate.validateObjectId(req.body._id, false)) {
 			query._id = req.body._id;
 		} else {
+			logger4js.warn("Signup no eMail or valid UserID %s found ", req.body._id);
 			return res.status(400).send({
 				state: "failure",
 				message: "No e-Mail or User ID in body"
@@ -653,12 +648,8 @@ router.route('/user/signup')
 		}
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				logger4js.fatal("user Signup DB Connection User.find(%s) %s ", query, err.message);
-				return res.status(500).send({
-					state: "failure",
-					message: "database error",
-					error: err
-				});
+				errorHandler(err, res, `DB: POST Signup ${req.body.email} Find `, `Signup failed`)
+				return;
 			}
 			if (user) req.body.email = user.email.toLowerCase();
 			// if user exists and is registered already refuse to register again
@@ -742,7 +733,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
+							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",
@@ -827,22 +818,18 @@ router.route('/user/signup')
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
-			if (!req.body._id || !mongoose.Types.ObjectId.isValid(req.body._id) || !req.body.hash) {
+			if (!validate.validateObjectId(req.body._id, false) || !req.body.hash) {
 				return res.status(400).send({
 					state: "failure",
-					message: "No User ID or hash in body"
+					message: "No valid User ID or hash in body"
 				});
 			}
 
 			var query = {_id: req.body._id};
 			visbouser.findOne(query, function(err, user) {
 				if (err) {
-					logger4js.fatal("e-Mail confirmation DB Connection User.findOne(%s) %s ", query, err.message);
-					return res.status(500).send({
-						state: "failure",
-						message: "database error",
-						error: err
-					});
+					errorHandler(err, res, `DB: POST User confirm ${req.body._id} Find `, `Error signup confirm failed`)
+					return;
 				}
 				// if user exists and is registered already refuse to register again
 				if (!user || (user.status && user.status.registeredAt)) {
@@ -891,7 +878,7 @@ router.route('/user/signup')
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
 					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 						if (err) {
-							logger4js.fatal("E-Mail Rendering failed %s %s", template, err.message);
+							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
 								state: "failure",
 								message: "E-Mail Rendering failed",

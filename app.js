@@ -8,6 +8,7 @@ var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
+var process = require('process');
 
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
@@ -114,10 +115,9 @@ function dbConnect(dbconnection) {
 
 // CORS Config, whitelist is an array
 var whitelist = [
-  undefined, // Postman Support
-  'http://localhost:3484', // DEV Support
   'https://my.visbo.net', // Production Support
   'https://staging.visbo.net', // Staging Support
+  'https://dev.visbo.net', // Development AWS Support
   'http://localhost:4200' // UI Support DEV Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
@@ -126,7 +126,9 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.fatal("CorsOptions deny  %s ", origin);
+      logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+      logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
+      console.log(`Cors Options deny ${origin} index ${whitelist.indexOf(origin)}`);
       //callback(null, true) // temporary enable cors for all sites
       callback(origin + ' is not allowed to access', null)
       // callback(new Error(origin + ' is not allowed to access'))
@@ -138,6 +140,11 @@ environment.config();
 
 // start express app
 var app = express();
+// MS TODO: PM2 Setup for multi server
+// var port = process.env.PORT ||'3484';
+// // app.set('port', port);
+// app.listen(port)
+
 // configure log4js
 var fsLogPath = __dirname + '/logging';
 if (process.env.LOGPATH != undefined) {
@@ -162,6 +169,9 @@ log4js.configure({
     "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
     "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
   }
+  // ,
+  // pm2: true,
+  // pm2InstanceVar: 'INSTANCE_ID'
 });
 logger4js.level = 'info';
 // initialise with default debug
@@ -264,9 +274,12 @@ app.use('/status', status);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
-  err.status = 404;
-  res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
+  logger4js.warn("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
+  return res.status(404).send({
+    state: 'failure',
+    message: "Sorry can't find the URL",
+    url: req.originalUrl
+  });
 });
 
 
@@ -276,11 +289,13 @@ app.use(function(req, res, next) {
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
   app.use(function(err, req, res, next) {
-    logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
-    res.status(err.status || 500);
+    var errCode = err.status || 500;
+    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    res.status(errCode);
     res.send({
       state: 'failure',
-      message: err.message,
+      message: errMessage,
       error: err
     });
   });
@@ -289,11 +304,13 @@ if (process.env.NODE_ENV === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-  logger4js.fatal("Error 500 :%s: Error %O; Parameter %O; Query %O", req.originalUrl, err, req.params, req.query);
-  res.status(err.status || 500);
+  var errCode = err.status || 500;
+  var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+  logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+  res.status(errCode);
   res.send({
     state: 'failure',
-    message: 'Internal Server Error'
+    message: errMessage
   });
 });
 
