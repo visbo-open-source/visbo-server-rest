@@ -30,6 +30,8 @@ var logger4js = log4js.getLogger(logModule);
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
+// register the VPF middleware to generate the Project List that is assigned to the portfolio
+router.use('/', verifyVpv.getPortfolioVPs);
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVpvidGroups);
 
@@ -54,6 +56,12 @@ var updateVPVCount = function(vpid, variantName, increment){
 	})
 }
 
+// find a project in an array of a structured projects (name, id)
+var findVPVariantList = function(arrayItem) {
+		// console.log("compare %s %s result %s", JSON.stringify(arrayItem), JSON.stringify(this), arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName);
+		return arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName;
+}
+
 /////////////////
 // Visbo Project Versions API
 // /vpv
@@ -73,7 +81,7 @@ router.route('/')
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
 	* has to specify the query parameter longList.
 	*
-	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, refDate, refNext, varianName, status.
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, vpfid, refDate, refNext, varianName, status.
 	* to query only the main version of a project, use variantName= in the query string.
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
@@ -81,6 +89,7 @@ router.route('/')
 	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
 	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
+	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
@@ -140,9 +149,10 @@ router.route('/')
 			})
 		}
 		queryvpv.deletedAt = {$exists: checkDeleted};
+		queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
 		// collect the VPIDs where the user has View permission to
 		var vpidList = [];
-		if (req.query.vpid && validate.validateObjectId(req.query.vpid, false)) {
+		if (req.query.vpid) {
 			vpidList.push(req.query.vpid);
 			if (req.query.deleted) {
 				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);
@@ -182,7 +192,20 @@ router.route('/')
 			}
 		}
 		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
-		queryvpv.vpid = {$in: vpidList};
+
+		if (req.listPortfolioVP) {
+			// restrict query to VPs with Permission and VPs part of Portfolio
+			var vpCondition = [];
+			vpCondition.push({"vpid": {$in: vpidList}})
+			vpCondition.push({"vpid": {$in: req.listPortfolioVP}})
+			queryvpv["$and"] = vpCondition;
+			logger4js.info("Get Project Versions for Portfolio user %s for Query %s", userId, JSON.stringify(queryvpv));
+		} else {
+			// restrict query to VPs with permission
+			queryvpv.vpid = {$in: vpidList};
+		}
+
+
 		logger4js.trace("VPV query string %s", JSON.stringify(queryvpv));
 		var timeMongoStart = new Date();
 		var queryVPV = VisboProjectVersion.find(queryvpv);
@@ -206,6 +229,22 @@ router.route('/')
 					vpidsList.push(listVPV[i]._id)
 				}
 			} else {
+				if (req.listPortfolioVPVariant) {
+					// filter versions not part of portfolio
+					logger4js.debug("Splice short Versions not belonging to Portfolio List %d \n%O", req.listPortfolioVPVariant.length, req.listPortfolioVPVariant);
+					var filterVPV = [];
+					for (let i = 0; i < listVPV.length; i++){
+						//check if vpid & variant are member of portfolio
+						logger4js.debug("check: Index %d :%s: Variant :%s: ", i, listVPV[i].vpid, listVPV[i].variantName);
+						var itemSearch = {vpid: listVPV[i].vpid, variantName: listVPV[i].variantName};
+						if (req.listPortfolioVPVariant.find(findVPVariantList, itemSearch)) {
+							logger4js.debug("found: Index %d :%s: Variant :%s: ", i, listVPV[i].vpid, listVPV[i].variantName);
+							filterVPV.push(listVPV[i])
+						}
+					}
+					listVPV = filterVPV;
+				}
+
 				if (req.query.refNext != true) {
 					if (listVPV.length > 0) {
 						vpidsList.push(listVPV[0]._id);

@@ -3,14 +3,14 @@ var Schema = mongoose.Schema;
 
 var groupUserSchema = new Schema({
 	userId: {type: Schema.Types.ObjectId, ref: 'User'},
-	email: {type: String, required: true}
+	email: {type: String, required: true, maxlength: 256}
 });
 
 var visboGroupSchema = new mongoose.Schema({
 	groupType: {type: String, required: true},
 	internal: {type: Boolean, required: true},
 	global: {type: Boolean, required: true},
-	name: {type: String, required: true},
+	name: {type: String, required: true, maxlength: 256},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: false},
 	vpids: [{type: Schema.Types.ObjectId, ref: 'VisboProject', required: false}],
 	permission: {

@@ -3,7 +3,7 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var cors = require('cors');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
+// var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
@@ -126,9 +126,7 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
       callback(null, true)
     } else {
-      logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
       logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
-      console.log(`Cors Options deny ${origin} index ${whitelist.indexOf(origin)}`);
       //callback(null, true) // temporary enable cors for all sites
       callback(origin + ' is not allowed to access', null)
       // callback(new Error(origin + ' is not allowed to access'))
@@ -240,7 +238,7 @@ var options = {
   }
 }
 app.use(express.static(path.join(__dirname, 'public'), options));
-app.use(cookieParser());
+// app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
