@@ -34,7 +34,6 @@ var visboParseUA = function(agent, stringUA) {
 
 // Send Mail about account locked
 function accountLocked(req, user) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// now send an e-Mail to the user for pw change
 	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs')
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
@@ -63,7 +62,6 @@ function accountLocked(req, user) {
 
 // Send Mail about password expired
 function passwordExpired(req, user) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// Send Mail to password forgotten
 	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs')
 	var uiUrl = process.env.UI_URL || 'http://localhost:4200'
@@ -86,7 +84,6 @@ function passwordExpired(req, user) {
 
 // Send Mail about password expires soon
 function passwordExpiresSoon(req, user, expiresAt) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// send Mail to User about Password expiration
 	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
@@ -109,7 +106,6 @@ function passwordExpiresSoon(req, user, expiresAt) {
 
 // Send Mail about user not registered
 function accountNotRegistered(req, user) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs')
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
@@ -131,7 +127,6 @@ function accountNotRegistered(req, user) {
 
 // Send Mail about account locked
 function accountNewLogin(req, user) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	// now send an e-Mail to the user for pw change
 	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs')
 	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'

@@ -63,7 +63,6 @@ router.route('/')
 .get(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
 	req.auditSysAdmin = true;
 	req.auditInfo = 'System';

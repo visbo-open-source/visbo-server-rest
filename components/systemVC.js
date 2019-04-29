@@ -9,6 +9,9 @@ var logging = require('./logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+var errorHandler = require('./../components/errorhandler').handler;
+
+var visboRedis = require('./../components/visboRedis');
 
 var vcSystem = undefined;
 
@@ -23,14 +26,12 @@ var findUserList = function(currentUser) {
 
 // Verify/Create Visbo Center with an initial user
 var createSystemVC = function (body) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-	// logger4js.level = 'debug';
-
 	logger4js.info("Create System Visbo Center if not existent");
 	if (!body && !body.users) {
 		logger4js.warn("No Body or no users System VisboCenter %s", body);
 		return undefined;
 	}
+	var redisClient = visboRedis.VisboRedisInit();
 	var users = body.users;
 	var nameSystemVC = "Visbo-System";
 	// check that VC name is unique
@@ -43,6 +44,8 @@ var createSystemVC = function (body) {
 		if (vc) {
 			logger4js.debug("System VisboCenter already exists");
 			vcSystem = vc;
+			redisClient.set('vcSystem', vcSystem._id.toString())
+
 			// Get the Default Log Level from DB
 			var query = {};
 			var listSetting;
@@ -74,6 +77,7 @@ var createSystemVC = function (body) {
 					});
 				}
 			});
+			logger4js.info("Update System Log Setting");
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
@@ -88,6 +92,7 @@ var createSystemVC = function (body) {
 				return undefined
 			}
 			vcSystem = vc;
+			redisClient.set('vcSystem', vcSystem._id.toString())
 
 			var newUser = new User();
 			newUser.email = body.users[0].email;

@@ -2,6 +2,8 @@ var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+var visboRedis = require('./../components/visboRedis');
+
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 
@@ -11,7 +13,6 @@ var pwPolicyExclude = undefined;
 var pwPolicyExcludePattern = undefined;
 
 var isAllowedPassword = function(password){
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	if (!pwPolicy) {
 		logger4js.debug("Check Password Policy from .env %s", process.env.PWPOLICY);
@@ -32,7 +33,6 @@ var isAllowedPassword = function(password){
 // Verify User Authentication
 function verifyUser(req, res, next) {
 
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var token = req.headers['access-key'];
 
 	// decode token
@@ -63,9 +63,27 @@ function verifyUser(req, res, next) {
 	        	message: 'Token is dead'
 	        });
 				}
-				// if everything is good, save to request for use in other routes
-				req.decoded = decoded;
-        return next();
+				var redisClient = visboRedis.VisboRedisInit();
+				var token = req.headers['access-key'].split(".")[2];
+				redisClient.get('token.'+token, function(err, reply) {
+					logger4js.debug("Redis Token Check err %O reply %s", err, reply);
+					if (err) {
+						return res.status(500).send({
+		        	state: 'failure',
+		        	message: 'Logout Validation'
+		        });
+					}
+					logger4js.debug("Redis Token Found %s user %s", token, reply, );
+					if (reply) {
+						return res.status(401).send({
+		        	state: 'failure',
+		        	message: 'Session already terminated'
+		        });
+					}
+					// if everything is good, save to request for use in other routes
+					req.decoded = decoded;
+	        return next();
+				});
       }
     });
   }

@@ -10,11 +10,14 @@ var environment = require('dotenv');
 var moment = require('moment');
 var process = require('process');
 
+var logging = require('./components/logging');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
 var logger4jsRest = log4js.getLogger("REST");
-var logging = require('./components/logging');
 
+var visboRedis = require('./components/visboRedis');
+var visboTaskSchedule = require('./components/visboTaskSchedule');
+var visboTaskScheduleInit = visboTaskSchedule.visboTaskScheduleInit;
 //initialize mongoose schemas
 require('./models/users');
 require('./models/visbogroup');
@@ -97,6 +100,8 @@ function dbConnect(dbconnection) {
       // mongoose.set('debug', function (coll, method, query, doc, options) {
       //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
       // });
+      systemVC.createSystemVC({ users: [ { "email":"support@visbo.de" } ]})
+
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
@@ -117,8 +122,8 @@ function dbConnect(dbconnection) {
 var whitelist = [
   'https://my.visbo.net', // Production Support
   'https://staging.visbo.net', // Staging Support
-  'https://dev.visbo.net', // Development AWS Support
-  'http://localhost:4200' // UI Support DEV Support
+  'http://localhost:4200', // Development
+  'https://dev.visbo.net' // Development AWS Support
 ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
 var corsOptions = {
@@ -144,38 +149,11 @@ var app = express();
 // app.listen(port)
 
 // configure log4js
-var fsLogPath = __dirname + '/logging';
-if (process.env.LOGPATH != undefined) {
-  fsLogPath = process.env.LOGPATH;
-}
-
-log4js.configure({
-  appenders: {
-    out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
-    'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
-  },
-  categories: {
-    default: { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "USER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
-  }
-  // ,
-  // pm2: true,
-  // pm2InstanceVar: 'INSTANCE_ID'
-});
-logger4js.level = 'info';
+var fsLogPath = process.env.LOGPATH || (__dirname + '/logging');
+logging.initLog4js(fsLogPath);
 // initialise with default debug
-var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "All": "debug"}
+var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "ALL": "debug"}
 logging.setLogLevelConfig(settingDebugInit);
-logger4js.debug("LogPath %s", fsLogPath)
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
 logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
@@ -215,16 +193,14 @@ app.use(logger(function (tokens, req, res) {
   return webLog
 }));
 
+var redisClient = visboRedis.VisboRedisInit();
+
 // set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
 
 dbConnect(process.env.NODE_VISBODB);
 
-var sysVC = systemVC.createSystemVC(
-    { users: [
-        { "email":"support@visbo.de" }
-     ]}
-   )
+visboTaskScheduleInit();
 
 var options = {
   dotfiles: 'ignore',
@@ -280,7 +256,6 @@ app.use(function(req, res, next) {
   });
 });
 
-
 // error handlers
 
 // development error handler
@@ -297,19 +272,19 @@ if (process.env.NODE_ENV === 'development') {
       error: err
     });
   });
-}
-
-// production error handler
-// no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-  var errCode = err.status || 500;
-  var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
-  logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
-  res.status(errCode);
-  res.send({
-    state: 'failure',
-    message: errMessage
+} else {
+  // production error handler
+  // no stacktraces leaked to user
+  app.use(function(err, req, res, next) {
+    var errCode = err.status || 500;
+    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    res.status(errCode);
+    res.send({
+      state: 'failure',
+      message: errMessage
+    });
   });
-});
+}
 
 module.exports = app;

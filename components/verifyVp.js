@@ -19,7 +19,6 @@ var logger4js = log4js.getLogger(logModule);
 function getAllVPGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
 	if (!validate.validateObjectId(req.query.vcid, true)) {
 		logger4js.warn("VC Bad Query Parameter vcid %s", req.query.vcid);
@@ -116,8 +115,6 @@ function checkVpfid(req, res, next, vpfid) {
 function getVpidGroups(req, res, next, vpid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;

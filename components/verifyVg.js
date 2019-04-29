@@ -18,7 +18,6 @@ function getGroupId(req, res, next, groupId) {
 	var useremail = req.decoded.email;
 	var vcid = req.params.vcid ? req.params.vcid : undefined;
 	var vpid = req.params.vpid ? req.params.vpid : undefined;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	logger4js.debug("Check GroupId %s for vcid %s vpid %s ", groupId, vcid, vpid);
 	if (!validate.validateObjectId(groupId, false) || !validate.validateObjectId(vcid, true) || !validate.validateObjectId(vpid, true)) {

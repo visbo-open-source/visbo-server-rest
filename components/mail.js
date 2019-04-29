@@ -15,8 +15,6 @@ var debug = false;
 
 // Send Mail to User
 function VisboSendMail(message) {
-
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var smtpConfig = undefined;
 	logger4js.debug("MAIL Send Mail to :%s:", message.to);
 

@@ -501,6 +501,30 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+
+dateBlock = "2019-04-29T00:00:00"
+if (currentVersion < dateBlock) {
+  // add tasks for regular execution of clean up
+  // remove items from Audit Trail that have expired already
+  var taskName = 'Audit Cleanup'
+  var setting = db.vcsettings.findOne({vcid: systemvc._id, type: "Task", name: taskName});
+  if (!setting) {
+    print ("Create Task " + taskName)
+    db.vcsettings.insertOne({vcid: systemvc._id, name: taskName, type: "Task", value: {lastRun: new Date(), interval: 86400}, createdAt: new Date(), updatedAt: new Date()})
+  }
+  // remove duplicate get VPV from same user in same period and keep only first. Run once a day and recognise only entries older than 30 days
+  var taskName = 'Audit Squeeze'
+  var setting = db.vcsettings.findOne({vcid: systemvc._id, type: "Task", name: taskName});
+  if (!setting) {
+    print ("Create Task " + taskName)
+    db.vcsettings.insertOne({vcid: systemvc._id, name: taskName, type: "Task", value: {lastRun: new Date(), interval: 86400, skipDays: 30}, createdAt: new Date(), updatedAt: new Date()})
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
@@ -508,7 +532,3 @@ if (currentVersion < dateBlock) {
 //   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
 //   currentVersion = dateBlock
 // }
-
-// Delete outdated AuditLog Entries, should be done later once per day/week
-print ("Delete Outdated Audit Trail Entries")
-db.visboaudits.deleteMany({ttl: {$lt: new Date()}})

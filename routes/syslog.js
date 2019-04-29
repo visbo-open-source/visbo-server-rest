@@ -52,7 +52,6 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLog (Read)';
 		req.auditSysAdmin = true;
 
@@ -109,7 +108,6 @@ router.route('/file/:filename')
 	*/
 // get syslog file list
 	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysLogs (Read)';
 		req.auditSysAdmin = true;
 

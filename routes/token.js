@@ -126,7 +126,6 @@ router.route('/user/login')
 // Post Login
 	.post(function(req, res) {
 		var currentDate = new Date();
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
@@ -351,7 +350,6 @@ router.route('/user/pwforgotten')
 
 // Forgot Password
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
@@ -492,7 +490,6 @@ router.route('/user/pwreset')
 
 	// Password Reset
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Password Reset';
 
 		logger4js.info("Password Reset Change through e-Mail");
@@ -627,7 +624,6 @@ router.route('/user/signup')
 
 // Post Signup User
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
@@ -821,7 +817,6 @@ router.route('/user/signup')
 	  */
 	// Post User Confirm
 		.post(function(req, res) {
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);

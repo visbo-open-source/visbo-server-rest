@@ -29,8 +29,8 @@ router.route('/')
 	*/
 // get status
 	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Status (Read)';
+		req.auditTTLMode = 4;			// short Time to Live
 
 		logger4js.info("Get Satus ReST Server ");
 		var err = {"code": "400", "errtext": "Long explanation"}
