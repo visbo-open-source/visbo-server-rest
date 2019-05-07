@@ -12,7 +12,7 @@ setLogLevelConfig = function(newConfigDebug) {
 	}
 	for (var category in newConfigDebug) {
 		if (logConfig.categories[category]) {
-			logger4js.debug("LogLevel Set %O Value %s", category, newConfigDebug[category])
+			logger4js.trace("LogLevel Set %O Value %s", category, newConfigDebug[category])
 			// logConfig.categories[category].level = newConfigDebug[category]
 			var logger = log4js.getLogger(category);
 			logger.level = newConfigDebug[category]
@@ -23,7 +23,6 @@ setLogLevelConfig = function(newConfigDebug) {
 }
 
 initLog4js = function(fsLogPath) {
-	console.log("LogPath: " + fsLogPath)
 	// if (!logObj) {
 		logConfig = {
 			appenders: {

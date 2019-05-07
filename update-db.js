@@ -23,7 +23,7 @@ if (continueFlag) {
   if (!setting) {
     print ("System DB Version not set")
     currentVersion = '2018-01-01T00:00:00'
-    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "Internal", value: {version: currentVersion}, createdAt: new Date(), updatedAt: new Date()})
+    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "SysValue", value: {version: currentVersion}, createdAt: new Date(), updatedAt: new Date()})
   } else {
     currentVersion = setting.value.version;
   }
@@ -518,6 +518,26 @@ if (currentVersion < dateBlock) {
   if (!setting) {
     print ("Create Task " + taskName)
     db.vcsettings.insertOne({vcid: systemvc._id, name: taskName, type: "Task", value: {lastRun: new Date(), interval: 86400, skipDays: 30}, createdAt: new Date(), updatedAt: new Date()})
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-05-06T00:00:00"
+if (currentVersion < dateBlock) {
+  // change Config Value Types
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion', type: 'Internal'}, {$set: {type: "SysValue", updatedAt: new Date()}}, {upsert: false})
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DEBUG', type: 'Internal'}, {$set: {type: "SysConfig", updatedAt: new Date()}}, {upsert: false})
+  // add additional config values
+  db.vcsettings.insertOne({vcid: systemvc._id, name: 'PW Policy', type: "SysConfig", value: {PWPOlicy: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$', PWPolicyExcl: '^(?!.*[\\"\\\'\\\\])'}, createdAt: new Date(), updatedAt: new Date()})
+  // db.vcsettings.insertOne({vcid: systemvc._id, name: 'UI URL', type: "SysConfig", value: {UIUrl: 'http://localhost:4200'}, createdAt: new Date(), updatedAt: new Date()})
+  var taskName = 'System Config'
+  var setting = db.vcsettings.findOne({vcid: systemvc._id, type: "Task", name: taskName});
+  if (!setting) {
+    print ("Create Task " + taskName)
+    db.vcsettings.insertOne({vcid: systemvc._id, name: taskName, type: "Task", value: {lastRun: new Date(), interval: 60}, createdAt: new Date(), updatedAt: new Date()})
   }
 
   // Set the currentVersion in Script and in DB

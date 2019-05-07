@@ -2,6 +2,7 @@
 var logModule = "MAIL";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var moment = require('moment');
 moment.locale('de');
@@ -36,7 +37,7 @@ var visboParseUA = function(agent, stringUA) {
 function accountLocked(req, user) {
 	// now send an e-Mail to the user for pw change
 	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs')
-	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	var uiUrl =  getSystemUrl();
 	var eMailSubject = 'Your account has been locked';
 	var info = {};
 	logger4js.trace("E-Mail template %s, url %s", template, uiUrl);
@@ -64,7 +65,7 @@ function accountLocked(req, user) {
 function passwordExpired(req, user) {
 	// Send Mail to password forgotten
 	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs')
-	var uiUrl = process.env.UI_URL || 'http://localhost:4200'
+	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
@@ -86,7 +87,7 @@ function passwordExpired(req, user) {
 function passwordExpiresSoon(req, user, expiresAt) {
 	// send Mail to User about Password expiration
 	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
-	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
 		if (err) {
@@ -107,7 +108,7 @@ function passwordExpiresSoon(req, user, expiresAt) {
 // Send Mail about user not registered
 function accountNotRegistered(req, user) {
 	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs')
-	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
@@ -129,7 +130,7 @@ function accountNotRegistered(req, user) {
 function accountNewLogin(req, user) {
 	// now send an e-Mail to the user for pw change
 	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs')
-	var uiUrl =  process.env.UI_URL || 'http://localhost:4200'
+	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	var eMailSubject = 'New Login from a new device or programm';
 	var info = {};

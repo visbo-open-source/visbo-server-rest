@@ -8,6 +8,7 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var moment = require('moment');
 moment.locale('de');
@@ -430,10 +431,7 @@ router.route('/user/pwforgotten')
 						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
-						var uiUrl =  'http://localhost:4200'
-						if (process.env.UI_URL != undefined) {
-						  uiUrl = process.env.UI_URL;
-						}
+						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
@@ -723,11 +721,8 @@ router.route('/user/signup')
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
 					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
-					var uiUrl =  'http://localhost:4200'
+					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'Please confirm your eMail address ';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
@@ -869,12 +864,8 @@ router.route('/user/signup')
 					}
 					// now send the eMail for confirmation of the e-Mail address
 					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
-					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'Successful eMail confirmation';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
-
+					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/login?email=', user.email);
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);

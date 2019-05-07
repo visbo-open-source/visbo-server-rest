@@ -12,6 +12,7 @@ var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -332,6 +333,7 @@ router.route('/')
 
 		req.auditDescription = 'Visbo Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
 
@@ -614,6 +616,7 @@ router.route('/:vpid')
 
 		req.auditDescription = 'Visbo Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
@@ -1086,6 +1089,7 @@ router.route('/:vpid/audit')
 
 			req.auditDescription = 'Visbo Project Group (Read)';
 			req.auditSysAdmin = sysAdmin;
+			req.auditTTLMode = 1;
 
 			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
 
@@ -1544,10 +1548,7 @@ router.route('/:vpid/audit')
 							req.oneGroup = vgGroup;
 							// now send an e-Mail to the user for registration
 							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs')
-							var uiUrl =  'http://localhost:4200'
-							if (process.env.UI_URL != undefined) {
-								uiUrl = process.env.UI_URL;
-							}
+							var uiUrl =  getSystemUrl();
 
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
@@ -1600,11 +1601,8 @@ router.route('/:vpid/audit')
 						req.oneGroup = vgGroup;
 						// now send an e-Mail to the user for registration/login
 						var template = __dirname.concat('/../emailTemplates/');
-						var uiUrl =  'http://localhost:4200'
+						var uiUrl =  getSystemUrl();
 						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name
-						if (process.env.UI_URL != undefined) {
-							uiUrl = process.env.UI_URL;
-						}
 						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
 						if (user.status && user.status.registeredAt) {
 							// send e-Mail to a registered user
@@ -2169,6 +2167,7 @@ router.route('/:vpid/portfolio')
 
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
 			logger4js.warn("Get VPF mal formed query parameter %O ", req.query);
@@ -2447,6 +2446,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.trace("Get Portfolio Versions");
 		var query = {}

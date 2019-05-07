@@ -3,6 +3,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
+var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting
 
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
@@ -15,11 +16,26 @@ var pwPolicyExcludePattern = undefined;
 var isAllowedPassword = function(password){
 
 	if (!pwPolicy) {
-		logger4js.debug("Check Password Policy from .env %s", process.env.PWPOLICY);
-		pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
-		pwPolicyPattern = new RegExp(pwPolicy);
+		var pwPolicySetting = getSystemVCSetting('PW Policy')
+		if (pwPolicySetting) {
+			logger4js.trace("Check Password Policy from DB %O len %s", pwPolicySetting, pwPolicySetting.value.PWPOlicy.length);
+			if (pwPolicySetting.value && pwPolicySetting.value.PWPOlicy) {
+				pwPolicy = pwPolicySetting.value.PWPOlicy
+			}
+			if (pwPolicySetting.value && pwPolicySetting.value.PWPOlicyExclude) {
+				pwPolicyExclude = pwPolicySetting.value.PWPOlicyExclude
+			}
+		}
+		if (!pwPolicy) {
+			logger4js.trace("Check Password Policy from .env %s", process.env.PWPOLICY);
+			pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
+		}
+		if (!pwPolicyExclude) {
+			logger4js.debug("Check Password Exclude Policy from .env %s", process.env.PWPOLICY);
+			pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\\\])"
+		}
 
-		pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\\\])"
+		pwPolicyPattern = new RegExp(pwPolicy);
 		pwPolicyExcludePattern = new RegExp(pwPolicyExclude);
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
@@ -66,14 +82,14 @@ function verifyUser(req, res, next) {
 				var redisClient = visboRedis.VisboRedisInit();
 				var token = req.headers['access-key'].split(".")[2];
 				redisClient.get('token.'+token, function(err, reply) {
-					logger4js.debug("Redis Token Check err %O reply %s", err, reply);
+					// logger4js.debug("Redis Token Check err %O reply %s", err, reply);
 					if (err) {
 						return res.status(500).send({
 		        	state: 'failure',
 		        	message: 'Logout Validation'
 		        });
 					}
-					logger4js.debug("Redis Token Found %s user %s", token, reply, );
+					logger4js.trace("Redis Token Found %s user %s", token, reply, );
 					if (reply) {
 						return res.status(401).send({
 		        	state: 'failure',

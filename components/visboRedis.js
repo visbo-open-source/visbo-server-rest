@@ -3,6 +3,8 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var redis = require('redis');
+var bluebird = require('bluebird')
+bluebird.promisifyAll(redis);
 
 var initialised = false;
 var redisClient;

@@ -8,6 +8,14 @@ var logger4js = log4js.getLogger(logModule);
 
 var validate = require('./../components/validate');
 
+const sleep = function (ms) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(ms*2);
+    }, ms);
+  });
+};
+
 router.route('/')
 /**
 	* @api {get} /status Get status of ReST Server
@@ -97,6 +105,34 @@ router.route('/')
 				}
 			});
 		}
+	})
+
+router.route('/test')
+// get status/test
+	.get(async function(req, res) {
+		req.auditDescription = 'Status Test (Read)';
+		req.auditTTLMode = 4;			// short Time to Live
+		var message = "Say Hello World";
+
+		var status = "UNDEFINED"
+		logger4js.info("Get Status Test ");
+		try {
+			var result = await sleep(500)			
+			logger4js.info("Get Status after say hello: %s Result %O ", message, result);
+			var status = message
+		} catch (ex) {
+			logger4js.info("Say Hello Again Catch Error %O", ex);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Status Test Check Failed',
+				error: JSON.stringify(ex)
+			});
+		}
+		return res.status(200).send({
+			state: 'success',
+			message: 'Status Test Check',
+			status: status
+		});
 	})
 
 module.exports = router;

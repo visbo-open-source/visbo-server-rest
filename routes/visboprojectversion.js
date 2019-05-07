@@ -129,6 +129,7 @@ router.route('/')
 
 		req.auditDescription = 'Visbo Project Versions (Read)';
 		req.auditSysAdmin = sysAdmin;
+		if (!req.query.longList) req.auditTTLMode = 1;
 		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
