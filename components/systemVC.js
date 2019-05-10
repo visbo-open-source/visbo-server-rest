@@ -15,6 +15,7 @@ var logger4js = log4js.getLogger(logModule);
 var errorHandler = require('./../components/errorhandler').handler;
 
 var visboRedis = require('./../components/visboRedis');
+var crypt = require('./../components/encrypt');
 
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
@@ -50,8 +51,9 @@ var createSystemVC = function (body) {
 		if (vc) {
 			logger4js.debug("System VisboCenter already exists");
 			vcSystem = vc;
-			redisClient.set('vcSystem', vcSystem._id.toString())
-			initSystemSettings();
+			redisClient.set('vcSystem', vcSystem._id.toString());
+			crypt.initIV(vcSystem._id.toString());
+			initSystemSettings(vcSystem._id.toString());
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
@@ -67,6 +69,7 @@ var createSystemVC = function (body) {
 			}
 			vcSystem = vc;
 			redisClient.set('vcSystem', vcSystem._id.toString())
+			crypt.initIV(vcSystem._id.toString());
 
 			var newUser = new User();
 			newUser.email = body.users[0].email;
@@ -116,12 +119,19 @@ var initSystemSettings = function() {
 		vcSystemSetting = listVCSetting;
 		lastUpdatedAt = new Date('2000-01-01');
 		for (var i=0; i<vcSystemSetting.length; i++) {
+			if (vcSystemSetting[i].name == "SMTP") {
+				vcSystemSetting[i].value.auth.pass = crypt.decrypt(vcSystemSetting[i].value.auth.pass);
+				logger4js.info("Setting SMTP found Decrypt Password", vcSystemSetting[i].value.auth.pass);
+			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt
 			}
 		}
-		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 20)
+		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4)
 		logging.setLogLevelConfig(getSystemVCSetting("DEBUG").value)
+
+		logger4js.debug("Cache System SMTP Setting %O", getSystemVCSetting("SMTP").value);
+
 		logger4js.info("Cache System Setting last Updated %s", lastUpdatedAt.toISOString());
 	});
 }
@@ -136,13 +146,13 @@ var refreshSystemSetting = function(taskID, finishedTask, value) {
 			return;
 		}
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
-			logger4js.debug("Task(%s) refreshSystemSetting Init Settings %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
 			initSystemSettings()
 		} else {
-			logger4js.debug("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
 		}
 		finishedTask(taskID, undefined);
-	  logger4js.debug("Task(%s) refreshSystemSetting Done UpdatedAt %s", taskID, newUpdatedAt);
+	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", taskID, newUpdatedAt);
 	})
 }
 
@@ -171,13 +181,19 @@ var getSystemVCSetting = function (name) {
 		}
 	}
 	if (value) {
-		logger4js.info("Config %s not found new Value %O", name, value);
 		var vcSetting = new VCSetting();
 		vcSetting.name = name;
 		vcSetting.vcid = vcSystem._id;
 		vcSetting.value = value;
 		vcSetting.type = 'SysConfig';
-		vcSystemSetting.push(vcSetting);
+		var vcSettingCopy = JSON.parse(JSON.stringify(vcSetting))
+		if (vcSetting.name == "SMTP") {
+			if (vcSetting.value && vcSetting.value.auth && vcSetting.value.auth.pass) {
+				logger4js.info("MAIL Encrypt Password");
+				vcSetting.value.auth.pass = crypt.encrypt(vcSetting.value.auth.pass);
+			}
+		}
+		vcSystemSetting.push(vcSettingCopy);
 		vcSetting.save(function(err, oneVCSetting) {
 			if (err) {
 				errorHandler(err, undefined, `DB: POST VC Setting UI URl ${req.params.vcid} save`, undefined)

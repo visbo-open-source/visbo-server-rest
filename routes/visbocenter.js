@@ -1780,7 +1780,7 @@ router.route('/:vcid/group/:groupid')
 					return;
 				}
 				if (oneVCRole) {
-					return res.status(403).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role already exists'
 					});
@@ -2472,7 +2472,11 @@ router.route('/:vcid/cost')
 			vcSetting.value = req.body.value;
 			vcSetting.type = 'Custom';
 			if (req.body.userId) vcSetting.userId = req.body.userId;
-			// if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
+			if (req.body.type
+			&& req.body.type != 'SysValue' && req.body.type != 'SysConfig'	// reserved Names for System Config
+			&& req.params.vcid.toString() != getSystemVC()._id.toString()) {			// do not allow creation of new Settings through ReST for System Object
+				vcSetting.type = req.body.type;
+			}
 			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
 			if (req.body.timestamp) vcSetting.timestamp = dateValue;
 

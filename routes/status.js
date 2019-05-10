@@ -7,6 +7,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var validate = require('./../components/validate');
+var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting
 
 const sleep = function (ms) {
   return new Promise(resolve => {
@@ -107,32 +108,66 @@ router.route('/')
 		}
 	})
 
-router.route('/test')
-// get status/test
-	.get(async function(req, res) {
-		req.auditDescription = 'Status Test (Read)';
-		req.auditTTLMode = 4;			// short Time to Live
-		var message = "Say Hello World";
+router.route('/pwpolicy')
+/**
+	* @api {get} /status/pwpolicy Get Password Policy of ReST Server
+	* @apiVersion 1.0.0
+	* @apiGroup Visbo System
+	* @apiName GetPWPolicy
+	* @apiExample Example usage:
+	*   url: http://localhost:3484/status/pwpolicy
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"Password Policy",
+	*  "value":{
+	*    "PWPolicy":"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*([^a-zA-Z\d\s])).{8,}$",
+  *    "PWPolicyExcl":"^(?!.*[\"\'\\])",
+  *    "Description":"At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."
+	*  }
+	*}
+	*/
+// get status/pwpolicy
+	.get(function(req, res) {
+		req.auditDescription = 'Status PW Policy (Read)';
+		req.auditTTLMode = 3;
+    logger4js.info("Get Password Policy ReST Server ");
+    var pwPolicySetting = getSystemVCSetting('PW Policy')
 
-		var status = "UNDEFINED"
-		logger4js.info("Get Status Test ");
-		try {
-			var result = await sleep(500)			
-			logger4js.info("Get Status after say hello: %s Result %O ", message, result);
-			var status = message
-		} catch (ex) {
-			logger4js.info("Say Hello Again Catch Error %O", ex);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Status Test Check Failed',
-				error: JSON.stringify(ex)
-			});
-		}
 		return res.status(200).send({
 			state: 'success',
-			message: 'Status Test Check',
-			status: status
+			message: "Password Policy",
+			value: pwPolicySetting.value
 		});
 	})
+
+  router.route('/test')
+  // get status/test
+  	.get(async function(req, res) {
+  		req.auditDescription = 'Status Test (Read)';
+  		req.auditTTLMode = 4;			// short Time to Live
+  		var message = "Say Hello World";
+
+  		var status = "UNDEFINED"
+  		logger4js.info("Get Status Test ");
+  		try {
+  			var result = await sleep(500)
+  			logger4js.info("Get Status after say hello: %s Result %O ", message, result);
+  			var status = message
+  		} catch (ex) {
+  			logger4js.info("Say Hello Again Catch Error %O", ex);
+  			return res.status(500).send({
+  				state: 'failure',
+  				message: 'Status Test Check Failed',
+  				error: JSON.stringify(ex)
+  			});
+  		}
+  		return res.status(200).send({
+  			state: 'success',
+  			message: 'Status Test Check',
+  			status: status
+  		});
+  	})
 
 module.exports = router;

@@ -90,7 +90,12 @@ function dbConnect(dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
     // exit();
   } else {
-    logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+    var position = dbconnection.indexOf(":") + 1
+    position = dbconnection.indexOf(":", position) + 1
+    var cleanString = dbconnection.substring(0, position)
+    position = dbconnection.indexOf("@", position + 1)
+    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length))
+    logger4js.mark('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri
       dbconnection,
@@ -112,7 +117,7 @@ function dbConnect(dbconnection) {
         trialDelay += trialDelay;
         if (trialDelay>7200) trialDelay = 7200;
         // enable recurtion
-        dbConnect();
+        dbConnect(dbconnection);
       });
     });
   }
