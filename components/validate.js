@@ -56,7 +56,7 @@ var validateObjectId = function(id, allowEmpty) {
 		return false;
 	}
 	if (!id) {
-		logger4js.debug("trace ID: ID is empty ok", id);
+		logger4js.debug("validateObjectId: ID is empty ok");
 		return true;
 	}
 	if (!mongoose.Types.ObjectId.isValid(id)) {

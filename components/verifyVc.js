@@ -3,6 +3,8 @@ var Const = require('../models/constants')
 var constPermSystem = Const.constPermSystem
 var constPermVC = Const.constPermVC
 
+var systemVC = require('./../components/systemVC')
+
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
@@ -187,6 +189,7 @@ function getVcidGroups(req, res, next, vcid) {
 function getSystemGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
+	req.oneVC = systemVC.getSystemVC();
 
 	// get the System Groups the user is member of
 	logger4js.trace("Generate System Groups for user %s for url %s", req.decoded.email, req.url);

@@ -10,6 +10,9 @@ var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
+var systemVC = require('./../components/systemVC')
+var getSystemVC = systemVC.getSystemVC
+var getSystemUrl = systemVC.getSystemUrl
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -160,6 +163,7 @@ router.route('/')
 
 			req.auditDescription = 'Visbo Center (Read)';
 			req.auditSysAdmin = isSysAdmin;
+			req.auditTTLMode = 1;
 
 			logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
 
@@ -370,6 +374,7 @@ router.route('/:vcid')
 
 		req.auditDescription = 'Visbo Center (Read)';
 		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
 		// check for deleted only for sysAdmins
 		var found = false;
@@ -883,6 +888,7 @@ router.route('/:vcid/group')
 
 		req.auditDescription = 'Visbo Center Group (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Visbo Center Group for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -1452,10 +1458,7 @@ router.route('/:vcid/group/:groupid')
 						req.oneGroup = vcGroup;
 						// now send an e-Mail to the user for registration
 						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
-						var uiUrl =  'http://localhost:4200'
-						if (process.env.UI_URL != undefined) {
-							uiUrl = process.env.UI_URL;
-						}
+						var uiUrl =  getSystemUrl();
 
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 						var hash = createHash(secret);
@@ -1508,11 +1511,8 @@ router.route('/:vcid/group/:groupid')
 					req.oneGroup = vcGroup;
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
-					var uiUrl =  'http://localhost:4200'
+					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
 					logger4js.trace("E-Mail User Status %O %s", user.status, user.status.registeredAt);
 					if (user.status && user.status.registeredAt) {
 						// send e-Mail to a registered user
@@ -1688,6 +1688,7 @@ router.route('/:vcid/group/:groupid')
 
 			req.auditDescription = 'Visbo Center Role (Read)';
 			req.auditSysAdmin = sysAdmin;
+			req.auditTTLMode = 1;
 
 			logger4js.info("Get Visbo Center Role for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.combinedPerm);
 
@@ -1779,7 +1780,7 @@ router.route('/:vcid/group/:groupid')
 					return;
 				}
 				if (oneVCRole) {
-					return res.status(403).send({
+					return res.status(409).send({
 						state: 'failure',
 						message: 'Visbo Center Role already exists'
 					});
@@ -2024,6 +2025,7 @@ router.route('/:vcid/cost')
 
 		req.auditDescription = 'Visbo Center Cost (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Visbo Center Cost for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
@@ -2337,6 +2339,7 @@ router.route('/:vcid/cost')
 
 			req.auditDescription = 'Visbo Center Setting (Read)';
 			req.auditSysAdmin = sysAdmin;
+			req.auditTTLMode = 1;
 
 			logger4js.info("Get Visbo Center Setting for userid %s email %s and vc %s ", userId, useremail, req.params.vcid);
 
@@ -2469,7 +2472,11 @@ router.route('/:vcid/cost')
 			vcSetting.value = req.body.value;
 			vcSetting.type = 'Custom';
 			if (req.body.userId) vcSetting.userId = req.body.userId;
-			if (req.body.type && req.body.type != 'Internal') vcSetting.type = req.body.type;
+			if (req.body.type
+			&& req.body.type != 'SysValue' && req.body.type != 'SysConfig'	// reserved Names for System Config
+			&& req.params.vcid.toString() != getSystemVC()._id.toString()) {			// do not allow creation of new Settings through ReST for System Object
+				vcSetting.type = req.body.type;
+			}
 			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
 			if (req.body.timestamp) vcSetting.timestamp = dateValue;
 
@@ -2547,12 +2554,12 @@ router.route('/:vcid/cost')
 					});
 				}
 				req.oneVCSetting = oneVCSetting;
-				if (oneVCSetting.type == 'Internal') {
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Not allowed to delete Internal Settings'
-					});
-				}
+				// if (oneVCSetting.type == 'Internal') {
+				// 	return res.status(400).send({
+				// 		state: 'failure',
+				// 		message: 'Not allowed to delete Internal Settings'
+				// 	});
+				// }
 				logger4js.info("Found the Setting for VC");
 				oneVCSetting.remove(function(err, empty) {
 					if (err) {
@@ -2670,7 +2677,8 @@ router.route('/:vcid/cost')
 					errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, `Error updating VisboCenter Setting`)
 					return;
 				}
-				if (oneVCSetting.type == 'Internal') {
+				if (getSystemVC()._id.toString() == oneVCSetting.vcid.toString()
+				&& (oneVCSetting.type == 'SysConfig')) {
 					if (oneVCSetting.name == 'DEBUG') {
 						logger4js.info("Update System Log Setting");
 						logging.setLogLevelConfig(oneVCSetting.value)

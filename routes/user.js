@@ -8,6 +8,7 @@ var bCrypt = require('bcrypt-nodejs');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var mail = require('../components/mail');
 var ejs = require('ejs');
@@ -77,6 +78,7 @@ router.route('/profile')
 // get profile
 	.get(function(req, res) {
 		req.auditDescription = 'Profile (Read)';
+		req.auditTTLMode = 1;
 
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
@@ -265,10 +267,7 @@ router.route('/passwordchange')
 					user.password = undefined;
 					// now send an e-Mail to the user for pw change
 					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs')
-					var uiUrl =  'http://localhost:4200'
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
+					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/pwforgotten/');
 					var eMailSubject = 'Your password has been changed';
 					var info = {};
