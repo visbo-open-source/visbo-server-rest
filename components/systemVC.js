@@ -115,7 +115,7 @@ var initSystemSettings = function() {
 		if (err) {
 			errorHandler(err, undefined, `DB: Get System Setting Select `, undefined)
 		}
-		logger4js.info("Setting %d found for System VC", listVCSetting.length);
+		logger4js.info("Setting %d found for System VC", listVCSetting ? listVCSetting.length : undefined);
 		vcSystemSetting = listVCSetting;
 		lastUpdatedAt = new Date('2000-01-01');
 		for (var i=0; i<vcSystemSetting.length; i++) {
