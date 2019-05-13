@@ -723,6 +723,7 @@ router.route('/:vcid/audit')
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
 	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {text} [area] Request Audit Trail only for specific Area (vc, vp).
 	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -759,12 +760,13 @@ router.route('/:vcid/audit')
 				});
 		}
 
-		var from, to, maxcount = 1000, action;
+		var from, to, maxcount = 1000, action, area;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
 		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 		if (req.query.action) action = req.query.action.trim();
+		if (req.query.area) area = req.query.area.trim();
 		// no date is set to set to to current Date and recalculate from afterwards
 		if (!to) to = new Date();
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
@@ -782,6 +784,18 @@ router.route('/:vcid/audit')
 			query.sysAdmin = {$exists: false};
 		}
 		var queryListCondition = [];
+		logger4js.info("Get Audit Trail for vc %O ", req.permGroups[0].vcid);
+		var areaCondition = [];
+		switch(area) {
+			case "vc":
+				areaCondition.push({"vp": {$exists: false}});
+		    break;
+		  case "vp":
+				areaCondition.push({"vp": {$exists: true}});
+				// areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
+		    break;
+		}
+		if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
 		if (req.query.text) {
 			var textCondition = [];
 			var text = req.query.text;

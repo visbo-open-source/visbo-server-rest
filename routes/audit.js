@@ -66,7 +66,6 @@ router.route('/')
 	var useremail = req.decoded.email;
 	req.auditDescription = 'Visbo Audit';
 	req.auditSysAdmin = true;
-	req.auditInfo = 'System';
 
 	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
