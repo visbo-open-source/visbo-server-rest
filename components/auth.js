@@ -18,12 +18,12 @@ var isAllowedPassword = function(password){
 	if (!pwPolicy) {
 		var pwPolicySetting = getSystemVCSetting('PW Policy')
 		if (pwPolicySetting) {
-			logger4js.trace("Check Password Policy from DB %O len %s", pwPolicySetting, pwPolicySetting.value.PWPOlicy.length);
-			if (pwPolicySetting.value && pwPolicySetting.value.PWPOlicy) {
-				pwPolicy = pwPolicySetting.value.PWPOlicy
+			logger4js.trace("Check Password Policy from DB %O len %s", pwPolicySetting, pwPolicySetting.value.PWPolicy.length);
+			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicy) {
+				pwPolicy = pwPolicySetting.value.PWPolicy
 			}
-			if (pwPolicySetting.value && pwPolicySetting.value.PWPOlicyExclude) {
-				pwPolicyExclude = pwPolicySetting.value.PWPOlicyExclude
+			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicyExclude) {
+				pwPolicyExclude = pwPolicySetting.value.PWPolicyExclude
 			}
 		}
 		if (!pwPolicy) {

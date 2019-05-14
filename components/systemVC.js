@@ -121,7 +121,7 @@ var initSystemSettings = function() {
 		for (var i=0; i<vcSystemSetting.length; i++) {
 			if (vcSystemSetting[i].name == "SMTP") {
 				vcSystemSetting[i].value.auth.pass = crypt.decrypt(vcSystemSetting[i].value.auth.pass);
-				logger4js.info("Setting SMTP found Decrypt Password", vcSystemSetting[i].value.auth.pass);
+				logger4js.debug("Setting SMTP found Decrypt Password");
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt
