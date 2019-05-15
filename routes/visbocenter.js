@@ -235,7 +235,7 @@ router.route('/')
 	 * url: http://localhost:3484/vc
 	 * {
 	 *  "name":"My first Visbo Center",
-	 *  "description": "Visbo Center Descripton"
+	 *  "description": "Visbo Center Description"
 	 * }
 	 * @apiSuccessExample {json} Success-Response:
 	 * HTTP/1.1 200 OK
@@ -424,7 +424,7 @@ router.route('/:vcid')
 	* url: http://localhost:3484/vc/vc5aada025
 	* {
 	*  "name":"My first Visbo Center Renamed",
-	*  "description": "Changed Descripton"
+	*  "description": "Changed Description"
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK

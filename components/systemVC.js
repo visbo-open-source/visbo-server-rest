@@ -170,6 +170,8 @@ var getSystemVCSetting = function (name) {
 	if (name == "DEBUG") {
 		// Set Default Values
 		value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"}
+	} else if (name == "PW Policy") {
+		value = {PWPolicy: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\"\\'\\\\]).{8,}$", Description: "At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."}
 	} else if (name == "UI URL") {
 		// Check Environment and update DB
 		value = {UIUrl: process.env.UI_URL || 'http://localhost:4200'}

@@ -490,7 +490,7 @@ router.route('/user/pwreset')
 	.post(function(req, res) {
 		req.auditDescription = 'Password Reset';
 
-		logger4js.info("Password Reset Change through e-Mail");
+		logger4js.info("Password Reset Change through e-Mail Token %s PW %s", req.body.token && "Token Available", req.body.password && "PW Available");
 		if (!req.body.token || !req.body.password) {
 			return res.status(400).send({
 				state: "failure",
