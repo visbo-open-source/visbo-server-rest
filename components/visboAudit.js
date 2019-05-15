@@ -7,15 +7,19 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var errorHandler = require('./../components/errorhandler').handler;
 
-function cleanupAudit(taskID, finishedTask, value) {
+function cleanupAudit(taskID, finishedTask, value, startDate) {
 	logger4js.debug("cleanupAudit Execute %s", taskID);
 	var queryaudit = {ttl: {$lt: new Date()}};
 	VisboAudit.deleteMany(queryaudit, function (err, result) {
 		if (err){
 			errorHandler(err, undefined, `DB: DELETE Expired Audits`, undefined)
+			finishedTask(taskID, {result: -1, resultDescription: 'Err: DB: Delete Audit'}, startDate);
+			return;
 		}
+		var resultFinished = {result: result.deletedCount, resultDescription: `Deleted ${result.deletedCount} expired Audit Entries`}
+
 		logger4js.debug("Task: cleanupAudit Result %O", result)
-		finishedTask(taskID);
+		finishedTask(taskID, resultFinished, startDate);
 	});
 
 	logger4js.debug("cleanupAudit Done %s", taskID);
@@ -37,7 +41,7 @@ function squeezeDelete(squeezeEntry, lastDate) {
 	});
 }
 
-function squeezeAudit(taskID, finishedTask, value) {
+function squeezeAudit(taskID, finishedTask, value, startDate) {
 	logger4js.debug("squeezeAudit Execute %s", taskID);
 	var startSqueeze = new Date("2018-01-01");
 
@@ -48,6 +52,7 @@ function squeezeAudit(taskID, finishedTask, value) {
 	var endSqueeze = new Date(startSqueeze);
 	endSqueeze.setMonth(endSqueeze.getMonth() + 1);
 	var latestSqueeze = new Date();
+	var resultFinished = {};
 	latestSqueeze.setDate(latestSqueeze.getDate() - (value.skipDays || 30))
 
 	if (latestSqueeze < endSqueeze) endSqueeze = latestSqueeze
@@ -57,9 +62,12 @@ function squeezeAudit(taskID, finishedTask, value) {
 	endSqueeze.setMinutes(0);
 	endSqueeze.setSeconds(0);
 	endSqueeze.setMilliseconds(0);
+	resultFinished.lastMonth = endSqueeze;
 	if (startSqueeze >= endSqueeze) {
 		logger4js.debug("squeezeAudit Nothing to Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
-		setTimeout(finishedTask, 1, taskID)	// MS TODO: Wait 1 second. Immediate return has a problem with lock
+		resultFinished.result = 0;
+		resultFinished.resultDescription = 'Nothing to squeeze';
+		finishedTask(taskID, resultFinished, startDate);
 		return;
 	}
 	logger4js.debug("squeezeAudit Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
@@ -76,17 +84,25 @@ function squeezeAudit(taskID, finishedTask, value) {
 	querySqueezeAudit.exec(function (err, listAudits) {
 		if (err) {
 			errorHandler(err, undefined, `DB: GET squeeze Audit`, undefined)
+			resultFinished.lastMonth = value.lastMonth; // stay in same interval and try again
+			resultFinished.result = -1;
+			resultFinished.resultDescription = 'Err: DB Get Squeeze Audit';
+			finishedTask(taskID, resultFinished, startDate);
 			return;
 		}
 		logger4js.info("Task: squeezeAudit Result %s Audit Groups", listAudits.length)
 		// now delete the duplicate rows, loop through all groups and delete all but one
+		var squeezeCount = 0;
 		for (var i=0; i<listAudits.length; i++) {
+			squeezeCount += listAudits[i].count - 1;
 		  logger4js.debug("Check vpvid %s user %s Count %s First %s", listAudits[i]._id.vpvid, listAudits[i]._id.user, listAudits[i].count, listAudits[i].first)
 			squeezeDelete(listAudits[i], endSqueeze);
 		}
 		// MS TODO: Do we have to wait for the Delete to finish??
-		value.taskSpecific.lastMonth = endSqueeze;
-		finishedTask(taskID, value.taskSpecific);
+		resultFinished.lastMonth = endSqueeze;
+		resultFinished.result = squeezeCount;
+		resultFinished.resultDescription = `Squeezed ${squeezeCount} Entries for Month ${endSqueeze.toISOString()}`
+		finishedTask(taskID, resultFinished, startDate);
 	});
 	logger4js.debug("squeezeAudit Done %s", taskID);
 }

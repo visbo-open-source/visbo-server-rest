@@ -130,28 +130,29 @@ var initSystemSettings = function() {
 		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4)
 		logging.setLogLevelConfig(getSystemVCSetting("DEBUG").value)
 
-		logger4js.debug("Cache System SMTP Setting %O", getSystemVCSetting("SMTP").value);
-
 		logger4js.info("Cache System Setting last Updated %s", lastUpdatedAt.toISOString());
 	});
 }
 
-var refreshSystemSetting = function(taskID, finishedTask, value) {
+var refreshSystemSetting = function(taskID, finishedTask, value, startDate) {
 	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", taskID, value);
 	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
 			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
-			finishedTask(taskID, undefined);
+			finishedTask(taskID, {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'}, startDate);
 			return;
 		}
+		var result = {};
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
 			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
 			initSystemSettings()
+			result = {result: 1, resultDescription: 'Init System Settings'}
 		} else {
 			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			result = {result: 0, resultDescription: 'System Settings Still up to date'}
 		}
-		finishedTask(taskID, undefined);
+		finishedTask(taskID, result, startDate);
 	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", taskID, newUpdatedAt);
 	})
 }
