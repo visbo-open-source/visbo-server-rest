@@ -433,7 +433,6 @@ router.route('/user/pwforgotten')
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
-						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
@@ -490,7 +489,7 @@ router.route('/user/pwreset')
 	.post(function(req, res) {
 		req.auditDescription = 'Password Reset';
 
-		logger4js.info("Password Reset Change through e-Mail");
+		logger4js.info("Password Reset Change through e-Mail Token %s PW %s", req.body.token && "Token Available", req.body.password && "PW Available");
 		if (!req.body.token || !req.body.password) {
 			return res.status(400).send({
 				state: "failure",

@@ -122,8 +122,7 @@ router.route('/pwpolicy')
 	*  "state":"success",
 	*  "message":"Password Policy",
 	*  "value":{
-	*    "PWPolicy":"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*([^a-zA-Z\d\s])).{8,}$",
-  *    "PWPolicyExcl":"^(?!.*[\"\'\\])",
+	*    "PWPolicy":"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d\s])(?!.*[\"\'\\]).{8,}$",
   *    "Description":"At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."
 	*  }
 	*}

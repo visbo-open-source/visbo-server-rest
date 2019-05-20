@@ -18,13 +18,15 @@ var visboAudit = require('./../components/visboAudit');
 var refreshSystemSetting = require('./../components/systemVC').refreshSystemSetting;
 
 //Create an event handler:
-function finishedTask(taskID, valueSpecific) {
+function finishedTask(taskID, valueSpecific, startDate) {
   logger4js.debug("Task Finished, Task %s", taskID);
   var updateQuery = {_id: taskID};
   var updateOption = {upsert: false};
-  var updateUpdate = {$unset : {'value.lockedUntil' : ''}, $set : {'value.lastRun' : new Date()} };
+  var currentDate = new Date();
+  var duration = startDate > 0 ? currentDate - startDate : -1;
+  var updateUpdate = {$unset : {'value.lockedUntil' : ''}, $set : {'value.lastRun' : currentDate, 'value.lastDuration': duration} };
   if (valueSpecific) {
-    updateUpdate = {$unset : {'value.lockedUntil' : ''}, $set : {'value.lastRun' : new Date(), 'value.taskSpecific': valueSpecific} };
+    updateUpdate = {$unset : {'value.lockedUntil' : ''}, $set : {'value.lastRun' : currentDate, 'value.lastDuration': duration, 'value.taskSpecific': valueSpecific} };
   }
 
   logger4js.trace("finishedTask Task(%s) unlock %O", taskID, updateUpdate);
@@ -118,19 +120,19 @@ function checkNextRun() {
           // call specific operation for task
           switch(listTask[i].name) {
             case 'Audit Cleanup':
-              visboAudit.cleanupAudit(listTask[i]._id, finishedTask, listTask[i].value);
+              visboAudit.cleanupAudit(listTask[i]._id, finishedTask, listTask[i].value, new Date());
               break;
             case 'Audit Squeeze':
-              visboAudit.squeezeAudit(listTask[i]._id, finishedTask, listTask[i].value);
+              visboAudit.squeezeAudit(listTask[i]._id, finishedTask, listTask[i].value, new Date());
               break;
             case 'System Config':
-              refreshSystemSetting(listTask[i]._id, finishedTask, listTask[i].value);
+              refreshSystemSetting(listTask[i]._id, finishedTask, listTask[i].value, new Date());
               break;
             case 'Task Test':
-              taskTest(listTask[i]._id, finishedTask, listTask[i].value);
+              taskTest(listTask[i]._id, finishedTask, listTask[i].value, new Date());
               break;
             default:
-              finishedTask(listTask[i]._id)
+              finishedTask(listTask[i]._id, new Date())
           }
         }
 			}
@@ -138,7 +140,7 @@ function checkNextRun() {
   });
 }
 
-function taskTest(taskID, finishedTask, value) {
+function taskTest(taskID, finishedTask, value, startDate) {
   logger4js.debug("TaskTest Execute %s Value %O", taskID, value);
   if (value && value.taskSpecific) {
     value.taskSpecific.lastPeriod = new Date();
@@ -146,7 +148,7 @@ function taskTest(taskID, finishedTask, value) {
     value.taskSpecific.lastPeriod.setMinutes(0);
     value.taskSpecific.lastPeriod.setSeconds(0);
   }
-  setTimeout(finishedTask, 1, taskID, value.taskSpecific)
+  finishedTask(taskID, value.taskSpecific, startDate)
   logger4js.trace("TaskTest Done %s", taskID);
 }
 

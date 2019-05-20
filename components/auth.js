@@ -10,8 +10,6 @@ var jwtSecret = require('./../secrets/jwt');
 
 var pwPolicy = undefined;
 var pwPolicyPattern = undefined;
-var pwPolicyExclude = undefined;
-var pwPolicyExcludePattern = undefined;
 
 var isAllowedPassword = function(password){
 
@@ -22,27 +20,18 @@ var isAllowedPassword = function(password){
 			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicy) {
 				pwPolicy = pwPolicySetting.value.PWPolicy
 			}
-			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicyExclude) {
-				pwPolicyExclude = pwPolicySetting.value.PWPolicyExclude
-			}
 		}
 		if (!pwPolicy) {
 			logger4js.trace("Check Password Policy from .env %s", process.env.PWPOLICY);
 			pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
 		}
-		if (!pwPolicyExclude) {
-			logger4js.debug("Check Password Exclude Policy from .env %s", process.env.PWPOLICY);
-			pwPolicyExclude = process.env.PWPOLICYEXCLUDE || "^(?!.*[\"\'\\\\])"
-		}
 
 		pwPolicyPattern = new RegExp(pwPolicy);
-		pwPolicyExcludePattern = new RegExp(pwPolicyExclude);
 		logger4js.debug("Initialise Password Policy %s", pwPolicy);
 	}
 
 	logger4js.trace("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
-	logger4js.trace("Check Password Policy against Exclude %s result %s", pwPolicyExclude, password.match(pwPolicyExcludePattern) || 'NULL');
-	var result = password.match(pwPolicyPattern) && password.match(pwPolicyExcludePattern)
+	var result = password.match(pwPolicyPattern)
 	return result;
 };
 
