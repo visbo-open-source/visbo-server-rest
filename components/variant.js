@@ -4,8 +4,6 @@ var logger4js = log4js.getLogger(logModule);
 
 // return the variant index for a given variantName, -1 if not found
 findVariant = function(vp, variantName) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
 	logger4js.trace("findVariant Check Lock for VP %s and Variant :%s: Locks %O", vp._id, variantName, vp.lock);
 	if (vp.variant) {
 		for (i = 0; i < vp.variant.length; i++) {
@@ -21,8 +19,6 @@ findVariant = function(vp, variantName) {
 
 // return the variant index for a given variantId, -1 if not found
 findVariantId = function(vp, variantId) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
 	logger4js.trace("findVariant Check Lock for VP %s for Variant :%s: Locks %O", vp._id, variantId, vp.lock);
 	if (vp.variant) {
 		for (i = 0; i < vp.variant.length; i++) {

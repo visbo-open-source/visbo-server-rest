@@ -127,9 +127,9 @@ router.route('/')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Versions (Read)';
 		req.auditSysAdmin = sysAdmin;
+		if (!req.query.longList) req.auditTTLMode = 1;
 		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info("Get Project Versions for user %s with query params %O ", userId, req.query);
@@ -287,7 +287,7 @@ router.route('/')
 				// deliver only the short info about project versions
 				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
 			} else {
-				req.auditNoTTL = true;	// Real Download of Visbo Project Versions
+				req.auditTTLMode = 0;	// Real Download of Visbo Project Versions
 			}
 			queryVPV.lean();
 			queryVPV.exec(function (err, listVPV) {
@@ -351,7 +351,7 @@ router.route('/')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Versions (Create)';
 		var queryvpv = {};
 
@@ -557,10 +557,9 @@ router.route('/:vpvid')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Version (Read)';
 		req.auditSysAdmin = sysAdmin;
-		req.auditNoTTL = true;	// Real Download of Visbo Project Version
+		req.auditTTLMode = 0;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		return res.status(200).send({
@@ -605,7 +604,7 @@ router.route('/:vpvid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Version (Update)';
 
 		logger4js.info("PUT/Save Visbo Project Version for userid %s email %s and vpv %s perm %O", userId, useremail, req.params.vpvid, req.combinedPerm);
@@ -675,7 +674,7 @@ router.route('/:vpvid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Version (Delete)';
 
 		logger4js.info("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);

@@ -1,18 +1,113 @@
-var express = require('express');
-var router = express.Router();
 var mongoose = require('mongoose');
-mongoose.Promise = require('q').Promise;
-var moment = require('moment');
-var audit = require('./../components/visboAudit');
 var VisboAudit = mongoose.model('VisboAudit');
+var validate = require('./../components/validate');
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+var errorHandler = require('./../components/errorhandler').handler;
+
+function cleanupAudit(taskID, finishedTask, value, startDate) {
+	logger4js.debug("cleanupAudit Execute %s", taskID);
+	var queryaudit = {ttl: {$lt: new Date()}};
+	VisboAudit.deleteMany(queryaudit, function (err, result) {
+		if (err){
+			errorHandler(err, undefined, `DB: DELETE Expired Audits`, undefined)
+			finishedTask(taskID, {result: -1, resultDescription: 'Err: DB: Delete Audit'}, startDate);
+			return;
+		}
+		var resultFinished = {result: result.deletedCount, resultDescription: `Deleted ${result.deletedCount} expired Audit Entries`}
+
+		logger4js.debug("Task: cleanupAudit Result %O", result)
+		finishedTask(taskID, resultFinished, startDate);
+	});
+
+	logger4js.debug("cleanupAudit Done %s", taskID);
+}
+
+function squeezeDelete(squeezeEntry, lastDate) {
+	logger4js.trace("squeezeDelete Execute %s Count %s", squeezeEntry._id.vpvid, squeezeEntry.count);
+	var queryaudit = {
+		createdAt: {$gt: squeezeEntry.first, $lt: lastDate},
+		action: "GET",
+		"vpv.vpvid": squeezeEntry._id.vpvid,
+		"user.email": squeezeEntry._id.user
+	};
+	VisboAudit.deleteMany(queryaudit, function (err, result) {
+		if (err){
+			errorHandler(err, undefined, `DB: DELETE Squeezed Audits`, undefined)
+		}
+		logger4js.debug("Task: squeezeDelete Result %O", result)
+	});
+}
+
+function squeezeAudit(taskID, finishedTask, value, startDate) {
+	logger4js.debug("squeezeAudit Execute %s", taskID);
+	var startSqueeze = new Date("2018-01-01");
+
+	if (!value.taskSpecific) value.taskSpecific = {};
+	if (validate.validateDate(value.taskSpecific.lastMonth, false)) {
+		startSqueeze = value.taskSpecific.lastMonth
+	}
+	var endSqueeze = new Date(startSqueeze);
+	endSqueeze.setMonth(endSqueeze.getMonth() + 1);
+	var latestSqueeze = new Date();
+	var resultFinished = {};
+	latestSqueeze.setDate(latestSqueeze.getDate() - (value.skipDays || 30))
+
+	if (latestSqueeze < endSqueeze) endSqueeze = latestSqueeze
+	// set it to beginning of Month
+	endSqueeze.setDate(1);
+	endSqueeze.setHours(0);
+	endSqueeze.setMinutes(0);
+	endSqueeze.setSeconds(0);
+	endSqueeze.setMilliseconds(0);
+	resultFinished.lastMonth = endSqueeze;
+	if (startSqueeze >= endSqueeze) {
+		logger4js.debug("squeezeAudit Nothing to Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
+		resultFinished.result = 0;
+		resultFinished.resultDescription = 'Nothing to squeeze';
+		finishedTask(taskID, resultFinished, startDate);
+		return;
+	}
+	logger4js.debug("squeezeAudit Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
+
+	// get all ReST Calls Type "GET" in a defined period and group them by vpvid and user
+	// aggregate the count and the minimum createdAt time and filter only entries with a certain amount of duplicates
+	var aggregateQuery = [
+		{$match: {createdAt: {$gt: startSqueeze, $lt: endSqueeze}, action: "GET", vpv: {$exists: true}}},
+		{$group: {_id: {action: "$action", "vpvid" : "$vpv.vpvid", "user": "$user.email"}, count : { "$sum" : 1 }, first: {"$min": "$createdAt"} } },
+		{$match: {count: {$gt: 3 }}},
+		{$sort: {count: -1}}
+	];
+	var querySqueezeAudit = VisboAudit.aggregate(aggregateQuery);
+	querySqueezeAudit.exec(function (err, listAudits) {
+		if (err) {
+			errorHandler(err, undefined, `DB: GET squeeze Audit`, undefined)
+			resultFinished.lastMonth = value.lastMonth; // stay in same interval and try again
+			resultFinished.result = -1;
+			resultFinished.resultDescription = 'Err: DB Get Squeeze Audit';
+			finishedTask(taskID, resultFinished, startDate);
+			return;
+		}
+		logger4js.info("Task: squeezeAudit Result %s Audit Groups", listAudits.length)
+		// now delete the duplicate rows, loop through all groups and delete all but one
+		var squeezeCount = 0;
+		for (var i=0; i<listAudits.length; i++) {
+			squeezeCount += listAudits[i].count - 1;
+		  logger4js.debug("Check vpvid %s user %s Count %s First %s", listAudits[i]._id.vpvid, listAudits[i]._id.user, listAudits[i].count, listAudits[i].first)
+			squeezeDelete(listAudits[i], endSqueeze);
+		}
+		// MS TODO: Do we have to wait for the Delete to finish??
+		resultFinished.lastMonth = endSqueeze;
+		resultFinished.result = squeezeCount;
+		resultFinished.resultDescription = `Squeezed ${squeezeCount} Entries for Month ${endSqueeze.toISOString()}`
+		finishedTask(taskID, resultFinished, startDate);
+	});
+	logger4js.debug("squeezeAudit Done %s", taskID);
+}
 
 function saveAuditEntry(tokens, req, res, factor) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
 	var auditEntry = new VisboAudit();
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
@@ -27,10 +122,12 @@ function saveAuditEntry(tokens, req, res, factor) {
 		// if (urlComponent.length >= 4 && urlComponent[3] == 'portfolio') addJSON = urlComponent[3];
 		if (urlComponent.length >= 4 && urlComponent[3] == 'setting') addJSON = urlComponent[3];
 	} else {
-		var setTTL = req.auditNoTTL ? false : true;
-		if (setTTL) {
+		if (req.auditTTLMode > 0) {
 			auditEntry.ttl = new Date();
-			auditEntry.ttl.setDate(auditEntry.ttl.getDate() + 30)
+			if (req.auditTTLMode == 4) auditEntry.ttl.setMinutes(auditEntry.ttl.getMinutes() + 5)		// 5 Minutes
+			else if (req.auditTTLMode == 3) auditEntry.ttl.setHours(auditEntry.ttl.getHours() + 1)	// 1 Hour
+			else if (req.auditTTLMode == 2) auditEntry.ttl.setDate(auditEntry.ttl.getDate() + 1)		// 1 Day
+			else auditEntry.ttl.setDate(auditEntry.ttl.getDate() + 30)															// 30 Days
 		}
 	}
 
@@ -114,8 +211,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 }
 
 function visboAudit(tokens, req, res) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
+	if (req.auditIgnore) return
 	if (tokens.method(req, res) == "GET" && req.listVPV) {
 		if (req.query.longList != undefined) {
 			// generate multiple audit entries per VisboProjectVersion
@@ -140,5 +236,7 @@ function visboAudit(tokens, req, res) {
 }
 
 module.exports = {
-	visboAudit: visboAudit
+	visboAudit: visboAudit,
+	cleanupAudit: cleanupAudit,
+	squeezeAudit: squeezeAudit
 };

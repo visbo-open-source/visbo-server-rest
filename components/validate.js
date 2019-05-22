@@ -8,7 +8,6 @@ var logger4js = log4js.getLogger(logModule);
 // check if string has invalid content
 // validate a string to prevent XSS
 var validateName = function(name, allowEmpty) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	if (!allowEmpty && !name) {
 		logger4js.debug("Check Name: Name is empty!", name);
 		return false;
@@ -23,7 +22,6 @@ var validateName = function(name, allowEmpty) {
 
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	if (!allowEmpty && !dateString) {
 		logger4js.debug("Check Date: DateString is empty! :%s:", !dateString);
 		return undefined;
@@ -38,7 +36,6 @@ var validateDate = function(dateString, allowEmpty) {
 
 // validate a date to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	if (!allowEmpty && isNaN(numberValue)) {
 		logger4js.debug("Check Number: Number is NaN! :%s:", numberValue);
 		return undefined;
@@ -53,14 +50,13 @@ var validateNumber = function(numberValue, allowEmpty) {
 // check if string has invalid content
 // validate a string to prevent XSS
 var validateObjectId = function(id, allowEmpty) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	logger4js.trace("Check ID:  %s Allow empty %s", id, allowEmpty);
-if (allowEmpty != true && !id) {
+	if (allowEmpty != true && !id) {
 		logger4js.debug("debug ID: ID is empty!", id);
 		return false;
 	}
 	if (!id) {
-		logger4js.debug("trace ID: ID is empty ok", id);
+		logger4js.debug("validateObjectId: ID is empty ok");
 		return true;
 	}
 	if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -74,7 +70,6 @@ if (allowEmpty != true && !id) {
 // check if email has invalid content
 // validate a string to prevent XSS
 var validateEmail = function(email, allowEmpty) {
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	if (!allowEmpty && !email) {
 		logger4js.debug("Check Name: Name is empty!", email);
 		return false;

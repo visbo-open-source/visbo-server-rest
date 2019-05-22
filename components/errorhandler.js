@@ -9,7 +9,6 @@ var logger4js = log4js.getLogger(logModule);
 // validate a string to prevent XSS
 var handler = function(err, res, logMesage, restMessage) {
 	var error, httpcode;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	if (err.name == 'ValidationError') {
 		error = err.message;
 		logger4js.mark("Validation Error: %s ReST error %s err %O", logMesage, restMessage, error);

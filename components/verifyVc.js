@@ -3,6 +3,8 @@ var Const = require('../models/constants')
 var constPermSystem = Const.constPermSystem
 var constPermVC = Const.constPermVC
 
+var systemVC = require('./../components/systemVC')
+
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
@@ -16,7 +18,6 @@ var logger4js = log4js.getLogger(logModule);
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
 	if (baseUrl == '/') {
 		// get the VC Groups the user is member of
@@ -89,7 +90,6 @@ function getAllGroups(req, res, next) {
 function getVcidGroups(req, res, next, vcid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
@@ -189,7 +189,7 @@ function getVcidGroups(req, res, next, vcid) {
 function getSystemGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+	req.oneVC = systemVC.getSystemVC();
 
 	// get the System Groups the user is member of
 	logger4js.trace("Generate System Groups for user %s for url %s", req.decoded.email, req.url);

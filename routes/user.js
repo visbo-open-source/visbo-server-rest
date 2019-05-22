@@ -8,6 +8,7 @@ var bCrypt = require('bcrypt-nodejs');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var mail = require('../components/mail');
 var ejs = require('ejs');
@@ -16,6 +17,8 @@ var useragent = require('useragent');
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
+var visboRedis = require('./../components/visboRedis');
 
 // Generates hash using bCrypt
 var createHash = function(secret){
@@ -74,8 +77,8 @@ router.route('/profile')
 	*/
 // get profile
 	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Profile (Read)';
+		req.auditTTLMode = 1;
 
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
@@ -146,7 +149,6 @@ router.route('/profile')
 	*/
 // Update profile
 	.put(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Profile (Update)';
 
 		logger4js.info("Put/Update user %s", req.decoded._id);
@@ -221,7 +223,6 @@ router.route('/passwordchange')
 	*/
 // Change Password
 	.put(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Password (Change)';
 
 		logger4js.info("Put/Update user password %s", req.decoded._id);
@@ -266,10 +267,7 @@ router.route('/passwordchange')
 					user.password = undefined;
 					// now send an e-Mail to the user for pw change
 					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs')
-					var uiUrl =  'http://localhost:4200'
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
+					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/pwforgotten/');
 					var eMailSubject = 'Your password has been changed';
 					var info = {};
@@ -312,5 +310,39 @@ router.route('/passwordchange')
 			}
 		});
 	})
+
+router.route('/logout')
+/**
+	* @api {post} /user/logout Logout and invalidate token
+	* @apiVersion 1.0.0
+	* @apiHeader {String} access-key User authentication token.
+	* @apiGroup User Profile
+	* @apiName Logout
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
+	* @apiExample Example usage:
+	*  url: http://localhost:3484/user/logout
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"You have successfully logged out"
+	* }
+	*/
+// Logout
+	.post(function(req, res) {
+		req.auditDescription = 'Logout';
+
+		logger4js.info("Post Logout %s", req.decoded._id);
+		// add token to Redis
+		var redisClient = visboRedis.VisboRedisInit();
+		var token = req.headers['access-key'].split(".")[2];
+		redisClient.set('token.'+token, req.decoded._id, 'EX', 3600);
+		return res.status(200).send({
+			state: "success",
+			message: "You have successfully logged out"
+		});
+	})
+
 
 module.exports = router;

@@ -21,7 +21,6 @@ var logger4js = log4js.getLogger(logModule);
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
 	if (baseUrl == '/') {
 		// get the VP Groups the user is member of
@@ -115,8 +114,6 @@ function getAllVPVGroups(req, res, next) {
 function getVpvidGroups(req, res, next, vpvid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
-
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
@@ -228,7 +225,6 @@ function getVpvidGroups(req, res, next, vpvid) {
 function getPortfolioVPs(req, res, next) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var baseUrl = req.url.split("?")[0]
 	if (baseUrl == '/' && req.method == "GET" && req.query.vpfid) {
 		// get the VP List of a VPF

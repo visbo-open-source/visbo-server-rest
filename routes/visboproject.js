@@ -12,6 +12,7 @@ var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -165,7 +166,6 @@ var updateVPName = function(vpid, name, type){
 
 // updates the Global VC Groups to add the VPID to the list
 var updatePermAddVP = function(vcid, vpid){
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var updateQuery = {vcid: vcid, global: true};
 	var updateUpdate = {$push: {vpids: vpid}};
 	var updateOption = {upsert: false};
@@ -180,7 +180,6 @@ var updatePermAddVP = function(vcid, vpid){
 
 // updates the Global VC Groups to remove the VPID from the list
 var updatePermRemoveVP = function(vcid, vpid){
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var updateQuery = {vcid: vcid, global: true};
 	var updateUpdate = {$pull: {vpids: vpid}};
 	var updateOption = {upsert: false};
@@ -331,9 +330,10 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
 
@@ -450,7 +450,7 @@ router.route('/')
 		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project (Create)';
 
 		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
@@ -613,9 +613,10 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
@@ -682,7 +683,7 @@ router.route('/:vpid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project (Update)';
 
 		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
@@ -814,7 +815,7 @@ router.route('/:vpid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project (Delete)';
 
 		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s  ", userId, useremail, req.params.vpid, req.oneVP.name);
@@ -949,7 +950,6 @@ router.route('/:vpid/audit')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Project Audit (Read)';
 		req.auditSysAdmin = sysAdmin;
 
@@ -1087,9 +1087,9 @@ router.route('/:vpid/audit')
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Read)';
 			req.auditSysAdmin = sysAdmin;
+			req.auditTTLMode = 1;
 
 			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
 
@@ -1198,7 +1198,6 @@ router.route('/:vpid/audit')
 				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 			}
 
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Create)';
 
 			logger4js.info("Post a new Visbo Project Group with name %s executed by user %s ", req.body.name, useremail);
@@ -1297,7 +1296,7 @@ router.route('/:vpid/audit')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 			req.auditDescription = 'Visbo Project Group (Delete)';
 			req.auditInfo = req.oneGroup.name;
 			logger4js.info("DELETE Visbo Project Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vpid, req.params.groupid);
@@ -1370,7 +1369,6 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Visbo Project Group (Update)';
 
 			var vgName = (req.body.name || '').trim();
@@ -1476,7 +1474,6 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			logger4js.info("Post a new Visbo Project User with name %s  to group %s executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.combinedPerm);
 			req.auditDescription = 'Visbo Project User (Add)';
 
@@ -1551,10 +1548,7 @@ router.route('/:vpid/audit')
 							req.oneGroup = vgGroup;
 							// now send an e-Mail to the user for registration
 							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs')
-							var uiUrl =  'http://localhost:4200'
-							if (process.env.UI_URL != undefined) {
-								uiUrl = process.env.UI_URL;
-							}
+							var uiUrl =  getSystemUrl();
 
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
@@ -1607,11 +1601,8 @@ router.route('/:vpid/audit')
 						req.oneGroup = vgGroup;
 						// now send an e-Mail to the user for registration/login
 						var template = __dirname.concat('/../emailTemplates/');
-						var uiUrl =  'http://localhost:4200'
+						var uiUrl =  getSystemUrl();
 						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name
-						if (process.env.UI_URL != undefined) {
-							uiUrl = process.env.UI_URL;
-						}
 						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
 						if (user.status && user.status.registeredAt) {
 							// send e-Mail to a registered user
@@ -1622,7 +1613,7 @@ router.route('/:vpid/audit')
 							template = template.concat('inviteVPNewUser.ejs');
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
-							uiUrl = 'http://'.concat(uiUrl, '/register/', user._id, '?hash=', hash);
+							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
 						}
 
 						logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
@@ -1694,7 +1685,7 @@ router.route('/:vpid/audit')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 			logger4js.info("DELETE Visbo Project User by userid %s email %s for user %s Group %s ", userId, useremail, req.params.userid, req.oneGroup._id);
 
 			req.auditDescription = 'Visbo Project User (Delete)';
@@ -1782,7 +1773,7 @@ router.route('/:vpid/lock')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Lock (Create)';
 
 		logger4js.info("POST Lock Visbo Project for userid %s email %s and vp %s ", userId, useremail, req.params.vpid);
@@ -1880,7 +1871,7 @@ router.route('/:vpid/lock')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Lock (Delete)';
 
 		var variantName = "";
@@ -1961,7 +1952,7 @@ router.route('/:vpid/variant')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Variant (Create)';
 
 		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O", userId, useremail, req.params.vpid, req.body, req.combinedPerm);
@@ -2054,7 +2045,7 @@ router.route('/:vpid/variant/:vid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var variantId = req.params.vid;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Project Variant (Delete)';
 		req.auditInfo = req.body.variantId;
 
@@ -2174,9 +2165,9 @@ router.route('/:vpid/portfolio')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
 			logger4js.warn("Get VPF mal formed query parameter %O ", req.query);
@@ -2257,7 +2248,7 @@ router.route('/:vpid/portfolio')
 	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project.
 	* @apiError {number} 400 no Project Items specified for Portfolio or Visbo Project is not a Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View the Visb Proect (Portfolio) or Create a Visbo Center Portfolio List
+	* @apiError {number} 403 No Permission to View the Visb Project (Portfolio) or Modify the Project (Portfolio) or Variant
 	* @apiError {number} 409 Variant does not exist
 	*
 	* @apiExample Example usage:
@@ -2306,7 +2297,7 @@ router.route('/:vpid/portfolio')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Portfolio List (Create)';
 
 		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
@@ -2453,9 +2444,9 @@ router.route('/:vpid/portfolio/:vpfid')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Visbo Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
+		req.auditTTLMode = 1;
 
 		logger4js.trace("Get Portfolio Versions");
 		var query = {}
@@ -2509,7 +2500,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
+
 		req.auditDescription = 'Visbo Portfolio List (Delete)';
 
 		logger4js.debug("DELETE Visbo Portfolio in Project %s", req.oneVP.name);

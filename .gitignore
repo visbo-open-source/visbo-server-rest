@@ -12,3 +12,4 @@ logging/
 env-dev
 env-prod
 VisboReST
+dump.rdb

@@ -69,9 +69,9 @@ router.route('/')
 	*/
 // get sysuser list
 	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'SysUsers (Read)';
 		req.auditSysAdmin = true;
+		req.auditTTLMode = 1;
 		var email = (req.query && req.query.email) ? req.query.email : undefined;
 		var userId = req.query && req.query.userid && mongoose.Types.ObjectId.isValid(req.query.userid) ? req.query.userid : undefined;
 		var maxcount = req.query && req.query.maxcount ? Number(req.query.maxcount) : 100;

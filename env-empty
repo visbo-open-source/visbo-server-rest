@@ -4,8 +4,4 @@ NODE_ENV=production
 # PRODUCTION
   # Atlas  Mongo DB
 NODE_VISBODB="mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboStaging?retryWrites=true"
-UI_URL="https://my.visbo.net"
 SMTP = { "host": "smtp.1und1.de", "auth": { "user": "service@visbo.de", "pass": "XXXXXXXXX" }, "pool": true, "port": 465, "secure": true, "requireTLS": true, "connectionTimeout": 500, "greetingTimeout": 300, "logger": false, "debug": false, "dkim": { "domainName": "visbo.de", "keySelector": "visbo2019" }}
-
-DEBUG={"VC": "debug", "VP": "debug", "VPV": "debug", "USER":"debug", "OTHER": "debug", "MAIL": "debug", "All": "debug"}
-PWPOLICY="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*([^a-zA-Z\d\s])).{8,}$"

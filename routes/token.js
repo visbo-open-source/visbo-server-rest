@@ -8,6 +8,7 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var moment = require('moment');
 moment.locale('de');
@@ -126,7 +127,6 @@ router.route('/user/login')
 // Post Login
 	.post(function(req, res) {
 		var currentDate = new Date();
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
@@ -351,7 +351,6 @@ router.route('/user/pwforgotten')
 
 // Forgot Password
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
@@ -432,12 +431,8 @@ router.route('/user/pwforgotten')
 						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
-						var uiUrl =  'http://localhost:4200'
-						if (process.env.UI_URL != undefined) {
-						  uiUrl = process.env.UI_URL;
-						}
+						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
-						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
@@ -492,10 +487,9 @@ router.route('/user/pwreset')
 
 	// Password Reset
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Password Reset';
 
-		logger4js.info("Password Reset Change through e-Mail");
+		logger4js.info("Password Reset Change through e-Mail Token %s PW %s", req.body.token && "Token Available", req.body.password && "PW Available");
 		if (!req.body.token || !req.body.password) {
 			return res.status(400).send({
 				state: "failure",
@@ -627,7 +621,6 @@ router.route('/user/signup')
 
 // Post Signup User
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
@@ -727,11 +720,8 @@ router.route('/user/signup')
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
 					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
-					var uiUrl =  'http://localhost:4200'
+					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'Please confirm your eMail address ';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
@@ -821,7 +811,6 @@ router.route('/user/signup')
 	  */
 	// Post User Confirm
 		.post(function(req, res) {
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
@@ -874,12 +863,8 @@ router.route('/user/signup')
 					}
 					// now send the eMail for confirmation of the e-Mail address
 					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
-					var uiUrl =  'http://localhost:4200'
 					var eMailSubject = 'Successful eMail confirmation';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
-
+					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/login?email=', user.email);
 
 					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
