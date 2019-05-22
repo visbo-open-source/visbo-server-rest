@@ -19,7 +19,7 @@ var crypt = require('./../components/encrypt');
 
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
-var lastUpdatedAt = undefined;
+var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
 var findUser = function(currentUser) {
@@ -134,26 +134,46 @@ var initSystemSettings = function() {
 	});
 }
 
-var refreshSystemSetting = function(taskID, finishedTask, value, startDate) {
-	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", taskID, value);
+var refreshSystemSetting = function(task, finishedTask) {
+	if (!task || !task.value) finishedTask(task);
+	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", task._id, task.value);
 	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
 			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
-			finishedTask(taskID, {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'}, startDate);
+			task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
+			finishedTask(task);
 			return;
 		}
 		var result = {};
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
-			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
 			initSystemSettings()
 			result = {result: 1, resultDescription: 'Init System Settings'}
 		} else {
-			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
 			result = {result: 0, resultDescription: 'System Settings Still up to date'}
 		}
-		finishedTask(taskID, result, startDate);
-	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", taskID, newUpdatedAt);
+		task.value.taskSpecific = result;
+		finishedTask(task);
+	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
+	})
+}
+
+var reloadSystemSetting = function() {
+	logger4js.info("reloadSystemSetting from DB");
+	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
+	redisClient.del('vcSystemConfigUpdatedAt', function(err, response) {
+		if (err) {
+			errorHandler(err, undefined, `REDIS: Del System Setting vcSystemConfigUpdatedAt Error `, undefined)
+			return;
+		}
+		if (response) {
+			logger4js.info("REDIS: vcSystemConfigUpdatedAt Deleted Successfully");
+		} else  {
+			logger4js.warn("REDIS: vcSystemConfigUpdatedAt Deletion Problem");
+		}
+		initSystemSettings()
 	})
 }
 
@@ -210,7 +230,6 @@ var getSystemVCSetting = function (name) {
 }
 
 var getSystemUrl = function () {
-	logger4js.trace("Get Visbo System Url");
 	var vcSetting = getSystemVCSetting("UI URL")
 	var result = vcSetting.value && vcSetting.value.UIUrl;
 	logger4js.debug("Get Visbo System Url: %s", result);
@@ -223,5 +242,6 @@ module.exports = {
 	getSystemVC: getSystemVC,
 	getSystemVCSetting: getSystemVCSetting,
 	getSystemUrl: getSystemUrl,
-	refreshSystemSetting: refreshSystemSetting
+	refreshSystemSetting: refreshSystemSetting,
+	reloadSystemSetting: reloadSystemSetting
 };

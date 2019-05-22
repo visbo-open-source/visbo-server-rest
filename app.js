@@ -124,23 +124,31 @@ function dbConnect(dbconnection) {
 }
 
 // CORS Config, whitelist is an array
-var whitelist = [
-  'https://my.visbo.net', // Production Support
-  'https://staging.visbo.net', // Staging Support
-  'http://localhost:4200', // Development
-  'https://dev.visbo.net' // Development AWS Support
-]
+// var whitelist = [
+//   'https://my.visbo.net', // Production Support
+//   'https://staging.visbo.net', // Staging Support
+//   'http://localhost:4200', // Development
+//   'https://dev.visbo.net' // Development AWS Support
+// ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
 var corsOptions = {
   origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1 || !origin) {
+    var uiUrl = systemVC.getSystemUrl();
+    // check if the origin is from same system or not set in case of ClientApp or Postman
+    if (origin == uiUrl || !origin) {
       callback(null, true)
     } else {
-      logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
-      //callback(null, true) // temporary enable cors for all sites
+      logger4js.info("CorsOptions deny  %s ", origin);
       callback(origin + ' is not allowed to access', null)
-      // callback(new Error(origin + ' is not allowed to access'))
     }
+    // if (whitelist.indexOf(origin) !== -1 || !origin) {
+    //   callback(null, true)
+    // } else {
+    //   logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
+    //   //callback(null, true) // temporary enable cors for all sites
+    //   callback(origin + ' is not allowed to access', null)
+    //   // callback(new Error(origin + ' is not allowed to access'))
+    // }
   }
 }
 // setup environment variables

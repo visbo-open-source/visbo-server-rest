@@ -10,9 +10,10 @@ var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
-var systemVC = require('./../components/systemVC')
-var getSystemVC = systemVC.getSystemVC
-var getSystemUrl = systemVC.getSystemUrl
+var systemVC = require('./../components/systemVC');
+var getSystemVC = systemVC.getSystemVC;
+var getSystemUrl = systemVC.getSystemUrl;
+var reloadSystemSetting = systemVC.reloadSystemSetting;
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -2697,6 +2698,7 @@ router.route('/:vcid/cost')
 						logger4js.info("Update System Log Setting");
 						logging.setLogLevelConfig(oneVCSetting.value)
 					}
+					reloadSystemSetting();
 				}
 				req.oneVCSetting = oneVCSetting;
 				return res.status(200).send({
