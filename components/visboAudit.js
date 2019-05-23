@@ -50,7 +50,7 @@ function squeezeAudit(task, finishedTask) {
 
 	if (!task.value.taskSpecific) task.value.taskSpecific = {};
 	if (validate.validateDate(task.value.taskSpecific.lastMonth, false)) {
-		startSqueeze = task.value.taskSpecific.lastMonth
+		startSqueeze = new Date(task.value.taskSpecific.lastMonth)
 	}
 	var endSqueeze = new Date(startSqueeze);
 	endSqueeze.setMonth(endSqueeze.getMonth() + 1);

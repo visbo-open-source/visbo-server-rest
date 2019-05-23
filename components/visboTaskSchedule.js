@@ -21,7 +21,7 @@ var vcSystemId = undefined;
 
 //Create an event handler:
 function finishedTask(task) {
-  logger4js.debug("Task Finished, Task %s", task && task._id);
+  logger4js.debug("Task Finished, Task (%s/%s)", task && task.name, task && task._id);
   if (!task || !task.value) {
     logger4js.warn("No Task available during Finish, Task %s", task._id);
     return;
@@ -36,12 +36,12 @@ function finishedTask(task) {
     updateUpdate = {$unset : {'value.lockedUntil' : ''}, $set : {'value.lastRun' : currentDate, 'value.lastDuration': duration, 'value.taskSpecific': task.value.taskSpecific} };
   }
 
-  logger4js.trace("finishedTask Task(%s) unlock %O", task._id, updateUpdate);
+  logger4js.trace("FinishedTask Task(%s/%s) unlock %O", task.name, task._id, updateUpdate);
   VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
       if (err) {
         errorHandler(err, undefined, `DB: Update Task Unlock`, undefined)
       }
-      logger4js.debug("Finished Task Task(%s) unlocked %s", task._id, result.nModified);
+      logger4js.debug("Finished Task Task(%s/%s) unlocked %s", task.name, task._id, result.nModified);
   })
   createTaskAudit(task, duration);
 }
@@ -105,19 +105,19 @@ function checkNextRun() {
         var actual = new Date();
         for (var i=0; i < listTask.length; i++) {
           if (!listTask[i].value) {
-            logger4js.warn("CheckNextRun Task(%s/%s): %s has no valid Value %O ", i, listTask[i]._id, listTask[i].name, listTask[i]);
+            logger4js.warn("CheckNextRun Task(%s/%s): %s has no valid Value %O ", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i]);
             continue;
           } else {
-            logger4js.trace("CheckNextRun Task(%s/%s): %s nextRun %s lockedUntil %s ", i, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun, listTask[i].value.lockedUntil);
+            logger4js.trace("CheckNextRun Task(%s/%s): %s nextRun %s lockedUntil %s ", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun, listTask[i].value.lockedUntil);
             if (listTask[i].value.nextRun > actual) {  // nextRun has not expired
-              logger4js.trace("CheckNextRun Task(%s/%s): %s skip execution actual %s next %s", i, listTask[i]._id, listTask[i].name, actual.toISOString(), listTask[i].value.nextRun.toISOString());
+              logger4js.trace("CheckNextRun Task(%s/%s): %s skip execution actual %s next %s", listTask[i].name, listTask[i]._id, listTask[i].name, actual.toISOString(), listTask[i].value.nextRun.toISOString());
               continue;
             } else {  // nextRun has expired already
               if (listTask[i].value.lockedUntil) {  // Task was locked
                 if (listTask[i].value.lockedUntil < actual) { // lock expired
-                  logger4js.debug("CheckNextRun Task(%s/%s): %s has an expired lock %s lastRun %s", i, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
+                  logger4js.debug("CheckNextRun Task(%s/%s): %s has an expired lock %s lastRun %s", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
                 } else {
-                  logger4js.info("CheckNextRun Task(%s/%s): %s is locked %s lastRun %s ", i, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
+                  logger4js.info("CheckNextRun Task(%s/%s): %s is locked %s lastRun %s ", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
                   continue;
                 }
               }
@@ -144,35 +144,42 @@ function checkNextRun() {
           listTask[i].value.lockedUntil = new Date(actual);
           listTask[i].value.lockedUntil.setTime(listTask[i].value.lockedUntil.getTime() + lockPeriod * 1000);
           listTask[i].value.lastRun = new Date(); // now set it to current date as the last StartDate
-          logger4js.debug("CheckNextRun Task(%s/%s): %s needs execution next %s new lock %s", i, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun.toISOString(), listTask[i].value.lockedUntil.toISOString());
+          logger4js.debug("CheckNextRun Task(%s/%s): %s needs execution next %s new lock %s", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun.toISOString(), listTask[i].value.lockedUntil.toISOString());
           // MS TODO: Do not update if locked and check result that it has updated the item
-          var updateQuery = {_id: listTask[i]._id};
+          var updateQuery = {_id: listTask[i]._id, "$or": [{"value.lockedUntil": {$exists: false}}, {"value.lockedUntil": {$lt: new Date()}}]};
         	var updateOption = {upsert: false};
       		var updateUpdate = {$set : {'value.lastRun' : listTask[i].value.lastRun, 'value.nextRun' : listTask[i].value.nextRun, 'value.lockedUntil' : listTask[i].value.lockedUntil} };
+          var task = listTask[i];
 
         	VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
               if (err) {
                 errorHandler(err, undefined, `DB: Update Task`, undefined)
               }
-              logger4js.trace("CheckNextRun Task Saved %O", result);
+              logger4js.debug("CheckNextRun Task (%s/%s) Saved Items %s", task.name, task._id, result.nModified);
+              if (result.nModified == 1) {
+                // call specific operation for task
+                switch(task.name) {
+                  case 'Audit Cleanup':
+                    visboAudit.cleanupAudit(task, finishedTask);
+                    break;
+                  case 'Audit Squeeze':
+                    visboAudit.squeezeAudit(task, finishedTask);
+                    break;
+                  case 'System Config':
+                    refreshSystemSetting(task, finishedTask);
+                    break;
+                  case 'Task Test':
+                    taskTest(task, finishedTask);
+                    break;
+                  default:
+                    finishedTask(task)
+                }
+              } else {
+                logger4js.info("CheckNextRun Task (%s/%s) locked already by another Server", task.name, task._id);
+              }
         	})
-          // call specific operation for task
-          switch(listTask[i].name) {
-            case 'Audit Cleanup':
-              visboAudit.cleanupAudit(listTask[i], finishedTask);
-              break;
-            case 'Audit Squeeze':
-              visboAudit.squeezeAudit(listTask[i], finishedTask);
-              break;
-            case 'System Config':
-              refreshSystemSetting(listTask[i], finishedTask);
-              break;
-            case 'Task Test':
-              taskTest(listTask[i], finishedTask);
-              break;
-            default:
-              finishedTask(listTask[i])
-          }
+          // execute only one per round, otherwise task Object is incorrect
+          break;
         }
 			}
 		});
@@ -184,14 +191,14 @@ function taskTest(task, finishedTask) {
     finishedTask(task)
   }
   logger4js.trace("TaskTest Execute %s Value %O", task && task._id, task.value);
-  if (task.value.taskSpecific) {
-    task.value.taskSpecific.lastPeriod = new Date();
-    task.value.taskSpecific.lastPeriod.setHours(0);
-    task.value.taskSpecific.lastPeriod.setMinutes(0);
-    task.value.taskSpecific.lastPeriod.setSeconds(0);
-  }
+  task.value.taskSpecific = {};
+  task.value.taskSpecific.lastPeriod = new Date();
+  task.value.taskSpecific.lastPeriod.setHours(0);
+  task.value.taskSpecific.lastPeriod.setMinutes(0);
+  task.value.taskSpecific.lastPeriod.setSeconds(0);
+
   finishedTask(task)
-  logger4js.trace("TaskTest Done %s", task._id);
+  logger4js.debug("TaskTest Done %s Result %O", task._id, task.value.taskSpecific);
 }
 
 function visboTaskScheduleInit() {

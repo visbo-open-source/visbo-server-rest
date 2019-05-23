@@ -568,7 +568,7 @@ router.route('/:vcid')
 		logger4js.trace("Delete Visbo Center %s Status %s %O", req.params.vcid, req.oneVC.deletedAt, req.oneVC);
 		if (!req.oneVC.deletedAt) {
 			req.oneVC.deletedAt = new Date();
-			logger4js.trace("Delete Visbo Center after premission check %s %O", req.params.vcid, req.oneVC);
+			logger4js.trace("Delete Visbo Center after permission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
 					errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id}`, `Error deleting Visbo Center ${req.oneVC.name}`)
@@ -1180,7 +1180,7 @@ router.route('/:vcid/group/:groupid')
 				});
 			}
 		}
-		logger4js.debug("Delete Visbo Center Group after premission check %s", req.params.vcid);
+		logger4js.debug("Delete Visbo Center Group after permission check %s", req.params.vcid);
 
 		// Do not allow to delete internal VC Group
 		if (req.oneGroup.internal
@@ -1280,7 +1280,7 @@ router.route('/:vcid/group/:groupid')
 				message: 'not a Visbo Center Group'
 			});
 		}
-		logger4js.debug("Update Visbo Center Group after premission check vcid %s groupName %s", req.params.vcid, req.oneGroup.name);
+		logger4js.debug("Update Visbo Center Group after permission check vcid %s groupName %s", req.params.vcid, req.oneGroup.name);
 
 		if (req.oneGroup.groupType == 'VC') {
 			var minimalPerm = constPermVC.View | constPermVC.ManagePerm;
@@ -1648,7 +1648,7 @@ router.route('/:vcid/group/:groupid')
 				groups: [req.oneGroup]
 			});
 		}
-		logger4js.debug("Delete Visbo Center User after premission check %s", req.params.userid);
+		logger4js.debug("Delete Visbo Center User after permission check %s", req.params.userid);
 		req.oneGroup.users = newUserList;
 		req.oneGroup.save(function(err, vg) {
 			if (err) {
@@ -1873,7 +1873,7 @@ router.route('/:vcid/group/:groupid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			logger4js.debug("Delete Visbo Center Role after premission check %s", req.params.vcid);
+			logger4js.debug("Delete Visbo Center Role after permission check %s", req.params.vcid);
 			var query = {};
 			query._id = req.params.roleid;
 			query.vcid = req.params.vcid;
@@ -1956,7 +1956,7 @@ router.route('/:vcid/group/:groupid')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			logger4js.debug("Update Visbo Center Role after premission check %s", req.params.vcid);
+			logger4js.debug("Update Visbo Center Role after permission check %s", req.params.vcid);
 			var query = {};
 			query._id = req.params.roleid;
 			query.vcid = req.params.vcid;
@@ -2182,7 +2182,7 @@ router.route('/:vcid/cost')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		logger4js.debug("Delete Visbo Center Cost after premission check %s", req.params.vcid);
+		logger4js.debug("Delete Visbo Center Cost after permission check %s", req.params.vcid);
 		var query = {};
 		query._id = req.params.costid;
 		query.vcid = req.params.vcid;
@@ -2265,7 +2265,7 @@ router.route('/:vcid/cost')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		logger4js.debug("Update Visbo Center Cost after premission check %s", req.params.vcid);
+		logger4js.debug("Update Visbo Center Cost after permission check %s", req.params.vcid);
 		var query = {};
 		query._id =  req.params.costid;
 		query.vcid = req.params.vcid;
@@ -2550,7 +2550,7 @@ router.route('/:vcid/cost')
 					message: 'No Visbo Center or no Permission'
 				});
 			}
-			logger4js.debug("Delete Visbo Center Setting after premission check %s", req.params.vcid);
+			logger4js.debug("Delete Visbo Center Setting after permission check %s", req.params.vcid);
 			var query = {};
 			query._id = req.params.settingid;
 			query.vcid = req.params.vcid;
@@ -2637,7 +2637,7 @@ router.route('/:vcid/cost')
 
 		if (req.body.name) req.body.name = req.body.name.trim();
 		if (req.body.type) req.body.type = req.body.type.trim();
-		if (!validate.validateName(req.body.name, true) || !req.body.value || !validate.validateObjectId(req.body.userId, true)
+		if (!validate.validateName(req.body.name, true) || !validate.validateObjectId(req.body.userId, true)
 		|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, true)) {
 			logger4js.debug("PUT a new Visbo Center Setting body or value not accepted %O", req.body);
 			return res.status(400).send({
@@ -2653,7 +2653,7 @@ router.route('/:vcid/cost')
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		logger4js.debug("Update Visbo Center Setting after premission check %s", req.params.vcid);
+		logger4js.debug("Update Visbo Center Setting after permission check %s", req.params.vcid);
 		var query = {};
 		query._id =  req.params.settingid;
 		query.vcid = req.params.vcid;
@@ -2680,33 +2680,80 @@ router.route('/:vcid/cost')
 					vcsetting: [ oneVCSetting ]
 				});
 			}
-			if (req.body.name) oneVCSetting.name = req.body.name;
-			if (req.body.value) oneVCSetting.value = req.body.value;
-			if (req.body.userId) oneVCSetting.userId = req.body.userId;
-			if (req.body.type) oneVCSetting.type = req.body.type;
+			var isSystemVC = getSystemVC()._id.toString() == oneVCSetting.vcid.toString();
+			var isTask = isSystemVC && oneVCSetting.type == "Task" ? true: false;
+			var isSysConfig = isSystemVC && oneVCSetting.type == "SysConfig" ? true: false;
 
-			var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
-			if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
-			oneVCSetting.save(function(err, oneVCSetting) {
-				if (err) {
-					errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, `Error updating VisboCenter Setting`)
-					return;
+			if (!isTask) {
+				if (isSysConfig) {
+					// only update Value do not change name, type, timestamp and userId
+					if (req.body.value) oneVCSetting.value = req.body.value;
+				} else  {
+					// allow to change all
+					if (req.body.name) oneVCSetting.name = req.body.name;
+					if (req.body.userId) oneVCSetting.userId = req.body.userId;
+					if (req.body.type) oneVCSetting.type = req.body.type;
+					if (req.body.value) oneVCSetting.value = req.body.value;
+					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
+					if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
 				}
-				if (getSystemVC()._id.toString() == oneVCSetting.vcid.toString()
-				&& (oneVCSetting.type == 'SysConfig')) {
-					if (oneVCSetting.name == 'DEBUG') {
-						logger4js.info("Update System Log Setting");
-						logging.setLogLevelConfig(oneVCSetting.value)
+				oneVCSetting.save(function(err, resultVCSetting) {
+					if (err) {
+						errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, `Error updating VisboCenter Setting`)
+						return;
 					}
-					reloadSystemSetting();
-				}
-				req.oneVCSetting = oneVCSetting;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Center Setting',
-					vcsetting: [ oneVCSetting ]
+					if (isSysConfig) {
+						if (resultVCSetting.name == 'DEBUG') {
+							logger4js.info("Update System Log Setting");
+							logging.setLogLevelConfig(resultVCSetting.value)
+						}
+						reloadSystemSetting();
+					}
+					req.oneVCSetting = resultVCSetting;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Center Setting',
+						vcsetting: [ resultVCSetting ]
+					});
 				});
-			});
+			} else {
+				// Special Handling for Tasks required to avoid parallel updates by ReST and Task-Schedule
+				if (oneVCSetting.value && req.body.value) {
+					// only update nextRun, interval and taskSpecific, do not change type, name, timestamp, userId
+					if (req.body.value.interval) oneVCSetting.value.interval = req.body.value.interval;
+					if (req.body.value.taskSpecific) oneVCSetting.value.taskSpecific = req.body.value.taskSpecific;
+					var dateValue = (req.body.value.nextRun && Date.parse(req.body.value.nextRun)) ? new Date(req.body.value.nextRun) : new Date();
+					oneVCSetting.value.nextRun = dateValue;
+				}
+				var updateQuery = {_id: oneVCSetting._id, "$or": [{"value.lockedUntil": {$exists: false}}, {"value.lockedUntil": {$lt: new Date()}}]};
+				var updateOption = {upsert: false};
+				var updateUpdate = {$set : {'value.nextRun' : oneVCSetting.value.nextRun, 'value.interval' : oneVCSetting.value.interval, 'value.taskSpecific' : oneVCSetting.value.taskSpecific} };
+				logger4js.debug("VC Seting Task (%s/%s) Before Save %O", oneVCSetting.name, oneVCSetting._id, oneVCSetting);
+
+				VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+						if (err) {
+							errorHandler(err, undefined, `DB: VC Setting Update Task`, undefined)
+						}
+						logger4js.debug("VC Seting Task (%s/%s) Saved %O", oneVCSetting.name, oneVCSetting._id, result);
+						if (result.nModified == 1) {
+							req.oneVCSetting = oneVCSetting;
+							return res.status(200).send({
+								state: 'success',
+								message: 'Updated Visbo Center Setting',
+								vcsetting: [ oneVCSetting ]
+							});
+						} else {
+							logger4js.info("VC Seting Task (%s/%s) locked already by another Server", oneVCSetting.name, oneVCSetting._id);
+							return res.status(409).send({
+								state: 'failure',
+								message: 'Visbo Center Setting already updated inbetween',
+								vcsetting: [ oneVCSetting ]
+							});
+						}
+				})
+
+
+			}
 		});
 	})
 

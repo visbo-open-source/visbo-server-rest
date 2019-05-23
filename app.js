@@ -131,9 +131,11 @@ function dbConnect(dbconnection) {
 //   'https://dev.visbo.net' // Development AWS Support
 // ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
+var uiUrl = undefined;
+
 var corsOptions = {
   origin: function (origin, callback) {
-    var uiUrl = systemVC.getSystemUrl();
+    if (!uiUrl) uiUrl = systemVC.getSystemUrl();
     // check if the origin is from same system or not set in case of ClientApp or Postman
     if (origin == uiUrl || !origin) {
       callback(null, true)
