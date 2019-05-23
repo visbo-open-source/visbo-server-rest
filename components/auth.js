@@ -13,6 +13,7 @@ var pwPolicyPattern = undefined;
 
 var isAllowedPassword = function(password){
 
+	if (!password) return false;
 	if (!pwPolicy) {
 		var pwPolicySetting = getSystemVCSetting('PW Policy')
 		if (pwPolicySetting) {

@@ -834,7 +834,7 @@ router.route('/:vpid')
 			});
 		}
 		var destroyVP = req.oneVP.deletedAt
-		logger4js.debug("Delete Visbo Project %s %s after premission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
+		logger4js.debug("Delete Visbo Project %s %s after permission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
 			req.oneVP.deletedAt = new Date();
@@ -1307,7 +1307,7 @@ router.route('/:vpid/audit')
 					message: 'No Visbo Project or no Permission'
 				});
 			}
-			logger4js.debug("Delete Visbo Project Group after premission check %s", req.params.vpid);
+			logger4js.debug("Delete Visbo Project Group after permission check %s", req.params.vpid);
 
 			// Do not allow to delete internal VC Group
 			if (req.oneGroup.internal || req.oneGroup.groupType != 'VP') {
@@ -1403,7 +1403,7 @@ router.route('/:vpid/audit')
 				});
 			}
 
-			logger4js.debug("Update Visbo Project Group after premission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
+			logger4js.debug("Update Visbo Project Group after permission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
 
 			// fill in the required fields
 			if (vgName) req.oneGroup.name = vgName;
@@ -1715,7 +1715,7 @@ router.route('/:vpid/audit')
 					groups: [req.oneGroup]
 				});
 			}
-			logger4js.debug("Delete Visbo Project User after premission check %s", req.params.userid);
+			logger4js.debug("Delete Visbo Project User after permission check %s", req.params.userid);
 			req.oneGroup.users = newUserList;
 			req.oneGroup.save(function(err, vg) {
 				if (err) {
