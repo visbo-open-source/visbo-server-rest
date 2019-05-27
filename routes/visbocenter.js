@@ -2498,9 +2498,15 @@ router.route('/:vcid/cost')
 			vcSetting.value = req.body.value;
 			vcSetting.type = 'Custom';
 			if (req.body.userId) vcSetting.userId = req.body.userId;
-			if (req.body.type
-			&& req.body.type != 'SysValue' && req.body.type != 'SysConfig'	// reserved Names for System Config
-			&& req.params.vcid.toString() != getSystemVC()._id.toString()) {			// do not allow creation of new Settings through ReST for System Object
+			if (req.body.type) {
+				if (req.params.vcid.toString() != getSystemVC()._id.toString()
+				&& (req.body.type == 'SysValue' || req.body.type == 'SysConfig' && req.body.type == 'Task')) {
+					// not allowed to Create / Delete System Config Settings
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Not allowed to create this setting type'
+					});
+				}
 				vcSetting.type = req.body.type;
 			}
 			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
@@ -2580,12 +2586,14 @@ router.route('/:vcid/cost')
 					});
 				}
 				req.oneVCSetting = oneVCSetting;
-				// if (oneVCSetting.type == 'Internal') {
-				// 	return res.status(400).send({
-				// 		state: 'failure',
-				// 		message: 'Not allowed to delete Internal Settings'
-				// 	});
-				// }
+				if (oneVCSetting._id.toString() != getSystemVC()._id.toString()
+				&& (oneVCSetting.type == 'SysValue' || oneVCSetting.type == 'SysConfig' && oneVCSetting.type == 'Task')) {
+					// not allowed to Create / Delete System Config Settings
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Not allowed to delete this setting type'
+					});
+				}
 				logger4js.info("Found the Setting for VC");
 				oneVCSetting.remove(function(err, empty) {
 					if (err) {
@@ -2644,6 +2652,7 @@ router.route('/:vcid/cost')
 		var settingChangeSMTP = false;
 
 		req.auditDescription = 'Visbo Center Setting (Update)';
+		req.auditInfo = req.body.name.trim();
 
 		logger4js.info("PUT Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
 
@@ -2738,10 +2747,10 @@ router.route('/:vcid/cost')
 						}
 						reloadSystemSetting();
 					}
-					req.oneVCSetting = resultVCSetting;
 					if (settingChangeSMTP) {
 						resultVCSetting.value.auth.pass = "";
 					}
+					req.oneVCSetting = resultVCSetting;
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Visbo Center Setting',
