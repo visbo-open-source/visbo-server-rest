@@ -9,7 +9,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VCSetting = mongoose.model('VCSetting');
 
 var logging = require('./logging');
-var logModule = "OTHER";
+var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var errorHandler = require('./../components/errorhandler').handler;
@@ -137,7 +137,7 @@ var initSystemSettings = function() {
 var refreshSystemSetting = function(task, finishedTask) {
 	if (!task || !task.value) finishedTask(task);
 	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", task._id, task.value);
-	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
+	// Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
 			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
