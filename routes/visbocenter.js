@@ -3,6 +3,8 @@ var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
+var crypt = require('./../components/encrypt');
+
 
 var assert = require('assert');
 var auth = require('./../components/auth');
@@ -2370,6 +2372,7 @@ router.route('/:vcid/cost')
 			if (req.query.type) query.type = req.query.type;
 			if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) query.userId = req.query.userId;
 
+			logger4js.info("Find VC Settings with query %O", query);
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext)
@@ -2382,7 +2385,14 @@ router.route('/:vcid/cost')
 					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`)
 					return;
 				}
-				logger4js.info("Found %d Settings for VC", listVCSetting.length);
+				for (let i = 0; i < listVCSetting.length; i++){
+					// Remove Password Information
+					if (listVCSetting[i].type == "SysConfig" && listVCSetting[i].name == "SMTP"
+					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
+						listVCSetting[i].value.auth.pass = ""
+						break;
+					}
+				}
 				if (listVCSetting.length > 1 && latestOnly){
 					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
@@ -2397,6 +2407,7 @@ router.route('/:vcid/cost')
 						}
 					}
 					logger4js.debug("Found %d Project Versions after Filtering", listVCSettingfiltered.length);
+
 					req.auditInfo = listVCSettingfiltered.length;
 					return res.status(200).send({
 						state: 'success',
@@ -2630,6 +2641,7 @@ router.route('/:vcid/cost')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var settingChangeSMTP = false;
 
 		req.auditDescription = 'Visbo Center Setting (Update)';
 
@@ -2687,7 +2699,24 @@ router.route('/:vcid/cost')
 			if (!isTask) {
 				if (isSysConfig) {
 					// only update Value do not change name, type, timestamp and userId
+					var password = "";
+					if (oneVCSetting.name == "SMTP") {
+						if (oneVCSetting.value && oneVCSetting.value.auth && oneVCSetting.value.auth.pass)
+							settingChangeSMTP = true;
+							password = oneVCSetting.value.auth.pass
+					}
 					if (req.body.value) oneVCSetting.value = req.body.value;
+					if (settingChangeSMTP) {
+						if (req.body.value.auth && req.body.value.auth.pass) {
+							// encrypt new password before save
+							oneVCSetting.value.auth.pass = crypt.encrypt(req.body.value.auth.pass);
+							logger4js.warn("Update SMTP Setting New Password");
+
+						} else {
+							// restore old encrypted password
+							oneVCSetting.value.auth.pass = password;
+						}
+					}
 				} else  {
 					// allow to change all
 					if (req.body.name) oneVCSetting.name = req.body.name;
@@ -2710,6 +2739,9 @@ router.route('/:vcid/cost')
 						reloadSystemSetting();
 					}
 					req.oneVCSetting = resultVCSetting;
+					if (settingChangeSMTP) {
+						resultVCSetting.value.auth.pass = "";
+					}
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Visbo Center Setting',
