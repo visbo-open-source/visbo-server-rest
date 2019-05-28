@@ -21,7 +21,7 @@ var vcSystemId = undefined;
 
 //Create an event handler:
 function finishedTask(task) {
-  logger4js.debug("Task Finished, Task (%s/%s)", task && task.name, task && task._id);
+  logger4js.info("Task Finished, Task (%s/%s)", task && task.name, task && task._id);
   if (!task || !task.value) {
     logger4js.warn("No Task available during Finish, Task %s", task._id);
     return;
