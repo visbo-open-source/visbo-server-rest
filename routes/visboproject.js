@@ -1404,28 +1404,43 @@ router.route('/:vpid/audit')
 			}
 
 			logger4js.debug("Update Visbo Project Group after permission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
-
-			// fill in the required fields
-			if (vgName) req.oneGroup.name = vgName;
-			req.oneGroup.permission = newPerm;
-			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
-			req.oneGroup.save(function(err, oneGroup) {
+			// check unique group name
+			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP', name: req.body.name};
+			var queryVCGroup = VisboGroup.find(query);
+			queryVCGroup.lean();
+			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`)
+					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, `Error getting VisboProject Groups`)
 					return;
 				}
-				var resultGroup = {};
-				resultGroup._id = oneGroup._id;
-				resultGroup.name = oneGroup.name;
-				resultGroup.vcid = oneGroup.vcid;
-				resultGroup.global = oneGroup.global;
-				resultGroup.permission = oneGroup.permission;
-				resultGroup.groupType = oneGroup.groupType;
-				resultGroup.users = oneGroup.users;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Project Group',
-					groups: [ resultGroup ]
+				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Visbo Project Group already exists'
+					});
+				}
+				// fill in the required fields
+				if (vgName) req.oneGroup.name = vgName;
+				req.oneGroup.permission = newPerm;
+				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
+				req.oneGroup.save(function(err, oneGroup) {
+					if (err) {
+						errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`)
+						return;
+					}
+					var resultGroup = {};
+					resultGroup._id = oneGroup._id;
+					resultGroup.name = oneGroup.name;
+					resultGroup.vcid = oneGroup.vcid;
+					resultGroup.global = oneGroup.global;
+					resultGroup.permission = oneGroup.permission;
+					resultGroup.groupType = oneGroup.groupType;
+					resultGroup.users = oneGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Project Group',
+						groups: [ resultGroup ]
+					});
 				});
 			});
 		})
