@@ -107,7 +107,7 @@ router.route('/')
 					{"vc": {$exists: false}, "vp": {$exists: false},
 						"$or": [
 							{"action": {$ne: "GET"}},
-							{"result.status": {$ne: "200", $ne: "304"}}
+							{"result.status": {$nin: ["200", "304"]}}
 						]
 					}
 				]});
