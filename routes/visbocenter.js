@@ -1304,13 +1304,15 @@ router.route('/:vcid/group/:groupid')
 		// check that group name does not exist
 		var query = {};
 		query.name = req.body.name;								// Name Duplicate check
-		query._id = {$ne: req.oneGroup._id};
-		VisboGroup.findOne(query, function(err, vg) {
+		query.vcid = req.oneVC._id;
+		query.groupType = "VC";
+		VisboGroup.find(query, function(err, listVCGroup) {
 			if (err) {
 				errorHandler(err, res, `DB: PUT VC Group ${req.body.name} Find`, `Update Visbo Center Group ${req.body.name} failed`)
 				return;
 			}
-			if (vg) {
+			if (listVCGroup.length > 1 || (listVCGroup.length == 1 &&  listVCGroup[0]._id.toString() != req.oneGroup._id.toString())) {
+				logger4js.debug("Create Visbo Center Group (Name is not unique) %O", listVCGroup);
 				return res.status(409).send({
 					state: "failure",
 					message: "Visbo Center Group already exists"
@@ -2428,7 +2430,7 @@ router.route('/:vcid/cost')
 					req.auditInfo = listVCSettingfiltered.length;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Versions',
+						message: 'Returned Visbo Center Settings',
 						count: listVCSettingfiltered.length,
 						vcsetting: listVCSettingfiltered
 					});
@@ -2436,7 +2438,7 @@ router.route('/:vcid/cost')
 					req.auditInfo = listVCSetting.length;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Versions',
+						message: 'Returned Visbo Center Settings',
 						count: listVCSetting.length,
 						vcsetting: listVCSetting
 					});
@@ -2669,7 +2671,7 @@ router.route('/:vcid/cost')
 		var settingChangeSMTP = false;
 
 		req.auditDescription = 'Visbo Center Setting (Update)';
-		req.auditInfo = req.body.name.trim();
+		req.auditInfo = (req.body.name || "").trim();
 
 		logger4js.info("PUT Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
 

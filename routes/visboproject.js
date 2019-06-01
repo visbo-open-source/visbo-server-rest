@@ -1803,6 +1803,13 @@ router.route('/:vpid/lock')
 		} 
 		logger4js.info("POST Lock Visbo Project %s Check variant %s does exists  ", req.params.vpid, variantName);
 
+		if (!(req.combinedPerm.vp & constPermVP.Modify
+				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Project or no Permission'
+			});
+		}
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
 				logger4js.warn("POST Lock Visbo Project %s variant %s does not exists  ", req.params.vpid, variantName);
 				return res.status(400).send({
@@ -1963,7 +1970,7 @@ router.route('/:vpid/variant')
 	*  ]}
 	* }
 	*/
-// Create a Variant inside a Project
+// Create Variant inside a Project
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;

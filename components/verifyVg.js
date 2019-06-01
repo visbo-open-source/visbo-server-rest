@@ -43,7 +43,7 @@ function getGroupId(req, res, next, groupId) {
 		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
 	 	// Convert the result to request
 		if (listVG.length != 1) {
-			logger4js.warn("GroupId %s for VC %s not found", groupId, vcid);
+			logger4js.warn("GroupId %s for VC/VP %s not found", groupId, vcid||vpid);
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({
 				state: 'failure',
