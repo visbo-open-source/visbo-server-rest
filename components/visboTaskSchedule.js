@@ -1,11 +1,13 @@
 var mongoose = require('mongoose');
 // mongoose.Promise = require('q').Promise;
 require('../models/visbocenter');
+require('../models/visboproject');
 require('../models/vcsetting');
 require('../models/visboaudit');
 var VisboCenter = mongoose.model('VisboCenter');
 var VCSetting = mongoose.model('VCSetting');
 var VisboAudit = mongoose.model('VisboAudit');
+var VisboProject = mongoose.model('VisboProject');
 
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -16,11 +18,12 @@ var eventEmitter = new events.EventEmitter();
 var visboRedis = require('./../components/visboRedis');
 var errorHandler = require('./../components/errorhandler').handler;
 var visboAudit = require('./../components/visboAudit');
+var lock = require('./../components/lock');
 var refreshSystemSetting = require('./../components/systemVC').refreshSystemSetting;
 var vcSystemId = undefined;
 
 //Create an event handler:
-function finishedTask(task) {
+function finishedTask(task, ignoreAudit) {
   logger4js.info("Task Finished, Task (%s/%s)", task && task.name, task && task._id);
   if (!task || !task.value) {
     logger4js.warn("No Task available during Finish, Task %s", task._id);
@@ -43,7 +46,7 @@ function finishedTask(task) {
       }
       logger4js.debug("Finished Task Task(%s/%s) unlocked %s", task.name, task._id, result.nModified);
   })
-  createTaskAudit(task, duration);
+  if (!ignoreAudit) createTaskAudit(task, duration);
 }
 
 function createTaskAudit(task, duration) {
@@ -165,6 +168,9 @@ function checkNextRun() {
                   case 'Audit Squeeze':
                     visboAudit.squeezeAudit(task, finishedTask);
                     break;
+                  case 'Lock Cleanup':
+                    lock.cleanupAllVPLock(task, finishedTask);
+                    break;
                   case 'System Config':
                     refreshSystemSetting(task, finishedTask);
                     break;
@@ -172,7 +178,7 @@ function checkNextRun() {
                     taskTest(task, finishedTask);
                     break;
                   default:
-                    finishedTask(task)
+                    finishedTask(task, false)
                 }
               } else {
                 logger4js.info("CheckNextRun Task (%s/%s) locked already by another Server", task.name, task._id);
@@ -188,7 +194,7 @@ function checkNextRun() {
 
 function taskTest(task, finishedTask) {
   if (!task && !task.value) {
-    finishedTask(task)
+    finishedTask(task, true)
   }
   logger4js.trace("TaskTest Execute %s Value %O", task && task._id, task.value);
   task.value.taskSpecific = {};
@@ -197,7 +203,7 @@ function taskTest(task, finishedTask) {
   task.value.taskSpecific.lastPeriod.setMinutes(0);
   task.value.taskSpecific.lastPeriod.setSeconds(0);
 
-  finishedTask(task)
+  finishedTask(task, true)
   logger4js.debug("TaskTest Done %s Result %O", task._id, task.value.taskSpecific);
 }
 

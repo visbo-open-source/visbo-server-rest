@@ -9,19 +9,19 @@ var errorHandler = require('./../components/errorhandler').handler;
 
 function cleanupAudit(task, finishedTask) {
 	logger4js.debug("cleanupAudit Execute %s", task && task._id);
-	if (!task || !task.value) finishedTask(task);
+	if (!task || !task.value) finishedTask(task, false);
 	var queryaudit = {ttl: {$lt: new Date()}};
 	VisboAudit.deleteMany(queryaudit, function (err, result) {
 		if (err){
 			errorHandler(err, undefined, `DB: DELETE Expired Audits`, undefined)
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: Delete Audit'};
-			finishedTask(task);
+			finishedTask(task, false);
 			return;
 		}
 		task.value.taskSpecific = {result: result.deletedCount, resultDescription: `Deleted ${result.deletedCount} expired Audit Entries`}
 
 		logger4js.debug("Task: cleanupAudit Result %O", result)
-		finishedTask(task);
+		finishedTask(task, false);
 	});
 
 	logger4js.debug("cleanupAudit Done %s", task._id);
@@ -45,7 +45,7 @@ function squeezeDelete(squeezeEntry, lastDate) {
 
 function squeezeAudit(task, finishedTask) {
 	logger4js.debug("squeezeAudit Execute %s", task && task._id);
-	if (!task || !task.value) finishedTask(task);
+	if (!task || !task.value) finishedTask(task, false);
 	var startSqueeze = new Date("2018-01-01");
 
 	if (!task.value.taskSpecific) task.value.taskSpecific = {};
@@ -71,7 +71,7 @@ function squeezeAudit(task, finishedTask) {
 		resultFinished.result = 0;
 		resultFinished.resultDescription = 'Nothing to squeeze';
 		task.value.taskSpecific = resultFinished
-		finishedTask(task);
+		finishedTask(task, false);
 		return;
 	}
 	logger4js.debug("squeezeAudit Execute %s: Start %s End %s", task._id, startSqueeze.toISOString(), endSqueeze.toISOString());
@@ -92,7 +92,7 @@ function squeezeAudit(task, finishedTask) {
 			resultFinished.result = -1;
 			resultFinished.resultDescription = 'Err: DB Get Squeeze Audit';
 			task.value.taskSpecific = resultFinished
-			finishedTask(task);
+			finishedTask(task, false);
 			return;
 		}
 		logger4js.info("Task: squeezeAudit Result %s Audit Groups", listAudits.length)
@@ -108,7 +108,7 @@ function squeezeAudit(task, finishedTask) {
 		resultFinished.result = squeezeCount;
 		resultFinished.resultDescription = `Squeezed ${squeezeCount} Entries for Month ${endSqueeze.toISOString()}`
 		task.value.taskSpecific = resultFinished
-		finishedTask(task);
+		finishedTask(task, false);
 	});
 	logger4js.debug("squeezeAudit Done %s", task._id);
 }

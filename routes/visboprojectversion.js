@@ -565,7 +565,8 @@ router.route('/:vpvid')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Project Version',
-			vpv: [req.oneVPV]
+			vpv: [req.oneVPV],
+			perm: req.combinedPerm
 		});
 	})
 
@@ -694,14 +695,6 @@ router.route('/:vpvid')
 				variantExists = false;
 			};
 		}
-		// check if the project is locked
-		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
-			return res.status(423).send({
-				state: 'failure',
-				message: 'Visbo Project locked',
-				vp: [req.oneVP]
-			});
-		}
 		// user does not have admin permission and does not own the variant
 		var hasPerm = false;
 		if (req.combinedPerm.vp & constPermVP.Delete) {
@@ -714,6 +707,14 @@ router.route('/:vpvid')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'Visbo Project Version no permission to delete Version'
+			});
+		}
+		// check if the project is locked
+		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
+			return res.status(423).send({
+				state: 'failure',
+				message: 'Visbo Project locked',
+				vp: [req.oneVP]
 			});
 		}
 		var destroyVPV = req.oneVPV.deletedAt

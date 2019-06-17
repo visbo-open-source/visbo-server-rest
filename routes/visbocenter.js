@@ -1301,56 +1301,75 @@ router.route('/:vcid/group/:groupid')
 				});
 			}
 		}
-		// query vpids to fill in if group is global
+		// check that group name does not exist
 		var query = {};
-		query.vcid = req.oneGroup.vcid;
-		query.deletedAt = {$exists: false};
-		var queryVP = VisboProject.find(query);
-		queryVP.select('_id'); // return only _id
-		queryVP.lean();
-		queryVP.exec(function (err, listVP) {
+		query.name = req.body.name;								// Name Duplicate check
+		query.vcid = req.oneVC._id;
+		query.groupType = "VC";
+		VisboGroup.find(query, function(err, listVCGroup) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Group, Get Projects `, `Error updating Group for Visbo Center ${req.oneVC.name} `)
+				errorHandler(err, res, `DB: PUT VC Group ${req.body.name} Find`, `Update Visbo Center Group ${req.body.name} failed`)
 				return;
-			};
-			logger4js.debug("Found %d Projects", listVP.length);
-			// logger4js.debug("Found Projects/n", listVP);
-
-			// fill in the required fields
-			if (req.body.name) req.oneGroup.name = req.body.name;
-			req.oneGroup.permission = newPerm;
-			if (vgGlobal != req.oneGroup.global) {
-				// switch global group setting, handle vpids
-				logger4js.debug("Switch Global Flag %s", vgGlobal);
-				req.oneGroup.vpids = [];
-				if (vgGlobal == true) {
-					for (var i = 0; i<listVP.length; i++) {
-						req.oneGroup.vpids.push(listVP[i]._id)
-					}
-					logger4js.debug("Updated Projects/n", req.oneGroup.vpids);
-				} else {
-					req.oneGroup.permission.vp = undefined;
-				}
-				req.oneGroup.global = vgGlobal;
 			}
-			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
-			req.oneGroup.save(function(err, oneVcGroup) {
+			if (listVCGroup.length > 1 || (listVCGroup.length == 1 &&  listVCGroup[0]._id.toString() != req.oneGroup._id.toString())) {
+				logger4js.debug("Create Visbo Center Group (Name is not unique) %O", listVCGroup);
+				return res.status(409).send({
+					state: "failure",
+					message: "Visbo Center Group already exists"
+				});
+			}
+			logger4js.debug("Create Visbo Center Group (Name is already unique)");
+			// query vpids to fill in if group is global
+			var query = {};
+			query.vcid = req.oneGroup.vcid;
+			query.deletedAt = {$exists: false};
+			var queryVP = VisboProject.find(query);
+			queryVP.select('_id'); // return only _id
+			queryVP.lean();
+			queryVP.exec(function (err, listVP) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VC Group ${req.oneGroup._id} Save `, `Error updating Visbo Center Group ${req.oneGroup.name} `)
+					errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Group, Get Projects `, `Error updating Group for Visbo Center ${req.oneVC.name} `)
 					return;
+				};
+				logger4js.debug("Found %d Projects", listVP.length);
+				// logger4js.debug("Found Projects/n", listVP);
+
+				// fill in the required fields
+				if (req.body.name) req.oneGroup.name = req.body.name;
+				req.oneGroup.permission = newPerm;
+				if (vgGlobal != req.oneGroup.global) {
+					// switch global group setting, handle vpids
+					logger4js.debug("Switch Global Flag %s", vgGlobal);
+					req.oneGroup.vpids = [];
+					if (vgGlobal == true) {
+						for (var i = 0; i<listVP.length; i++) {
+							req.oneGroup.vpids.push(listVP[i]._id)
+						}
+						logger4js.debug("Updated Projects/n", req.oneGroup.vpids);
+					} else {
+						req.oneGroup.permission.vp = undefined;
+					}
+					req.oneGroup.global = vgGlobal;
 				}
-				var resultGroup = {};
-				resultGroup._id = oneVcGroup._id;
-				resultGroup.name = oneVcGroup.name;
-				resultGroup.vcid = oneVcGroup.vcid;
-				resultGroup.global = oneVcGroup.global;
-				resultGroup.permission = oneVcGroup.permission;
-				resultGroup.groupType = oneVcGroup.groupType;
-				resultGroup.users = oneVcGroup.users;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Center Group',
-					groups: [ resultGroup ]
+				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
+				req.oneGroup.save(function(err, oneVcGroup) {
+					if (err) {
+						errorHandler(err, res, `DB: PUT VC Group ${req.oneGroup._id} Save `, `Error updating Visbo Center Group ${req.oneGroup.name} `)
+						return;
+					}
+					var resultGroup = {};
+					resultGroup._id = oneVcGroup._id;
+					resultGroup.name = oneVcGroup.name;
+					resultGroup.vcid = oneVcGroup.vcid;
+					resultGroup.global = oneVcGroup.global;
+					resultGroup.permission = oneVcGroup.permission;
+					resultGroup.groupType = oneVcGroup.groupType;
+					resultGroup.users = oneVcGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Center Group',
+						groups: [ resultGroup ]
+					});
 				});
 			});
 		});
@@ -2411,7 +2430,7 @@ router.route('/:vcid/cost')
 					req.auditInfo = listVCSettingfiltered.length;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Versions',
+						message: 'Returned Visbo Center Settings',
 						count: listVCSettingfiltered.length,
 						vcsetting: listVCSettingfiltered
 					});
@@ -2419,7 +2438,7 @@ router.route('/:vcid/cost')
 					req.auditInfo = listVCSetting.length;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Versions',
+						message: 'Returned Visbo Center Settings',
 						count: listVCSetting.length,
 						vcsetting: listVCSetting
 					});
@@ -2652,7 +2671,7 @@ router.route('/:vcid/cost')
 		var settingChangeSMTP = false;
 
 		req.auditDescription = 'Visbo Center Setting (Update)';
-		req.auditInfo = req.body.name.trim();
+		req.auditInfo = (req.body.name || "").trim();
 
 		logger4js.info("PUT Visbo Center Setting for userid %s email %s and vc %s setting %s ", userId, useremail, req.params.vcid, req.params.settingid);
 
