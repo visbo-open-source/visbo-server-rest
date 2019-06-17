@@ -627,6 +627,9 @@ router.route('/:vpid')
 			});
 		}
 		// we have found the VP already in middleware
+
+		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
+
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Projects',
@@ -1900,6 +1903,7 @@ router.route('/:vpid/lock')
 		variantName = req.query.variantName || "";
 		logger4js.info("DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
 
+		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
 			logger4js.info("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
@@ -1920,8 +1924,6 @@ router.route('/:vpid/lock')
 
 		logger4js.debug("Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
-		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
-		req.oneVP.lock = listLockNew;
 		logger4js.debug("Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
 		req.oneVP.save(function(err, empty) {

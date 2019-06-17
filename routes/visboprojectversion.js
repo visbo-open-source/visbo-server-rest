@@ -565,7 +565,8 @@ router.route('/:vpvid')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Project Version',
-			vpv: [req.oneVPV]
+			vpv: [req.oneVPV],
+			perm: req.combinedPerm
 		});
 	})
 

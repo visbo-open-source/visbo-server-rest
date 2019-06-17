@@ -135,14 +135,14 @@ var initSystemSettings = function() {
 }
 
 var refreshSystemSetting = function(task, finishedTask) {
-	if (!task || !task.value) finishedTask(task);
+	if (!task || !task.value) finishedTask(task, false);
 	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", task._id, task.value);
 	// Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
 			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
-			finishedTask(task);
+			finishedTask(task, false);
 			return;
 		}
 		var result = {};
@@ -155,7 +155,7 @@ var refreshSystemSetting = function(task, finishedTask) {
 			result = {result: 0, resultDescription: 'System Settings Still up to date'}
 		}
 		task.value.taskSpecific = result;
-		finishedTask(task);
+		finishedTask(task, task.value.taskSpecific.result == 0);
 	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
 	})
 }
