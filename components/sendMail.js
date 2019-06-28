@@ -126,6 +126,27 @@ function accountNotRegistered(req, user) {
 	});
 };
 
+// Send Mail about user not registered
+function accountRegisteredSuccess(req, user) {
+	var template = __dirname.concat('/../emailTemplates/userRegisteredSuccess.ejs')
+	var uiUrl =  getSystemUrl();
+	uiUrl = uiUrl.concat('/login', '?email=', user.email);
+	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+		if (err) {
+			logger4js.warn("E-Mail Rendering failed %s", err.message);
+		} else {
+			// logger4js.debug("E-Mail Rendering done: %s", emailHtml);
+			var message = {
+					to: user.email,
+					subject: 'You have successfully registered!',
+					html: '<p> '.concat(emailHtml, " </p>")
+			};
+			logger4js.info("Now send register success mail to %s", message.to);
+			mail.VisboSendMail(message);
+		}
+	});
+};
+
 // Send Mail about account locked
 function accountNewLogin(req, user) {
 	// now send an e-Mail to the user for pw change
@@ -160,5 +181,6 @@ module.exports = {
 	passwordExpired: passwordExpired,
 	passwordExpiresSoon: passwordExpiresSoon,
 	accountNotRegistered: accountNotRegistered,
+	accountRegisteredSuccess: accountRegisteredSuccess,
 	accountNewLogin: accountNewLogin
 };

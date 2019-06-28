@@ -137,10 +137,10 @@ var corsOptions = {
   origin: function (origin, callback) {
     if (!uiUrl) uiUrl = systemVC.getSystemUrl();
     // check if the origin is from same system or not set in case of ClientApp or Postman
-    if (origin == uiUrl || !origin) {
+    if (origin == uiUrl || origin == 'http://localhost:4200' || !origin) {
       callback(null, true)
     } else {
-      logger4js.info("CorsOptions deny  %s ", origin);
+      logger4js.info("CorsOptions deny  %s vs allowed %s", origin, uiUrl);
       callback(origin + ' is not allowed to access', null)
     }
     // if (whitelist.indexOf(origin) !== -1 || !origin) {
