@@ -18,13 +18,14 @@ lsb_release -a
 
 # get the node & npm installation
   sudo apt-get install -y nodejs
-  sudo apt install npm
-  sudo npm install -g n
+  sudo apt install -y npm
+  sudo npm install -gy n
   sudo n stable
+  # sudo apt install ng-common -y
 
 # install the additional components
-  sudo npm install -g @angular/cli 
-  sudo npm install apidoc -g
+  sudo npm install -yg @angular/cli 
+  sudo npm install apidoc -yg
   npm upgrade npm@6.9.0
 
 # CLOSE CONNECTION AND VERIFY THAT THE VERSION IS NOW CORRECT
@@ -35,16 +36,26 @@ lsb_release -a
 # Configure Network Setup
 
 # NGINX Setup
-  sudo apt-get install software-properties-common
-  sudo add-apt-repository ppa:nginx/stable
-  sudo apt-get install nginx
+  sudo apt-get install software-properties-common -y
+  sudo add-apt-repository ppa:nginx/stable -y
+  sudo apt-get install nginx -y
   sudo systemctl start nginx
   sudo systemctl enable nginx # restart during reboot
 
 # NGINX CONFIGURATION change
   # INSTALL SSL CERTIFICATES
-  # CONFIG server-availables/dev.visbo.net
+  sudo mkdir /etc/nginx/ssl
+  sudo chmod o-rwx /etc/nginx/ssl
+  sudo cp $HOME/GitHub/visbo-server-rest/setup/PublicSSLCertificate_visbo.net /etc/nginx/ssl/visbo.net_ssl_certificate.cer
+  sudo cp /dev/null /etc/nginx/ssl/_.visbo.net_private_key.key
+  echo "Private KEY for CERTIFICATE MISSING"
   sudo systemctl reload nginx
+
+  # CONFIG server-availables/dev.visbo.net
+  sudo cp $HOME/GitHub/visbo-server-rest/install/nginx_dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
+  sudo ln -s /etc/nginx/sites-available/dev.visbo.net /etc/nginx/sites-enabled/dev.visbo.net
+
+# VisboDevLoadBalancer-1259273035.eu-central-1.elb.amazonaws.com
 
 # GIT setup
   mkdir $HOME/GitHub; cd $HOME/GitHub
@@ -56,16 +67,21 @@ lsb_release -a
   git config credential.helper store
 
 # get the branches from bitbucket
+  echo "BE CAREFULL First use needs password so no multi line support"
   git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-rest.git --branch development --single-branch
+
   git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch development --single-branch
 
 # install modules for the two components
+  chown -R ubuntu:ubuntu $HOME/.npm
   cd $HOME/GitHub/visbo-server-rest; npm install
   cd $HOME/GitHub/visbo-server-ui; npm install
 
 # EDIT the $HOME/bin/update-* Commands
   cd $HOME; mkdir bin; cd bin
-  # TODO: create the commands here with the script
+  cp $HOME/GitHub/visbo-server-rest/setup/update-rest .
+  cp $HOME/GitHub/visbo-server-rest/setup/update-ui .
+
   chmod u+x $HOME/bin/update*
 
 # Create Web Folder /var/www/apidoc & /var/www/visbo-web-ui and log folder
@@ -86,7 +102,7 @@ lsb_release -a
   echo "ENABLE IP ADDRESS FOR Mongo DB ACCESS"
 
 # install Redis
-  sudo apt-get install redis-server
+  sudo apt-get install redis-server -y
   # setup to restart after reboot
   sudo systemctl enable redis-server.service
   # check that it runs
@@ -108,13 +124,14 @@ lsb_release -a
   ng build --prod
 
 # ReST Setup
-# EDIT THE CONFIG File for ReST Server 
+# EDIT THE CONFIG File for ReST Server
 cd $HOME/GitHub/visbo-server-rest/
 vi .env
 # start the ReST Server
 pm2 start $HOME/GitHub/visbo-server-rest/startReST.sh --name VisboReST
 pm2 startup
 pm2 save
+echo "EXECUTE Command that was prompted!!!"
 
 update-rest
 update-ui

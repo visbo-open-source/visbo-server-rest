@@ -1,6 +1,6 @@
 PORT=3484
 NODE_ENV=production
+LOGPATH="/var/log/visbo"
 
-# PRODUCTION
-  # Atlas  Mongo DB
+# Atlas  Mongo DB
 NODE_VISBODB="mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboStaging?retryWrites=true"
