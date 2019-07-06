@@ -1,0 +1,8 @@
+[Unit]
+Description=AWS EFS Mount Script
+
+[Service]
+ExecStart=/home/ubuntu/bin/aws-automount.sh
+
+[Install]
+WantedBy=multi-user.target

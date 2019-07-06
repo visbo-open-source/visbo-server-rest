@@ -1,5 +1,5 @@
 # Connect with SSH:
-ssh -i "$HOME/Downloads/DevVisboAWS.pem" ubuntu@dev.visbo.net
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@SERVER_DNS_NAME
 
 # Commands for Setup
 
