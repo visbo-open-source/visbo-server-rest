@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var VisboAudit = mongoose.model('VisboAudit');
 var validate = require('./../components/validate');
+var os = require("os");
 
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -115,8 +116,10 @@ function squeezeAudit(task, finishedTask) {
 
 function saveAuditEntry(tokens, req, res, factor) {
 	var auditEntry = new VisboAudit();
+
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
+	auditEntry.host = os.hostname().split(".")[0];
 	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
 	var baseUrl = auditEntry.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
