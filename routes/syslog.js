@@ -80,7 +80,7 @@ router.route('/')
 				message: 'No Permission to View System Log'
 			});
 		}
-		logger4js.warn("Get Log File from Directory: %s Date %s", dir, ageDate);
+		logger4js.debug("Get Log File from Directory: %s Date %s", dir, ageDate);
 		var folders = fs.readdirSync(dir);
 		var stats = {}
     for (var i in folders){

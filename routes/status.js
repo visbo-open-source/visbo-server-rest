@@ -41,7 +41,7 @@ router.route('/')
 		req.auditDescription = 'Status (Read)';
 		req.auditTTLMode = 4;			// short Time to Live
 
-		logger4js.info("Get Satus ReST Server ");
+		logger4js.debug("Get Satus ReST Server ");
 		var err = {"code": "400", "errtext": "Long explanation"}
 		if (req.query.error) {
 			var status = ''
@@ -101,8 +101,8 @@ router.route('/')
 				state: 'success',
 				message: 'Status of ReST Server',
 				status: {
-					version: process.env.VERSION_REST,
-					versionUI: process.env.VERSION_UI
+					version: process.env.VERSION_REST || new Date(),
+					versionUI: process.env.VERSION_UI || new Date()
 				}
 			});
 		}

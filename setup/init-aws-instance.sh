@@ -1,4 +1,14 @@
 
+// AWS WEB Server 1
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-121-116-230.eu-central-1.compute.amazonaws.com
+// AWS WEB Server 2
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-57-252-178.eu-central-1.compute.amazonaws.com
+// AWS WEB Server 3
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-35-159-46-84.eu-central-1.compute.amazonaws.com
+// AWS WEB Server 4
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-59-227-44.eu-central-1.compute.amazonaws.com
+/ AWS WEB Server 5
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-197-109-170.eu-central-1.compute.amazonaws.com
 
 #
   sudo cp $HOME/GitHub/visbo-server-rest/install/nginx.aws.dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
@@ -24,3 +34,9 @@ pm2 save
 
 update-rest
 update-ui
+
+
+fs-ac623ef5.efs.eu-central-1.amazonaws.com
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-ac623ef5.efs.eu-central-1.amazonaws.com:/ /var/centrallog
+# /etc/fstab entry
+fs-ac623ef5.efs.eu-central-1.amazonaws.com:/ /var/centrallog efs defaults,_netdev 0 0
