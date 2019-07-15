@@ -18,10 +18,19 @@ var getColumnOfDate = function(value) {
 
 
 // calculate cost of personal for the requested project per month
-var getAllPersonalKosten = function(vpv) {
+var getAllPersonalKosten = function(vpv, organisation) {
 	costValues = [];
-	logger4js.info("Calculate Personal Cost of Visbo Project Version %s start %s end %s ", vpv._id, vpv.startDate, vpv.endDate);
+	logger4js.info("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
+	// prepare organisation for direct access to uid
+	var allRoles = [];
+	for (var i = 0; i < organisation.value.allRoles.length; i++) {
+		allRoles[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i]
+	}
+	var endCalc = new Date();
+	logger4js.debug("Calculate Personal Cost Convert Organisation %s ", endCalc.getTime() - startCalc.getTime());
+
+	startCalc = new Date();
 	var startIndex = getColumnOfDate(vpv.startDate);
 	var endIndex = getColumnOfDate(vpv.endDate);
 	var dauer = endIndex - startIndex;
@@ -35,7 +44,7 @@ var getAllPersonalKosten = function(vpv) {
 				// logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);
 				for (var j = 0; j < phase.AllRoles.length; j++) {
 					var role = phase.AllRoles[j];
-					var tagessatz = 860.0;
+					var tagessatz = allRoles[role.RollenTyp].tagessatzIntern;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
 					if (role.Bedarf) {
 						var dimension = role.Bedarf.length;
@@ -51,7 +60,7 @@ var getAllPersonalKosten = function(vpv) {
 		costValues[0] = 0
 	}
 	var endCalc = new Date();
-	logger4js.info("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	logger4js.warn("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return costValues;
 }
 
