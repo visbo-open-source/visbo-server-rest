@@ -1,15 +1,7 @@
 
-// AWS WEB Server 1
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-121-116-230.eu-central-1.compute.amazonaws.com
-// AWS WEB Server 2
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-57-252-178.eu-central-1.compute.amazonaws.com
-// AWS WEB Server 3
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-35-159-46-84.eu-central-1.compute.amazonaws.com
-// AWS WEB Server 4
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-85-84.eu-central-1.compute.amazonaws.com
-/ AWS WEB Server 5
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-35-157-120-212.eu-central-1.compute.amazonaws.com
-
+/ AWS WEB Server 6
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-194-45-46.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-120-227-138.eu-central-1.compute.amazonaws.com
 cd $HOME/Downloads
 alias VP="newman run -e VisboReSTAWSDevelopment.postman_environment.json 40Parallelism.postman_collection.json"
 
