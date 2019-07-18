@@ -50,7 +50,7 @@ if [ -f update-db.js ]; then
     echo "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo --quiet "$NODE_VISBODB" update-db.js
+    mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."
