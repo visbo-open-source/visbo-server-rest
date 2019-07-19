@@ -1,5 +1,11 @@
 #!/bin/bash
 cd $HOME/GitHub/visbo-server-rest
+continueOnEmptyPull=0
+echo "Args:$#:"
+if [ $# -gt 0 -a "$1" = "force" ]
+then
+  continueOnEmptyPull=1
+fi
 echo "01: Checking Local Status of Branch"
 git status
 if [ $? -ne 0 ]
@@ -20,7 +26,7 @@ fi
 
 echo "Pull Result"
 echo "$pullOutput"
-if [ "$pullOutput" = "Already up to date." ]
+if [ "$continueOnEmptyPull" -eq 0 -a "$pullOutput" = "Already up to date." ]
 then
   echo "INFO: No changes in the ReST Server Branch."
   exit 0
