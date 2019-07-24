@@ -3,8 +3,9 @@ ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@SERVER_DNS_NAME
 
 # Commands for Setup
 
-# change root password to a specific & secure one
+# change root & ubuntu password to a specific & secure one
 sudo passwd
+passwd
 
 # get version of System
 lsb_release -a
@@ -42,21 +43,6 @@ lsb_release -a
   sudo systemctl start nginx
   sudo systemctl enable nginx # restart during reboot
 
-# NGINX CONFIGURATION change
-  # INSTALL SSL CERTIFICATES
-  sudo mkdir /etc/nginx/ssl
-  sudo chmod o-rwx /etc/nginx/ssl
-  sudo cp $HOME/GitHub/visbo-server-rest/setup/PublicSSLCertificate_visbo.net /etc/nginx/ssl/visbo.net_ssl_certificate.cer
-  sudo cp /dev/null /etc/nginx/ssl/_.visbo.net_private_key.key
-  echo "Private KEY for CERTIFICATE MISSING"
-  sudo systemctl reload nginx
-
-  # CONFIG server-availables/dev.visbo.net
-  sudo cp $HOME/GitHub/visbo-server-rest/install/nginx_dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
-  sudo ln -s /etc/nginx/sites-available/dev.visbo.net /etc/nginx/sites-enabled/dev.visbo.net
-
-# VisboDevLoadBalancer-1259273035.eu-central-1.elb.amazonaws.com
-
 # GIT setup
   mkdir $HOME/GitHub; cd $HOME/GitHub
   sudo chown ubuntu $HOME/.config
@@ -92,6 +78,21 @@ lsb_release -a
   sudo npm install pm2@latest -g
   ## no sudo for pm2, it runs as user not as root
   pm2 install pm2-logrotate
+
+  # NGINX CONFIGURATION change
+    # INSTALL SSL CERTIFICATES
+    # sudo mkdir /etc/nginx/ssl
+    # sudo chmod o-rwx /etc/nginx/ssl
+    # sudo cp $HOME/GitHub/visbo-server-rest/setup/PublicSSLCertificate_visbo.net /etc/nginx/ssl/visbo.net_ssl_certificate.cer
+    # sudo cp /dev/null /etc/nginx/ssl/_.visbo.net_private_key.key
+    # echo "Private KEY for CERTIFICATE MISSING"
+    # sudo systemctl reload nginx
+
+    # CONFIG server-availables/dev.visbo.net
+    sudo cp $HOME/GitHub/visbo-server-rest/setup/nginx.aws.dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
+    sudo ln -s /etc/nginx/sites-available/dev.visbo.net /etc/nginx/sites-enabled/dev.visbo.net
+
+  # VisboDevLoadBalancer-1259273035.eu-central-1.elb.amazonaws.com
 
 # install mongo clients
   echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse"| sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list

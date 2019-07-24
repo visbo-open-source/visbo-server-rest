@@ -1,7 +1,13 @@
 
 / AWS WEB Server 6
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-194-45-46.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-120-227-138.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-71-119.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-194-62-25.eu-central-1.compute.amazonaws.com
+
+# aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
+
+redis-cli -h visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com -p 6379 monitor
+
 cd $HOME/Downloads
 alias VP="newman run -e VisboReSTAWSDevelopment.postman_environment.json 40Parallelism.postman_collection.json"
 
