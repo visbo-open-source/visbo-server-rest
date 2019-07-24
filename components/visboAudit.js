@@ -196,7 +196,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 	auditEntry.ip = req.headers["x-real-ip"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
-	auditEntry.result.time = Math.round(Number(tokens['response-time'](req, res))/factor)
+	auditEntry.result.time = Math.round(Number((tokens['response-time'](req, res)) || 0)/factor)
 	var status = tokens.status(req, res);
 	auditEntry.result.status = status
 	if (status == 200) auditEntry.result.statusText = "Success"
