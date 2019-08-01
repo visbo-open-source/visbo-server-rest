@@ -123,6 +123,10 @@ var initSystemSettings = function() {
 				vcSystemSetting[i].value.auth.pass = crypt.decrypt(vcSystemSetting[i].value.auth.pass);
 				logger4js.debug("Setting SMTP found Decrypt Password");
 			}
+			if (vcSystemSetting[i].name == "REDIS") {
+				logger4js.info("Setting REDIS found init Client");
+				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
+			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt
 			}

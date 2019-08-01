@@ -2727,6 +2727,7 @@ router.route('/:vcid/cost')
 			if (!isTask) {
 				if (isSysConfig) {
 					// only update Value do not change name, type, timestamp and userId
+					logger4js.info("Update System Setting for VC %O", req.body.value);
 					var password = "";
 					if (oneVCSetting.name == "SMTP") {
 						if (oneVCSetting.value && oneVCSetting.value.auth && oneVCSetting.value.auth.pass)
@@ -2745,7 +2746,7 @@ router.route('/:vcid/cost')
 							oneVCSetting.value.auth.pass = password;
 						}
 					}
-				} else  {
+				} else {
 					// allow to change all
 					if (req.body.name) oneVCSetting.name = req.body.name;
 					if (req.body.userId) oneVCSetting.userId = req.body.userId;
@@ -2811,8 +2812,6 @@ router.route('/:vcid/cost')
 							});
 						}
 				})
-
-
 			}
 		});
 	})

@@ -1,7 +1,6 @@
 PORT=3484
 NODE_ENV=production
+LOGPATH="/var/log/visbo"
 
-# PRODUCTION
-  # Atlas  Mongo DB
+# Atlas  Mongo DB
 NODE_VISBODB="mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboStaging?retryWrites=true"
-SMTP = { "host": "smtp.1und1.de", "auth": { "user": "service@visbo.de", "pass": "XXXXXXXXX" }, "pool": true, "port": 465, "secure": true, "requireTLS": true, "connectionTimeout": 500, "greetingTimeout": 300, "logger": false, "debug": false, "dkim": { "domainName": "visbo.de", "keySelector": "visbo2019" }}

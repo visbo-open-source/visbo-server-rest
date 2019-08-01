@@ -1,21 +1,35 @@
 #!/bin/bash
 cd $HOME/GitHub/visbo-server-rest
+continueOnEmptyPull=0
+echo "Args:$#:"
+if [ $# -gt 0 -a "$1" = "force" ]
+then
+  continueOnEmptyPull=1
+fi
 echo "01: Checking Local Status of Branch"
 git status
 if [ $? -ne 0 ]
 then
   echo "FATAL: Local Changes have to be checked first before upgrading."
-  exit
+  exit 1
 fi
 
 echo "02: Pull Branch from Repository Server"
 updateCmdOrg=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
 updatePackageOrg=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
-git pull
+pullOutput=`git pull`
 if [ $? -ne 0 ]
 then
   echo "FATAL: Pull Failed to update ReST Server Branch."
-  exit
+  exit 1
+fi
+
+echo "Pull Result"
+echo "$pullOutput"
+if [ "$continueOnEmptyPull" -eq 0 -a "$pullOutput" = "Already up to date." ]
+then
+  echo "INFO: No changes in the ReST Server Branch."
+  exit 0
 fi
 
 updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
@@ -26,7 +40,7 @@ then
   if [ $? -ne 0 ]
   then
     echo "FATAL: Install of NODE components failed."
-    exit
+    exit 1
   fi
 fi
 
@@ -34,7 +48,7 @@ updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
   echo "WARN: Update Script has changed in between, please restart update again."
-  exit
+  exit 2
 fi
 
 echo "04: Update API Documentation"
@@ -50,11 +64,11 @@ if [ -f update-db.js ]; then
     echo "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo --quiet "$NODE_VISBODB" update-db.js
+    mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."
-      exit
+      exit 1
     fi
 else
   echo "No Upgrade Script available!"
@@ -66,7 +80,7 @@ pm2 restart VisboReST
 if [ $? -ne 0 ]
 then
   echo "FATAL: PM2 Restart failed to Restart Visbo-Server-Rest."
-  exit
+  exit 1
 fi
 pm2 reset VisboReST
 

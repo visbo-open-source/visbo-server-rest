@@ -9,6 +9,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
+var visboBusiness = require('./../components/visboBusiness');
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboGroupUser = mongoose.model('VisboGroupUser');
@@ -34,6 +35,8 @@ router.use('/', verifyVpv.getAllVPVGroups);
 router.use('/', verifyVpv.getPortfolioVPs);
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVpvidGroups);
+// register the VPV middleware to get the related organisation if required
+router.param('vpvid', verifyVpv.getVpvidOrgs);
 
 // updates the VPV Count in the VP after create/delete/undelete Visbo Project
 var updateVPVCount = function(vpid, variantName, increment){
@@ -556,18 +559,31 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
+		var calcCost = req.query.calcCost ? true : false;
+		var cost = [];
 
 		req.auditDescription = 'Visbo Project Version (Read)';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 0;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
-		return res.status(200).send({
-			state: 'success',
-			message: 'Returned Visbo Project Version',
-			vpv: [req.oneVPV],
-			perm: req.combinedPerm
-		});
+		if (calcCost) {
+			cost = visboBusiness.getAllPersonalKosten(req.oneVPV, req.visboOrganisations[0]);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Project Version',
+				// vpv: [req.oneVPV],
+				// perm: req.combinedPerm,
+				cost: cost
+			});
+		} else {
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Project Version',
+				vpv: [req.oneVPV],
+				perm: req.combinedPerm
+			});
+		}
 	})
 
 /**

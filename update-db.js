@@ -545,11 +545,28 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
-
 dateBlock = "2019-06-07T00:00:00"
 if (currentVersion < dateBlock) {
   // change Config Value Types
   var taskName = 'Lock Cleanup'
+  var setting = db.vcsettings.findOne({vcid: systemvc._id, type: "Task", name: taskName});
+  if (!setting) {
+    print ("Create Task " + taskName)
+    db.vcsettings.insertOne({vcid: systemvc._id, name: taskName, type: "Task", value: {lastRun: new Date(), interval: 86400}, createdAt: new Date(), updatedAt: new Date()})
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2019-06-29T00:00:00"
+if (currentVersion < dateBlock) {
+  // add Config Values fpr REDIS && Log File Handling
+  db.vcsettings.insertOne({vcid: systemvc._id, name: "REDIS", type: "SysConfig", value: {host: "localhost", port: 6379}, createdAt: new Date(), updatedAt: new Date()})
+  db.vcsettings.insertOne({vcid: systemvc._id, name: "Log Age", type: "SysConfig", value: {duration: 30}, createdAt: new Date(), updatedAt: new Date()})
+
+  var taskName = 'Log File Cleanup'
   var setting = db.vcsettings.findOne({vcid: systemvc._id, type: "Task", name: taskName});
   if (!setting) {
     print ("Create Task " + taskName)

@@ -3,12 +3,14 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var cors = require('cors');
 var logger = require('morgan');
+var fs = require('fs');
 // var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
 var process = require('process');
+var os = require( 'os' );
 
 var logging = require('./components/logging');
 var log4js = require('log4js');
@@ -137,10 +139,10 @@ var corsOptions = {
   origin: function (origin, callback) {
     if (!uiUrl) uiUrl = systemVC.getSystemUrl();
     // check if the origin is from same system or not set in case of ClientApp or Postman
-    if (origin == uiUrl || !origin) {
+    if (origin == uiUrl || origin == 'http://localhost:4200' || !origin) {
       callback(null, true)
     } else {
-      logger4js.info("CorsOptions deny  %s ", origin);
+      logger4js.info("CorsOptions deny  %s vs allowed %s", origin, uiUrl);
       callback(origin + ' is not allowed to access', null)
     }
     // if (whitelist.indexOf(origin) !== -1 || !origin) {
@@ -165,6 +167,45 @@ var app = express();
 
 // configure log4js
 var fsLogPath = process.env.LOGPATH || (__dirname + '/logging');
+var stats;
+try {
+  stats = fs.statSync(fsLogPath);
+} catch (err) {
+  console.log("LogPath %s does not exists or user has no permission: %O", fsLogPath, err)
+  throw err;
+}
+if ( !stats.isDirectory()) {
+  console.log("LogPath %s exists but is no directory")
+  throw err;
+} else {
+  // console.log("Basic LogPath exists, Check for the App Server Folder")
+  //
+  // find out the IP addresses of the server
+  // var networkInterfaces = os.networkInterfaces( );
+  // console.log( networkInterfaces );
+
+  // now checck for the Folder Hostname is not exists try to create
+  var hostname = os.hostname();
+  hostname = hostname.split(".")[0];
+  console.log("Hostname %s", hostname );
+  fsLogPath = path.join(fsLogPath, hostname);
+  try {
+    stats = fs.statSync(fsLogPath);
+  } catch (err) {
+    try {
+      fs.mkdirSync(fsLogPath, { recursive: false })
+    } catch (err) {
+      console.log("Host Folder could not be created %s", fsLogPath)
+      throw err
+    }
+  }
+  if ( !stats.isDirectory()) {
+    console.log("LogPath %s exists but is no directory")
+    throw err
+  }
+  // now all is in place fsLogPath exists for this server
+}
+
 logging.initLog4js(fsLogPath);
 // initialise with default debug
 var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "ALL": "debug"}

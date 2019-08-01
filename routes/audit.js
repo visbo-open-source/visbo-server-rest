@@ -149,6 +149,7 @@ router.route('/')
 			textCondition.push({"vc.name": expr});
 			textCondition.push({"vp.name": expr});
 			textCondition.push({"vpv.name": expr});
+			textCondition.push({"host": expr});
 			textCondition.push({"url": expr});
 			textCondition.push({"action": expr});
 			textCondition.push({"actionInfo": expr});
