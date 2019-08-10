@@ -1,9 +1,12 @@
 
 / AWS WEB Server 6
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-184-85-85.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-196-187-26.eu-central-1.compute.amazonaws.com
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-71-119.eu-central-1.compute.amazonaws.com
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-194-62-25.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-121-229-235.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-54-93-228-252.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-18-197-165-147.eu-central-1.compute.amazonaws.com
+
+
 # aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
 
 redis-cli -h visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com -p 6379 monitor
