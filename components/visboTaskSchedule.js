@@ -18,8 +18,10 @@ var eventEmitter = new events.EventEmitter();
 var visboRedis = require('./../components/visboRedis');
 var errorHandler = require('./../components/errorhandler').handler;
 var visboAudit = require('./../components/visboAudit');
+var logging = require('./../components/logging');
 var lock = require('./../components/lock');
 var refreshSystemSetting = require('./../components/systemVC').refreshSystemSetting;
+var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
 var vcSystemId = undefined;
 
 //Create an event handler:
@@ -167,6 +169,15 @@ function checkNextRun() {
                     break;
                   case 'Audit Squeeze':
                     visboAudit.squeezeAudit(task, finishedTask);
+                    break;
+                  case 'Log File Cleanup':
+                    var config = getSystemVCSetting('Log Age')
+                    var age = 30;
+                    if (config && config.value && config.value.duration)
+                      age = config.value.duration;
+                    task.specificValue = { 'logAge': age }
+                    logger4js.debug("Execute Log Delete Age %O", task.specificValue);
+                    logging.cleanupLogFiles(task, finishedTask);
                     break;
                   case 'Lock Cleanup':
                     lock.cleanupAllVPLock(task, finishedTask);

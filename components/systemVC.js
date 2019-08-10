@@ -2,6 +2,8 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 require('../models/users');
 require('../models/visbogroup');
+require('../models/visbocenter');
+require('../models/vcsetting');
 
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
