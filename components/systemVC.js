@@ -126,6 +126,7 @@ var initSystemSettings = function() {
 			if (vcSystemSetting[i].name == "REDIS") {
 				logger4js.info("Setting REDIS found init Client");
 				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
+				redisClient.set('vcSystem', vcSystem._id.toString());
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt
