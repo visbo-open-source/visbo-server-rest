@@ -1,4 +1,6 @@
 var mongoose = require('mongoose');
+var os = require("os");
+
 // mongoose.Promise = require('q').Promise;
 require('../models/visbocenter');
 require('../models/visboproject');
@@ -59,6 +61,7 @@ function createTaskAudit(task, duration) {
   var auditEntry = new VisboAudit();
   auditEntry.action = "PUT";
   auditEntry.url = "Task"
+  auditEntry.host = os.hostname().split(".")[0];
   auditEntry.sysAdmin = true;
   auditEntry.user = {};
   auditEntry.user.email = "System";
