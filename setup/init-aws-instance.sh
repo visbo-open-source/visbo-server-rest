@@ -2,9 +2,9 @@
 / AWS WEB Server 6
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-196-187-26.eu-central-1.compute.amazonaws.com
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-71-119.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-194-62-25.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-54-93-228-252.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-18-197-165-147.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-184-85-85.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-52-59-30-85.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-120-98-216.eu-central-1.compute.amazonaws.com
 
 
 # aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
@@ -39,8 +39,15 @@ pm2 save
 update-rest
 update-ui
 
+# install EFS Mount Utils
 
-fs-ac623ef5.efs.eu-central-1.amazonaws.com
-sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-ac623ef5.efs.eu-central-1.amazonaws.com:/ /var/centrallog
+sudo apt-get -y install binutils
+./build-deb.sh
+sudo apt-get -y install ./build/amazon-efs-utils*deb
+
+
+
+fs-030c235a.efs.eu-central-1.amazonaws.com
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-030c235a.efs.eu-central-1.amazonaws.com:/ /var/centrallog
 # /etc/fstab entry
-fs-ac623ef5.efs.eu-central-1.amazonaws.com:/ /var/centrallog efs defaults,_netdev 0 0
+fs-030c235a.efs.eu-central-1.amazonaws.com:/ /var/centrallog efs defaults,_netdev 0 0
