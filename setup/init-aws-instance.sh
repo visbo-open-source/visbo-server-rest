@@ -1,8 +1,7 @@
 
 / AWS WEB Server 6
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-196-187-26.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-71-119.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-184-85-85.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-59-207-14.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-59-224-211.eu-central-1.compute.amazonaws.com
 ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-52-59-30-85.eu-central-1.compute.amazonaws.com
 ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-120-98-216.eu-central-1.compute.amazonaws.com
 
@@ -51,3 +50,11 @@ fs-030c235a.efs.eu-central-1.amazonaws.com
 sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-030c235a.efs.eu-central-1.amazonaws.com:/ /var/centrallog
 # /etc/fstab entry
 fs-030c235a.efs.eu-central-1.amazonaws.com:/ /var/centrallog efs defaults,_netdev 0 0
+
+
+# update and create a new version of the AMI
+/usr/lib/update-notifier/apt-check -p
+sudo apt update && apt list --upgradeable
+sudo apt-get upgrade
+sudo apt-get full-upgrade
+sudo apt autoremove
