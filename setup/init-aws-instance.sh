@@ -1,10 +1,14 @@
 
 / AWS WEB Server 6
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-59-207-14.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-59-150-176.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-52-59-30-85.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-120-98-216.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-54-93-229-51.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-127-233.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-121-224-178.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-18-185-127-60.eu-central-1.compute.amazonaws.com
 
+curl http://localhost:3484/status
+
+
+fsmt-43fa731a
 
 # aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
 
@@ -58,6 +62,3 @@ sudo apt update && apt list --upgradeable
 sudo apt-get upgrade
 sudo apt-get full-upgrade
 sudo apt autoremove
-
-
-curl http://localhost:3484/status
