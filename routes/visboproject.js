@@ -627,6 +627,9 @@ router.route('/:vpid')
 			});
 		}
 		// we have found the VP already in middleware
+
+		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
+
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Projects',
@@ -834,7 +837,7 @@ router.route('/:vpid')
 			});
 		}
 		var destroyVP = req.oneVP.deletedAt
-		logger4js.debug("Delete Visbo Project %s %s after premission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
+		logger4js.debug("Delete Visbo Project %s %s after permission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
 			req.oneVP.deletedAt = new Date();
@@ -1307,7 +1310,7 @@ router.route('/:vpid/audit')
 					message: 'No Visbo Project or no Permission'
 				});
 			}
-			logger4js.debug("Delete Visbo Project Group after premission check %s", req.params.vpid);
+			logger4js.debug("Delete Visbo Project Group after permission check %s", req.params.vpid);
 
 			// Do not allow to delete internal VC Group
 			if (req.oneGroup.internal || req.oneGroup.groupType != 'VP') {
@@ -1403,29 +1406,44 @@ router.route('/:vpid/audit')
 				});
 			}
 
-			logger4js.debug("Update Visbo Project Group after premission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
-
-			// fill in the required fields
-			if (vgName) req.oneGroup.name = vgName;
-			req.oneGroup.permission = newPerm;
-			req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
-			req.oneGroup.save(function(err, oneGroup) {
+			logger4js.debug("Update Visbo Project Group after permission check vpid %s groupName %s", req.params.vpid, req.oneGroup.name);
+			// check unique group name
+			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP', name: req.body.name};
+			var queryVCGroup = VisboGroup.find(query);
+			queryVCGroup.lean();
+			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`)
+					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, `Error getting VisboProject Groups`)
 					return;
 				}
-				var resultGroup = {};
-				resultGroup._id = oneGroup._id;
-				resultGroup.name = oneGroup.name;
-				resultGroup.vcid = oneGroup.vcid;
-				resultGroup.global = oneGroup.global;
-				resultGroup.permission = oneGroup.permission;
-				resultGroup.groupType = oneGroup.groupType;
-				resultGroup.users = oneGroup.users;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated Visbo Project Group',
-					groups: [ resultGroup ]
+				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Visbo Project Group already exists'
+					});
+				}
+				// fill in the required fields
+				if (vgName) req.oneGroup.name = vgName;
+				req.oneGroup.permission = newPerm;
+				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
+				req.oneGroup.save(function(err, oneGroup) {
+					if (err) {
+						errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`)
+						return;
+					}
+					var resultGroup = {};
+					resultGroup._id = oneGroup._id;
+					resultGroup.name = oneGroup.name;
+					resultGroup.vcid = oneGroup.vcid;
+					resultGroup.global = oneGroup.global;
+					resultGroup.permission = oneGroup.permission;
+					resultGroup.groupType = oneGroup.groupType;
+					resultGroup.users = oneGroup.users;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Visbo Project Group',
+						groups: [ resultGroup ]
+					});
 				});
 			});
 		})
@@ -1715,7 +1733,7 @@ router.route('/:vpid/audit')
 					groups: [req.oneGroup]
 				});
 			}
-			logger4js.debug("Delete Visbo Project User after premission check %s", req.params.userid);
+			logger4js.debug("Delete Visbo Project User after permission check %s", req.params.userid);
 			req.oneGroup.users = newUserList;
 			req.oneGroup.save(function(err, vg) {
 				if (err) {
@@ -1788,6 +1806,13 @@ router.route('/:vpid/lock')
 		} 
 		logger4js.info("POST Lock Visbo Project %s Check variant %s does exists  ", req.params.vpid, variantName);
 
+		if (!(req.combinedPerm.vp & constPermVP.Modify
+				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Project or no Permission'
+			});
+		}
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
 				logger4js.warn("POST Lock Visbo Project %s variant %s does not exists  ", req.params.vpid, variantName);
 				return res.status(400).send({
@@ -1878,6 +1903,7 @@ router.route('/:vpid/lock')
 		variantName = req.query.variantName || "";
 		logger4js.info("DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:", userId, useremail, req.params.vpid, variantName);
 
+		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
 			logger4js.info("Delete Lock for VP :%s: No Lock exists", req.oneVP.name);
@@ -1898,8 +1924,6 @@ router.route('/:vpid/lock')
 
 		logger4js.debug("Delete Lock for VP :%s: after perm check has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
-		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
-		req.oneVP.lock = listLockNew;
 		logger4js.debug("Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
 		req.oneVP.save(function(err, empty) {
@@ -1948,7 +1972,7 @@ router.route('/:vpid/variant')
 	*  ]}
 	* }
 	*/
-// Create a Variant inside a Project
+// Create Variant inside a Project
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;

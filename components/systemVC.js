@@ -2,6 +2,8 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 require('../models/users');
 require('../models/visbogroup');
+require('../models/visbocenter');
+require('../models/vcsetting');
 
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -9,7 +11,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VCSetting = mongoose.model('VCSetting');
 
 var logging = require('./logging');
-var logModule = "OTHER";
+var logModule = "VC";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var errorHandler = require('./../components/errorhandler').handler;
@@ -19,7 +21,7 @@ var crypt = require('./../components/encrypt');
 
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
-var lastUpdatedAt = undefined;
+var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
 var findUser = function(currentUser) {
@@ -123,6 +125,11 @@ var initSystemSettings = function() {
 				vcSystemSetting[i].value.auth.pass = crypt.decrypt(vcSystemSetting[i].value.auth.pass);
 				logger4js.debug("Setting SMTP found Decrypt Password");
 			}
+			if (vcSystemSetting[i].name == "REDIS") {
+				logger4js.info("Setting REDIS found init Client");
+				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
+				redisClient.set('vcSystem', vcSystem._id.toString());
+			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt
 			}
@@ -134,26 +141,46 @@ var initSystemSettings = function() {
 	});
 }
 
-var refreshSystemSetting = function(taskID, finishedTask, value, startDate) {
-	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", taskID, value);
-	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
+var refreshSystemSetting = function(task, finishedTask) {
+	if (!task || !task.value) finishedTask(task, false);
+	logger4js.debug("Task(%s) refreshSystemSetting Execute Value %O", task._id, task.value);
+	// Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
 			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
-			finishedTask(taskID, {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'}, startDate);
+			task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
+			finishedTask(task, false);
 			return;
 		}
 		var result = {};
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
-			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
 			initSystemSettings()
 			result = {result: 1, resultDescription: 'Init System Settings'}
 		} else {
-			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", taskID, newUpdatedAt, lastUpdatedAt.toISOString());
+			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
 			result = {result: 0, resultDescription: 'System Settings Still up to date'}
 		}
-		finishedTask(taskID, result, startDate);
-	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", taskID, newUpdatedAt);
+		task.value.taskSpecific = result;
+		finishedTask(task, task.value.taskSpecific.result == 0);
+	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
+	})
+}
+
+var reloadSystemSetting = function() {
+	logger4js.info("reloadSystemSetting from DB");
+	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
+	redisClient.del('vcSystemConfigUpdatedAt', function(err, response) {
+		if (err) {
+			errorHandler(err, undefined, `REDIS: Del System Setting vcSystemConfigUpdatedAt Error `, undefined)
+			return;
+		}
+		if (response) {
+			logger4js.info("REDIS: vcSystemConfigUpdatedAt Deleted Successfully");
+		} else  {
+			logger4js.warn("REDIS: vcSystemConfigUpdatedAt Deletion Problem");
+		}
+		initSystemSettings()
 	})
 }
 
@@ -210,7 +237,6 @@ var getSystemVCSetting = function (name) {
 }
 
 var getSystemUrl = function () {
-	logger4js.trace("Get Visbo System Url");
 	var vcSetting = getSystemVCSetting("UI URL")
 	var result = vcSetting.value && vcSetting.value.UIUrl;
 	logger4js.debug("Get Visbo System Url: %s", result);
@@ -223,5 +249,6 @@ module.exports = {
 	getSystemVC: getSystemVC,
 	getSystemVCSetting: getSystemVCSetting,
 	getSystemUrl: getSystemUrl,
-	refreshSystemSetting: refreshSystemSetting
+	refreshSystemSetting: refreshSystemSetting,
+	reloadSystemSetting: reloadSystemSetting
 };

@@ -1,3 +1,7 @@
+var fs = require('fs');
+var util = require('util');
+var path = require('path');
+
 var log4js = require('log4js');
 var logger4js = undefined;
 
@@ -20,6 +24,88 @@ setLogLevelConfig = function(newConfigDebug) {
 	}
 	// console.log("LOG LEVEL SET: %O", newConfigDebug)
 	configDebug = newConfigDebug
+}
+
+function cleanupLogFiles(task, finishedTask) {
+	logger4js.debug("cleanupLogFiles Execute %s", task && task._id);
+	if (!task || !task.value) finishedTask(task, false);
+	var ageDays = 30;
+	if (task.specificValue)
+		ageDays =  task.specificValue.logAge || ageDays
+	var deleteLogDate = new Date();
+	var deletedCount = 0;
+	// MS TODO: use sysconfig Value for Log Age
+	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays)
+	deleteLogDate.setHours(0);
+	deleteLogDate.setMinutes(0);
+	deleteLogDate.setSeconds(0);
+	deleteLogDate.setMilliseconds(0);
+
+	var dir = path.join(__dirname, '../logging');
+	if (process.env.LOGPATH != undefined) {
+		dir = process.env.LOGPATH;
+	}
+	var fileList = [];
+
+	logger4js.debug("Delete Log File from Directory: %s Date %s", dir, deleteLogDate);
+	var folders = fs.readdirSync(dir);
+	var stats = {}
+
+	for (var i in folders) {
+		var folder = path.join(dir, folders[i]);
+		if (folders[i].substring(0, 1) == '.') {
+			logger4js.debug("Ignore dot folders %s in log folder", folder);
+			continue;
+		}
+		stats = fs.statSync(folder);
+		if ( !stats.isDirectory()) {
+			logger4js.debug("Ignore native file %s in log folder", folder);
+		} else {
+			// Browse Host Directory for Log Files per Host
+			var files = fs.readdirSync(folder);
+			var stats = {}
+			var emptyFolder = true;
+			for (var j in files) {
+				var file = path.join(folder, files[j]);
+				if (files[j].substring(0, 1) == '.') {
+					logger4js.debug("Ignore dot files %s in log folder", file);
+					emptyFolder = false
+					continue;
+				}
+				stats = fs.statSync(file);
+				if ( !stats.isFile()) {
+					logger4js.debug("Ignore non native file %s in log folder", file);
+					emptyFolder = false
+				} else {
+					if (stats.mtime < deleteLogDate) {
+						var fullFileName = path.join(folder, files[j]);
+						logger4js.trace("Delete Log File %s Modified %s AgeFilter %s", fullFileName, stats.mtime, deleteLogDate);
+						try {
+						  fs.unlinkSync(fullFileName);
+							deletedCount += 1;
+						  logger4js.debug('Delete Log File %s successfully', fullFileName);
+						} catch (err) {
+							logger4js.warn('Delete Log File %s failed', fullFileName);
+						}
+					} else {
+						logger4js.debug("Keep Log File %s from %s Modified %s AgeFilter %s", files[j], folders[i], stats.mtime, deleteLogDate);
+						emptyFolder = false
+					}
+				}
+			}
+			if (emptyFolder) {
+				logger4js.warn('Delete Empty Log Folder %s', folder);
+				try {
+					fs.rmdirSync(folder);
+					logger4js.debug('Delete Log Folder %s successfully', folder);
+				} catch (err) {
+					logger4js.warn('Delete Log Folder %s failed', folder);
+				}
+			}
+		}
+	}
+	task.value.taskSpecific = {result: deletedCount, resultDescription: `Deleted ${deletedCount} expired Log Files`}
+	finishedTask(task, false);
 }
 
 initLog4js = function(fsLogPath) {
@@ -56,5 +142,6 @@ initLog4js = function(fsLogPath) {
 
 module.exports = {
 	initLog4js: initLog4js,
-	setLogLevelConfig: setLogLevelConfig
+	setLogLevelConfig: setLogLevelConfig,
+	cleanupLogFiles: cleanupLogFiles
 };

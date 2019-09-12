@@ -1,6 +1,13 @@
+var mongoose = require('mongoose');
+require('../models/visboproject');
+
+var VisboProject = mongoose.model('VisboProject');
+
+var validate = require('./../components/validate');
 var logModule = "VP";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
 
 // check if Visbo Project has a valid lock
 lockStatus = function(vp, useremail, variantName) {
@@ -40,7 +47,37 @@ lockCleanup = function(listLock) {
 	return listLockNew;
 };
 
+function cleanupAllVPLock(task, finishedTask) {
+	logger4js.debug("cleanuplock Execute %s", task && task._id);
+	if (!task || !task.value) finishedTask(task, false);
+	var startUnLock = new Date("2018-01-01");
+	if (!task.value.taskSpecific) task.value.taskSpecific = {};
+	if (validate.validateDate(task.value.taskSpecific.lastSuccess, false)) {
+		startUnLock = new Date(task.value.taskSpecific.lastSuccess)
+		startUnLock.setMonth(startUnLock.getMonth()-1); // one month back
+		logger4js.debug("cleanuplock startUnLock %O", startUnLock);
+	}
+
+	var actDate = new Date();
+	var updateQuery = {updatedAt: {$gt: startUnLock}, deletedAt: {$exists: false}, "lock.expiresAt": {$lt: actDate}};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$pull: { lock: { expiresAt: {$lt: actDate}}}};
+
+	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid}`, undefined)
+			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: cleanup expired Locks'};
+			finishedTask(task, false);
+			return;
+		}
+		task.value.taskSpecific = {lastSuccess: actDate, result: result.nModified, resultDescription: `Updated ${result.nModified} expired Lock Entries`}
+		logger4js.info("Task: cleanuplock Result %d", result.nModified)
+		finishedTask(task, false);
+	})
+}
+
 module.exports = {
 	lockStatus: lockStatus,
-	lockCleanup: lockCleanup
+	lockCleanup: lockCleanup,
+	cleanupAllVPLock: cleanupAllVPLock
 };

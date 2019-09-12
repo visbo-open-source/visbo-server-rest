@@ -101,10 +101,17 @@ router.route('/')
 	var areaCondition = [];
 	switch(area) {
 		case "other":
-			areaCondition.push({"vc": {$exists: false}});
-			areaCondition.push({"vp": {$exists: false}});
-			areaCondition.push({"actionDescription": {$nin: ["Visbo Center (Read)", "Visbo Project (Read)", "Visbo Project Versions (Read)", "Visbo Audit"]}});
-	    break;
+			// get all changes on system and all others with Change or Error
+			areaCondition.push({"$or": [
+					{"vc.vcid": req.permGroups[0].vcid.toString(), "action": {$ne: "GET"}},
+					{"vc": {$exists: false}, "vp": {$exists: false},
+						"$or": [
+							{"action": {$ne: "GET"}},
+							{"result.status": {$nin: ["200", "304"]}}
+						]
+					}
+				]});
+			break;
 	  case "sys":
 			areaCondition.push({"vc.vcid": req.permGroups[0].vcid.toString()});
 	    break;
@@ -142,6 +149,7 @@ router.route('/')
 			textCondition.push({"vc.name": expr});
 			textCondition.push({"vp.name": expr});
 			textCondition.push({"vpv.name": expr});
+			textCondition.push({"host": expr});
 			textCondition.push({"url": expr});
 			textCondition.push({"action": expr});
 			textCondition.push({"actionInfo": expr});

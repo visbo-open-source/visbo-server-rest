@@ -1,28 +1,31 @@
 var mongoose = require('mongoose');
 var VisboAudit = mongoose.model('VisboAudit');
 var validate = require('./../components/validate');
+var os = require("os");
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var errorHandler = require('./../components/errorhandler').handler;
 
-function cleanupAudit(taskID, finishedTask, value, startDate) {
-	logger4js.debug("cleanupAudit Execute %s", taskID);
+function cleanupAudit(task, finishedTask) {
+	logger4js.debug("cleanupAudit Execute %s", task && task._id);
+	if (!task || !task.value) finishedTask(task, false);
 	var queryaudit = {ttl: {$lt: new Date()}};
 	VisboAudit.deleteMany(queryaudit, function (err, result) {
 		if (err){
 			errorHandler(err, undefined, `DB: DELETE Expired Audits`, undefined)
-			finishedTask(taskID, {result: -1, resultDescription: 'Err: DB: Delete Audit'}, startDate);
+			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: Delete Audit'};
+			finishedTask(task, false);
 			return;
 		}
-		var resultFinished = {result: result.deletedCount, resultDescription: `Deleted ${result.deletedCount} expired Audit Entries`}
+		task.value.taskSpecific = {result: result.deletedCount, resultDescription: `Deleted ${result.deletedCount} expired Audit Entries`}
 
 		logger4js.debug("Task: cleanupAudit Result %O", result)
-		finishedTask(taskID, resultFinished, startDate);
+		finishedTask(task, false);
 	});
 
-	logger4js.debug("cleanupAudit Done %s", taskID);
+	logger4js.debug("cleanupAudit Done %s", task._id);
 }
 
 function squeezeDelete(squeezeEntry, lastDate) {
@@ -41,19 +44,20 @@ function squeezeDelete(squeezeEntry, lastDate) {
 	});
 }
 
-function squeezeAudit(taskID, finishedTask, value, startDate) {
-	logger4js.debug("squeezeAudit Execute %s", taskID);
+function squeezeAudit(task, finishedTask) {
+	logger4js.debug("squeezeAudit Execute %s", task && task._id);
+	if (!task || !task.value) finishedTask(task, false);
 	var startSqueeze = new Date("2018-01-01");
 
-	if (!value.taskSpecific) value.taskSpecific = {};
-	if (validate.validateDate(value.taskSpecific.lastMonth, false)) {
-		startSqueeze = value.taskSpecific.lastMonth
+	if (!task.value.taskSpecific) task.value.taskSpecific = {};
+	if (validate.validateDate(task.value.taskSpecific.lastMonth, false)) {
+		startSqueeze = new Date(task.value.taskSpecific.lastMonth)
 	}
 	var endSqueeze = new Date(startSqueeze);
 	endSqueeze.setMonth(endSqueeze.getMonth() + 1);
 	var latestSqueeze = new Date();
 	var resultFinished = {};
-	latestSqueeze.setDate(latestSqueeze.getDate() - (value.skipDays || 30))
+	latestSqueeze.setDate(latestSqueeze.getDate() - (task.value.skipDays || 30))
 
 	if (latestSqueeze < endSqueeze) endSqueeze = latestSqueeze
 	// set it to beginning of Month
@@ -64,13 +68,14 @@ function squeezeAudit(taskID, finishedTask, value, startDate) {
 	endSqueeze.setMilliseconds(0);
 	resultFinished.lastMonth = endSqueeze;
 	if (startSqueeze >= endSqueeze) {
-		logger4js.debug("squeezeAudit Nothing to Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
+		logger4js.debug("squeezeAudit Nothing to Execute %s: Start %s End %s", task._id, startSqueeze.toISOString(), endSqueeze.toISOString());
 		resultFinished.result = 0;
 		resultFinished.resultDescription = 'Nothing to squeeze';
-		finishedTask(taskID, resultFinished, startDate);
+		task.value.taskSpecific = resultFinished
+		finishedTask(task, false);
 		return;
 	}
-	logger4js.debug("squeezeAudit Execute %s: Start %s End %s", taskID, startSqueeze.toISOString(), endSqueeze.toISOString());
+	logger4js.debug("squeezeAudit Execute %s: Start %s End %s", task._id, startSqueeze.toISOString(), endSqueeze.toISOString());
 
 	// get all ReST Calls Type "GET" in a defined period and group them by vpvid and user
 	// aggregate the count and the minimum createdAt time and filter only entries with a certain amount of duplicates
@@ -84,10 +89,11 @@ function squeezeAudit(taskID, finishedTask, value, startDate) {
 	querySqueezeAudit.exec(function (err, listAudits) {
 		if (err) {
 			errorHandler(err, undefined, `DB: GET squeeze Audit`, undefined)
-			resultFinished.lastMonth = value.lastMonth; // stay in same interval and try again
+			resultFinished.lastMonth = task.value.lastMonth; // stay in same interval and try again
 			resultFinished.result = -1;
 			resultFinished.resultDescription = 'Err: DB Get Squeeze Audit';
-			finishedTask(taskID, resultFinished, startDate);
+			task.value.taskSpecific = resultFinished
+			finishedTask(task, false);
 			return;
 		}
 		logger4js.info("Task: squeezeAudit Result %s Audit Groups", listAudits.length)
@@ -102,15 +108,18 @@ function squeezeAudit(taskID, finishedTask, value, startDate) {
 		resultFinished.lastMonth = endSqueeze;
 		resultFinished.result = squeezeCount;
 		resultFinished.resultDescription = `Squeezed ${squeezeCount} Entries for Month ${endSqueeze.toISOString()}`
-		finishedTask(taskID, resultFinished, startDate);
+		task.value.taskSpecific = resultFinished
+		finishedTask(task, false);
 	});
-	logger4js.debug("squeezeAudit Done %s", taskID);
+	logger4js.debug("squeezeAudit Done %s", task._id);
 }
 
 function saveAuditEntry(tokens, req, res, factor) {
 	var auditEntry = new VisboAudit();
+
 	auditEntry.action = tokens.method(req, res);
 	auditEntry.url = tokens.url(req, res);
+	auditEntry.host = os.hostname().split(".")[0];
 	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
 	var baseUrl = auditEntry.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
@@ -187,8 +196,8 @@ function saveAuditEntry(tokens, req, res, factor) {
 	auditEntry.ip = req.headers["x-real-ip"] || req.ip;
 	auditEntry.userAgent = req.get('User-Agent');
 	auditEntry.result = {};
-	auditEntry.result.time = Math.round(Number(tokens['response-time'](req, res))/factor)
-	var status = tokens.status(req, res);
+	auditEntry.result.time = Math.round(Number((tokens['response-time'](req, res)) || 0)/factor)
+	var status = tokens.status(req, res) || "";
 	auditEntry.result.status = status
 	if (status == 200) auditEntry.result.statusText = "Success"
 	if (status == 304) auditEntry.result.statusText = "Success"
@@ -203,7 +212,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 	auditEntry.result.size = Math.round(Number(tokens.res(req, res, 'content-length')||0)/factor);
 	auditEntry.save(function(err, auditEntryResult) {
 		if (err) {
-			logger4js.error("Save VisboAudit failed to save %O", auditEntry);
+			logger4js.error("Save VisboAudit failed to save %O", err);
 		}
 	});
 

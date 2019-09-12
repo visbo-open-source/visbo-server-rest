@@ -454,10 +454,23 @@ router.route('/user/pwforgotten')
 									// html: ejs.renderFile(template)
 							};
 							mail.VisboSendMail(message);
-							return res.status(200).send({
-								state: "success",
-								message: "Successfully Requested Password Reset through e-Mail"
-							});
+							logger4js.trace("PW Reset Env %s uiUrl %s debug %s.", process.env.NODE_ENV, uiUrl, req.body.debug);
+							if (process.env.NODE_ENV == "development" && uiUrl == "http://localhost:4200" && req.body.debug) {
+								// deliver more details to do automatic testing without mail verification
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully Requested Password Reset through e-Mail",
+									debug: {
+										url: pwreseturl,
+										token: token
+									}
+								});
+							} else {
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully Requested Password Reset through e-Mail"
+								});
+							}
 						});
 					}
 				);
@@ -725,10 +738,10 @@ router.route('/user/signup')
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
-					uiUrl = uiUrl.concat('/registerconfirm?id=', user._id, '&hash=', hash);
+					var registerconfirm = uiUrl.concat('/registerconfirm?id=', user._id, '&hash=', hash);
 
-					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+					logger4js.debug("E-Mail template %s, url %s", template, registerconfirm);
+					ejs.renderFile(template, {userTo: user, url: registerconfirm}, function(err, emailHtml) {
 						if (err) {
 							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
@@ -746,14 +759,29 @@ router.route('/user/signup')
 						};
 						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
 						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully signed up",
-							user: user
-						});
+						logger4js.warn("PW Reset Env %s uiUrl %s debug %s.", process.env.NODE_ENV, uiUrl, req.body.debug);
+						if (process.env.NODE_ENV == "development" && uiUrl == "http://localhost:4200" && req.body.debug) {
+							// deliver more details to do automatic testing without mail verification
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully signed up",
+								user: user,
+								debug: {
+									url: registerconfirm,
+									hash: hash
+								}
+							});
+						} else {
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully signed up",
+								user: user
+							});
+						}
 					});
 				} else {
 					logger4js.info("User Registration completed with Hash %s", user.email);
+					sendMail.accountRegisteredSuccess(req, user);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully signed up",
@@ -861,35 +889,12 @@ router.route('/user/signup')
 							error: err
 						});
 					}
-					// now send the eMail for confirmation of the e-Mail address
-					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
-					var eMailSubject = 'Successful eMail confirmation';
-					var uiUrl =  getSystemUrl();
-					uiUrl = uiUrl.concat('/login?email=', user.email);
-
-					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
-						if (err) {
-							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
-							return res.status(500).send({
-								state: "failure",
-								message: "E-Mail Rendering failed",
-								error: err
-							});
-						}
-						var message = {
-								// from: useremail,
-								to: user.email,
-								subject: eMailSubject,
-								html: '<p> '.concat(emailHtml, " </p>")
-						};
-						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
-						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully confirmed eMail",
-							user: user
-						});
+					// now send the eMail for successfully signup of the e-Mail address
+					sendMail.accountRegisteredSuccess(req, user);
+					return res.status(200).send({
+						state: "success",
+						message: "Successfully confirmed eMail",
+						user: user
 					});
 				});
 			});
