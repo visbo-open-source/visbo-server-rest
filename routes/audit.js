@@ -88,8 +88,8 @@ router.route('/')
 	// no date is set to set to to current Date and recalculate from afterwards
 	if (!to) to = new Date();
 	if (!from) {
-		from = new Date(to);
-		from.setDate(from.getDate()-7)
+		from = new Date();
+		from.setTime(0);
 	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};

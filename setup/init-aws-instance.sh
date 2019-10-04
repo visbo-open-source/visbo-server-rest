@@ -1,14 +1,19 @@
 
-/ AWS WEB Server 6
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-54-93-229-51.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-127-233.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-3-121-224-178.eu-central-1.compute.amazonaws.com
-ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-18-185-127-60.eu-central-1.compute.amazonaws.com
+/ AWS WEB Server
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-196-100-129.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-54-123.eu-central-1.compute.amazonaws.com
 
+ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com
+
+ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-3-122-55-160.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-18-195-20-28.eu-central-1.compute.amazonaws.com
+
+fs-ac623ef5
 curl http://localhost:3484/status
 
 
-fsmt-43fa731a
+git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch production --single-branch
 
 # aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
 
@@ -16,6 +21,10 @@ redis-cli -h visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com -p 6379 monitor
 
 cd $HOME/Downloads
 alias VP="newman run -e VisboReSTAWSDevelopment.postman_environment.json 40Parallelism.postman_collection.json"
+
+git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-rest.git --branch production --single-branch
+
+git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch production --single-branch
 
 #
   sudo cp $HOME/GitHub/visbo-server-rest/install/nginx.aws.dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
