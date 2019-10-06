@@ -1,7 +1,7 @@
 
 / AWS WEB Server
-ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-196-100-129.eu-central-1.compute.amazonaws.com
-TEMP ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-185-54-123.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-57-203-5.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-122-116-225.eu-central-1.compute.amazonaws.com
 
 ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com
 TEMP ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com

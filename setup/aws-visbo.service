@@ -1,0 +1,8 @@
+[Unit]
+Description=Visbo Boot Script
+
+[Service]
+ExecStart=/home/ubuntu/bin/aws-visboboot.sh
+
+[Install]
+WantedBy=multi-user.target
