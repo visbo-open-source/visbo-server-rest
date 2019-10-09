@@ -20,6 +20,7 @@ var clsBewertung = new Schema({
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
 	name: { type: String },
+	teamID: {type: Number},
 	farbe: { type: Number },
 	startkapa: { type: Number },
 	tagessatzIntern: { type: Number },
@@ -75,18 +76,15 @@ var clsPhase = new Schema({
 
 
 var visboProjectVersionSchema = new mongoose.Schema({
-//	_id: { type: String },												//MS is required as the ID was originally created manually and has self generated ids
 	name: { type: String, required: true, maxlength: 256},
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
 	variantName: { type: String, required: false, maxlength: 256},
-	deleted: {
-		deletedAt: {type: Date, required: false },
-		byParent: {type: Boolean}
-	},
-	variantDescription: { type: String, required: false, maxlength: 500},
+	deletedAt: {type: Date, required: false },
+	deletedByParent: {type: String, required: false, maxlength: 16 },
+	variantDescription: { type: String, required: false, maxlength: 4096},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},
-	customDblFields: [{str: {type: String, required: true}, dbl: {type: Number, required: true}}],
+  customDblFields: [{str: {type: String, required: true}, dbl: {type: Number, required: true}}],
 	customStringFields: [{strkey: {type: String, required: true}, strvalue: {type: String, required: true}}],
 	customBoolFields: [{str: {type: String, required: true}, bool: {type: Boolean, required: true}}],
 	Erloes: { type: Number, required: false},
@@ -102,7 +100,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	latestStartDate: { type: Date, required: false},
 	status: { type: String, required: false, maxlength: 256},
 	ampelStatus: { type: Number, required: false},
-	ampelErlaeuterung: { type: String, required: false, maxlength: 500},
+	ampelErlaeuterung: { type: String, required: false, maxlength: 4096},
 	farbe: { type: Number, required: false},
 	Schrift: { type: Number, required: false},
 	Schriftfarbe: { type: Number, required: false},
@@ -115,7 +113,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},
 	complexity: { type: Number, required: false},
-	description: { type: String, required: false, maxlength: 500},
+	description: { type: String, required: false, maxlength: 4096},
 	businessUnit: { type: String, required: false, maxlength: 256}
 });
 // Set Creation and modification date automatically

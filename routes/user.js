@@ -7,10 +7,18 @@ var bCrypt = require('bcrypt-nodejs');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
+var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
+
+var mail = require('../components/mail');
+var ejs = require('ejs');
+var useragent = require('useragent');
 
 var logModule = "USER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
+
+var visboRedis = require('./../components/visboRedis');
 
 // Generates hash using bCrypt
 var createHash = function(secret){
@@ -33,11 +41,11 @@ router.route('/profile')
 	* @api {get} /user/profile Get own profile
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName GetUserProfile
 	* @apiPermission user must be authenticated
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/user/profile
 	* @apiSuccessExample {json} Success-Response:
@@ -69,18 +77,13 @@ router.route('/profile')
 	*/
 // get profile
 	.get(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Profile (Read)';
+		req.auditTTLMode = 1;
 
-		logger4js.info("Get Profile ");
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User Get Profile DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: GET Profile ${req.decoded._id} Find `, `Error get profile failed`)
+				return;
 			}
 			user.password = undefined;
 			return res.status(200).send({
@@ -95,8 +98,11 @@ router.route('/profile')
 	* @api {put} /user/profile Update own profile
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName UpdateUserProfile
+	* @apiError {number} 400 required fields for profile missing
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/user/profile
 	*   body:
@@ -121,7 +127,7 @@ router.route('/profile')
 	*  "state":"success",
 	* "message":"Updated user profile",
 	* "user":{
-	*    "_id":"5a96787976294c5417f0e409",
+	*    "_id":"UID294c5417f0e49",
 	*    "updatedAt":"2018-03-20T10:31:27.216Z",
 	*    "createdAt":"2018-02-28T09:38:04.774Z",
 	*    "email":"markus.seyfried@visbo.de",
@@ -143,18 +149,13 @@ router.route('/profile')
 	*/
 // Update profile
 	.put(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Profile (Update)';
 
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Profile DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Find `, `Error update profile failed`)
+				return;
 			}
 			if (!req.body.profile || !req.body.profile.firstName || !req.body.profile.lastName ) {
 				logger4js.debug("Put/Update user %s body %O", req.decoded._id, req.body);
@@ -181,12 +182,8 @@ router.route('/profile')
 			user.save(function(err, user) {
 				logger4js.debug("Put/Update after Save");
 				if (err) {
-					logger4js.fatal("User update Profile to DB Connection ", err);
-					return res.status(500).send({
-						state: 'failure',
-						message: 'Error updating user',
-						error: err
-					});
+					errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error update profile failed`)
+					return;
 				}
 				user.password = undefined;
 				return res.status(200).send({
@@ -204,8 +201,12 @@ router.route('/passwordchange')
 	* @api {put} /user/passwordchange Update password
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup UserProfile
+	* @apiGroup User Profile
 	* @apiName PasswordChange
+	* @apiError {number} 400 old or new password missing
+	* @apiError {number} 409 password mismatch
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
 	*  url: http://localhost:3484/user/passwordchange
 	*  body:
@@ -222,18 +223,13 @@ router.route('/passwordchange')
 	*/
 // Change Password
 	.put(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Password (Change)';
 
 		logger4js.info("Put/Update user password %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				logger4js.fatal("User update Password DB Connection ", err);
-				return res.status(500).send({
-					state: 'failure',
-					message: 'Error getting user',
-					error: err
-				});
+				errorHandler(err, res, `DB: PUT Change Password ${req.decoded._id} Find `, `Error change password failed`)
+				return;
 			}
 			if (!req.body.password || !req.body.oldpassword ) {
 				logger4js.debug("Put/Update user %s body incomplete %O", req.decoded._id, req.body);
@@ -246,33 +242,107 @@ router.route('/passwordchange')
 			logger4js.debug("Put/Update Password Check Old Password");
 			if (!isValidPassword(user, req.body.oldpassword)) {
 				logger4js.info("Change Password: Wrong password", user.email);
-				return res.status(403).send({
+				return res.status(409).send({
 					state: "failure",
 					message: "password mismatch"
 				});
 			} else {
+				if (!auth.isAllowedPassword(req.body.password)) {
+					logger4js.info("Password Change: new passowrd does not match password rules");
+					return res.status(409).send({
+						state: "failure",
+						message: "Password does not match password rules"
+					});
+				}
 				logger4js.debug("Try to Change Password %s username&password accepted", user.email);
 				user.password = createHash(req.body.password);
 				if (!user.status) user.status = {};
 				user.status.loginRetries = 0;
+				user.status.expiresAt = undefined;
 				user.save(function(err, user) {
 					if (err) {
-						logger4js.error("Change Password Update DB Connection %O", err);
-						return res.status(500).send({
-							state: "failure",
-							message: "database error, failed to update user",
-							error: err
-						});
+						errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error chaneg password failed`)
+						return;
 					}
 					user.password = undefined;
-					return res.status(200).send({
-						state: "success",
-						message: "You changed your password successfully",
-						user: user
+					// now send an e-Mail to the user for pw change
+					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs')
+					var uiUrl =  getSystemUrl();
+					uiUrl = uiUrl.concat('/pwforgotten/');
+					var eMailSubject = 'Your password has been changed';
+					var info = {};
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					info.changedAt = new Date();
+					info.ip = req.headers["x-real-ip"] || req.ip;
+					// Check User userAgent
+					// var agent = useragent.parse(req.headers['user-agent']);
+					// logger4js.info("User Agent Browser %s ", agent.toAgent());
+					// logger4js.info("User Agent String %s ", agent.toString());
+					// logger4js.info("User Agent OS %s ", agent.os.toString());
+					// logger4js.info("User Agent JSON %s", JSON.stringify(agent));
+					// logger4js.info("Get Profile ");
+					info.userAgent = useragent.parse(req.get('User-Agent')).toString();
+					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
+					ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
+						if (err) {
+							logger4js.warn("E-Mail Rendering failed %s", err.message);
+							return res.status(500).send({
+								state: "failure",
+								message: "E-Mail Rendering failed",
+								error: err
+							});
+						}
+						var message = {
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, " </p>")
+						};
+						logger4js.info("Now send mail from %s to %s", message.from || 'System', message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: "success",
+							message: "You changed your password successfully",
+							user: user
+						});
 					});
+
 				});
 			}
 		});
 	})
+
+router.route('/logout')
+/**
+	* @api {post} /user/logout Logout and invalidate token
+	* @apiVersion 1.0.0
+	* @apiHeader {String} access-key User authentication token.
+	* @apiGroup User Profile
+	* @apiName Logout
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
+	* @apiExample Example usage:
+	*  url: http://localhost:3484/user/logout
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  "state":"success",
+	*  "message":"You have successfully logged out"
+	* }
+	*/
+// Logout
+	.post(function(req, res) {
+		req.auditDescription = 'Logout';
+
+		logger4js.info("Post Logout %s", req.decoded._id);
+		// add token to Redis
+		var redisClient = visboRedis.VisboRedisInit();
+		var token = req.headers['access-key'].split(".")[2];
+		redisClient.set('token.'+token, req.decoded._id, 'EX', 3600);
+		return res.status(200).send({
+			state: "success",
+			message: "You have successfully logged out"
+		});
+	})
+
 
 module.exports = router;

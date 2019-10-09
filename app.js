@@ -3,19 +3,26 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var cors = require('cors');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
+var fs = require('fs');
+// var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
 var moment = require('moment');
+var process = require('process');
+var os = require( 'os' );
 
+var logging = require('./components/logging');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger("OTHER");
 var logger4jsRest = log4js.getLogger("REST");
 
-
+var visboRedis = require('./components/visboRedis');
+var visboTaskSchedule = require('./components/visboTaskSchedule');
+var visboTaskScheduleInit = visboTaskSchedule.visboTaskScheduleInit;
 //initialize mongoose schemas
 require('./models/users');
+require('./models/visbogroup');
 require('./models/visboaudit');
 require('./models/visbocenter');
 require('./models/visboproject');
@@ -23,8 +30,9 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcrole');
 require('./models/vccost');
+require('./models/vcsetting');
 
-var systemVC = require('./components/sytemVC');
+var systemVC = require('./components/systemVC');
 
 // include the route modules
 var user = require('./routes/user');
@@ -84,14 +92,23 @@ function dbConnect(dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
     // exit();
   } else {
-    logger4js.mark('Connecting database %s', dbconnection.substring(0, 15).concat('...').concat(dbconnection.substring(dbconnection.length-10, dbconnection.length)));
+    var position = dbconnection.indexOf(":") + 1
+    position = dbconnection.indexOf(":", position) + 1
+    var cleanString = dbconnection.substring(0, position)
+    position = dbconnection.indexOf("@", position + 1)
+    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length))
+    logger4js.mark('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri
       dbconnection,
       dbOptions
     ).then(function() {
-      //mongoose.set('debug', true);
       logger4js.mark('Server is fully functional DB Connected');
+      // mongoose.set('debug', function (coll, method, query, doc, options) {
+      //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
+      // });
+      systemVC.createSystemVC({ users: [ { "email":"support@visbo.de" } ]})
+
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
@@ -102,31 +119,40 @@ function dbConnect(dbconnection) {
         trialDelay += trialDelay;
         if (trialDelay>7200) trialDelay = 7200;
         // enable recurtion
-        dbConnect();
+        dbConnect(dbconnection);
       });
     });
   }
 }
 
-// dbConnect();
-
 // CORS Config, whitelist is an array
-var whitelist = [
-  undefined, // POSTMAN Support
-  'http://localhost:3484', // DEV Support
-  'https://my.visbo.net', // Production Support
-  'http://localhost:4200' // MS Todo UI Support DEV Support
-]
+// var whitelist = [
+//   'https://my.visbo.net', // Production Support
+//   'https://staging.visbo.net', // Staging Support
+//   'http://localhost:4200', // Development
+//   'https://dev.visbo.net' // Development AWS Support
+// ]
 // corsoptions is an object consisting of a property origin, the function is called if property is requested
+var uiUrl = undefined;
+
 var corsOptions = {
   origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
+    if (!uiUrl) uiUrl = systemVC.getSystemUrl();
+    // check if the origin is from same system or not set in case of ClientApp or Postman
+    if (origin == uiUrl || origin == 'http://localhost:4200' || !origin) {
       callback(null, true)
     } else {
-      logger4js.fatal("CorsOptions deny  %s", origin);
-      //callback(null, true) // temporary enable cors for all sites
-      callback(new Error(origin + ' is not allowed to access'))
+      logger4js.info("CorsOptions deny  %s vs allowed %s", origin, uiUrl);
+      callback(origin + ' is not allowed to access', null)
     }
+    // if (whitelist.indexOf(origin) !== -1 || !origin) {
+    //   callback(null, true)
+    // } else {
+    //   logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
+    //   //callback(null, true) // temporary enable cors for all sites
+    //   callback(origin + ' is not allowed to access', null)
+    //   // callback(new Error(origin + ' is not allowed to access'))
+    // }
   }
 }
 // setup environment variables
@@ -134,36 +160,59 @@ environment.config();
 
 // start express app
 var app = express();
+// MS TODO: PM2 Setup for multi server
+// var port = process.env.PORT ||'3484';
+// // app.set('port', port);
+// app.listen(port)
+
 // configure log4js
-var fsLogPath = __dirname + '/logging';
-if (process.env.LOGPATH != undefined) {
-  fsLogPath = process.env.LOGPATH;
+var fsLogPath = process.env.LOGPATH || (__dirname + '/logging');
+var stats;
+try {
+  stats = fs.statSync(fsLogPath);
+} catch (err) {
+  console.log("LogPath %s does not exists or user has no permission: %O", fsLogPath, err)
+  throw err;
+}
+if ( !stats.isDirectory()) {
+  console.log("LogPath %s exists but is no directory")
+  throw err;
+} else {
+  // console.log("Basic LogPath exists, Check for the App Server Folder")
+  //
+  // find out the IP addresses of the server
+  // var networkInterfaces = os.networkInterfaces( );
+  // console.log( networkInterfaces );
+
+  // now checck for the Folder Hostname is not exists try to create
+  var hostname = os.hostname();
+  hostname = hostname.split(".")[0];
+  console.log("Hostname %s", hostname );
+  fsLogPath = path.join(fsLogPath, hostname);
+  try {
+    stats = fs.statSync(fsLogPath);
+  } catch (err) {
+    try {
+      fs.mkdirSync(fsLogPath, { recursive: false })
+    } catch (err) {
+      console.log("Host Folder could not be created %s", fsLogPath)
+      throw err
+    }
+  }
+  if ( !stats.isDirectory()) {
+    console.log("LogPath %s exists but is no directory")
+    throw err
+  }
+  // now all is in place fsLogPath exists for this server
 }
 
-log4js.configure({
-  appenders: {
-    out: { type: 'stdout' },
-    everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    emergencies: {  type: 'file', filename: fsLogPath + '/oh-no-not-again.log', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-    'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
-    'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
-  },
-  categories: {
-    default: { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "USER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-    "OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
-  }
-});
-logger4js.level = 'info';
-
-logger4js.debug("LogPath %s", fsLogPath)
+logging.initLog4js(fsLogPath);
+// initialise with default debug
+var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "ALL": "debug"}
+logging.setLogLevelConfig(settingDebugInit);
 logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
 logger4js.warn("Starting Version %s", process.env.VERSION_REST);
+logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
 
 // view engine setup
 //app.set('views', path.join(__dirname, 'views'));
@@ -172,37 +221,42 @@ app.engine('.html', require('ejs').renderFile);
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
-// set CORS Options (Cross Origin Ressource Sharing)
-app.use(cors(corsOptions));
-
 // define the log entry for processing pages
-//app.use(logger('common'));
 app.use(logger(function (tokens, req, res) {
-  visboAudit.visboAudit(tokens, req, res);
-  var webLog = [
-    tokens.method(req, res),
-    // 'base url', req.baseUrl,
-    //'Url', req.originalUrl,
-    tokens.url(req, res),
-    tokens.status(req, res),
-    tokens.res(req, res, 'content-length')||0+' Bytes',
-    Math.round(tokens['response-time'](req, res))+'ms',
-    req.headers["x-real-ip"] || req.ip,
-    req.get('User-Agent'),
-    ''
-  ].join(' ');
-  logger4jsRest.info(webLog);
-  webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  // ignore calls for OPTIONS
+  if (["GET", "POST", "PUT", "DELETE"].indexOf(tokens.method(req, res)) >= 0 ) {
+    visboAudit.visboAudit(tokens, req, res);
+    var webLog = [
+      tokens.method(req, res),
+      // 'base url', req.baseUrl,
+      //'Url', req.originalUrl,
+      tokens.url(req, res),
+      tokens.status(req, res),
+      tokens.res(req, res, 'content-length')||0+' Bytes',
+      Math.round(tokens['response-time'](req, res))+'ms',
+      req.headers["x-real-ip"] || req.ip,
+      req.get('User-Agent'),
+      ''
+    ].join(' ');
+    logger4jsRest.info(webLog);
+    webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+  }
+  if (tokens.status(req, res) == 500) {
+    var headers = JSON.parse(JSON.stringify(req.headers));
+    headers["access-key"] = undefined;
+    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
+  }
   return webLog
 }));
 
+var redisClient = visboRedis.VisboRedisInit();
+
+// set CORS Options (Cross Origin Ressource Sharing)
+app.use(cors(corsOptions));
+
 dbConnect(process.env.NODE_VISBODB);
 
-var sysVC = systemVC.createSystemVC(
-    { users: [
-        { "email":"support@visbo.de", "role": "Admin" }
-     ]}
-   )
+visboTaskScheduleInit();
 
 var options = {
   dotfiles: 'ignore',
@@ -216,7 +270,7 @@ var options = {
   }
 }
 app.use(express.static(path.join(__dirname, 'public'), options));
-app.use(cookieParser());
+// app.use(cookieParser());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
@@ -250,37 +304,43 @@ app.use('/status', status);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  logger4js.fatal("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
-  err.status = 404;
-  res.status(404).send("Sorry can't find the URL:" + req.originalUrl + ":") // MS added
+  logger4js.warn("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
+  return res.status(404).send({
+    state: 'failure',
+    message: "Sorry can't find the URL",
+    url: req.originalUrl
+  });
 });
-
 
 // error handlers
 
 // development error handler
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
-//if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
+    var errCode = err.status || 500;
+    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    res.status(errCode);
     res.send({
       state: 'failure',
-      message: err.message,
+      message: errMessage,
       error: err
     });
   });
-}
-
-// production error handler
-// no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-  res.status(err.status || 500);
-  res.send({
-    state: 'failure',
-    message: err.message,
-    error: err
+} else {
+  // production error handler
+  // no stacktraces leaked to user
+  app.use(function(err, req, res, next) {
+    var errCode = err.status || 500;
+    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
+    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    res.status(errCode);
+    res.send({
+      state: 'failure',
+      message: errMessage
+    });
   });
-});
+}
 
 module.exports = app;

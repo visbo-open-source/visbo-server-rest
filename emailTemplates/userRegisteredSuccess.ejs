@@ -1,0 +1,18 @@
+<head>
+    <% include ../emailTemplates/partials/head %>
+</head>
+<header>
+    <% include ../emailTemplates/partials/header %>
+</header>
+<h1>
+  You have registered successfully
+</h1>
+<p>
+  To access the Visbo System please Login: <a href="<%= url %>">Login</a>
+</p>
+<p>
+  Your e-Mail address <%= userTo.email %> was used for the registration.
+</p>
+<footer>
+    <% include ../emailTemplates/partials/footer %>
+</footer>

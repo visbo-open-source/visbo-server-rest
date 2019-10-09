@@ -1,0 +1,87 @@
+#!/bin/bash
+cd $HOME/GitHub/visbo-server-rest
+continueOnEmptyPull=0
+echo "Args:$#:"
+if [ $# -gt 0 -a "$1" = "force" ]
+then
+  continueOnEmptyPull=1
+fi
+echo "01: Checking Local Status of Branch"
+git status
+if [ $? -ne 0 ]
+then
+  echo "FATAL: Local Changes have to be checked first before upgrading."
+  exit 1
+fi
+
+echo "02: Pull Branch from Repository Server"
+updateCmdOrg=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+updatePackageOrg=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+pullOutput=`git pull`
+if [ $? -ne 0 ]
+then
+  echo "FATAL: Pull Failed to update ReST Server Branch."
+  exit 1
+fi
+
+echo "Pull Result"
+echo "$pullOutput"
+if [ "$continueOnEmptyPull" -eq 0 -a "$pullOutput" = "Already up to date." ]
+then
+  echo "INFO: No changes in the ReST Server Branch."
+  exit 0
+fi
+
+updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updatePackageOrg" != "$updatePackageAct" ]
+then
+  echo "03: Install subcomponents from NODE environment"
+  npm install
+  if [ $? -ne 0 ]
+  then
+    echo "FATAL: Install of NODE components failed."
+    exit 1
+  fi
+fi
+
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
+then
+  echo "WARN: Update Script has changed in between, please restart update again."
+  exit 2
+fi
+
+echo "04: Update API Documentation"
+apidoc -i routes -o public/apidoc
+rm -rf /var/www/apidoc/*
+cp -r public/apidoc/* /var/www/apidoc
+find /var/www/apidoc -type d -exec chmod 755 {} +
+find /var/www/apidoc -type f -exec chmod 644 {} +
+
+echo "05: Run Upgrade Script against DB"
+# get the DB Connection string
+if [ -f update-db.js ]; then
+    echo "Upgrade Script Found!"
+    CONF=`grep '^ *NODE_VISBODB' .env`
+    eval $CONF
+    mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
+    if [ $? -ne 0 ]
+    then
+      echo "FATAL: Database Update Script Failed."
+      exit 1
+    fi
+else
+  echo "No Upgrade Script available!"
+fi
+
+echo "06: Manage NODE Process with PM2"
+pm2 list
+pm2 restart VisboReST
+if [ $? -ne 0 ]
+then
+  echo "FATAL: PM2 Restart failed to Restart Visbo-Server-Rest."
+  exit 1
+fi
+pm2 reset VisboReST
+
+echo "ReST Server Updated Successfully"

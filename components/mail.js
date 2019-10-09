@@ -7,6 +7,8 @@ var logger4js = log4js.getLogger(logModule);
 var fs = require('fs');
 var util = require('util');
 var path = require('path');
+var systemVC = require('./../components/systemVC');
+var getSystemVCSetting = systemVC.getSystemVCSetting;
 
 var transporter;
 var mailUser;
@@ -15,16 +17,17 @@ var debug = false;
 
 // Send Mail to User
 function VisboSendMail(message) {
-
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	var smtpConfig = undefined;
+	var smtpSetting = undefined;
 	logger4js.debug("MAIL Send Mail to :%s:", message.to);
 
-	// MS Todo: move mail inititialisation make only once or refresh if closed later
+	// make mail inititialisation only once or refresh if closed later
 	if (!initialised) {
-		logger4js.debug("MAIL Evaluate SMTP Config");
-		if (process.env.SMTP != undefined) {
-			smtpConfig = JSON.parse(process.env.SMTP);
+		logger4js.info("MAIL Evaluate SMTP Config");
+		smtpSetting = getSystemVCSetting('SMTP');
+		smtpConfig = smtpSetting && smtpSetting.value;
+		logger4js.debug("MAIL Check Config %O", smtpConfig);
+		if (smtpConfig) {
 			if (smtpConfig.dkim) {
 				logger4js.debug("MAIL SMTP Config has DKIM Setting %O", smtpConfig.dkim);
 				// now check if we have the private key for the domain
@@ -40,7 +43,6 @@ function VisboSendMail(message) {
 		        var content = fs.readFileSync(dkimPrivKeyFile);
 						logger4js.debug("MAIL SMTP Config has DKIM Key Start %s ", content.toString().substring(0,50));
 						dkimPrivKey = content.toString();
-						// MS TODO: do we have to replace new lines so it gets a one liner?
 						keyStatusOk = true
 			    }
 				}
@@ -55,13 +57,11 @@ function VisboSendMail(message) {
 					delete smtpConfig.dkim
 				}
 			}
-		}
-		if (!smtpConfig) {
-			logger4js.fatal("MAIL SMTP Configuration Missing in Environment");
-			return;
-		} else {
 			logger4js.debug("MAIL SMTP gateway %s with user %s", smtpConfig.host, smtpConfig.auth.user);
 			mailUser = smtpConfig.auth.user;
+		} else {
+			logger4js.fatal("MAIL SMTP Configuration Missing in Environment");
+			return;
 		}
 		logger4js.debug("MAIL Initialise e-Mail sending connection for %s", smtpConfig.auth.user);
 

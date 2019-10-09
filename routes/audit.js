@@ -6,13 +6,20 @@ mongoose.Promise = require('q').Promise;
 var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
+var verifyVc = require('./../components/verifyVc');
+var errorHandler = require('./../components/errorhandler').handler;
+
+var Const = require('../models/constants')
+var constPermSystem = Const.constPermSystem
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
-router.use('/', auth.verifySysAdmin);
+router.use('/', auth.verifyUser);
+// Register the VC middleware to check that the user has access to the System Admin
+router.use('/', verifyVc.getSystemGroups);
 
 /////////////////
 // Audit API
@@ -21,16 +28,22 @@ router.use('/', auth.verifySysAdmin);
 
 router.route('/')
 	/**
-	* @api {get} /vc Get Audit Trail
+	* @api {get} /audit Get Audit Trail
 	* @apiVersion 1.0.0
-	* @apiGroup Audit
+	* @apiGroup Visbo System
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
 	* @apiPermission user must be authenticated and needs to have System Admin Permission
-	* @apiError NotAuthenticated no valid token HTTP 401
-	* @apiError NotPermission user is not member of system Admin HTTP 403
-	* @apiError ServerIssue No DB Connection HTTP 500
+	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
+	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {text} [area] Request Audit Trail only for specific Area (sys, vc, vp).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
+	* @apiError {number} 401 Not Authenticated, no valid token
+	* @apiError {number} 403 No Permission, user has no View & Audit Permission
+	* @apiError {number} 500 ServerIssue No DB Connection
 	* @apiExample Example usage:
 	* url: http://localhost:3484/audit
 	* url: http://localhost:3484/audit?from="2018-09-01"&to="2018-09-15"
@@ -51,45 +64,120 @@ router.route('/')
 .get(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	var sysAdminRole = req.decoded.status ? req.decoded.status.sysAdminRole : undefined;
-	logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 	req.auditDescription = 'Visbo Audit';
-	req.auditInfo = 'System';
+	req.auditSysAdmin = true;
 
-	logger4js.info("Get Audit Trail for userid %s email %s Admin %s", userId, useremail, sysAdminRole);
+	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
+	if (!(req.combinedPerm.system & constPermSystem.ViewAudit)) {
+		logger4js.debug("No Permission to View System Audit for user %s", userId);
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to View System Audit'
+		});
+	}
 	// now fetch all entries system wide
 	var query = {};
-	var from, to, maxcount = 1000;
+	var from, to, maxcount = 1000, action, area;
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
 	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
 	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
-	if (req.query.maxcount) maxcount = Number(req.query.maxcount);
+	if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
+	if (req.query.action) action = req.query.action.trim();
+	if (req.query.area) area = req.query.area.trim();
 	// no date is set to set to to current Date and recalculate from afterwards
-	if (!from && !to) to = new Date();
-	logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
+	if (!to) to = new Date();
 	if (!from) {
-		from = new Date(to);
-		from.setDate(from.getDate()-1)
-	}
-	if (!to) {
-		to = new Date(from);
-		to.setDate(to.getDate()+1)
+		from = new Date();
+		from.setTime(0);
 	}
 	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 	query = {"createdAt": {"$gte": from, "$lt": to}};
+	if (action) {
+		query.action = action;
+	}
+	var queryListCondition = [];
+	logger4js.info("Get Audit Trail for vc %O ", req.permGroups[0].vcid);
+	var areaCondition = [];
+	switch(area) {
+		case "other":
+			// get all changes on system and all others with Change or Error
+			areaCondition.push({"$or": [
+					{"vc.vcid": req.permGroups[0].vcid.toString(), "action": {$ne: "GET"}},
+					{"vc": {$exists: false}, "vp": {$exists: false},
+						"$or": [
+							{"action": {$ne: "GET"}},
+							{"result.status": {$nin: ["200", "304"]}}
+						]
+					}
+				]});
+			break;
+	  case "sys":
+			areaCondition.push({"vc.vcid": req.permGroups[0].vcid.toString()});
+	    break;
+		case "vc":
+			areaCondition.push({"$or": [{"$and": [{"vc": {$exists: true}}, {"vc.vcid": {$ne: req.permGroups[0].vcid.toString()}}]},
+									{"$and": [{"vc": {$exists: false}}, {"url": /^.vc/}]}]});
+			areaCondition.push({"vp": {$exists: false}});
+	    break;
+	  case "vp":
+			areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
+	    break;
+	}
+	if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
+	if (req.query.text) {
+		var textCondition = [];
+		var text = req.query.text;
+		var expr;
+		try {
+				expr = new RegExp(text, "i");
+		} catch(e) {
+				logger4js.info("System Audit RegEx corrupt: %s ", text);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Valid Regular Expression'
+				});
+		}
+		if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+			logger4js.debug("Get Audit Search for ObjectID %s", text);
+			textCondition.push({"vc.vcid": text});
+			textCondition.push({"vp.vpid": text});
+			textCondition.push({"vpv.vpvid": text});
+			textCondition.push({"user.userId": text});
+		} else {
+			textCondition.push({"user.email": expr});
+			textCondition.push({"vc.name": expr});
+			textCondition.push({"vp.name": expr});
+			textCondition.push({"vpv.name": expr});
+			textCondition.push({"host": expr});
+			textCondition.push({"url": expr});
+			textCondition.push({"action": expr});
+			textCondition.push({"actionInfo": expr});
+			textCondition.push({"actionDescription": expr});
+			textCondition.push({"result.statusText": expr});
+			textCondition.push({"userAgent": expr});
+		}
+		textCondition.push({"vc.vcjson": expr});
+		textCondition.push({"vp.vpjson": expr});
+		textCondition.push({"url": expr});
+		queryListCondition.push({"$or": textCondition})
+	}
+	var ttlCondition = [];
+	ttlCondition.push({"ttl": {$exists: false}});
+	ttlCondition.push({"ttl": {$gt: new Date()}});
+	queryListCondition.push({"$or": ttlCondition})
+
+	query["$and"] = queryListCondition;
+	logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
 
 	VisboAudit.find(query)
 	.limit(maxcount)
 	.sort({createdAt: -1})
+	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			logger4js.fatal("System Audit Get DB Connection ", err);
-			return res.status(500).send({
-				state: 'failure',
-				message: 'Error getting System Audit',
-				error: err
-			});
+			errorHandler(err, res, `DB: GET System Audit`, `Error getting System Audit`)
+			return;
 		}
 		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
 		for(var i = 0; i < listVCAudit.length; i++) {
@@ -105,6 +193,7 @@ router.route('/')
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned System Audit',
+			count: listVCAudit.length,
 			audit: listVCAudit
 		});
 	});
