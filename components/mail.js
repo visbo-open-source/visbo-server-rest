@@ -80,11 +80,7 @@ function VisboSendMail(message) {
 		if (error) {
 			logger4js.error("MAIL Error sending Mail %s", error);
 		} else {
-<<<<<<< HEAD
-			logger4js.debug("MAIL Mail Server is ready to take our messages");
-=======
 			logger4js.trace("MAIL Mail Server is ready to take our messages");
->>>>>>> 768f3ac86bfead9bbcfd5af56dbd4356967b41a3
 		}
 	});
 	logger4js.debug("MAIL Mail all prepared, now fire the email to %s ", message.to);
