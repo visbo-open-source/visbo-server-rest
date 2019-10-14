@@ -356,30 +356,29 @@ router.route('/')
 	*   "updatedAt":"2018-03-19T11:04:12.094Z",
 	*   "createdAt":"2018-03-19T11:04:12.094Z",
 	*   "_id":"vpv5c754feaa",
-	*	 "name":"My first Visbo Project Version",
+	*   "name":"My first Visbo Project Version",
 	*   "vpid": "vp5c754feaa"
 	*   "allOthers": "all properties of visbo project version",
-	* 	"keyMetrics": {
-	* 			"_id": "5da3fe1074612a4b47e703ee",
-	* 	 "costCurrentActual": 50,
-	* 	 "costCurrentTotal": 110,
-	* 	 "costBaseFirstActual": 40,
-	* 	 "costBaseFirstTotal": 100,
-	* 	 "costBaseLastActual": 50,
-	* 	 "costBaseLastTotal": 105,
-	* 	 "timeCompletionCurrentActual": 4.2,
-	* 	 "timeCompletionBaseFirstActual": 10,
-	* 	 "timeCompletionBaseLastActual": 10,
-	* 	 "endDateCurrent": "2019-12-31T00:00:00.000Z",
-	* 	 "endDateBaseFirst": "2019-12-31T00:00:00.000Z",
-	* 	 "endDateBaseLast": "2019-12-31T00:00:00.000Z",
-	* 	 "deliverableCompletionCurrentActual": 8.4,
-	* 	 "deliverableCompletionCurrentTotal": 20,
-	* 	 "deliverableBaseFirstActual": 10,
-	* 	 "deliverableBaseFirstTotal": 20,
-	* 	 "deliverableBaseLastActual": 10,
-	* 	 "deliverableBaseLastTotal": 20
-	* 	}
+	*   "keyMetrics": {
+	*    "costCurrentActual": 50,
+	*    "costCurrentTotal": 110,
+	*    "costBaseFirstActual": 40,
+	*    "costBaseFirstTotal": 100,
+	*    "costBaseLastActual": 50,
+	*    "costBaseLastTotal": 105,
+	*    "timeCompletionCurrentActual": 4.2,
+	*    "timeCompletionBaseFirstActual": 10,
+	*    "timeCompletionBaseLastActual": 10,
+	*    "endDateCurrent": "2019-12-31T00:00:00.000Z",
+	*    "endDateBaseFirst": "2019-12-31T00:00:00.000Z",
+	*    "endDateBaseLast": "2019-12-31T00:00:00.000Z",
+	*    "deliverableCompletionCurrentActual": 8.4,
+	*    "deliverableCompletionCurrentTotal": 20,
+	*    "deliverableBaseFirstActual": 10,
+	*    "deliverableBaseFirstTotal": 20,
+	*    "deliverableBaseLastActual": 10,
+	*    "deliverableBaseLastTotal": 20
+	*   }
 	*  }]
 	* }
 	*/
