@@ -74,6 +74,27 @@ var clsPhase = new Schema({
 	appearance: { type: String }
 });
 
+var clsKeyMetrics = new Schema({
+	costCurrentActual: { type: Number },
+	costCurrentTotal: { type: Number },
+	costBaseFirstActual: { type: Number },
+	costBaseFirstTotal: { type: Number },
+	costBaseLastActual: { type: Number },
+	costBaseLastTotal: { type: Number },
+	timeCompletionCurrentActual: { type: Number },
+	timeCompletionBaseFirstActual: { type: Number },
+	timeCompletionBaseLastActual: { type: Number },
+	endDateCurrent: { type: Date },
+	endDateBaseFirst: { type: Date },
+	endDateBaseLast: { type: Date },
+	deliverableCompletionCurrentActual: { type: Number },
+	deliverableCompletionCurrentTotal: { type: Number },
+	deliverableBaseFirstActual: { type: Number },
+	deliverableBaseFirstTotal: { type: Number },
+	deliverableBaseLastActual: { type: Number },
+	deliverableBaseLastTotal: { type: Number }
+});
+
 
 var visboProjectVersionSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256},
@@ -114,7 +135,8 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	volumen: { type: Number, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
-	businessUnit: { type: String, required: false, maxlength: 256}
+	businessUnit: { type: String, required: false, maxlength: 256},
+	keyMetrics: { type: clsKeyMetrics }
 });
 // Set Creation and modification date automatically
 visboProjectVersionSchema.set('timestamps', true);

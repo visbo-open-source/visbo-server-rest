@@ -7,6 +7,7 @@ var constPermVP = Const.constPermVP
 var VisboProject = mongoose.model('VisboProject');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
+var VisboPortfolio = mongoose.model('VisboPortfolio');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -100,6 +101,8 @@ function getAllVPGroups(req, res, next) {
 }
 
 function checkVpfid(req, res, next, vpfid) {
+	var sysAdmin = req.query.sysadmin ? true : false;
+
 	logger4js.debug("Check Portfolio ID vpfid %s user %s for url %s ", vpfid, req.decoded.email, req.url);
 	if (!validate.validateObjectId(vpfid, false)) {
 		logger4js.warn("VC Groups Bad Parameter vpid %s", vpfid);
@@ -108,7 +111,28 @@ function checkVpfid(req, res, next, vpfid) {
 			message: 'No valid Visbo Project Portfolio'
 		});
 	}
-	return next();
+	logger4js.debug("VP Portfolio vpid: %s vpfid: ", req.oneVP._id, vpfid);
+
+	var query = {};
+	query.vpid = req.oneVP._id;
+	query._id = vpfid;
+	var queryVPF = VisboPortfolio.findOne(query);
+	// queryVP.select('name users updatedAt createdAt');
+	queryVPF.exec(function (err, oneVPF) {
+		if (err) {
+			errorHandler(err, res, `DB: VP Get VPF List`, `Error getting Visbo Project Portfolio List`)
+			return;
+		}
+		if (!oneVPF) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Visbo Project Portfolio or no Permission'
+			});
+		}
+		req.oneVPF = oneVPF
+		logger4js.debug("Found Visbo Project Portfolio %s ", vpfid);
+		return next();
+	});
 }
 
 // Generate the Groups where the user is member of System / VP depending on the case
@@ -143,7 +167,7 @@ function getVpidGroups(req, res, next, vpid) {
 		query.vpids = vpid;
 		query["$or"] = [{groupType: "VC"}, {deletedByParent: {$exists: checkDeleted}}]
 	}
-	logger4js.debug("Search VGs %O", query);
+	logger4js.trace("Search VGs %O", query);
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vpid')
