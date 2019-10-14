@@ -96,6 +96,7 @@ router.route('/')
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
+	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
 	*
 	* @apiPermission Permission: Authenticated, View Visbo Project.
 	* @apiError {number} 400 Bad Values in paramter in URL
@@ -140,10 +141,12 @@ router.route('/')
 		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = false;		// show only specific columns instead of all
+		var keyMetrics = false;
 		var nowDate = new Date();
 
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
+		|| (req.query.vpfid && !validate.validateObjectId(req.query.vpfid, false))
 		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
 			logger4js.warn("Get VPV mal formed query parameter %O ", req.query);
 			return res.status(400).send({
@@ -193,6 +196,11 @@ router.route('/')
 				logger4js.debug("longList Query String :%s:", req.query.longList);
 				longList = true;
 			}
+			if (req.query.keyMetrics != undefined){
+				logger4js.debug("keyMetrics Query String :%s:", req.query.keyMetrics);
+				keyMetrics = true;
+				longList = false;
+			}
 		}
 		logger4js.info("Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s", userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 
@@ -225,11 +233,11 @@ router.route('/')
 			var timeMongoEnd = new Date();
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
-			var vpidsList = [];
+			var vpvidsList = [];
 			if (!latestOnly) {
-				// psuh all vpvids to search for more details
+				// push all vpvids to search for more details
 				for (let i = 0; i < listVPV.length; i++){
-					vpidsList.push(listVPV[i]._id)
+					vpvidsList.push(listVPV[i]._id)
 				}
 			} else {
 				if (req.listPortfolioVPVariant) {
@@ -249,8 +257,9 @@ router.route('/')
 				}
 
 				if (req.query.refNext != true) {
+					// MS TODO: Check if the element 0 should be pushed might be it does not belong to the list because of variantName
 					if (listVPV.length > 0) {
-						vpidsList.push(listVPV[0]._id);
+						vpvidsList.push(listVPV[0]._id);
 					}
 					for (let i = 1; i < listVPV.length; i++){
 						//compare current item with previous and ignore if it is the same vpid & variantname
@@ -258,13 +267,13 @@ router.route('/')
 						if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
 							|| listVPV[i].variantName != listVPV[i-1].variantName
 						) {
-							vpidsList.push(listVPV[i]._id)
+							vpvidsList.push(listVPV[i]._id)
 							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
 						}
 					}
 				} else {
 					if (listVPV.length == 1) {
-						vpidsList.push(listVPV[0]._id);
+						vpvidsList.push(listVPV[0]._id);
 					}
 					for (let i = 0; i < listVPV.length - 1; i++){
 						//compare current item with previous and ignore if it is the same vpid & variantname
@@ -272,21 +281,24 @@ router.route('/')
 						if (listVPV[i].vpid.toString() != listVPV[i+1].vpid.toString()
 							|| listVPV[i].variantName != listVPV[i+1].variantName
 						) {
-							vpidsList.push(listVPV[i]._id)
+							vpvidsList.push(listVPV[i]._id)
 							logger4js.trace("compare unequal: Index %d VPIDs equal %s timestamp %s %s ", i, listVPV[i].vpid != listVPV[i+1].vpid, listVPV[i].timestamp, listVPV[i+1].timestamp);
 						}
 					}
 					if (listVPV.length > 0) {
-						vpidsList.push(listVPV[listVPV.length-1]._id);
+						vpvidsList.push(listVPV[listVPV.length-1]._id);
 					}
 				}
 			}
 			// if (listVPV.length > 1 && latestOnly){
-			logger4js.debug("Found %d Project Version IDs", vpidsList.length);
+			logger4js.debug("Found %d Project Version IDs", vpvidsList.length);
 
-			queryvpvids._id = {$in: vpidsList};
+			queryvpvids._id = {$in: vpvidsList};
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
-			if (!longList) {
+			if (keyMetrics) {
+				// deliver only the short info about project versions
+				queryVPV.select('_id vpid name timestamp keyMetrics status ampelStatus variantName updatedAt createdAt deletedAt');
+			} else if (!longList) {
 				// deliver only the short info about project versions
 				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
 			} else {
@@ -501,6 +513,7 @@ router.route('/')
 				newVPV.complexity = req.body.complexity;
 				newVPV.description = req.body.description;
 				newVPV.businessUnit = req.body.businessUnit;
+				newVPV.keyMetrics = req.body.keyMetrics;
 
 				logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 				newVPV.save(function(err, oneVPV) {
