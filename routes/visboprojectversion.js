@@ -568,7 +568,8 @@ router.route('/:vpvid')
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		if (calcCost) {
-			cost = visboBusiness.getAllPersonalKosten(req.oneVPV, req.visboOrganisations[0]);
+			// cost = visboBusiness.getAllPersonalKosten(req.oneVPV, req.visboOrganisations[0]);
+			cost = visboBusiness.getAllOtherCost(req.oneVPV, req.visboOrganisations[0]);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Project Version',
