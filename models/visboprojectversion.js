@@ -77,20 +77,14 @@ var clsPhase = new Schema({
 var clsKeyMetrics = new Schema({
 	costCurrentActual: { type: Number },
 	costCurrentTotal: { type: Number },
-	costBaseFirstActual: { type: Number },
-	costBaseFirstTotal: { type: Number },
 	costBaseLastActual: { type: Number },
 	costBaseLastTotal: { type: Number },
 	timeCompletionCurrentActual: { type: Number },
-	timeCompletionBaseFirstActual: { type: Number },
 	timeCompletionBaseLastActual: { type: Number },
 	endDateCurrent: { type: Date },
-	endDateBaseFirst: { type: Date },
 	endDateBaseLast: { type: Date },
 	deliverableCompletionCurrentActual: { type: Number },
 	deliverableCompletionCurrentTotal: { type: Number },
-	deliverableBaseFirstActual: { type: Number },
-	deliverableBaseFirstTotal: { type: Number },
 	deliverableBaseLastActual: { type: Number },
 	deliverableBaseLastTotal: { type: Number }
 });

@@ -362,20 +362,14 @@ router.route('/')
 	*   "keyMetrics": {
 	*    "costCurrentActual": 50,
 	*    "costCurrentTotal": 110,
-	*    "costBaseFirstActual": 40,
-	*    "costBaseFirstTotal": 100,
 	*    "costBaseLastActual": 50,
 	*    "costBaseLastTotal": 105,
 	*    "timeCompletionCurrentActual": 4.2,
-	*    "timeCompletionBaseFirstActual": 10,
 	*    "timeCompletionBaseLastActual": 10,
 	*    "endDateCurrent": "2019-12-31T00:00:00.000Z",
-	*    "endDateBaseFirst": "2019-12-31T00:00:00.000Z",
 	*    "endDateBaseLast": "2019-12-31T00:00:00.000Z",
 	*    "deliverableCompletionCurrentActual": 8.4,
 	*    "deliverableCompletionCurrentTotal": 20,
-	*    "deliverableBaseFirstActual": 10,
-	*    "deliverableBaseFirstTotal": 20,
 	*    "deliverableBaseLastActual": 10,
 	*    "deliverableBaseLastTotal": 20
 	*   }
