@@ -604,7 +604,8 @@ router.route('/:vpid')
 	*      "email": "someone@visbo.de",
 	*      "createdAt": "2018-04-26T11:04:12.094Z",
 	*      "expiresAt": "2018-04-26T12:04:12.094Z"
-	*    }]
+	*    }],
+	*    "perm": {"vc": 307, "vp": 1331}
 	* }]
  	*}
 	*/
@@ -2179,6 +2180,7 @@ router.route('/:vpid/portfolio')
 	*     "reasonToExclude": "Description Text Exclude",
 	*     "_id": "5b19306f53eb4b516619a5ac"
 	*   }]
+	*   "perm": {"vc": 307, "vp": 1331}
   * }
 	*/
 // Get Portfolio Versions
@@ -2248,14 +2250,16 @@ router.route('/:vpid/portfolio')
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
 					count: listVPFfiltered.length,
-					vpf: listVPFfiltered
+					vpf: listVPFfiltered,
+					perm: req.combinedPerm
 				});
 			} else {
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
 					count: listVPF.length,
-					vpf: listVPF
+					vpf: listVPF,
+					perm: req.combinedPerm
 				});
 			}
 		});

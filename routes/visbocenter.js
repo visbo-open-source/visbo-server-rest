@@ -168,7 +168,7 @@ router.route('/')
 			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
-			logger4js.info("Get Visbo Center for user %s sysAdmin %s", useremail, req.query.sysadmin);
+			logger4js.info("Get Visbo Center for User %s SysAdmin %s", useremail, req.query.sysadmin);
 
 			var query = {};
 			// Get all VCs there the user Group is assigned to
