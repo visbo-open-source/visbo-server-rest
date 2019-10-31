@@ -1,15 +1,16 @@
 
 / AWS WEB Server
 ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-52-57-203-5.eu-central-1.compute.amazonaws.com
-TEMP ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-3-122-116-225.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/DevVisboAWS.pem" ubuntu@ec2-18-184-124-32.eu-central-1.compute.amazonaws.com
 
 ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com
 TEMP ssh -i "$HOME/.ssh/StagVisboAWS.pem" ubuntu@ec2-35-159-33-231.eu-central-1.compute.amazonaws.com
 
-ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-3-122-55-160.eu-central-1.compute.amazonaws.com
-TEMP ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-18-195-20-28.eu-central-1.compute.amazonaws.com
+ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-18-184-75-41.eu-central-1.compute.amazonaws.com
+TEMP ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-18-184-4-146.eu-central-1.compute.amazonaws.com
 
-fs-ac623ef5
+# prod fs-c85c5b91
+
 curl http://localhost:3484/status
 
 
@@ -71,3 +72,28 @@ sudo apt update && apt list --upgradeable
 sudo apt-get upgrade
 sudo apt-get full-upgrade
 sudo apt autoremove
+
+
+# Change Boot service
+sudo systemctl stop aws-efs
+ls -l /etc/systemd/system/aws-efs.service /etc/systemd/system/multi-user.target.wants/aws-efs.service
+sudo rm /etc/systemd/system/aws-efs.service
+sudo rm /etc/systemd/system/multi-user.target.wants/aws-efs.service
+
+sudo systemctl daemon-reload
+
+# git pull to get the new scripts
+mv $HOME/bin/aws-automount.sh  $HOME/bin/aws-visboboot.sh
+sudo systemctl enable $HOME/GitHub/visbo-server-rest/setup/aws-visbo.service
+
+
+
+sudo swapoff -a
+sudo swapon -s
+sudo fallocate -l 1.5G /var/swap.1
+sudo mkswap /var/swap.1
+sudo swapon /var/swap.1
+sudo swapon -s
+cat /etc/fstab
+
+ADD: /var/swap.1 swap swap defaults 0 0 // to /etc/fstab

@@ -210,7 +210,7 @@ router.route('/')
 			vpCondition.push({"vpid": {$in: vpidList}})
 			vpCondition.push({"vpid": {$in: req.listPortfolioVP}})
 			queryvpv["$and"] = vpCondition;
-			logger4js.info("Get Project Versions for Portfolio user %s for Query %s", userId, JSON.stringify(queryvpv));
+			logger4js.trace("Get Project Versions for Portfolio user %s for Query %s", userId, JSON.stringify(queryvpv));
 		} else {
 			// restrict query to VPs with permission
 			queryvpv.vpid = {$in: vpidList};
