@@ -279,9 +279,9 @@ router.route('/user/login')
 								sendMail.accountNewLogin(req, user);
 								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
-							// Cleanup old User Agents older than 1 year
+							// Cleanup old User Agents older than 3 Months
 							var expiredAt = new Date()
-							expiredAt.setFullYear(expiredAt.getFullYear()-1)
+							expiredAt.setMonth(expiredAt.getMonth()-3)
 							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
 							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
 						}
