@@ -93,7 +93,7 @@ router.route('/')
 	* @apiParam {String} vcid Deliver only versions for projects inside a specific VisboCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
 	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
-	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. If client wants to have only versions from the main branch, use variantName=
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
@@ -190,7 +190,7 @@ router.route('/')
 			}
 			if (req.query.variantName != undefined){
 				logger4js.debug("Variant Query String :%s:", req.query.variantName);
-				queryvpv.variantName = req.query.variantName
+				queryvpv.variantName = {$in: req.query.variantName.split(",")};
 			}
 			if (req.query.longList != undefined){
 				logger4js.debug("longList Query String :%s:", req.query.longList);
