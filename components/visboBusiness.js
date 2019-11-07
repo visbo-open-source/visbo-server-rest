@@ -64,6 +64,20 @@ var getAllPersonalKosten = function(vpv, organisation) {
 	return costValues;
 }
 
+var calcKeyMetrics = function(vpv, pfv, organisation) {
+	var keyMetrics = {};
+	var startCalc = new Date();
+
+	// Calculate keyMetrics Values here
+	keyMetrics = vpv.keyMetrics;
+	logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+
+	var endCalc = new Date();
+	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	return keyMetrics;
+}
+
 module.exports = {
-	getAllPersonalKosten: getAllPersonalKosten
+	getAllPersonalKosten: getAllPersonalKosten,
+	calcKeyMetrics: calcKeyMetrics
 };
