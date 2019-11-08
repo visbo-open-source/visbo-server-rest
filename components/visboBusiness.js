@@ -64,6 +64,73 @@ var getAllPersonalKosten = function(vpv, organisation) {
 	return costValues;
 }
 
+<<<<<<< HEAD
+// calculate all other Costs for the requested project per month
+var getAllOtherCost = function(vpv, organisation) {
+	OthercostValues = [];
+	logger4js.info("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
+	var startCalc = new Date();
+	// prepare organisation for direct access to uid
+	var allCosts = [];
+	for (var i = 0; i < organisation.value.allCosts.length; i++) {
+		allCosts[organisation.value.allCosts[i].uid] = organisation.value.allCosts[i]
+	}
+	var endCalc = new Date();
+	logger4js.debug("Calculate all other Cost Convert Organisation %s ", endCalc.getTime() - startCalc.getTime());
+
+	startCalc = new Date();
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var dauer = endIndex - startIndex + 1;
+	var faktor = 1;
+
+
+	if (dauer > 0) {
+		for (x = 0; x < 1; x++) { // for performance Test do it several times
+			for (var i = 0; i < vpv.AllPhases.length; i++) {
+				var phase = vpv.AllPhases[i];
+				var phasenStart = phase.relStart - 1
+				// logger4js.trace("Calculate Phase %s Costs %s", i, phase.AllCosts.length);
+				for (var j = 0; j < phase.AllCosts.length; j++) {
+					var cost = phase.AllCosts[j];
+					var tagessatz = allCosts[cost.KostenTyp].budget;
+					// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
+					if (cost.Bedarf) {
+						var dimension = cost.Bedarf.length;
+						for (var k = phasenStart; k < phasenStart + dimension; k++) {
+							// if OthercostValue[i] is not set yet use 0
+							OthercostValues[k] = (OthercostValues[k] || 0) + cost.Bedarf[k - phasenStart] * faktor // dieser Wert ist bereits in T € und muss nicht dividiert durch 1000
+						}
+					}
+				}
+			}
+		}
+	} else {
+		OthercostValues[0] = 0
+	}
+	var endCalc = new Date();
+	logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	return OthercostValues;
+=======
+var calcKeyMetrics = function(vpv, pfv, organisation) {
+	var keyMetrics = {};
+	var startCalc = new Date();
+
+	// Calculate keyMetrics Values here
+	keyMetrics = vpv.keyMetrics;
+	logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+
+	var endCalc = new Date();
+	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	return keyMetrics;
+>>>>>>> 1bde85d341e90c70da6d10ac098eeefaebcf8748
+}
+
 module.exports = {
-	getAllPersonalKosten: getAllPersonalKosten
+	getAllPersonalKosten: getAllPersonalKosten,
+<<<<<<< HEAD
+	getAllOtherCost: getAllOtherCost
+=======
+	calcKeyMetrics: calcKeyMetrics
+>>>>>>> 1bde85d341e90c70da6d10ac098eeefaebcf8748
 };
