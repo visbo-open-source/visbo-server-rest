@@ -303,66 +303,6 @@ function getPortfolioVPs(req, res, next) {
 	}
 }
 
-// Get the organisations for this VPV for Cost calculation
-function getVpvidOrgs(req, res, next, vpvid) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	var baseUrl = req.url.split("?")[0]
-	var urlComponent = baseUrl.split("/")
-	var sysAdmin = req.query.sysadmin ? true : false;
-	var checkDeleted = req.query.deleted == true;
-	var calcCost = req.query.calcCost == true;
-	var vcid = undefined;
-
-	logger4js.debug("VPV getVpvidOrgs Middleware for %s calc %s", vpvid, calcCost);
-	// do not calculate if not requested by GET (calcCost)
-	if (!(req.method == "GET" && calcCost)) return next();
-
-	if (!req.oneVPV || !req.permGroups) {
-		logger4js.warn("VPV not available for cost calculation %s", vpvid);
-		return res.status(400).send({
-			state: 'failure',
-			message: 'No valid Visbo Project Version'
-		});
-	}
-	for (var i = 0; i < req.permGroups.length; i++) {
-		if (req.permGroups[i].vcid) {
-			vcid = req.permGroups[i].vcid;
-			break;
-		}
-	}
-	if (!vcid) {
-		logger4js.warn("VCID not available for VPV cost calculation %s", vpvid);
-		return res.status(400).send({
-			state: 'failure',
-			message: 'No valid Visbo Center'
-		});
-	}
-	logger4js.debug("VPV calcCost VPV EXISTS VCID %s", vcid);
-	var query = {};
-	query.vcid = vcid;
-	query.name = 'organisation';
-	query.type = 'organisation';
-
-	logger4js.debug("calcCost: Find VC Settings with query %O", query);
-	var queryVCSetting = VCSetting.find(query);
-	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of cost calculation
-	queryVCSetting.select('-value.allRoles.kapazitaet');
-	queryVCSetting.sort('type name userId -timestamp')
-	queryVCSetting.lean();
-	queryVCSetting.exec(function (err, listVCSetting) {
-		if (err) {
-			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`)
-			return;
-		}
-		req.visboOrganisations = listVCSetting;
-		for (var i = 0; i < listVCSetting.length; i++) {
-			logger4js.debug("calcCost: Organisation(%d) found: id: %s, name %s, type %s vcid: %s", i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
-		}
-		return next();
-	});
-}
-
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.url.split("?")[0]
@@ -427,7 +367,7 @@ function getVPVpfv(req, res, next) {
 	// fetch the base line in case of POST VPV to calculate keyMetrics
 	if (!(req.method == "POST" && baseUrl == '/' )) return next();
 
-	// MS TODO: check that vpid is present and is a valid ObjectID
+	// check that vpid is present and is a valid ObjectID
 	if (!validate.validateObjectId(vpid, false)
 	|| !validate.validateDate(timestamp, true)) {
 		logger4js.warn("Get VPV mal formed or missing vpid %s or timestamp %s", vpid, timestamp);
@@ -457,7 +397,7 @@ function getVPVpfv(req, res, next) {
 			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
 			return;
 		};
-		logger4js.debug("VPV getVPVpfv: Found a pfv Version? %s ", pfvVPV && pfvVPV._id);
+		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		return next();
 	});
@@ -467,7 +407,6 @@ module.exports = {
 	getAllVPVGroups: getAllVPVGroups,
 	getVpvidGroups: getVpvidGroups,
 	getPortfolioVPs: getPortfolioVPs,
-	getVpvidOrgs: getVpvidOrgs,
 	getVCOrgs: getVCOrgs,
 	getVPVpfv: getVPVpfv
 };

@@ -78,6 +78,5 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 }
 
 module.exports = {
-	getAllPersonalKosten: getAllPersonalKosten,
 	calcKeyMetrics: calcKeyMetrics
 };
