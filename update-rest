@@ -1,7 +1,6 @@
 #!/bin/bash
 cd $HOME/GitHub/visbo-server-rest
 continueOnEmptyPull=0
-echo "Args:$#:"
 if [ $# -gt 0 -a "$1" = "force" ]
 then
   continueOnEmptyPull=1

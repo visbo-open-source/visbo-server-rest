@@ -314,8 +314,9 @@ function getVpvidOrgs(req, res, next, vpvid) {
 	var calcCost = req.query.calcCost == true;
 	var vcid = undefined;
 
-	logger4js.debug("VPV calcCost Middleware for %s calc %s", vpvid, calcCost);
-	if (!calcCost) return next();
+	logger4js.debug("VPV getVpvidOrgs Middleware for %s calc %s", vpvid, calcCost);
+	// do not calculate if not requested by GET (calcCost)
+	if (!(req.method == "GET" && calcCost)) return next();
 
 	if (!req.oneVPV || !req.permGroups) {
 		logger4js.warn("VPV not available for cost calculation %s", vpvid);
@@ -356,9 +357,108 @@ function getVpvidOrgs(req, res, next, vpvid) {
 		}
 		req.visboOrganisations = listVCSetting;
 		for (var i = 0; i < listVCSetting.length; i++) {
-			logger4js.debug("calcCost: Organisations found: id: %s, name %s, type %s vcid: %s", listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
+			logger4js.debug("calcCost: Organisation(%d) found: id: %s, name %s, type %s vcid: %s", i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
 		}
-		logger4js.trace("calcCost: First Organisation %s", JSON.stringify(listVCSetting[0]));
+		return next();
+	});
+}
+
+// Get the organisations for keyMetrics calculation
+function getVCOrgs(req, res, next) {
+	var baseUrl = req.url.split("?")[0]
+	var vcid = undefined;
+
+	logger4js.debug("VPV getVCOrgs Information");
+	// fetch the organization in case of POST VPV to calculate keyMetrics
+	if (!(req.method == "POST" && baseUrl == '/' )) return next();
+
+	if (!req.permGroups) {
+		logger4js.warn("No Permission Group available");
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to Create Project Version'
+		});
+	}
+	for (var i = 0; i < req.permGroups.length; i++) {
+		if (req.permGroups[i].vcid) {
+			vcid = req.permGroups[i].vcid;
+			break;
+		}
+	}
+	if (!vcid) {
+		logger4js.warn("VCID not available for VPV");
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Visbo Center'
+		});
+	}
+	logger4js.debug("VPV getVCOrgs organization for VCID %s", vcid);
+	var query = {};
+	query.vcid = vcid;
+	query.name = 'organisation';
+	query.type = 'organisation';
+
+	logger4js.debug("getVCOrgs: Find VC Settings with query %O", query);
+	var queryVCSetting = VCSetting.find(query);
+	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
+	queryVCSetting.select('-value.allRoles.kapazitaet');
+	queryVCSetting.sort('type name userId -timestamp')
+	queryVCSetting.lean();
+	queryVCSetting.exec(function (err, listVCSetting) {
+		if (err) {
+			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`)
+			return;
+		}
+		req.visboOrganisations = listVCSetting;
+		for (var i = 0; i < listVCSetting.length; i++) {
+			logger4js.debug("getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s", i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
+		}
+		return next();
+	});
+}
+
+// Get the base line (pfv) for keyMetrics calculation
+function getVPVpfv(req, res, next) {
+	var baseUrl = req.url.split("?")[0]
+	var vpid = req.body.vpid;
+	var timestamp = req.body.timestamp;
+
+	logger4js.trace("VPV getVPVpfv Information");
+	// fetch the base line in case of POST VPV to calculate keyMetrics
+	if (!(req.method == "POST" && baseUrl == '/' )) return next();
+
+	// MS TODO: check that vpid is present and is a valid ObjectID
+	if (!validate.validateObjectId(vpid, false)
+	|| !validate.validateDate(timestamp, true)) {
+		logger4js.warn("Get VPV mal formed or missing vpid %s or timestamp %s", vpid, timestamp);
+		return res.status(400).send({
+			state: "failure",
+			message: "Visbo Project ID missing"
+		})
+	}
+	if (!timestamp) {
+		timestamp = new Date();
+	}
+	logger4js.debug("VPV getVPVpfv base line for VPID %s TimeStamp %s", vpid, timestamp);
+
+	var queryvpv = {};
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
+	queryvpv.timestamp =  {$lt: timestamp};
+	queryvpv.vpid = vpid;
+	queryvpv.variantName = 'pfv';
+
+	var queryVPV = VisboProjectVersion.findOne(queryvpv);
+	queryVPV.sort('vpid variantName -timestamp');
+	// queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, pfvVPV) {
+		if (err) {
+			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
+			return;
+		};
+		logger4js.debug("VPV getVPVpfv: Found a pfv Version? %s ", pfvVPV && pfvVPV._id);
+		req.visboPFV = pfvVPV;
 		return next();
 	});
 }
@@ -367,5 +467,7 @@ module.exports = {
 	getAllVPVGroups: getAllVPVGroups,
 	getVpvidGroups: getVpvidGroups,
 	getPortfolioVPs: getPortfolioVPs,
-	getVpvidOrgs: getVpvidOrgs
+	getVpvidOrgs: getVpvidOrgs,
+	getVCOrgs: getVCOrgs,
+	getVPVpfv: getVPVpfv
 };

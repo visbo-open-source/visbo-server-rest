@@ -64,6 +64,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 	return costValues;
 }
 
+<<<<<<< HEAD
 // calculate all other Costs for the requested project per month
 var getAllOtherCost = function(vpv, organisation) {
 	OthercostValues = [];
@@ -110,9 +111,26 @@ var getAllOtherCost = function(vpv, organisation) {
 	var endCalc = new Date();
 	logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return OthercostValues;
+=======
+var calcKeyMetrics = function(vpv, pfv, organisation) {
+	var keyMetrics = {};
+	var startCalc = new Date();
+
+	// Calculate keyMetrics Values here
+	keyMetrics = vpv.keyMetrics;
+	logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+
+	var endCalc = new Date();
+	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	return keyMetrics;
+>>>>>>> 1bde85d341e90c70da6d10ac098eeefaebcf8748
 }
 
 module.exports = {
 	getAllPersonalKosten: getAllPersonalKosten,
+<<<<<<< HEAD
 	getAllOtherCost: getAllOtherCost
+=======
+	calcKeyMetrics: calcKeyMetrics
+>>>>>>> 1bde85d341e90c70da6d10ac098eeefaebcf8748
 };
