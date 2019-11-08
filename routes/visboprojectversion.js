@@ -31,6 +31,10 @@ var logger4js = log4js.getLogger(logModule);
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
+// register the organisation middleware to get the related organisation
+router.use('/', verifyVpv.getVCOrgs);
+// register the base line middleware to get the related base line version
+router.use('/', verifyVpv.getVPVpfv);
 // register the VPF middleware to generate the Project List that is assigned to the portfolio
 router.use('/', verifyVpv.getPortfolioVPs);
 // register the VPV middleware to check that the user has access to the VPV
@@ -527,7 +531,9 @@ router.route('/')
 				newVPV.complexity = req.body.complexity;
 				newVPV.description = req.body.description;
 				newVPV.businessUnit = req.body.businessUnit;
+				// MS TODO: Remove use of keyMetrics from body after keyMetrics calc works
 				newVPV.keyMetrics = req.body.keyMetrics;
+				newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 
 				logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 				newVPV.save(function(err, oneVPV) {
@@ -595,7 +601,8 @@ router.route('/:vpvid')
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
 		if (calcCost) {
-			cost = visboBusiness.getAllPersonalKosten(req.oneVPV, req.visboOrganisations[0]);
+			// cost = visboBusiness.getAllPersonalKosten(req.oneVPV, req.visboOrganisations[0]);
+			cost = visboBusiness.getAllOtherCost(req.oneVPV, req.visboOrganisations[0]);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Project Version',

@@ -495,7 +495,7 @@ router.route('/user/pwreset')
       if (err) {
         return res.status(401).send({
         	state: 'failure',
-        	message: 'Token is dead'
+        	message: 'Session has expired'
         });
       } else {
         // if everything is good, save to request for use in other routes
