@@ -299,10 +299,10 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp keyMetrics status ampelStatus variantName updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics status ampelStatus ampelErlaeuterung leadPerson variantName updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus variantName updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp Erloes startDate endDate status ampelStatus ampelErlaeuterung leadPerson variantName updatedAt createdAt deletedAt');
 			} else {
 				req.auditTTLMode = 0;	// Real Download of Visbo Project Versions
 			}
@@ -506,8 +506,6 @@ router.route('/')
 				newVPV.actualDataUntil = req.body.actualDataUntil;
 				newVPV.Erloes = req.body.Erloes;
 				newVPV.leadPerson = req.body.leadPerson;
-				newVPV.tfSpalte = req.body.tfSpalte;
-				newVPV.tfZeile = req.body.tfZeile;
 				newVPV.startDate = req.body.startDate;
 				newVPV.endDate = req.body.endDate;
 
