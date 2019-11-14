@@ -107,8 +107,6 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Erloes: { type: Number, required: false},
 	actualDataUntil: { type: Date, required: false},
 	leadPerson: { type: String, required: false, maxlength: 256},
-	tfSpalte: { type: Number, required: false},
-	tfZeile: { type: Number, required: false},
 	startDate: { type: Date, required: false},
 	endDate: { type: Date, required: false},
 	earliestStart: { type: Number, required: false},
