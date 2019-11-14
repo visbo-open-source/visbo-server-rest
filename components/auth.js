@@ -50,7 +50,7 @@ function verifyUser(req, res, next) {
 				if (decoded) req.decoded = decoded;
         return res.status(401).send({
         	state: 'failure',
-        	message: 'Token is dead'
+        	message: 'Session is no longer valid'
         });
       } else {
         // if everything is good, check IP and User Agent to prevent session steeling
@@ -66,7 +66,7 @@ function verifyUser(req, res, next) {
 				if (!sessionValid) {
 					return res.status(401).send({
 	        	state: 'failure',
-	        	message: 'Token is dead'
+	        	message: 'Session is no longer valid'
 	        });
 				}
 				var redisClient = visboRedis.VisboRedisInit();

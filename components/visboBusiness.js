@@ -128,6 +128,7 @@ var getAllOtherCost = function(vpv, organisation) {
 	//var endCalc = new Date();
 	//logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return OthercostValues;
+
 }
 
 var getSummeKosten = function(vpv, organisation, index){
@@ -610,6 +611,7 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 		return sum;
  }
 
+
 var calcKeyMetrics = function(vpv, pfv, organisation) {
 	var keyMetrics = {};
 	var startCalc = new Date();
@@ -690,10 +692,12 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
 
 	return keyMetrics;
+
 }
 
 module.exports = {
 	getAllPersonalKosten: getAllPersonalKosten,
 	getAllOtherCost: getAllOtherCost,
 	calcKeyMetrics: calcKeyMetrics
+
 };
