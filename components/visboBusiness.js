@@ -650,9 +650,14 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 	
 						if (vpv.variantName != "pfv"){
 							if (total){
-								
-								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
-								
+
+								if (isElemOfPast){
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								}					
+								else{				
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}							
+																
 							}
 							else{
 								if (isElemOfPast){
@@ -694,8 +699,13 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 						
 						if (vpv.variantName != "pfv"){
 							if (total){
-								
-								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+																	
+								if (isElemOfPast){
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								}					
+								else{				
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}								
 								
 							}
 							else{
