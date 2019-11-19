@@ -824,23 +824,23 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 		keyMetrics = null;
 	}
 
-	var diff_CostBLAct = oldkeyMetrics.costBaseLastActual - keyMetrics.costBaseLastActual;
-	var diff_CostBLTot = oldkeyMetrics.costBaseLastTotal - keyMetrics.costBaseLastTotal;
-	var diff_CostCurAct = oldkeyMetrics.costCurrentActual - keyMetrics.costCurrentActual;
-	var diff_CostCurTot = oldkeyMetrics.costCurrentTotal - keyMetrics.costCurrentTotal;
+	// var diff_CostBLAct = oldkeyMetrics.costBaseLastActual - keyMetrics.costBaseLastActual;
+	// var diff_CostBLTot = oldkeyMetrics.costBaseLastTotal - keyMetrics.costBaseLastTotal;
+	// var diff_CostCurAct = oldkeyMetrics.costCurrentActual - keyMetrics.costCurrentActual;
+	// var diff_CostCurTot = oldkeyMetrics.costCurrentTotal - keyMetrics.costCurrentTotal;
 
-	var diff_DelivBLAct = oldkeyMetrics.deliverableCompletionBaseLastActual - keyMetrics.deliverableCompletionBaseLastActual;
-	var diff_DelivBLTot = oldkeyMetrics.deliverableCompletionBaseLastTotal - keyMetrics.deliverableCompletionBaseLastTotal;
-	var diff_DelivCurAct = oldkeyMetrics.deliverableCompletionCurrentActual - keyMetrics.deliverableCompletionCurrentActual;
-	var diff_DelivCurTot= oldkeyMetrics.deliverableCompletionCurrentTotal - keyMetrics.deliverableCompletionCurrentTotal;
+	// var diff_DelivBLAct = oldkeyMetrics.deliverableCompletionBaseLastActual - keyMetrics.deliverableCompletionBaseLastActual;
+	// var diff_DelivBLTot = oldkeyMetrics.deliverableCompletionBaseLastTotal - keyMetrics.deliverableCompletionBaseLastTotal;
+	// var diff_DelivCurAct = oldkeyMetrics.deliverableCompletionCurrentActual - keyMetrics.deliverableCompletionCurrentActual;
+	// var diff_DelivCurTot= oldkeyMetrics.deliverableCompletionCurrentTotal - keyMetrics.deliverableCompletionCurrentTotal;
 
-	var diff_timeBLAct = oldkeyMetrics.timeCompletionBaseLastActual - keyMetrics.timeCompletionBaseLastActual;
-	var diff_timeBLTot = oldkeyMetrics.timeCompletionBaseLastTotal - keyMetrics.timeCompletionBaseLastTotal;
-	var diff_timeCurAct = oldkeyMetrics.timeCompletionCurrentActual - keyMetrics.timeCompletionCurrentActual;
-	var diff_timeCurTot = oldkeyMetrics.timeCompletionCurrentTotal -	keyMetrics.timeCompletionCurrentTotal;
+	// var diff_timeBLAct = oldkeyMetrics.timeCompletionBaseLastActual - keyMetrics.timeCompletionBaseLastActual;
+	// var diff_timeBLTot = oldkeyMetrics.timeCompletionBaseLastTotal - keyMetrics.timeCompletionBaseLastTotal;
+	// var diff_timeCurAct = oldkeyMetrics.timeCompletionCurrentActual - keyMetrics.timeCompletionCurrentActual;
+	// var diff_timeCurTot = oldkeyMetrics.timeCompletionCurrentTotal -	keyMetrics.timeCompletionCurrentTotal;
 
-	var diff_endDateBL = oldkeyMetrics.endDateBaseLast.getTime() - keyMetrics.endDateBaseLast.getTime();
-	var diff_endDateCur = oldkeyMetrics.endDateCurrent.getTime() - keyMetrics.endDateCurrent.getTime()
+	// var diff_endDateBL = oldkeyMetrics.endDateBaseLast.getTime() - keyMetrics.endDateBaseLast.getTime();
+	// var diff_endDateCur = oldkeyMetrics.endDateCurrent.getTime() - keyMetrics.endDateCurrent.getTime()
 
 
 	var endCalc = new Date();
