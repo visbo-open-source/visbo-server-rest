@@ -594,6 +594,7 @@ router.route('/:vpvid')
 		req.auditTTLMode = 0;	// Real Download of Visbo Project Version
 
 		logger4js.info("Get Visbo Project Version for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
+
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Project Version',
