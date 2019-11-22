@@ -37,7 +37,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
-	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
+	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
@@ -45,18 +45,18 @@ var clsResult = new Schema({
 	shortName: { type: String },
 	originalName: { type: String },
 	appearance: { type: String },
-	deliverables: [{ type: String, required: true }],
+	deliverables: [{ type: String }],
 	percentDone: { type: Number }
 });
 
 var clsPhase = new Schema({
-	AllRoles: [{ type: clsRole, required: true }],
-	AllCosts: [{ type: clsKostenart, required: true}],
-	AllResults: [{ type: clsResult, required: true }],
-	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
+	AllRoles: [{ type: clsRole }],
+	AllCosts: [{ type: clsKostenart }],
+	AllResults: [{ type: clsResult }],
+	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
 	percentDone: { type: Number },
 	responsible: { type: String },
-	deliverables: [{ type: String , required: true}],
+	deliverables: [{ type: String }],
 	ampelStatus: { type: Number },
 	ampelErlaeuterung: { type: String },
 	earliestStart: { type: Number },
@@ -121,9 +121,9 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Schriftfarbe: { type: Number, required: false},
 	VorlagenName: { type: String, required: false, maxlength: 256},
 	Dauer: { type: Number, required: false},
-	AllPhases: [{ type: clsPhase, required: true}],
+	AllPhases: [{ type: clsPhase, required: false}],
 	hierarchy: {
-		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode, required: true}} ]
+		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode}} ]
 	},
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},
