@@ -772,7 +772,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 			if (pfv != null){
 
 				var hrchy = [];
-				for (var i = 0; i < vpv.hierarchy.allNodes.length; i++) {
+				for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
 					hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
 				}
 
