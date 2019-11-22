@@ -1,3 +1,7 @@
+//var mongoose = require('mongoose');
+//var clsResult = mongoose.model('clsResult');
+//var clsHierarchyNode = mongoose.model('clsHierarchyNode');
+//var clsPhase = mongoose.model('clsPhase');
 var logging = require('../components/logging');
 
 var logModule = "OTHER";
@@ -16,6 +20,10 @@ var getColumnOfDate = function(value) {
 	return valueMonth - refMonth;
 }
 
+function addDays(dd, numDays) {
+	var inputDate = new Date(dd);
+	return new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate() + numDays);
+ }
 
 // calculate cost of personal for the requested project per month
 var getAllPersonalKosten = function(vpv, organisation) {
@@ -33,11 +41,15 @@ var getAllPersonalKosten = function(vpv, organisation) {
 	startCalc = new Date();
 	var startIndex = getColumnOfDate(vpv.startDate);
 	var endIndex = getColumnOfDate(vpv.endDate);
-	var dauer = endIndex - startIndex;
+	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
+	for (i=0 ; i < dauer; i++){
+		costValues[i] = 0;
+	}
+
 	if (dauer > 0) {
-		for (x = 0; x < 1; x++) { // for performance Test do it several times
+		//for (x = 0; x < 1; x++) { // for performance Test do it several times
 			for (var i = 0; i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
@@ -55,12 +67,12 @@ var getAllPersonalKosten = function(vpv, organisation) {
 					}
 				}
 			}
-		}
+		//}
 	} else {
 		costValues[0] = 0
 	}
-	var endCalc = new Date();
-	logger4js.warn("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	//var endCalc = new Date();
+	//logger4js.warn("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return costValues;
 }
 
@@ -68,6 +80,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 // calculate all other Costs for the requested project per month
 var getAllOtherCost = function(vpv, organisation) {
 	OthercostValues = [];
+
 	logger4js.info("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 	// prepare organisation for direct access to uid
@@ -84,15 +97,19 @@ var getAllOtherCost = function(vpv, organisation) {
 	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
+	for (i=0 ; i < dauer; i++){
+		OthercostValues[i] = 0;
+	}
 
 	if (dauer > 0) {
-		for (x = 0; x < 1; x++) { // for performance Test do it several times
+		//for (x = 0; x < 1; x++) { // for performance Test do it several times
 			for (var i = 0; i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
 				// logger4js.trace("Calculate Phase %s Costs %s", i, phase.AllCosts.length);
 				for (var j = 0; j < phase.AllCosts.length; j++) {
 					var cost = phase.AllCosts[j];
+					var costTyp = cost.KostenTyp;
 					var tagessatz = allCosts[cost.KostenTyp].budget;
 					// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
 					if (cost.Bedarf) {
@@ -104,24 +121,731 @@ var getAllOtherCost = function(vpv, organisation) {
 					}
 				}
 			}
-		}
+		//}
 	} else {
 		OthercostValues[0] = 0
 	}
-	var endCalc = new Date();
-	logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	//var endCalc = new Date();
+	//logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return OthercostValues;
+
+}
+
+var getSummeKosten = function(vpv, organisation, index){
+	// calculate the total cost until index-month
+	var costSum = 0;
+
+	if ((vpv != null) && (organisation != null)){
+		var allCostValues = {};
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+
+		var personalCost = getAllPersonalKosten(vpv, organisation);
+		var allOtherCost = getAllOtherCost(vpv, organisation);
+
+		if (index > dauer - 1){
+			index = dauer - 1
+		}
+
+		for (i = 0 ; i <= index; i++){
+			allCostValues[i] = personalCost[i] + allOtherCost[i];
+			costSum += allCostValues[i];
+		}
+	}
+
+	return costSum;
+}
+
+function deliverable (name, nameID){
+	deliverable.name = name;
+	deliverable.nameID = nameID;
+}
+
+function deliverableValue (relMonth, wert){
+	this.relMonth = relMonth;
+	this.wert = wert;
+}
+
+var elemIdIsMilestone = function(elemId) {
+	if (elemId != null) {
+		var isElemId = (elemId.search("1§") >= 0);
+	}
+	else{
+		isElemId = false;
+	}
+
+	return isElemId;
+}
+
+
+var getPhaseByID = function(hrchy, vpv, elemId){
+
+	var phIndex = hrchy[elemId].hryNode.indexOfElem;
+
+	if ((phIndex >= 0) && (phIndex <= vpv.AllPhases.length)){
+		 phase = vpv.AllPhases[phIndex-1];
+	}
+	else{
+		phase = null;
+	}
+	logger4js.trace("find the the Phase %s of the project %s ", phase.name, vpv.name);
+	return phase;
+}
+
+var getMilestoneByID = function(hrchy,vpv, elemId){
+
+	// prepared for direct Access with elemId
+	// hrchy = vpv.hierarchy, sortiert nach elemId
+
+	currentNode = hrchy[elemId].hryNode;
+	if (currentNode != null){
+		 phaseID = currentNode.parentNodeKey;
+		 phase = getPhaseByID(hrchy,vpv,phaseID);
+		 var msIndex = currentNode.indexOfElem;
+		 ms = phase.AllResults[msIndex-1];
+	}
+	else{
+		ms = null;
+	}
+	logger4js.trace("find the milestone %s of the project %s ", ms.name, vpv.name);
+	return ms;
+}
+var getMsDate = function(hrchy, vpv, elemId){
+	//var ms = new clsResult();
+	//var hrchy = vpv.hierarchy;
+	var msDate = new Date();
+	//var currentNode = new clsHierarchyNode();
+
+	//if ((msIndex >= 0) && (msIndex <= hrchy.allNodes.length)){
+	currentNode = hrchy[elemId].hryNode;
+	if (currentNode != null){
+		 phaseID = currentNode.parentNodeKey;
+		 phase = getPhaseByID(hrchy, vpv, phaseID);
+
+		 var msIndex = currentNode.indexOfElem;
+		 ms = phase.AllResults[msIndex-1];
+
+		 logger4js.trace("get the Date of Milestone %s in %s ", ms.name, phase.name);
+
+		 msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
+	}
+	else{
+		msDate = null;
+	}
+	return msDate;
+}
+// Herausfinden des EndDates der Phase phase
+var getPhEndDate = function(vpv, phase){
+	var phEndDate = new Date();
+	logger4js.trace("find the endDate of the Phase %s  ", phase.name);
+	if (phase.dauerInDays > 0){
+		phEndDate = addDays(vpv.startDate, phase.startOffsetinDays + phase.dauerInDays -1);
+	}
+	else{
+		phEndDate = addDays(vpv.startDate, phase.startOffsetinDays);
+	}
+	return phEndDate;
+}
+
+
+
+// finde all milestones of one VisboProjectVersion
+var getMilestones = function(hrchy, vpv){
+
+	if (vpv != null){
+
+		var milestones=[];
+
+		logger4js.trace("Calculate all milestones of %s  ", vpv && vpv._id);
+
+
+		for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+			var currentNodeID = vpv.hierarchy.allNodes[i].hryNodeKey;
+			if (elemIdIsMilestone(currentNodeID)){
+				var msDate = getMsDate(hrchy, vpv, currentNodeID);
+				while (milestones[msDate] != null) {
+					//addiere auf msDate eine MilliSekunde
+					msDate.setMilliseconds(msDate.getMilliseconds + 1);
+				}
+				milestones[msDate] = currentNodeID;
+			}
+		}
+	}
+	return milestones.reverse();
+}
+
+// find all phases of One VisboProjectVersion vpv
+var getPhases = function(hrchy, vpv){
+
+	if (vpv != null){
+
+		var phases = [];
+
+		logger4js.trace("Calculate all phases of %s  ", vpv && vpv._id);
+
+		for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+			var currentNodeID = vpv.hierarchy.allNodes[i].hryNodeKey;
+
+			if (!elemIdIsMilestone(currentNodeID)){
+				if (currentNodeID != null){
+					var phase = getPhaseByID(hrchy, vpv, currentNodeID);
+					var phaseDate = getPhEndDate(vpv, phase);
+					while (phases[phaseDate] != null) {
+						//addiere auf phaseDate eine MilliSekunde
+						phaseDate.setMilliseconds(phaseDate.getMilliseconds + 1);
+					}
+					phases[phaseDate] = currentNodeID;
+				}
+
+			}
+		}
+	}
+return phases.reverse();
+}
+
+
+// Calculate all Deliverables for the requested Project/BaseProject
+var getAllDeliverables = function(vpv) {
+	allDelivNames=[];
+	logger4js.trace("Calculate all Deliverables of %s  ", vpv && vpv._id);
+
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var dauer = endIndex - startIndex + 1;
+
+	// Laufvariable für die aufgesammelten Deliverables
+	var l = 0;
+
+	if (dauer > 0) {
+			for (var i = 0; i < vpv.AllPhases && vpv.AllPhases.length; i++) {
+				var phase = vpv.AllPhases[i];
+				var phasenStart = phase.relStart - 1;
+				// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
+				var anzPhaseDel = phase.deliverables.length;
+				for (var j = 0; j < vpv.AllPhases[i].deliverables.length; j++) {
+					var tmpNameId = phase.name;
+					var tmpdeliverable = phase.deliverables[j] + "(" + tmpNameId + ")";
+
+					var deliv = new deliverable();
+					deliv.nameID = tmpNameId;
+					deliv.name = tmpdeliverable;
+					// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, phase.nameID);
+					allDelivNames[l] = deliv;
+					l++;
+				}
+				var anzMS = phase.AllResults.length;
+				for (var k = 0; k < phase.AllResults.length; k++){
+					var milestone = phase.AllResults[k];
+					var anzMsDeliv = milestone.deliverables.length;
+					// logger4js.trace("Calculate Milestone %s Deliverables %s", i, phase.AllResults.length);
+					for (var m = 0; m < milestone.deliverables.length; m++){
+						var tmpNameId = milestone.name;
+						var tmpdeliverable = milestone.deliverables[m] + "(" + tmpNameId + ")";
+
+						var deliv = new deliverable;
+						deliv.nameID = tmpNameId;
+						deliv.name = tmpdeliverable;
+						// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, milestone.nameID);
+						allDelivNames[l] = deliv;
+						l++;
+					}
+				}
+			}
+		}
+	else {
+		allDelivNames[0] = 0
+	}
+	return allDelivNames;
+}
+
+var getDeliverableOutOfPhase = function(hrchy, vpv, deliverable, bezugsdatum, total){
+
+	var deliverableComplValue = new deliverableValue(0,0);
+	var deliverableComplValueArray = [];
+
+	var hstr = deliverable.name;
+	var hstrArr = hstr.split("(");
+	var deliverableName = hstrArr[0];
+
+
+	var phase = getPhaseByID(hrchy,vpv, deliverable.nameID);
+
+	if (phase != null){
+
+		var currentEndIndex = phase.relEnde - 1;
+		var currentPrzDone = phase.percentDone;
+		var isElemOfPast = (getPhEndDate(vpv, phase).getTime() < bezugsdatum.getTime());
+
+		if (deliverableName != ""){
+
+			deliverableComplValue.relMonth = currentEndIndex;
+
+			if (vpv.variantName != "pfv"){
+				if (total){
+					if (isElemOfPast){
+						deliverableComplValue.wert = 1 * currentPrzDone;
+					}
+					else{
+						deliverableComplValue.wert = 1;
+					}
+				}
+				else{
+					if (isElemOfPast){
+						deliverableComplValue.wert = 1 * currentPrzDone;
+					}
+				}
+			}
+			else{
+				if (total){
+						deliverableComplValue.wert = 1;
+				}
+				else{
+					if (isElemOfPast){
+							deliverableComplValue.wert = 1;
+					}
+
+				}
+			}
+		}
+
+	}
+	else{
+		deliverableComplValue.wert = -1;
+	}
+	deliverableComplValueArray[0] = deliverableComplValue;
+	return deliverableComplValueArray;
+}
+
+var getDeliverableOutOfMilestone = function(hrchy,vpv, deliverable, bezugsdatum, total){
+
+	// var deliverableMSComplValue = new deliverableValue(0,0);
+	var deliverableMSComplValue = new deliverableValue(0,0);
+	var deliverableMSComplValueArray = [];
+
+	var hstr = deliverable.name;
+	var hstrArr = hstr.split("(");
+	var deliverableName = hstrArr[0];
+
+	var ms = getMilestoneByID(hrchy,vpv, deliverable.nameID);
+
+	if (ms != null){
+
+		var msStartDate = getMsDate(hrchy, vpv, deliverable.nameID)
+		var currentEndIndex =getColumnOfDate(msStartDate) - getColumnOfDate(vpv.startDate);
+		var currentPrzDone = ms.percentDone;
+		var isElemOfPast = (msStartDate.getTime() < bezugsdatum.getTime());
+
+		deliverableMSComplValue.relMonth = currentEndIndex;
+
+		// prepare Deliverables for direct access to elemId
+		var msDelilverables = [];
+		for (var msi = 0; msi < ms.deliverables.length; msi++) {
+			msDelilverables[ms.deliverables[msi]] = ms.deliverables[msi];
+		}
+
+		var hmsDeliv = msDelilverables[deliverableName];
+
+		if (hmsDeliv != null){
+
+			if (deliverableName != ""){
+
+			if (vpv.variantName != "pfv"){
+				if (total){
+					if (isElemOfPast){
+						deliverableMSComplValue.wert = 1 * currentPrzDone;
+					}
+					else{
+						deliverableMSComplValue.wert = 1;
+					}
+				}
+				else{
+					if (isElemOfPast){
+						deliverableMSComplValue.wert = 1 * currentPrzDone;
+						}
+				}
+			}
+			else{
+				if (total){
+						deliverableMSComplValue.wert =  1;
+				}
+				else{
+					if (isElemOfPast){
+						deliverableMSComplValue.wert =  1;
+						}
+
+					}
+				}
+			}
+		}
+		else{
+			deliverableMSComplValue.wert = -1;
+		}
+
+	}
+	else{
+		deliverableMSComplValue.wert = -1;
+	}
+	deliverableMSComplValueArray[0] = deliverableMSComplValue;
+
+	return deliverableMSComplValueArray;
+}
+
+var getDeliverableCompletionMetric = function(vpv, baseDeliverables, bezugsdatum, total){
+
+	var sum = 0;
+
+	if (vpv != null){
+
+		deliverableCompletionValues=[];
+
+		logger4js.trace("Calculate metric of Deliverables of %s  ", vpv && vpv._id);
+
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+		// Fill the Array with Value = 0 for every Element
+		for (i=0 ; i < dauer; i++){
+			deliverableCompletionValues[i] = 0;
+		}
+		// prepare hierarchy for direct access with elemId
+		var hrchy = [];
+		for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+			hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+		}
+
+		var vpv_Deliverables = getAllDeliverables(vpv);
+
+		if (dauer > 0) {
+
+			for (var i = 0; i < baseDeliverables.length; i++) {
+
+				var baseDeliv = new deliverable();
+				baseDeliv = baseDeliverables[i];
+				var hstr = baseDeliv.name;
+				var hstrArr = hstr.split("(");
+				var baseDelivName = hstrArr[0];
+				var weitersuchen = false;
+
+				if (baseDelivName != "") {
+
+					var delComplValueArray = [];
+					var delComplValue = new deliverableValue(0,0);
+
+					var isMS = elemIdIsMilestone(baseDeliv.nameID);
+
+					if (!isMS){     // Deliverable gehört zu einer Phase
+
+						delComplValueArray = getDeliverableOutOfPhase(hrchy,vpv,baseDeliv,bezugsdatum, total);
+						delComplValue = delComplValueArray[0];
+						if (delComplValue.wert != -1){
+							deliverableCompletionValues[delComplValue.relMonth] = deliverableCompletionValues[delComplValue.relMonth] + delComplValue.wert;
+							weitersuchen = false;
+						}
+						else{
+							weitersuchen = true;
+						}
+
+					}
+					else{           // Deliverable gehört zu einem Meilenstein
+
+
+						delComplValueArray =  getDeliverableOutOfMilestone(hrchy,vpv,baseDeliv,bezugsdatum, total);
+						delComplValue = delComplValueArray[0];
+
+						if (delComplValue.wert != -1){
+							deliverableCompletionValues[delComplValue.relMonth] = deliverableCompletionValues[delComplValue.relMonth] + delComplValue.wert;
+							weitersuchen = false;
+						}
+						else{
+							weitersuchen = true;
+						}
+
+					}
+
+					// Deliverable wurde wohl verschoben
+					if (weitersuchen) {
+
+						// baseDeliv.nameID evt. nun in einer anderen Phase oder auch anderen Meilenstein
+						for (j= 0; j < vpv_Deliverables.length; j++){
+
+							var delComplValueArray = [];
+							var delComplValue = new deliverableValue(0,0);
+
+							var vpvDeliv = vpv_Deliverables[j];
+							var hstr = vpvDeliv.name;
+							var hstrArr = hstr.split("(");
+							var vpvDelivName = hstrArr[0];
+
+							if (baseDelivName == vpvDelivName){
+
+								if (elemIdIsMilestone(vpvDeliv.nameID)){
+									delComplValueArray = getDeliverableOutOfMilestone(hrchy, vpv,  vpvDeliv, bezugsdatum, total);
+									delComplValue = delComplValueArray[0];
+								}
+								else{
+									delComplValueArray = getDeliverableOutOfPhase(hrchy, vpv, vpvDeliv, bezugsdatum, total);
+									delComplValue = delComplValueArray[0];
+								}
+
+								if (delComplValue.wert != -1){
+									deliverableCompletionValues[delComplValue.relMonth] = deliverableCompletionValues[delComplValue.relMonth] + delComplValue.wert;
+								}
+							}
+						}
+
+					}
+				}
+
+			} // ende der For-Schleife
+
+		}
+	}
+	// Sum the values for all months
+	var sum = 0;
+	for (i=0; i < dauer; i++){
+		sum += deliverableCompletionValues[i];
+	}
+	return sum;
+}
+
+
+var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdatum, total){
+
+	var sum = 0;
+
+	if (vpv != null){
+
+		timeCompletionValues=[];
+
+		logger4js.trace("Calculate metric of Deliverables of %s  ", vpv && vpv._id);
+
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+		// Fill the Array with Value = 0 for every Element
+		for (i=0 ; i < dauer; i++){
+			timeCompletionValues[i] = 0;
+		}
+
+		var hrchy = [];
+		for (var i = 0; i < vpv.hierarchy && vpv.hierarchy.allNodes && vpv.hierarchy.allNodes.length; i++) {
+			hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+		}
+
+		if (dauer > 0) {
+			for (x in basePhases) {
+
+				phaseId = basePhases[x] ;
+				phase = getPhaseByID(hrchy, vpv, phaseId);
+
+				if (phase != null){
+					{
+						var currentEndIndex = phase.relEnde - 1;
+						var currentPrzDone = phase.percentDone;
+						var isElemOfPast = (getPhEndDate(vpv, phase).getTime() < bezugsdatum.getTime());
+
+						if (vpv.variantName != "pfv"){
+							if (total){
+
+								if (isElemOfPast){
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								}
+								else{
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}
+
+							}
+							else{
+								if (isElemOfPast){
+
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+
+								}
+							}
+						}
+						else{
+							if (total){
+
+								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+
+							}
+							else{
+								if (isElemOfPast){
+
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}
+
+							}
+						}
+					}
+				}
+
+			}
+			for (x in baseMilestones) {
+
+				msId = baseMilestones[x] ;
+				ms = getMilestoneByID(hrchy, vpv, msId);
+
+				if (ms != null){
+
+						var msStartDate = getMsDate(hrchy, vpv, msId)
+						var currentEndIndex =getColumnOfDate(msStartDate) - getColumnOfDate(vpv.startDate);
+						var currentPrzDone = ms.percentDone;
+						var isElemOfPast = (msStartDate.getTime() < bezugsdatum.getTime());
+
+						if (vpv.variantName != "pfv"){
+							if (total){
+
+								if (isElemOfPast){
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								}
+								else{
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}
+
+							}
+							else{
+								if (isElemOfPast){
+
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+
+								}
+							}
+						}
+						else{
+							if (total){
+
+								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+
+							}
+							else{
+								if (isElemOfPast){
+
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
+								}
+
+							}
+						}
+					}
+				}
+
+			}
+
+		}
+		// Sum the values for all months
+		var sum = 0;
+		for (i=0; i < dauer; i++){
+			sum += timeCompletionValues[i];
+		}
+
+		return sum;
+ }
+
 
 var calcKeyMetrics = function(vpv, pfv, organisation) {
 	var keyMetrics = {};
+	var oldkeyMetrics = {};
 	var startCalc = new Date();
+	var pfv_Deliverables = [];
+	var vpv_Deliverables = [];
 
-	// Calculate keyMetrics Values here
-	keyMetrics = vpv.keyMetrics;
-	logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+	if (vpv != null){
+
+		// Calculate keyMetrics Values here
+		oldkeyMetrics = vpv.keyMetrics;
+		keyMetrics = vpv.keyMetrics;
+		logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+
+		if (vpv.variantName != "pfv"){
+			var index = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
+			keyMetrics.costBaseLastTotal = getSummeKosten(pfv, organisation, index);
+			keyMetrics.costCurrentTotal= getSummeKosten(vpv, organisation, index);
+
+			var index = getColumnOfDate(vpv.timestamp) - getColumnOfDate(vpv.startDate);
+			keyMetrics.costCurrentActual= getSummeKosten(vpv, organisation, index);
+			keyMetrics.costBaseLastActual = getSummeKosten(pfv, organisation, index);
+
+			if (pfv != null){
+
+				var hrchy = [];
+				for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+					hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+				}
+
+				baseMilestones = getMilestones(hrchy,pfv);
+				basePhases = getPhases(hrchy, pfv);
+
+				keyMetrics.timeCompletionCurrentActual = getTimeCompletionMetric(vpv, baseMilestones, basePhases, vpv.timestamp,false);
+				keyMetrics.timeCompletionBaseLastActual = getTimeCompletionMetric(pfv, baseMilestones, basePhases, vpv.timestamp,false);
+				keyMetrics.timeCompletionCurrentTotal = getTimeCompletionMetric(vpv, baseMilestones, basePhases, vpv.timestamp,true);
+				keyMetrics.timeCompletionBaseLastTotal = getTimeCompletionMetric(pfv, baseMilestones, basePhases, vpv.timestamp,true);
+
+				keyMetrics.endDateCurrent= vpv.endDate;
+				keyMetrics.endDateBaseLast = pfv.endDate;
+
+				pfv_Deliverables = getAllDeliverables(pfv);
+				keyMetrics.deliverableCompletionBaseLastActual= getDeliverableCompletionMetric(pfv, pfv_Deliverables, vpv.timestamp, false);
+				keyMetrics.deliverableCompletionBaseLastTotal= getDeliverableCompletionMetric(pfv, pfv_Deliverables, vpv.timestamp, true);
+				keyMetrics.deliverableCompletionCurrentActual= getDeliverableCompletionMetric(vpv, pfv_Deliverables, vpv.timestamp, false);
+				keyMetrics.deliverableCompletionCurrentTotal= getDeliverableCompletionMetric(vpv, pfv_Deliverables, vpv.timestamp, true);
+
+			}
+			else{
+
+				keyMetrics.timeCompletionCurrentActual = 0;
+				keyMetrics.timeCompletionBaseLastActual = 0;
+				keyMetrics.timeCompletionCurrentTotal = 0;
+				keyMetrics.timeCompletionBaseLastTotal = 0;
+
+				keyMetrics.endDateCurrent = vpv.endDate;
+				keyMetrics.endDateBaseLast = null;
+
+				vpv_Deliverables = getAllDeliverables(vpv);
+				keyMetrics.deliverableCompletionBaseLastActual= 0;
+				keyMetrics.deliverableCompletionBaseLastTotal= 0;
+				keyMetrics.deliverableCompletionCurrentActual= 0;
+				keyMetrics.deliverableCompletionCurrentTotal= 0;
+				keyMetrics.deliverableCompletionCurrentActual= getDeliverableCompletionMetric(vpv, vpv_Deliverables, vpv.timestamp, false);
+				keyMetrics.deliverableCompletionCurrentTotal= getDeliverableCompletionMetric(vpv, vpv_Deliverables, vpv.timestamp, true);
+
+			}
+
+		}
+		else{
+			// übernehme die vorhandene keyMetrics
+		}
+	}
+
+	else{
+		keyMetrics = null;
+	}
+
+	// var diff_CostBLAct = oldkeyMetrics.costBaseLastActual - keyMetrics.costBaseLastActual;
+	// var diff_CostBLTot = oldkeyMetrics.costBaseLastTotal - keyMetrics.costBaseLastTotal;
+	// var diff_CostCurAct = oldkeyMetrics.costCurrentActual - keyMetrics.costCurrentActual;
+	// var diff_CostCurTot = oldkeyMetrics.costCurrentTotal - keyMetrics.costCurrentTotal;
+
+	// var diff_DelivBLAct = oldkeyMetrics.deliverableCompletionBaseLastActual - keyMetrics.deliverableCompletionBaseLastActual;
+	// var diff_DelivBLTot = oldkeyMetrics.deliverableCompletionBaseLastTotal - keyMetrics.deliverableCompletionBaseLastTotal;
+	// var diff_DelivCurAct = oldkeyMetrics.deliverableCompletionCurrentActual - keyMetrics.deliverableCompletionCurrentActual;
+	// var diff_DelivCurTot= oldkeyMetrics.deliverableCompletionCurrentTotal - keyMetrics.deliverableCompletionCurrentTotal;
+
+	// var diff_timeBLAct = oldkeyMetrics.timeCompletionBaseLastActual - keyMetrics.timeCompletionBaseLastActual;
+	// var diff_timeBLTot = oldkeyMetrics.timeCompletionBaseLastTotal - keyMetrics.timeCompletionBaseLastTotal;
+	// var diff_timeCurAct = oldkeyMetrics.timeCompletionCurrentActual - keyMetrics.timeCompletionCurrentActual;
+	// var diff_timeCurTot = oldkeyMetrics.timeCompletionCurrentTotal -	keyMetrics.timeCompletionCurrentTotal;
+
+	// var diff_endDateBL = oldkeyMetrics.endDateBaseLast.getTime() - keyMetrics.endDateBaseLast.getTime();
+	// var diff_endDateCur = oldkeyMetrics.endDateCurrent.getTime() - keyMetrics.endDateCurrent.getTime()
+
 
 	var endCalc = new Date();
 	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+
 	return keyMetrics;
 
 }
