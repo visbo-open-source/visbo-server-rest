@@ -530,6 +530,9 @@ router.route('/')
 				// MS TODO: Remove use of keyMetrics from body after keyMetrics calc works
 				newVPV.keyMetrics = req.body.keyMetrics;
 				newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+				if (!newVPV.keyMetrics && req.body.keyMetrics) {
+					newVPV.keyMetrics = req.body.keyMetrics
+				}
 
 				logger4js.debug("Create VisboProjectVersion in Project %s with Name %s and timestamp %s", newVPV.vpid, newVPV.name, newVPV.timestamp);
 				newVPV.save(function(err, oneVPV) {
