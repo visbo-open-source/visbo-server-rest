@@ -420,7 +420,8 @@ var getDeliverableOutOfPhase = function(hrchy, vpv, deliverable, bezugsdatum, to
 				if (vpv.variantName != "pfv"){
 					if (total){
 						if (isElemOfPast){
-							deliverableComplValue.wert = 1 * currentPrzDone;
+							//deliverableComplValue.wert = 1 * currentPrzDone;
+							deliverableComplValue.wert = 1 ;
 						}
 						else{
 							deliverableComplValue.wert = 1;
@@ -493,7 +494,8 @@ var getDeliverableOutOfMilestone = function(hrchy,vpv, deliverable, bezugsdatum,
 				if (vpv.variantName != "pfv"){
 					if (total){
 						if (isElemOfPast){
-							deliverableMSComplValue.wert = 1 * currentPrzDone;
+							//deliverableMSComplValue.wert = 1 * currentPrzDone;
+							deliverableMSComplValue.wert = 1;
 						}
 						else{
 							deliverableMSComplValue.wert = 1;
@@ -701,7 +703,8 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 							if (total){
 
 								if (isElemOfPast){
-									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+									//timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
 								}
 								else{
 									timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
@@ -752,7 +755,8 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 						if (total){
 
 							if (isElemOfPast){
-								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								//timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1 * currentPrzDone;
+								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
 							}
 							else{
 								timeCompletionValues[currentEndIndex] = timeCompletionValues[currentEndIndex] + 1;
