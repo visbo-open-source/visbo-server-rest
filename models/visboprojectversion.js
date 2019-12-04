@@ -83,12 +83,16 @@ var clsKeyMetrics = new Schema({
 	timeCompletionBaseLastActual: { type: Number },
 	timeCompletionCurrentTotal: { type: Number },
 	timeCompletionBaseLastTotal: { type: Number },
+	timeDelayCurrentActual: { type: Number },
+  timeDelayCurrentTotal: { type: Number },
 	endDateCurrent: { type: Date },
 	endDateBaseLast: { type: Date },
 	deliverableCompletionCurrentActual: { type: Number },
 	deliverableCompletionCurrentTotal: { type: Number },
 	deliverableCompletionBaseLastActual: { type: Number },
-	deliverableCompletionBaseLastTotal: { type: Number }
+	deliverableCompletionBaseLastTotal: { type: Number },
+	deliverableDelayCurrentActual: { type: Number },
+  deliverableDelayCurrentTotal: { type: Number }
 });
 
 
