@@ -31,14 +31,14 @@ var logger4js = log4js.getLogger(logModule);
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
+// register the VPV middleware to check that the user has access to the VPV
+router.param('vpvid', verifyVpv.getVpvidGroups);
 // register the organisation middleware to get the related organisation
 router.use('/', verifyVpv.getVCOrgs);
 // register the base line middleware to get the related base line version
 router.use('/', verifyVpv.getVPVpfv);
 // register the VPF middleware to generate the Project List that is assigned to the portfolio
 router.use('/', verifyVpv.getPortfolioVPs);
-// register the VPV middleware to check that the user has access to the VPV
-router.param('vpvid', verifyVpv.getVpvidGroups);
 
 // updates the VPV Count in the VP after create/delete/undelete Visbo Project
 var updateVPVCount = function(vpid, variantName, increment){
@@ -793,5 +793,59 @@ router.route('/:vpvid')
 
 		}
 	})
+
+	router.route('/:vpvid/calc')
+
+	/**
+	 	* @api {get} /vpv/:vpvid/calc Get calculation for specific Version
+		* @apiVersion 1.0.0
+	 	* @apiGroup Visbo Project Version
+	 	* @apiName GetVisboProjectVersionCalc
+	 	* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Get returns the calculation for a specific VisboProjectVersion the user has access permission to the VisboProject
+		* In case of success it delivers an array of VPVProppertiesList, the array contains 0 or 1 element with a VPV
+		*
+		* @apiPermission Permission: Authenticated, View Visbo Project.
+		* @apiError {number} 400 Bad Values in paramter in URL
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Visbo Project Version
+		*
+	 	* @apiExample Example usage:
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc
+	 	* @apiSuccessExample {json} Success-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   "state":"success",
+	 	*   "message":"Returned Visbo Project Versions",
+	 	*   "vpv": [{ // MS TODO document the correct values
+	 	*     "_id":"vpv5c754feaa",
+		*     "name":"My new Visbo Project Version",
+		*     "updatedAt":"2018-03-19T11:04:12.094Z",
+		*     "createdAt":"2018-03-19T11:04:12.094Z",
+		*     "vpid": "vp5c754feaa"
+		*     "allOthers": "all properties of visbo project version"
+	 	*   }]
+	 	* }
+		*/
+	// Get a specific Visbo Project Version
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+
+			req.auditDescription = 'Visbo Project Version Calc (Read)';
+			req.auditSysAdmin = sysAdmin;
+			req.auditTTLMode = 1;	// Download of Visbo Project Info Calculation
+
+			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
+			var calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Visbo Project Version',
+				calc: [calcVPV],
+				perm: req.combinedPerm
+			});
+		})
+
 
 module.exports = router;

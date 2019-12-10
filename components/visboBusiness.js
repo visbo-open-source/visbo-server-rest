@@ -28,7 +28,7 @@ function addDays(dd, numDays) {
 // calculate cost of personal for the requested project per month
 var getAllPersonalKosten = function(vpv, organisation) {
 	costValues = [];
-	logger4js.info("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
+	logger4js.debug("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 	// prepare organisation for direct access to uid
 	var allRoles = [];
@@ -82,7 +82,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 var getAllOtherCost = function(vpv, organisation) {
 	OthercostValues = [];
 
-	logger4js.info("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
+	logger4js.debug("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 	// prepare organisation for direct access to uid
 	var allCosts = [];
@@ -130,6 +130,58 @@ var getAllOtherCost = function(vpv, organisation) {
 	//logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return OthercostValues;
 
+}
+
+var calcCosts = function(vpv, pfv, organisation) {
+	var allCostValues = [];
+	var allCostValuesIndexed = [];
+	var startCalc = new Date();
+	if ( vpv && organisation ) {
+		var currentDate = new Date(vpv.startDate);
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+		var personalCost = getAllPersonalKosten(vpv, organisation);
+		var allOtherCost = getAllOtherCost(vpv, organisation);
+
+		for (var i = 0 ; i < dauer; i++){
+			allCostValues[currentDate] = {
+				'Costs': personalCost[i] + allOtherCost[i]
+			};
+			currentDate.setMonth(currentDate.getMonth() + 1);
+		}
+	}
+	if ( pfv && organisation ) {
+		var currentDate = new Date(pfv.startDate);
+		var startIndex = getColumnOfDate(pfv.startDate);
+		var endIndex = getColumnOfDate(pfv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+		var personalCost = getAllPersonalKosten(pfv, organisation);
+		var allOtherCost = getAllOtherCost(pfv, organisation);
+
+		for (var i = 0 ; i < dauer; i++){
+			if (!allCostValues[currentDate]) allCostValues[currentDate] = {}
+			allCostValues[currentDate] = {
+				'BaseLineCosts': personalCost[i] + allOtherCost[i]
+			};
+			currentDate.setMonth(currentDate.getMonth() + 1);
+		}
+	}
+	var j = 0, element;
+	for (element in allCostValues) {
+		allCostValuesIndexed[j] = {
+			'Date': (new Date(element)).toISOString(),
+			'BaseLineCosts': allCostValues[element].BaseLineCosts || 0,
+			'CurrentCost': allCostValues[element].Costs || 0
+		}
+		j++
+	}
+
+	var endCalc = new Date();
+	logger4js.info("Calculate Project Costs duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	return allCostValuesIndexed;
 }
 
 var getSummeKosten = function(vpv, organisation, index){
@@ -928,7 +980,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 
 
 	var endCalc = new Date();
-	logger4js.debug("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	logger4js.info("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
 
 	return keyMetrics;
 
@@ -937,6 +989,6 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 module.exports = {
 	getAllPersonalKosten: getAllPersonalKosten,
 	getAllOtherCost: getAllOtherCost,
-	calcKeyMetrics: calcKeyMetrics
-
+	calcKeyMetrics: calcKeyMetrics,
+	calcCosts: calcCosts
 };

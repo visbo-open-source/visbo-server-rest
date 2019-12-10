@@ -216,7 +216,11 @@ function getVpvidGroups(req, res, next, vpvid) {
 				req.combinedPerm = combinedPerm;
 
 				logger4js.debug("Found Visbo Project %s Access Permission %O", oneVPV.vpid, req.combinedPerm);
-				return next();
+				if (urlComponent.length == 3 && urlComponent[2] == "calc") {
+					getVCOrganisation(oneVP.vcid, req, res, next);
+				} else {
+					return next();
+				}
 			});
 		});
 	});
@@ -306,17 +310,21 @@ function getPortfolioVPs(req, res, next) {
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.url.split("?")[0]
+	var urlComponent = baseUrl.split("/")
 	var vcid = undefined;
 
 	logger4js.debug("VPV getVCOrgs Information");
 	// fetch the organization in case of POST VPV to calculate keyMetrics
-	if (!(req.method == "POST" && baseUrl == '/' )) return next();
+	var flagGetOrg = false;
+	if (req.method == "POST" && baseUrl == '/' ) flagGetOrg = true;
+
+	if (!flagGetOrg) return next();
 
 	if (!req.permGroups) {
 		logger4js.warn("No Permission Group available");
 		return res.status(403).send({
 			state: 'failure',
-			message: 'No Permission to Create Project Version'
+			message: 'No Permission to Get Organization'
 		});
 	}
 	for (var i = 0; i < req.permGroups.length; i++) {
@@ -332,6 +340,10 @@ function getVCOrgs(req, res, next) {
 			message: 'No valid Visbo Center'
 		});
 	}
+	getVCOrganisation(vcid, req, res, next);
+}
+
+function getVCOrganisation(vcid, req, res, next) {
 	logger4js.debug("VPV getVCOrgs organization for VCID %s", vcid);
 	var query = {};
 	query.vcid = vcid;
@@ -365,8 +377,9 @@ function getVPVpfv(req, res, next) {
 
 	logger4js.trace("VPV getVPVpfv Information");
 	// fetch the base line in case of POST VPV to calculate keyMetrics
-	if (!(req.method == "POST" && baseUrl == '/' )) return next();
-
+	if (!(req.method == "POST" && baseUrl == '/' )) {
+		return next();
+	}
 	// check that vpid is present and is a valid ObjectID
 	if (!validate.validateObjectId(vpid, false)
 	|| !validate.validateDate(timestamp, true)) {
