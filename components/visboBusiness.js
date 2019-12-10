@@ -536,7 +536,7 @@ var getDeliverableOutOfMilestone = function(hrchy,vpv, deliverable, bezugsdatum,
 	return deliverableMSComplValueArray;
 }
 
-var getDeliverableCompletionMetric = function(vpv, baseDeliverables, bezugsdatum, total){
+var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezugsdatum, total){
 
 	var sum = 0;
 
@@ -556,10 +556,10 @@ var getDeliverableCompletionMetric = function(vpv, baseDeliverables, bezugsdatum
 		}
 
 		// prepare hierarchy for direct access with elemId
-		var hrchy = [];
-		for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-			hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
-		}
+		// var hrchy = [];
+		// for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+		// 	hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+		// }
 
 
 		if (dauer > 0) {
@@ -663,7 +663,7 @@ var getDeliverableCompletionMetric = function(vpv, baseDeliverables, bezugsdatum
 }
 
 
-var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdatum, total){
+var getTimeCompletionMetric= function(vpv, hrchy, baseMilestones, basePhases, bezugsdatum, total){
 
 	var sum = 0;
 
@@ -682,10 +682,10 @@ var getTimeCompletionMetric= function(vpv, baseMilestones, basePhases, bezugsdat
 			timeCompletionValues[i] = 0;
 		}
 
-		var hrchy = [];
-		for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-			hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
-		}
+		// var hrchy = [];
+		// for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
+		// 	hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+		// }
 
 
 		if (dauer > 0) {
@@ -833,9 +833,9 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 			}
 
 
-			var hrchy = [];
+			var hrchy_vpv = [];
 			for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-				hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+				hrchy_vpv[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
 			}
 
 
@@ -844,16 +844,22 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 			if (pfv){
 
 				keyMetrics.endDateBaseLast = pfv.endDate;
+				
+				// prepare hierarchy of pfv for direct access
+				var hrchy_pfv = [];
+				for (var i = 0; pfv.hierarchy && pfv.hierarchy.allNodes && i < pfv.hierarchy.allNodes.length; i++) {
+					hrchy_pfv[pfv.hierarchy.allNodes[i].hryNodeKey] = pfv.hierarchy.allNodes[i];
+				}
 
-				baseMilestones = getMilestones(hrchy,pfv);
-				basePhases = getPhases(hrchy, pfv);
+				baseMilestones = getMilestones(hrchy_pfv, pfv);
+				basePhases = getPhases(hrchy_pfv, pfv);
 
 				if (basePhases && baseMilestones){
 
-					keyMetrics.timeCompletionCurrentActual = getTimeCompletionMetric(vpv, baseMilestones, basePhases, vpv.timestamp,false);
-					keyMetrics.timeCompletionBaseLastActual = getTimeCompletionMetric(pfv, baseMilestones, basePhases, vpv.timestamp,false);
-					keyMetrics.timeCompletionCurrentTotal = getTimeCompletionMetric(vpv, baseMilestones, basePhases, vpv.timestamp,true);
-					keyMetrics.timeCompletionBaseLastTotal = getTimeCompletionMetric(pfv, baseMilestones, basePhases, vpv.timestamp,true);
+					keyMetrics.timeCompletionCurrentActual = getTimeCompletionMetric(vpv, hrchy_vpv, baseMilestones, basePhases, vpv.timestamp,false);
+					keyMetrics.timeCompletionBaseLastActual = getTimeCompletionMetric(pfv, hrchy_pfv, baseMilestones, basePhases, vpv.timestamp,false);			
+					keyMetrics.timeCompletionCurrentTotal = getTimeCompletionMetric(vpv, hrchy_vpv, baseMilestones, basePhases, vpv.timestamp,true);
+					keyMetrics.timeCompletionBaseLastTotal = getTimeCompletionMetric(pfv, hrchy_pfv, baseMilestones, basePhases, vpv.timestamp,true);
 
 				}
 				else{
@@ -864,13 +870,13 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 				}
 
 
-				pfv_Deliverables = getAllDeliverables(pfv);
+				baseDeliverables = getAllDeliverables(pfv);
 
 				if (pfv_Deliverables){
-					keyMetrics.deliverableCompletionBaseLastActual= getDeliverableCompletionMetric(pfv, pfv_Deliverables, vpv.timestamp, false);
-					keyMetrics.deliverableCompletionBaseLastTotal= getDeliverableCompletionMetric(pfv, pfv_Deliverables, vpv.timestamp, true);
-					keyMetrics.deliverableCompletionCurrentActual= getDeliverableCompletionMetric(vpv, pfv_Deliverables, vpv.timestamp, false);
-					keyMetrics.deliverableCompletionCurrentTotal= getDeliverableCompletionMetric(vpv, pfv_Deliverables, vpv.timestamp, true);
+					keyMetrics.deliverableCompletionBaseLastActual= getDeliverableCompletionMetric(pfv, hrchy_pfv, baseDeliverables, vpv.timestamp, false);
+					keyMetrics.deliverableCompletionBaseLastTotal= getDeliverableCompletionMetric(pfv, hrchy_pfv,  baseDeliverables, vpv.timestamp, true);
+					keyMetrics.deliverableCompletionCurrentActual= getDeliverableCompletionMetric(vpv, hrchy_vpv, baseDeliverables, vpv.timestamp, false);
+					keyMetrics.deliverableCompletionCurrentTotal= getDeliverableCompletionMetric(vpv, hrchy_vpv, baseDeliverables, vpv.timestamp, true);
 				}
 				else{
 					keyMetrics.deliverableCompletionBaseLastActual= undefined;
