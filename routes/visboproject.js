@@ -538,7 +538,7 @@ router.route('/')
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
-				newVG.users = [];
+				newVG.users = [{email: useremail, userId: userId}];
 
 				logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
 				newVG.save(function(err, vg) {
@@ -2400,6 +2400,7 @@ router.route('/:vpid/portfolio')
 			for (var i = 0; i < req.body.allItems.length; i++) {
 				// get the item, overwrite Project name with correct name
 				req.body.allItems[i].name = listVP.find(findVPList, req.body.allItems[i].vpid).name;
+				if (!req.body.allItems[i].variantName) req.body.allItems[i].variantName = "";
 				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}

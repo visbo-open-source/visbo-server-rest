@@ -29,7 +29,7 @@ function getAllVPVGroups(req, res, next) {
 		logger4js.debug("Generate VPV Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
 		var acceptEmpty = true;
-		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC
+		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC or one VP
 		query = {'users.userId': userId};	// search for VP groups where user is member
 		// independent of the delete Flag the VP (or the related groups) must be undeleted
 		query.deletedByParent = {$exists: false};
@@ -55,7 +55,11 @@ function getAllVPVGroups(req, res, next) {
 					combinedPermStatus = true;
 				}
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
-				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				if (req.query.keyMetrics) {
+					query['permission.vp'] = { $bitsAllSet: constPermVP.View + constPermVP.ViewAudit }
+				} else {
+					query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				}
 			}
 		} else if (req.method == "POST") {
 			// Only Create VP Request, check vpid from Body
@@ -94,7 +98,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 
 			if (combinedPermStatus) {
-				// combined permission only applicable if it does not combine diffeent VCIDs
+				// combined permission only applicable if it does not combine diffeent VCIDs or VPIDs
 				var combinedPerm = {system: 0, vc: 0, vp: 0};
 				for (var i=0; i < req.permGroups.length; i++) {
 					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
