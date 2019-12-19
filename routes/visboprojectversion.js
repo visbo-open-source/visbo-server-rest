@@ -87,7 +87,8 @@ router.route('/')
 	* has to specify the query parameter longList.
 	*
 	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: vcid, vpid, vpfid, refDate, refNext, varianName, status.
-	* to query only the main version of a project, use variantName= in the query string.
+	* With an additional paramter keyMetrics the result is a short VPV that includes the keyMetrics values. In this only Project Versions from Projects with Audit Permissions are delivered.
+	* to query only the main version of a project, use variantName= in the query string, to query specific variantNames concatenate them separated with comma, to include the main variant use an empty string after/before the comma. i.e. get the main plus the pfv Version use "variantName=pfv,"
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
@@ -163,8 +164,8 @@ router.route('/')
 		if (req.query.vpid) {
 			vpidList.push(req.query.vpid);
 			if (req.query.deleted) {
-				logger4js.info("Get Deleted Project Versions vpid %s combinedPerm %O", req.query.vpid, req.combinedPerm);
-				if (!(req.combinedPerm.vp & constPermVP.Delete)) {
+				logger4js.info("Get Deleted Project Versions vpid %s combinedPermList %O", req.query.vpid, req.combinedPermList.getPerm(req.query.vpid));
+				if (!(req.combinedPermList.getPerm(req.query.vpid).vp & constPermVP.Delete)) {
 					return res.status(403).send({
 						state: 'failure',
 						message: 'No Permission to see deleted Versions'
@@ -174,8 +175,13 @@ router.route('/')
 				}
 			}
 		} else {
-			for ( var i=0; i<req.permGroups.length; i++) {
-				vpidList = vpidList.concat(req.permGroups[i].vpids)
+			// MS TODO: Move this stuff to verifyVPV
+			requiredPerm = constPermVP.View
+			if (req.query.keyMetrics) requiredPerm += constPermVP.ViewAudit
+			for (var id in req.combinedPermList.permList) {
+				if ((req.combinedPermList.permList[id].vp & requiredPerm) == requiredPerm) {
+					vpidList.push(id)
+				}
 			}
 		}
 
@@ -391,11 +397,11 @@ router.route('/')
 		var variantName = (req.body.variantName  || '').trim();
 		var variantIndex = -1;
 
-		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.combinedPerm);
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.combinedPermList.getPerm(vpid));
 		var newVPV = new VisboProjectVersion();
 		var permCreateVersion = false
-		if (req.combinedPerm.vp & constPermVP.Modify) permCreateVersion = true;
-		if ((req.combinedPerm.vp & constPermVP.CreateVariant) && variantName != '') permCreateVersion = true;
+		if (req.combinedPermList.getPerm(vpid).vp & constPermVP.Modify) permCreateVersion = true;
+		if ((req.combinedPermList.getPerm(vpid).vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') permCreateVersion = true;
 		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
@@ -603,7 +609,7 @@ router.route('/:vpvid')
 			state: 'success',
 			message: 'Returned Visbo Project Version',
 			vpv: [req.oneVPV],
-			perm: req.combinedPerm
+			perm: req.combinedPermList.getPerm(req.oneVPV.vpid)
 		});
 	})
 
@@ -645,7 +651,7 @@ router.route('/:vpvid')
 
 		req.auditDescription = 'Visbo Project Version (Update)';
 
-		logger4js.info("PUT/Save Visbo Project Version for userid %s email %s and vpv %s perm %O", userId, useremail, req.params.vpvid, req.combinedPerm);
+		logger4js.info("PUT/Save Visbo Project Version for userid %s email %s and vpv %s perm %O", userId, useremail, req.params.vpvid, req.combinedPermList);
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
@@ -662,7 +668,7 @@ router.route('/:vpvid')
 			});
 		}
 
-		if (!(req.combinedPerm.vp & constPermVP.Delete)) {
+		if (!(req.combinedPermList.getPerm(req.oneVPV.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to Undelete Visbo Project Version'
@@ -734,7 +740,8 @@ router.route('/:vpvid')
 		}
 		// user does not have admin permission and does not own the variant
 		var hasPerm = false;
-		if (req.combinedPerm.vp & constPermVP.Delete) {
+		logger4js.debug("VPV Delete Permission %O", req.combinedPermList);
+		if (req.combinedPermList.getPerm(req.oneVPV.vpid).vp & constPermVP.Delete) {
 			hasPerm = true;
 		} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
 			hasPerm = true;
@@ -844,7 +851,7 @@ router.route('/:vpvid')
 				state: 'success',
 				message: 'Returned Visbo Project Version',
 				calc: [calcVPV],
-				perm: req.combinedPerm
+				perm: req.combinedPermList.getPerm(calcVPV.vpid).vp
 			});
 		})
 

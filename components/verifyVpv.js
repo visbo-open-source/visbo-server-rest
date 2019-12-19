@@ -18,6 +18,28 @@ var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+
+// MS TODO Move Object Definition to constants
+function Permission() {
+  this.length = 0;
+	this.systemID = undefined;
+  this.permList = {};
+  this.addPerm = function(id, perm) {
+		if (perm == undefined) return;
+		if (id == undefined) return;
+		if (this.permList[id] == undefined) {
+			this.permList[id] = {system: 0, vc: 0, vp: 0};
+			this.length += 1;
+		}
+		this.permList[id].system = this.permList[id].system | perm.system;
+		this.permList[id].vc = this.permList[id].vc | perm.vc;
+		this.permList[id].vp = this.permList[id].vp | perm.vp;
+	};
+	this.getPerm = function(id) {
+		return this.permList[id] || {system: 0, vc: 0, vp: 0};
+	}
+}
+
 // Generate the Groups where the user is member of and has VP Permission
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
@@ -29,7 +51,9 @@ function getAllVPVGroups(req, res, next) {
 		logger4js.debug("Generate VPV Groups for user %s for url %s", req.decoded.email, req.url);
 		var query = {};
 		var acceptEmpty = true;
-		var combinedPermStatus = req.query.sysadmin == true; // deliver combined Permission if focus on one Object System VC or one VC or one VP
+		var specificVPID = undefined;
+		var specificSystem = undefined;
+
 		query = {'users.userId': userId};	// search for VP groups where user is member
 		// independent of the delete Flag the VP (or the related groups) must be undeleted
 		query.deletedByParent = {$exists: false};
@@ -37,8 +61,9 @@ function getAllVPVGroups(req, res, next) {
 		if (req.method == "GET") {
 			if (req.query.sysadmin) {
 				query.groupType = 'System';						// search for System Groups only
-				query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				// query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 				acceptEmpty = false;
+				specificSystem = true;
 			} else {
 				if (!validate.validateObjectId(req.query.vcid, true) || !validate.validateObjectId(req.query.vpid, true)) {
 					logger4js.warn("VC Bad Query Parameter vcid %s vpid %s", req.query.vcid, req.query.vpid);
@@ -52,14 +77,15 @@ function getAllVPVGroups(req, res, next) {
 				}
 				if (req.query.vpid) {
 					query.vpids = req.query.vpid;
-					combinedPermStatus = true;
+					specificVPID = req.query.vpid;
 				}
 				query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
-				if (req.query.keyMetrics) {
-					query['permission.vp'] = { $bitsAllSet: constPermVP.View + constPermVP.ViewAudit }
-				} else {
-					query['permission.vp'] = { $bitsAllSet: constPermVP.View }
-				}
+				// MS TODO: Handle the special Permission Check
+				// if (req.query.keyMetrics) {
+				// 	query['permission.vp'] = { $bitsAllSet: constPermVP.View + constPermVP.ViewAudit }
+				// } else {
+				// 	query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+				// }
 			}
 		} else if (req.method == "POST") {
 			// Only Create VP Request, check vpid from Body
@@ -69,16 +95,16 @@ function getAllVPVGroups(req, res, next) {
 					message: 'No Visbo Project ID defined'
 				});
 			}
-			combinedPermStatus = true;
 			query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
-			query.vpids = req.body.vpid
+			query.vpids = req.body.vpid;
+			specificVPID = req.body.vpid;
 			acceptEmpty = false;
-			query['permission.vp'] = { $bitsAnySet: constPermVP.View + constPermVP.Modify + constPermVP.CreateVariant }
+			// query['permission.vp'] = { $bitsAnySet: constPermVP.View + constPermVP.Modify + constPermVP.CreateVariant }
 		}
 
 		logger4js.debug("Query VGs %s", JSON.stringify(query));
 		var queryVG = VisboGroup.find(query);
-		queryVG.select('name permission vcid vpids')
+		queryVG.select('name permission vcid vpids groupType')
 		queryVG.lean();
 		queryVG.exec(function (err, listVG) {
 			if (err) {
@@ -86,26 +112,44 @@ function getAllVPVGroups(req, res, next) {
 				return;
 			}
 			logger4js.debug("Found VGs %d", listVG.length);
-			// Convert the result to request
-			req.permGroups = listVG;
-			logger4js.trace("Found VPGroups %s", JSON.stringify(listVG));
-			if (!acceptEmpty && listVG.length == 0) {
-				// do not accept requests without a group assignement especially to System Group
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Visbo Project or no Permission'
-				});
-			}
-
-			if (combinedPermStatus) {
-				// combined permission only applicable if it does not combine diffeent VCIDs or VPIDs
-				var combinedPerm = {system: 0, vc: 0, vp: 0};
-				for (var i=0; i < req.permGroups.length; i++) {
-					combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
-					combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
-					combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
+			// Convert the permission to request
+			var combinedPermList = new Permission();
+			for (var i=0; i < listVG.length; i++) {
+				// Check all VPIDs in Group
+				var permGroup = listVG[i];
+				req.oneVCID = permGroup.vcid;
+				if (permGroup.groupType == "System") {
+					combinedPermList.addPerm(0, permGroup.permission)
+				} else if (permGroup.vpids) {
+					for (var j=0; j < permGroup.vpids.length; j++) {
+	          combinedPermList.addPerm(permGroup.vpids[j], permGroup.permission)
+					}
 				}
-				req.combinedPerm = combinedPerm;
+			}
+			logger4js.trace("VPV Combined Perm List %s Len %s", JSON.stringify(combinedPermList), combinedPermList.length);
+			req.combinedPermList = combinedPermList;
+
+			// MS TODO: Remove permGroups from request
+			// req.permGroups = listVG;
+			logger4js.trace("Found VPGroups %s", JSON.stringify(listVG));
+			if ( specificVPID && req.method == "POST" ) {
+					// Post a new VPV
+					if ((combinedPermList.getPerm(specificVPID).vp & constPermVP.View) == 0
+					|| (combinedPermList.getPerm(specificVPID).vp & (constPermVP.Modify | constPermVP.CreateVariant)) == 0) {
+						return res.status(403).send({
+							state: 'failure',
+							message: 'No Visbo Project or no Permission'
+						});
+					}
+			} else if (specificSystem) {
+				var perm = combinedPermList.getPerm(0).vp;
+				if ((perm & constPermVP.View) == 0 ) {
+					// do not accept requests without a permission assignement to System Group
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Visbo Project or no Permission'
+					});
+				}
 			}
 			return next();
 		});
@@ -115,7 +159,7 @@ function getAllVPVGroups(req, res, next) {
 	}
 }
 
-// Generate the Groups where the user is member of System / VP depending on the case
+// Generate the Groups & Combined Permission realted to the VPV-ID
 function getVpvidGroups(req, res, next, vpvid) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
@@ -123,6 +167,8 @@ function getVpvidGroups(req, res, next, vpvid) {
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
+	var specificVPID = undefined;
+	var specificSystem = undefined;
 
 	if (!validate.validateObjectId(vpvid, false)) {
 		logger4js.warn("VPV Bad Parameter vpvid %s", vpvid);
@@ -155,18 +201,17 @@ function getVpvidGroups(req, res, next, vpvid) {
 		query = {'users.userId': userId};	// search for VP groups where user is member
 		if (sysAdmin) {
 			query.groupType = 'System';						// search for System Groups only
-			query['permission.vp'] = { $bitsAllSet: constPermVP.View }
-			acceptEmpty = false;
+			// query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 		} else {
 			query.groupType = {$in: ['VC', 'VP']};				// search for VC/VP Groups only
-			query['permission.vp'] = { $bitsAllSet: constPermVP.View }
+			// query['permission.vp'] = { $bitsAllSet: constPermVP.View }
 			// check that vpid is in the group list
 			query.vpids = oneVPV.vpid;
 		}
 		logger4js.trace("Search VGs %O", query);
 
 		var queryVG = VisboGroup.find(query);
-		queryVG.select('name permission vcid vpid')
+		queryVG.select('name permission vcid vpids groupType')
 		queryVG.lean();
 		queryVG.exec(function (err, listVG) {
 			if (err) {
@@ -178,25 +223,32 @@ function getVpvidGroups(req, res, next, vpvid) {
 				});
 			}
 			logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
-			// Convert the result to request
-			req.permGroups = listVG;
-			if (listVG.length == 0) {
-				// do not accept requests without a group assignement especially to System Group
+
+			var combinedPermList = new Permission();
+			var vpid = req.oneVPV.vpid;
+			for (var i=0; i < listVG.length; i++) {
+				// Check all VPIDs in Group
+				var permGroup = listVG[i];
+				if (permGroup.groupType == "System") {
+					combinedPermList.addPerm(0, permGroup.permission)
+				} else if (permGroup.vpids) {
+					for (var j=0; j < permGroup.vpids.length; j++) {
+						if (permGroup.vpids[j].toString() == vpid.toString()) {
+							combinedPermList.addPerm(permGroup.vpids[j], permGroup.permission)
+						}
+					}
+				}
+			}
+			logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", oneVPV.vpid, listVG.length, combinedPermList);
+			if ((combinedPermList.getPerm(vpid).vp & constPermVP.View) == 0) {
+				// do not accept requests without View Permission
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
 				});
 			}
-			// check against the groups
-			var combinedPerm = {system: 0, vc: 0, vp: 0};
-			for (var i=0; i < req.permGroups.length; i++) {
-				combinedPerm.system = combinedPerm.system | (req.permGroups[i].permission.system || 0);
-				combinedPerm.vc = combinedPerm.vc | (req.permGroups[i].permission.vc || 0);
-				combinedPerm.vp = combinedPerm.vp | (req.permGroups[i].permission.vp || 0);
-			}
-			logger4js.debug("Get %d groups combinedPerm %O", req.permGroups.length, combinedPerm);
-			if (!sysAdmin) delete combinedPerm.system
-			logger4js.debug("Get Visbo Project with id %s, %d Group(s) Perm %O", oneVPV.vpid, req.permGroups.length, combinedPerm);
+			req.combinedPermList = combinedPermList;
+			var combinedVPPerm = combinedPermList.getPerm(permGroup.groupType == "System" ? 0 : vpid)
 			var query = {};
 			query._id = oneVPV.vpid;
 			// prevent that the user gets access to Versions of Deleted VPs or Deleted VCs
@@ -217,9 +269,8 @@ function getVpvidGroups(req, res, next, vpvid) {
 					});
 				}
 				req.oneVP = oneVP
-				req.combinedPerm = combinedPerm;
 
-				logger4js.debug("Found Visbo Project %s Access Permission %O", oneVPV.vpid, req.combinedPerm);
+				logger4js.debug("Found Visbo Project %s Access Permission %O", oneVPV.vpid, req.combinedPermList);
 				if (urlComponent.length == 3 && urlComponent[2] == "calc") {
 					getVCOrganisation(oneVP.vcid, req, res, next);
 				} else {
@@ -324,27 +375,14 @@ function getVCOrgs(req, res, next) {
 
 	if (!flagGetOrg) return next();
 
-	if (!req.permGroups) {
+	if (!req.oneVCID && (req.combinedPermList.getPerm(req.body.vpid).vc & constPermVC.View) == 0 ) {
 		logger4js.warn("No Permission Group available");
 		return res.status(403).send({
 			state: 'failure',
-			message: 'No Permission to Get Organization'
+			message: 'No Permission to Visbo Center or Organization'
 		});
 	}
-	for (var i = 0; i < req.permGroups.length; i++) {
-		if (req.permGroups[i].vcid) {
-			vcid = req.permGroups[i].vcid;
-			break;
-		}
-	}
-	if (!vcid) {
-		logger4js.warn("VCID not available for VPV");
-		return res.status(400).send({
-			state: 'failure',
-			message: 'No valid Visbo Center'
-		});
-	}
-	getVCOrganisation(vcid, req, res, next);
+	getVCOrganisation(req.oneVCID, req, res, next);
 }
 
 function getVCOrganisation(vcid, req, res, next) {

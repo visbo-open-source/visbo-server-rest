@@ -28,7 +28,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 	logger4js.debug("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 
-	
+
 	// prepare organisation for direct access to uid
 	var allRoles = [];
 	for (var i = 0; organisation && organisation.value && organisation.value.allRoles && i < organisation.value.allRoles.length; i++) {
@@ -52,7 +52,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 			for (var i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
-				
+
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
 					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);
 					//????
@@ -104,7 +104,7 @@ var getAllOtherCost = function(vpv, organisation) {
 	}
 
 	if (dauer > 0) {
-		
+
 			for (var i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
@@ -408,7 +408,7 @@ var getAllDeliverables = function(vpv) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1;
 				// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
-				
+
 				for (var j = 0; vpv.AllPhases[i].deliverables && j < vpv.AllPhases[i].deliverables.length; j++) {
 					var tmpNameId = phase.name;
 					var tmpdeliverable = phase.deliverables[j] + "(" + tmpNameId + ")";
@@ -620,7 +620,7 @@ var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezu
 
 				var baseDeliv = new deliverable();
 				baseDeliv = baseDeliverables[i];
-				var hstr = baseDeliv.name;
+				var hstr = baseDeliv.name || "";
 				var hstrArr = hstr.split("(");
 				var baseDelivName = hstrArr[0];
 				var weitersuchen = false;
@@ -705,7 +705,7 @@ var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezu
 
 		}
 	}
-	
+
 	// Sum the values for all months
 	var sum = 0;
 	for (i=0; i < dauer; i++){
@@ -896,7 +896,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 			if (pfv){
 
 				keyMetrics.endDateBaseLast = pfv.endDate;
-				
+
 				// prepare hierarchy of pfv for direct access
 				var hrchy_pfv = [];
 				for (var i = 0; pfv.hierarchy && pfv.hierarchy.allNodes && i < pfv.hierarchy.allNodes.length; i++) {
@@ -909,7 +909,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 				if (basePhases && baseMilestones){
 
 					keyMetrics.timeCompletionCurrentActual = getTimeCompletionMetric(vpv, hrchy_vpv, baseMilestones, basePhases, vpv.timestamp,false);
-					keyMetrics.timeCompletionBaseLastActual = getTimeCompletionMetric(pfv, hrchy_pfv, baseMilestones, basePhases, vpv.timestamp,false);			
+					keyMetrics.timeCompletionBaseLastActual = getTimeCompletionMetric(pfv, hrchy_pfv, baseMilestones, basePhases, vpv.timestamp,false);
 					keyMetrics.timeCompletionCurrentTotal = getTimeCompletionMetric(vpv, hrchy_vpv, baseMilestones, basePhases, vpv.timestamp,true);
 					keyMetrics.timeCompletionBaseLastTotal = getTimeCompletionMetric(pfv, hrchy_pfv, baseMilestones, basePhases, vpv.timestamp,true);
 
