@@ -874,10 +874,10 @@ router.route('/:vpvid')
 	router.route('/:vpvid/copy')
 
 	/**
-		* @api {post} /vpv Create a Version
+		* @api {post} /vpv:vpvid/copy Copy a Version abd recalc keyMetrics
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Project Version
-		* @apiName CreateVisboProjectVersions
+		* @apiName CopyVisboProjectVersion
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
 		* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
 		* Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
@@ -892,7 +892,7 @@ router.route('/:vpvid')
 		* @apiError {number} 423 Visbo Project (Portfolio) is locked by another user
 		*
 	  * @apiExample Example usage:
-		*   url: http://localhost:3484/vpv
+		*   url: http://localhost:3484/vpv/vpv5c754feaa/copy
 		* {
 		*  "timestamp": "2019-03-19T11:04:12.094Z"
 		* }
@@ -909,27 +909,27 @@ router.route('/:vpvid')
 		*   "name":"My first Visbo Project Version",
 		*   "timestamp": "2019-03-19T11:04:12.094Z"
 		*   "vpid": "vp5c754feaa"
-		*   "allOthers": "all properties of visbo project version",
-		* 		"keyMetrics": {
-		* 		   "costCurrentActual": 125,
-		* 		   "costCurrentTotal": 125,
-		* 		   "costBaseLastActual": 115,
-		* 		   "costBaseLastTotal": 115,
-		* 		   "timeCompletionCurrentActual": 12,
-		* 		   "timeCompletionBaseLastActual": 14,
-		* 		   "timeCompletionCurrentTotal": 20,
-		* 		   "timeCompletionBaseLastTotal": 20,
-		* 		   "endDateCurrent": "2020-12-31",
-		* 		   "endDateBaseLast": "2020-12-31",
-		* 		   "deliverableCompletionCurrentActual": 9.3,
-		* 		   "deliverableCompletionCurrentTotal": 20,
-		* 		   "deliverableCompletionBaseLastActual": 10,
-		* 		   "deliverableCompletionBaseLastTotal": 20,
-		* 		   "timeDelayCurrentActual": 10,
-		* 		   "timeDelayCurrentTotal":1,
-		* 		   "deliverableDelayCurrentActual": 1,
-		* 		   "deliverableDelayCurrentTotal":10
-		* 		 }
+		*   "basicOthers": "only key basic properties",
+		*   "keyMetrics": {
+		*     "costCurrentActual": 125,
+		*     "costCurrentTotal": 125,
+		*     "costBaseLastActual": 115,
+		*     "costBaseLastTotal": 115,
+		*     "timeCompletionCurrentActual": 12,
+		*     "timeCompletionBaseLastActual": 14,
+		*     "timeCompletionCurrentTotal": 20,
+		*     "timeCompletionBaseLastTotal": 20,
+		*     "endDateCurrent": "2020-12-31",
+		*     "endDateBaseLast": "2020-12-31",
+		*     "deliverableCompletionCurrentActual": 9.3,
+		*     "deliverableCompletionCurrentTotal": 20,
+		*     "deliverableCompletionBaseLastActual": 10,
+		*     "deliverableCompletionBaseLastTotal": 20,
+		*     "timeDelayCurrentActual": 10,
+		*     "timeDelayCurrentTotal":1,
+		*     "deliverableDelayCurrentActual": 1,
+		*     "deliverableDelayCurrentTotal":10
+		*   }
 		*  }]
 		* }
 		*/
