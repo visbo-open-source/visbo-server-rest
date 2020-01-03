@@ -874,10 +874,10 @@ router.route('/:vpvid')
 	router.route('/:vpvid/copy')
 
 	/**
-		* @api {post} /vpv:vpvid/copy Copy a Version abd recalc keyMetrics
+		* @api {post} /vpv:vpvid/copy Create a Copy of a Version
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Project Version
-		* @apiName CopyVisboProjectVersion
+		* @apiName VisboProjectVersionCopy
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
 		* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
 		* Visbo Project Version Properties like _id, name and timestamp are overwritten by the system
