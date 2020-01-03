@@ -104,7 +104,7 @@ function squeezeAudit(task, finishedTask) {
 		  logger4js.debug("Check vpvid %s user %s Count %s First %s", listAudits[i]._id.vpvid, listAudits[i]._id.user, listAudits[i].count, listAudits[i].first)
 			squeezeDelete(listAudits[i], endSqueeze);
 		}
-		// MS TODO: Do we have to wait for the Delete to finish??
+		// Without wait for the Delete to finish??
 		resultFinished.lastMonth = endSqueeze;
 		resultFinished.result = squeezeCount;
 		resultFinished.resultDescription = `Squeezed ${squeezeCount} Entries for Month ${endSqueeze.toISOString()}`

@@ -69,7 +69,7 @@ router.route('/')
 
 	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
 
-	if (!(req.combinedPerm.system & constPermSystem.ViewAudit)) {
+	if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewAudit)) {
 		logger4js.debug("No Permission to View System Audit for user %s", userId);
 		return res.status(403).send({
 			state: 'failure',
@@ -97,13 +97,13 @@ router.route('/')
 		query.action = action;
 	}
 	var queryListCondition = [];
-	logger4js.info("Get Audit Trail for vc %O ", req.permGroups[0].vcid);
+	logger4js.info("Get Audit Trail for System VC %s", req.oneVC._id);
 	var areaCondition = [];
 	switch(area) {
 		case "other":
 			// get all changes on system and all others with Change or Error
 			areaCondition.push({"$or": [
-					{"vc.vcid": req.permGroups[0].vcid.toString(), "action": {$ne: "GET"}},
+					{"vc.vcid": req.oneVC._id.toString(), "action": {$ne: "GET"}},
 					{"vc": {$exists: false}, "vp": {$exists: false},
 						"$or": [
 							{"action": {$ne: "GET"}},
@@ -113,10 +113,10 @@ router.route('/')
 				]});
 			break;
 	  case "sys":
-			areaCondition.push({"vc.vcid": req.permGroups[0].vcid.toString()});
+			areaCondition.push({"vc.vcid": req.oneVC._id.toString()});
 	    break;
 		case "vc":
-			areaCondition.push({"$or": [{"$and": [{"vc": {$exists: true}}, {"vc.vcid": {$ne: req.permGroups[0].vcid.toString()}}]},
+			areaCondition.push({"$or": [{"$and": [{"vc": {$exists: true}}, {"vc.vcid": {$ne: req.oneVC._id.toString()}}]},
 									{"$and": [{"vc": {$exists: false}}, {"url": /^.vc/}]}]});
 			areaCondition.push({"vp": {$exists: false}});
 	    break;

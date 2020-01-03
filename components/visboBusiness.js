@@ -74,7 +74,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 		costValues[0] = 0
 	}
 	var endCalc = new Date();
-	logger4js.warn("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	logger4js.debug("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return costValues;
 }
 

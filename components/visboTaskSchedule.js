@@ -153,7 +153,7 @@ function checkNextRun() {
           listTask[i].value.lockedUntil.setTime(listTask[i].value.lockedUntil.getTime() + lockPeriod * 1000);
           listTask[i].value.lastRun = new Date(); // now set it to current date as the last StartDate
           logger4js.debug("CheckNextRun Task(%s/%s): %s needs execution next %s new lock %s", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun.toISOString(), listTask[i].value.lockedUntil.toISOString());
-          // MS TODO: Do not update if locked and check result that it has updated the item
+          // Do not update if locked and check result that it has updated the item
           var updateQuery = {_id: listTask[i]._id, "$or": [{"value.lockedUntil": {$exists: false}}, {"value.lockedUntil": {$lt: new Date()}}]};
         	var updateOption = {upsert: false};
       		var updateUpdate = {$set : {'value.lastRun' : listTask[i].value.lastRun, 'value.nextRun' : listTask[i].value.nextRun, 'value.lockedUntil' : listTask[i].value.lockedUntil} };
