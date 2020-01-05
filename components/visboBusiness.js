@@ -148,7 +148,7 @@ var calcCosts = function(vpv, pfv, organisation) {
 
 		for (var i = 0 ; i < dauer; i++){
 			allCostValues[currentDate] = {
-				'Costs': personalCost[i] + allOtherCost[i]
+				'currentCost': personalCost[i] + allOtherCost[i]
 			};
 			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
@@ -164,18 +164,16 @@ var calcCosts = function(vpv, pfv, organisation) {
 
 		for (var i = 0 ; i < dauer; i++){
 			if (!allCostValues[currentDate]) allCostValues[currentDate] = {}
-			allCostValues[currentDate] = {
-				'BaseLineCosts': personalCost[i] + allOtherCost[i]
-			};
+			allCostValues[currentDate].baseLineCost = personalCost[i] + allOtherCost[i];
 			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
 	var j = 0, element;
 	for (element in allCostValues) {
 		allCostValuesIndexed[j] = {
-			'Date': (new Date(element)).toISOString(),
-			'BaseLineCosts': allCostValues[element].BaseLineCosts || 0,
-			'CurrentCost': allCostValues[element].Costs || 0
+			'currentDate': (new Date(element)).toISOString(),
+			'baseLineCost': allCostValues[element].baseLineCost || 0,
+			'currentCost': allCostValues[element].currentCost || 0
 		}
 		j++
 	}

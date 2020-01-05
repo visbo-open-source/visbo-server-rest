@@ -42,6 +42,7 @@ router.use('/', verifyVpv.getPortfolioVPs);
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVPV);
 router.use('/:vpvid/copy', verifyVpv.getCurrentVPVpfv);
+router.use('/:vpvid/calc', verifyVpv.getCurrentVPVpfv);
 
 // updates the VPV Count in the VP after create/delete/undelete Visbo Project
 var updateVPVCount = function(vpid, variantName, increment){
@@ -531,7 +532,6 @@ router.route('/')
 				newVPV.leadPerson = req.body.leadPerson;
 				newVPV.startDate = req.body.startDate;
 				newVPV.endDate = req.body.endDate;
-
 				newVPV.earliestStart = req.body.earliestStart;
 				newVPV.earliestStartDate = req.body.earliestStartDate;
 				newVPV.latestStart = req.body.latestStart;
@@ -887,9 +887,6 @@ router.route('/:vpvid')
 		* @apiError {number} 400 missing name or ID of Visbo Project during Creation, or other bad content in body
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create Visbo Project Version
-		* @apiError {number} 409 Visbo Project Variant does not exists
-		* @apiError {number} 409 Visbo Project (Portfolio) Version was alreaddy updated in between (Checked updatedAt Flag)
-		* @apiError {number} 423 Visbo Project (Portfolio) is locked by another user
 		*
 	  * @apiExample Example usage:
 		*   url: http://localhost:3484/vpv/vpv5c754feaa/copy
@@ -958,12 +955,43 @@ router.route('/:vpvid')
 				});
 			}
 			// keep unchangable attributes
-			newVPV = req.oneVPV;
+			newVPV.name = req.oneVPV.name;
+			newVPV.vpid = req.oneVPV.vpid;
+			newVPV.variantName = req.oneVPV.variantName;
 			if (req.body.timestamp && Date.parse(req.body.timestamp)) {
 				newVPV.timestamp = new Date(req.body.timestamp)
 			} else {
 				newVPV.timestamp = new Date();
 			}
+			newVPV.variantDescription = req.oneVPV.variantDescription;
+			newVPV.Risiko = req.oneVPV.Risiko;
+			newVPV.StrategicFit = req.oneVPV.StrategicFit;
+			newVPV.customDblFields = req.oneVPV.customDblFields;
+			newVPV.customStringFields = req.oneVPV.customStringFields;
+			newVPV.customBoolFields = req.oneVPV.customBoolFields;
+			newVPV.actualDataUntil = req.oneVPV.actualDataUntil;
+			newVPV.Erloes = req.oneVPV.Erloes;
+			newVPV.leadPerson = req.oneVPV.leadPerson;
+			newVPV.startDate = req.oneVPV.startDate;
+			newVPV.endDate = req.oneVPV.endDate;
+			newVPV.earliestStart = req.oneVPV.earliestStart;
+			newVPV.earliestStartDate = req.oneVPV.earliestStartDate;
+			newVPV.latestStart = req.oneVPV.latestStart;
+			newVPV.latestStartDate = req.oneVPV.latestStartDate;
+			newVPV.status = req.oneVPV.status;
+			newVPV.ampelStatus = req.oneVPV.ampelStatus;
+			newVPV.ampelErlaeuterung = req.oneVPV.ampelErlaeuterung;
+			newVPV.farbe = req.oneVPV.farbe;
+			newVPV.Schrift = req.oneVPV.Schrift;
+			newVPV.Schriftfarbe = req.oneVPV.Schriftfarbe;
+			newVPV.VorlagenName = req.oneVPV.VorlagenName;
+			newVPV.Dauer = req.oneVPV.Dauer;
+			newVPV.AllPhases = req.oneVPV.AllPhases;
+			newVPV.hierarchy = req.oneVPV.hierarchy;
+			newVPV.volumen = req.oneVPV.volumen;
+			newVPV.complexity = req.oneVPV.complexity;
+			newVPV.description = req.oneVPV.description;
+			newVPV.businessUnit = req.oneVPV.businessUnit;
 			// MS TODO: ignore keyMetrics from body
 			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			if (!newVPV.keyMetrics && req.body.keyMetrics) {
@@ -1039,15 +1067,11 @@ router.route('/:vpvid')
 	 	* {
 	 	*   "state":"success",
 	 	*   "message":"Returned Visbo Project Versions",
-	 	*   "vpv": [{ // MS TODO document the correct values
+	 	*   "vpv": [{
 	 	*     "_id":"vpv5c754feaa",
-		*     "name":"My new Visbo Project Version",
-		*     "updatedAt":"2018-03-19T11:04:12.094Z",
-		*     "createdAt":"2018-03-19T11:04:12.094Z",
-		*     "vpid": "vp5c754feaa"
-		*     "allOthers": "all properties of visbo project version",
-		* 		"keyMetrics": {
-		* 		   "costCurrentActual": 125,
+		*     "timestamp": "2019-03-19T11:04:12.094Z",
+		* 		"cost": [{
+		* 		   "currentDate":  "2018-03-01T00:00:00.000Z",
 		* 		   "costCurrentTotal": 125,
 		* 		   "costBaseLastActual": 115,
 		* 		   "costBaseLastTotal": 115,
@@ -1065,7 +1089,7 @@ router.route('/:vpvid')
 		* 		   "timeDelayCurrentTotal":1,
 		* 		   "deliverableDelayCurrentActual": 1,
 		* 		   "deliverableDelayCurrentTotal":10
-		* 		 }
+		* 		 }]
 	 	*   }]
 	 	* }
 		*/
@@ -1088,12 +1112,18 @@ router.route('/:vpvid')
 				});
 			}
 
-			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s :%O ", userId, useremail, req.params.vpvid);
+			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s", userId, useremail, req.oneVPV.timestamp.toISOString(), req.visboPFV._id, req.visboPFV.timestamp.toISOString());
 			var calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Project Version',
-				calc: [calcVPV],
+				vpv: [ {
+					_id: req.oneVPV._id,
+					timestamp: req.oneVPV.timestamp,
+					vpid: req.oneVPV.vpid,
+					name: req.oneVPV.name,
+					cost: calcVPV
+				} ],
 				perm: perm
 			});
 		})

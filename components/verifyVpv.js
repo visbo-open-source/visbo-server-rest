@@ -371,7 +371,7 @@ function getVPVpfv(req, res, next) {
 // Get the current base line (pfv) for keyMetrics calculation
 function getCurrentVPVpfv(req, res, next) {
 	var startCalc = new Date();
-	var timestamp = req.body.timestamp || new Date();
+	var timestamp = req.body.timestamp || req.oneVPV.timestamp || new Date();
 
 	logger4js.trace("VPV getVPVpfv Information %s", req.params.vpvid);
 	// fetch the base line in case of POST VPV to calculate keyMetrics
