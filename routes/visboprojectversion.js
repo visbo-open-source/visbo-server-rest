@@ -874,7 +874,7 @@ router.route('/:vpvid')
 	router.route('/:vpvid/copy')
 
 	/**
-		* @api {post} /vpv:vpvid/copy Create a Copy of a Version
+		* @api {post} /vpv/:vpvid/copy Create a Copy of a Version
 		* @apiVersion 1.0.0
 		* @apiGroup Visbo Project Version
 		* @apiName VisboProjectVersionCopy
@@ -1070,6 +1070,7 @@ router.route('/:vpvid')
 	 	*   "vpv": [{
 	 	*     "_id":"vpv5c754feaa",
 		*     "timestamp": "2019-03-19T11:04:12.094Z",
+		*     "actualDataUntil": "2019-01-31T00:00:00.000Z",
 		* 		"cost": [{
 		* 		   "currentDate":  "2018-03-01T00:00:00.000Z",
 		* 		   "costCurrentTotal": 125,
@@ -1120,6 +1121,7 @@ router.route('/:vpvid')
 				vpv: [ {
 					_id: req.oneVPV._id,
 					timestamp: req.oneVPV.timestamp,
+					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
 					name: req.oneVPV.name,
 					cost: calcVPV
