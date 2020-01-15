@@ -56,12 +56,11 @@ lsb_release -a
   echo "BE CAREFULL First use needs password so no multi line support"
   git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-rest.git --branch development --single-branch
 
-  git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch development --single-branch
+  git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-ui-build.git --branch development --single-branch
 
 # install modules for the two components
   chown -R ubuntu:ubuntu $HOME/.npm
   cd $HOME/GitHub/visbo-server-rest; npm install
-  cd $HOME/GitHub/visbo-server-ui; npm install
 
 # EDIT the $HOME/bin/update-* Commands
   cd $HOME; mkdir bin; cd bin
@@ -118,8 +117,9 @@ lsb_release -a
 
 # UI Setup
   # EDIT THE CONFIG File for UI
-  cd $HOME/GitHub/visbo-server-ui/
-  vi src/environments/environment.prod.ts
+  cd $HOME/GitHub/visbo-ui-build/
+  cp dist/env-default.js dist/env.js
+  vi dist/env.js
 
   # Build the first Version
   ng build --prod

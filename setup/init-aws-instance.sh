@@ -14,7 +14,7 @@ TEMP ssh -i "$HOME/.ssh/ProdVisboAWS.pem" ubuntu@ec2-18-184-4-146.eu-central-1.c
 curl http://localhost:3484/status
 
 
-git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch production --single-branch
+git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-ui-build.git --branch production --single-branch
 
 # aws elasticache describe-cache-clusters --cache-cluster-id visbodevredis.xa0tw2.0001.euc1.cache.amazonaws.com:6379 visbodevredis --show-cache-node-info
 
@@ -25,7 +25,7 @@ alias VP="newman run -e VisboReSTAWSDevelopment.postman_environment.json 40Paral
 
 git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-rest.git --branch production --single-branch
 
-git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git --branch production --single-branch
+git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-ui-build.git --branch production --single-branch
 
 #
   sudo cp $HOME/GitHub/visbo-server-rest/install/nginx.aws.dev.visbo.net /etc/nginx/sites-available/dev.visbo.net
@@ -34,8 +34,8 @@ git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-server-ui.git -
 
 # UI Setup
   # EDIT THE CONFIG File for UI
-  cd $HOME/GitHub/visbo-server-ui/
-  echo "Update or Adopt: src/environments/environment.prod.ts"
+  cd $HOME/GitHub/visbo-ui-build/
+  echo "Update or Adopt: dist/env.js"
 
 # ReST Setup
 # EDIT THE CONFIG File for ReST Server

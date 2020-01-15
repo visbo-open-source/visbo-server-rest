@@ -3,7 +3,7 @@ echo $LogFile
 mkdir -p /var/log/visbo/$HOSTNAME/
 echo `date` "Execute Update of Visbo ReST by user" `whoami` | tee -a $LogFile
 echo `date` "Update ReST Server UI" | tee -a $LogFile
-cd $HOME/GitHub/visbo-server-ui
+cd $HOME/GitHub/visbo-ui-build
 bash update-ui | tee -a $LogFile
 ExitStatus=${PIPESTATUS[0]}
 if [ $ExitStatus -ne 0 ]
