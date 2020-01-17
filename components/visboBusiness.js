@@ -19,7 +19,8 @@ var getColumnOfDate = function(value) {
 
 function addDays(dd, numDays) {
 	var inputDate = new Date(dd);
-	return new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate() + numDays);
+	inputDate.setDate(inputDate.getDate() + numDays);
+	return inputDate;
  }
 
 // calculate cost of personal for the requested project per month
@@ -57,7 +58,7 @@ var getAllPersonalKosten = function(vpv, organisation) {
 					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);
 					//????
 					var role = phase.AllRoles[j];
-					var tagessatz = allRoles[role.RollenTyp].tagessatzIntern;
+					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
 					if (role &&  role.Bedarf) {
 						var dimension = role.Bedarf.length;
@@ -235,16 +236,20 @@ var elemIdIsMilestone = function(elemId) {
 
 var getPhaseByID = function(hrchy, vpv, elemId){
 
-	var phIndex = hrchy[elemId].hryNode.indexOfElem;
-	if (vpv.AllPhases){
-		if ((phIndex >= 0) && (phIndex <= vpv.AllPhases.length)){
-			phase = vpv.AllPhases[phIndex-1];
-	   }
-	   else{
-		   phase = null;
-	   }
-	}
-	else{
+	if (hrchy && hrchy[elemId] && hrchy[elemId].hryNode) {
+		var phIndex = hrchy[elemId].hryNode.indexOfElem;
+		if (vpv.AllPhases){
+			if ((phIndex >= 0) && (phIndex <= vpv.AllPhases.length)){
+				phase = vpv.AllPhases[phIndex-1];
+		   }
+		   else{
+			   phase = null;
+		   }
+		}
+		else{
+			phase = undefined;
+		}
+	} else {
 		phase = undefined;
 	}
 
@@ -277,7 +282,7 @@ var getMilestoneByID = function(hrchy,vpv, elemId){
 
 var getMsDate = function(hrchy, vpv, elemId){
 
-	var msDate = new Date();
+	var msDate = undefined;
 
 	currentNode = hrchy[elemId].hryNode;
 	if (currentNode){
@@ -290,14 +295,7 @@ var getMsDate = function(hrchy, vpv, elemId){
 			logger4js.trace("get the Date of Milestone %s in %s ", ms.name, phase.name);
    			msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
 		 }
-		 else{
-			 msdate = undefined
-		 }
 	}
-	else{
-		msDate = null;
-	}
-
 	return msDate;
 }
 // Herausfinden des EndDates der Phase phase

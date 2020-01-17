@@ -941,7 +941,7 @@ router.route('/:vpvid')
 			var vpid = req.oneVPV.vpid;
 			var variantName = req.oneVPV.variantName
 
-			logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
+			logger4js.info("Post a copy Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 			var newVPV = new VisboProjectVersion();
 			var permCreateVersion = false
 			var perm = req.listVPPerm.getPerm(vpid);
@@ -1113,7 +1113,7 @@ router.route('/:vpvid')
 				});
 			}
 
-			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s", userId, useremail, req.oneVPV.timestamp.toISOString(), req.visboPFV._id, req.visboPFV.timestamp.toISOString());
+			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s", userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 			var calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
 			return res.status(200).send({
 				state: 'success',

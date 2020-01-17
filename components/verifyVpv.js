@@ -119,7 +119,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 		}
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV Perm All Groups %s ", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug("Calculate verifyVPV Perm All Groups %s ms", endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -190,9 +190,9 @@ function getVPV(req, res, next, vpvid) {
 			}
 			req.oneVP = oneVP
 
-			logger4js.debug("Found Visbo Project %s Access Permission %O", oneVPV.vpid, req.listVPPerm);
+			logger4js.debug("Found Visbo Project %s Access", oneVPV.vpid);
 			var endCalc = new Date();
-			logger4js.debug("Calculate verifyVPV getVPV %s ", endCalc.getTime() - startCalc.getTime());
+			logger4js.debug("Calculate verifyVPV getVPV %s ms ", endCalc.getTime() - startCalc.getTime());
 			if (urlComponent.length == 3 && urlComponent[2] == "calc") {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
@@ -263,7 +263,7 @@ function getPortfolioVPs(req, res, next) {
 			req.listPortfolioVP = listVP;
 			req.listPortfolioVPVariant = listVPVariant
 			var endCalc = new Date();
-			logger4js.debug("Calculate verifyVPV getPortfolioVPs %s ", endCalc.getTime() - startCalc.getTime());
+			logger4js.debug("Calculate verifyVPV getPortfolioVPs %s ms", endCalc.getTime() - startCalc.getTime());
 			return next();
 		});
 	} else {
@@ -313,7 +313,7 @@ function getVCOrganisation(vcid, req, res, next) {
 			logger4js.debug("getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s", i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
 		}
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getVCOrganisation %s ", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug("Calculate verifyVPV getVCOrganisation %s ms", endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -363,7 +363,7 @@ function getVPVpfv(req, res, next) {
 		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getVPVpfv %s ", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug("Calculate verifyVPV getVPVpfv %s ms", endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -371,10 +371,8 @@ function getVPVpfv(req, res, next) {
 // Get the current base line (pfv) for keyMetrics calculation
 function getCurrentVPVpfv(req, res, next) {
 	var startCalc = new Date();
-	var timestamp = req.body.timestamp || req.oneVPV.timestamp || new Date();
-
-	logger4js.trace("VPV getVPVpfv Information %s", req.params.vpvid);
-	// fetch the base line in case of POST VPV to calculate keyMetrics
+	var timestamp = req.method == "POST" ? req.body.timestamp : req.oneVPV.timestamp;
+	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
 		logger4js.warn("Copy VPV mal formed timestamp %s", vpid, timestamp);
@@ -404,7 +402,7 @@ function getCurrentVPVpfv(req, res, next) {
 		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getCurrentVPVpfv %s ", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug("Calculate verifyVPV getCurrentVPVpfv %s ms", endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
