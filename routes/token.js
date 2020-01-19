@@ -140,7 +140,7 @@ router.route('/user/login')
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
-				// MS TODO: Send Mail to User with Register Link
+				// Send Mail to User with Register Link
 				sendMail.accountNotRegistered(req, user);
 				return res.status(401).send({
 					state: "failure",
@@ -408,7 +408,6 @@ router.route('/user/pwforgotten')
 							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
 							return;
 						};
-						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  getSystemUrl();
