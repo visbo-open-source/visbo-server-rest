@@ -84,16 +84,16 @@ function getAllGroups(req, res, next) {
 
 		if (req.query.sysadmin) {
 			// MS TODO: Check if ok for users with sysadmin permission but without View VC
-			if ((listVCPerm.getPerm(0).vc & constPermSystem.View) == 0) {
-				// no View permission for VC
+			if ((listVCPerm.getPerm(0).vp & constPermVP.View) == 0) {
+				// no View permission for VP
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
 				});
 			}
 		} else if (vcid) {
-			if ((listVCPerm.getPerm(vcid).vc & constPermVC.View) == 0) {
-				// no View permission for VC
+			if ((listVCPerm.getPerm(vcid).vp & constPermVP.View) == 0) {
+				// no View permission for VP
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Center or no Permission'
