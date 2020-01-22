@@ -256,9 +256,9 @@ var markDeleteVersion = function(vpid){
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // register the VP middleware to get all Groups with VP Permissions for the user
-router.use('/', verifyVp.getAllVPGroups);
+router.use('/', verifyVp.getAllGroups);
 // register the VP middleware to check that the user has access to the VP
-router.param('vpid', verifyVp.getVpidGroups);
+router.param('vpid', verifyVp.getVP);
 // register the VP middleware to check that the vpfid is valid
 router.param('vpfid', verifyVp.checkVpfid);
 // Register the Group middleware to check the groupid param
@@ -337,44 +337,23 @@ router.route('/')
 
 		logger4js.info("Get Project for user %s check sysAdmin %s", userId, isSysAdmin);
 
-		if (req.query.vcid && !validate.validateObjectId(req.query.vcid, false)) {
-			logger4js.warn("Get VP mal formed query parameter %O ", req.query);
-			return res.status(400).send({
-				state: "failure",
-				message: "Bad Content in Query Parameters"
-			})
-		}
 		var query = {};
-		// Get all VCs there the user Group is assigned to
+		// Get all VPs there the user Group is assigned to
+		var requiredPerm = constPermVP.View
+		if (!isSysAdmin && req.query.deleted) {
+			requiredPerm += constPermVP.Delete
+		}
 		if (!isSysAdmin) {
-			var vpidList = []; var allowAccess;
-			for (var i=0; i < req.permGroups.length; i++) {
-				allowAccess = false;
-				if (req.query.deleted && req.permGroups[i].permission && req.permGroups[i].permission.vp & constPermVP.Delete)
-					allowAccess = true;
-				else if (!req.query.deleted)
-					allowAccess = true;
-				if (allowAccess && req.permGroups[i].vpids) {
-					vpidList = vpidList.concat(req.permGroups[i].vpids)
-				}
-			}
-			logger4js.debug("Get Visbo Project with %d Group VPIDs", vpidList.length);
-			query._id = {$in: vpidList};
+			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm)};
 		}
-
-		// check for deleted VPs
-		if (req.query.deleted) {
-			query.deletedAt = {$exists: true}				// Not deleted
-		} else {
-			query.deletedAt = {$exists: false};
-		}
+		query.deletedAt = {$exists: req.query.deleted ? true : false}				// Not deleted
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) {
 			query.vcid = req.query.vcid;
 		}
 		// check if query string is used to restrict projects to a certain type (project, portfolio, template)
-		if (req.query && req.query.vpType) query.vpType = req.query.vpType;
+		if (req.query.vpType) query.vpType = req.query.vpType;
 
 		logger4js.info("Get Projects for user %s", userId);
 		logger4js.trace("Get Project for user %s with query parameters %O", userId, query);
@@ -464,7 +443,7 @@ router.route('/')
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
 		var kundennummer;
-		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s. Perm: %O", useremail, req.body.name, vcid, req.combinedPerm);
+		logger4js.info("Post a new Visbo Project for user %s with name %s in VisboCenter %s. Perm: %O", useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace("Post a new Visbo Project body %O", req.body);
 
 		if (!validateName(vpname, false)
@@ -479,11 +458,13 @@ router.route('/')
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
 		var newVP = new VisboProject();
 
-		logger4js.debug("Check VC Permission %O", req.combinedPerm);
-		if (!(req.combinedPerm.vc & constPermVC.CreateVP)) {
-			return res.status(403).send({
+		logger4js.debug("Check VC Permission %O", req.listVCPerm.getPerm(vcid));
+		var requiredPerm = constPermVC.View + constPermVC.CreateVP
+		if ((req.listVCPerm.getPerm(vcid).vc & requiredPerm) != requiredPerm) {
+				return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Centers not found or no Permission to create Project'
+				message: 'No Permission to create Visbo Project',
+				perm: req.listVCPerm.getPerm(vcid)
 			});
 		}
 		var query = {'_id': vcid};
@@ -538,7 +519,7 @@ router.route('/')
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
-				newVG.users = [];
+				newVG.users = [{email: useremail, userId: userId}];
 
 				logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
 				newVG.save(function(err, vg) {
@@ -604,7 +585,8 @@ router.route('/:vpid')
 	*      "email": "someone@visbo.de",
 	*      "createdAt": "2018-04-26T11:04:12.094Z",
 	*      "expiresAt": "2018-04-26T12:04:12.094Z"
-	*    }]
+	*    }],
+	*    "perm": {"vc": 307, "vp": 1331}
 	* }]
  	*}
 	*/
@@ -620,7 +602,7 @@ router.route('/:vpid')
 
 		logger4js.info("Get Visbo Project for userid %s email %s and vp %s oneVC %s", userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (req.query.deleted && !(req.combinedPerm.vp & constPermVP.Delete)) {
+		if (req.query.deleted && !(req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to deleted Visbo Projects'
@@ -634,7 +616,7 @@ router.route('/:vpid')
 			state: 'success',
 			message: 'Returned Visbo Projects',
 			vp: [req.oneVP],
-			perm: req.combinedPerm
+			perm: req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid)
 		});
 	})
 
@@ -689,7 +671,7 @@ router.route('/:vpid')
 
 		req.auditDescription = 'Visbo Project (Update)';
 
-		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
+		logger4js.info("PUT/Save Visbo Project for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
 		if (!req.body) {
 			return res.status(400).send({
@@ -719,8 +701,8 @@ router.route('/:vpid')
 			logger4js.debug("Undelete VP %s flag %O", req.oneVP._id, req.oneVP);
 		}
 
-		if ((vpUndelete && !(req.combinedPerm.vp & constPermVP.Delete))
-		|| (!vpUndelete && !(req.combinedPerm.vp & constPermVP.Modify))) {
+		if ((vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete))
+		|| (!vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Project or no Permission'
@@ -730,7 +712,8 @@ router.route('/:vpid')
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 
@@ -787,7 +770,8 @@ router.route('/:vpid')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Updated Visbo Project',
-					vp: [ oneVP ]
+					vp: [ oneVP ],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			});
 		});
@@ -823,17 +807,19 @@ router.route('/:vpid')
 
 		logger4js.info("DELETE Visbo Project for userid %s email %s and vp %s oneVP %s  ", userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (!(req.combinedPerm.vp & constPermVP.Delete)) {
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: "failure",
-				message: "No permission to delete Visbo Project"
+				message: "No permission to delete Visbo Project",
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		var destroyVP = req.oneVP.deletedAt
@@ -885,7 +871,7 @@ router.route('/:vpid')
 				if (err){
 					errorHandler(err, undefined, `DB: DELETE(Destory) VP Groups`, undefined)
 				}
-				logger4js.trace("VC Destroy: %s VP Groups Deleted", req.oneVP._id)
+				logger4js.trace("VP Destroy: %s VP Groups Deleted", req.oneVP._id)
 			});
 			// Delete Audit Trail of VPs & VPVs
 			var queryaudit = {'vp.vpid': req.oneVP._id};
@@ -956,11 +942,12 @@ router.route('/:vpid/audit')
 		req.auditDescription = 'Visbo Project Audit (Read)';
 		req.auditSysAdmin = sysAdmin;
 
-		logger4js.info("Get Visbo Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
-		if (!(req.combinedPerm.vp & constPermVP.ViewAudit)) {
+		logger4js.info("Get Visbo Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
-					message: 'You need to have View Audit permission to get audit trail'
+					message: 'You need to have View Audit permission to get audit trail',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 		}
 
@@ -1094,13 +1081,13 @@ router.route('/:vpid/audit')
 			req.auditSysAdmin = sysAdmin;
 			req.auditTTLMode = 1;
 
-			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.combinedPerm);
+			logger4js.info("Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O", userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
 
 			var query = {};
 			query.vpids = req.oneVP._id;
 			query.groupType = {$in: ['VC', 'VP']};
 			// VC Groups without global Permission are excluded, but deliver VP Groups without permission
-			query['permission.vp'] = { $exists: true }		// any permission set for VP VC Groups
+			query['permission.vp'] = { $exists: true }		// any permission set for VP Groups
 			logger4js.trace("Get Visbo Project Group Query %O", query);
 			var queryVCGroup = VisboGroup.find(query);
 			queryVCGroup.select('-vpids');
@@ -1110,7 +1097,7 @@ router.route('/:vpid/audit')
 					errorHandler(err, res, `DB: GET VP Groups find ${query}`, `Error getting VisboProject Groups`)
 					return;
 				}
-				logger4js.info("Found %d Groups for VC", listVPGroup.length);
+				logger4js.info("Found %d Groups for VP", listVPGroup.length);
 				if (req.query.userlist) {
 					var listVPUsers = [];
 					for (var i = 0; i < listVPGroup.length; i++) {
@@ -1128,14 +1115,16 @@ router.route('/:vpid/audit')
 						message: 'Returned Visbo Project Groups',
 						count: listVPGroup.length,
 						groups: listVPGroup,
-						users: listVPUsers
+						users: listVPUsers,
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				} else {
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Visbo Project Groups',
 						count: listVPGroup.length,
-						groups: listVPGroup
+						groups: listVPGroup,
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				}
 			});
@@ -1172,7 +1161,7 @@ router.route('/:vpid/audit')
 		*     "name":"My first Group",
 		*     "vpid": "vc5c754feaa",
 		*     "global": true,
-		*     "permission": {vc: 307 },
+		*     "permission": {vp: 307 },
 		*   }]
 		* }
 		*/
@@ -1204,16 +1193,17 @@ router.route('/:vpid/audit')
 			req.auditDescription = 'Visbo Project Group (Create)';
 
 			logger4js.info("Post a new Visbo Project Group with name %s executed by user %s ", req.body.name, useremail);
-			logger4js.debug("Post a new Visbo Project Group Req Body: %O Name %s Perm %O", req.body, vgName, req.combinedPerm);
+			logger4js.debug("Post a new Visbo Project Group Req Body: %O Name %s Perm %O", req.body, vgName, req.listVPPerm.getPerm(req.params.vpid));
 
-			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Project or no Permission'
+					message: 'No Permission to change Permission of Visbo Project',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			if (!req.body.name) {
-				logger4js.info("Body is inconsistent VC %s Body %O", req.oneVC._id, req.body);
+				logger4js.info("Body is inconsistent VP %s Body %O", req.oneVP._id, req.body);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid Group Definition'
@@ -1232,7 +1222,8 @@ router.route('/:vpid/audit')
 				if (oneGroup) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Visbo Project Group already exists'
+						message: 'Visbo Project Group already exists',
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				}
 
@@ -1263,7 +1254,8 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Inserted Visbo Project Group',
-						groups: [ resultGroup ]
+						groups: [ resultGroup ],
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				});
 			});
@@ -1304,20 +1296,22 @@ router.route('/:vpid/audit')
 			req.auditInfo = req.oneGroup.name;
 			logger4js.info("DELETE Visbo Project Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vpid, req.params.groupid);
 
-			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Project or no Permission'
+					message: 'No Permission to delete Visbo Project Group',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			logger4js.debug("Delete Visbo Project Group after permission check %s", req.params.vpid);
 
-			// Do not allow to delete internal VC Group
+			// Do not allow to delete internal or VC Group
 			if (req.oneGroup.internal || req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Visbo Project Group not deletable'
-				});
+					message: 'Visbo Project Group not deletable',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+			});
 			}
 			req.oneGroup.remove(function(err, empty) {
 				if (err) {
@@ -1326,7 +1320,8 @@ router.route('/:vpid/audit')
 				}
 				return res.status(200).send({
 					state: 'success',
-					message: 'Deleted Visbo Project Group'
+					message: 'Deleted Visbo Project Group',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			});
 		})
@@ -1384,7 +1379,7 @@ router.route('/:vpid/audit')
 				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
 			}
 
-			logger4js.info("PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vpid, req.params.groupid, req.combinedPerm);
+			logger4js.info("PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));
 			if (!validateName(vgName, true)) {
 				logger4js.info("PUT Visbo Project Group contains illegal strings body %O", req.body);
 				return res.status(400).send({
@@ -1393,16 +1388,18 @@ router.route('/:vpid/audit')
 				});
 			}
 
-			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Project or no Permission'
+					message: 'No Permission to change Visbo Project Group',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			if (req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'not a Visbo Project Group'
+					message: 'not a Visbo Project Group',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 
@@ -1419,7 +1416,8 @@ router.route('/:vpid/audit')
 				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Visbo Project Group already exists'
+						message: 'Visbo Project Group already exists',
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				}
 				// fill in the required fields
@@ -1442,7 +1440,8 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Visbo Project Group',
-						groups: [ resultGroup ]
+						groups: [ resultGroup ],
+						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				});
 			});
@@ -1492,7 +1491,7 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.info("Post a new Visbo Project User with name %s  to group %s executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.combinedPerm);
+			logger4js.info("Post a new Visbo Project User with name %s  to group %s executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.listVPPerm.getPerm(req.params.vpid));
 			req.auditDescription = 'Visbo Project User (Add)';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
@@ -1505,7 +1504,7 @@ router.route('/:vpid/audit')
 
 			req.auditInfo = req.body.email + ' / ' + req.oneGroup.name;
 			// no check for SysAdmin as SysAdmin does not get any special permissions
-			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
@@ -1528,7 +1527,7 @@ router.route('/:vpid/audit')
 
 			// check if the user is not member of the group already
 			if (req.oneGroup.users.filter(users => (users.email == vgUser.email)).length != 0) {
-				logger4js.debug("Post User %s to VC Group %s User is already a member", vgUser.email, req.oneGroup._id);
+				logger4js.debug("Post User %s to Group %s User is already a member", vgUser.email, req.oneGroup._id);
 				return res.status(409).send({
 					state: 'failure',
 					message: 'User is already member',
@@ -1554,7 +1553,7 @@ router.route('/:vpid/audit')
 							errorHandler(err, res, `DB: POST VP User to Group Add`, `Error adding User to VisboProject Group`)
 							return;
 						}
-						// user exists now, now the VC can be updated
+						// user exists now, now the group can be updated
 						vgUser.userId = user._id;
 
 						req.oneGroup.users.push(vgUser)
@@ -1675,7 +1674,7 @@ router.route('/:vpid/audit')
 		router.route('/:vpid/group/:groupid/user/:userid')
 
 		/**
-			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from VC Group
+			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from VP Group
 			* @apiVersion 1.0.0
 			* @apiGroup Visbo Project Permission
 			* @apiName DeleteVisboProjectUser
@@ -1711,7 +1710,7 @@ router.route('/:vpid/audit')
 			var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
 			if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
-			if (!(req.combinedPerm.vp & constPermVP.ManagePerm)) {
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Visbo Project or no Permission'
@@ -1806,11 +1805,12 @@ router.route('/:vpid/lock')
 		} 
 		logger4js.info("POST Lock Visbo Project %s Check variant %s does exists  ", req.params.vpid, variantName);
 
-		if (!(req.combinedPerm.vp & constPermVP.Modify
-				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
+				|| (req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant))) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project or no Permission'
+				message: 'No Permission to lock Visbo Project',
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		if (variantName != "" && variant.findVariant(req.oneVP, variantName) < 0) {
@@ -1818,7 +1818,8 @@ router.route('/:vpid/lock')
 				return res.status(400).send({
 				state: 'failure',
 				message: 'Visbo Project Variant does not exist',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 
@@ -1826,7 +1827,8 @@ router.route('/:vpid/lock')
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Visbo Project already locked',
-				lock: req.oneVP.lock
+				lock: req.oneVP.lock,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		if (expiredAt <= dateNow) {
@@ -1834,7 +1836,8 @@ router.route('/:vpid/lock')
 			return res.status(400).send({
 				state: 'failure',
 				message: 'New Lock already expired',
-				lock: req.oneVP.lock
+				lock: req.oneVP.lock,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
@@ -1861,7 +1864,8 @@ router.route('/:vpid/lock')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated Visbo Project Locks',
-				lock: [newLock]
+				lock: [newLock],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
 	})
@@ -1910,15 +1914,17 @@ router.route('/:vpid/lock')
 			return res.status(409).send({
 				state: 'failure',
 				message: 'VP no Lock exists for Deletion',
-				lock: req.oneVP.lock
+				lock: req.oneVP.lock,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
-		if (resultLock.locked && !(req.combinedPerm.vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
+		if (resultLock.locked && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
 			logger4js.info("Delete Lock for VP :%s: Project is locked by another user", req.oneVP.name);
 			return res.status(403).send({
 				state: 'failure',
-				message: 'VP locked for another user',
-				lock: req.oneVP.lock
+				message: 'No Permission to delete the Lock',
+				lock: req.oneVP.lock,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 
@@ -1934,7 +1940,8 @@ router.route('/:vpid/lock')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Deleted Visbo Project Locks',
-				lock: req.oneVP.lock
+				lock: req.oneVP.lock,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
 	})
@@ -1979,7 +1986,7 @@ router.route('/:vpid/variant')
 
 		req.auditDescription = 'Visbo Project Variant (Create)';
 
-		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O", userId, useremail, req.params.vpid, req.body, req.combinedPerm);
+		logger4js.info("POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O", userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
 
 		var variantList = req.oneVP.variant;
 		var variantName = (req.body.variantName || "").trim();
@@ -1991,11 +1998,12 @@ router.route('/:vpid/variant')
 				message: "Visbo Project Variant Body contains invalid strings"
 			});
 		}
-		if (!(req.combinedPerm.vp & constPermVP.Modify
-				|| req.combinedPerm.vp & constPermVP.CreateVariant)) {
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
+				|| req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project or no Permission'
+				message: 'No Permission to create Variant',
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		logger4js.trace("Variant %s current list %O", variantName, variantList);
@@ -2011,8 +2019,9 @@ router.route('/:vpid/variant')
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Variant already exists',
-				vp: [req.oneVP]
-			});
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
+		});
 		}
 		logger4js.trace("Variant List %d orig %O ", variantList.length, variantList);
 		newVariant = new Variant;
@@ -2032,7 +2041,8 @@ router.route('/:vpid/variant')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Visbo Project Variant',
-				variant: [newVariant]
+				variant: [newVariant],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
 	})
@@ -2086,11 +2096,12 @@ router.route('/:vpid/variant/:vid')
 		var variantName = req.oneVP.variant[variantIndex].variantName;
 		req.auditInfo = variantName;
 		//variant belongs to a different user and curr. user is not an Admin
-		if (req.oneVP.variant[variantIndex].email != useremail && !(req.combinedPerm.vp & constPermVP.Modify)) {
+		if (req.oneVP.variant[variantIndex].email != useremail && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to delete',
-				vp: [req.oneVP]
+				message: 'No Permission to delete Variant',
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
@@ -2098,14 +2109,16 @@ router.route('/:vpid/variant/:vid')
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Visbo Project locked',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		if (req.oneVP.variant[variantIndex].vpvCount > 0) {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Visbo Project Variant still has Versions',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		req.oneVP.variant.splice(variantIndex, 1);
@@ -2124,7 +2137,8 @@ router.route('/:vpid/variant/:vid')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Deleted Visbo Project Variant',
-				vp: [req.oneVP]
+				vp: [req.oneVP],
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		})
 	})
@@ -2179,6 +2193,7 @@ router.route('/:vpid/portfolio')
 	*     "reasonToExclude": "Description Text Exclude",
 	*     "_id": "5b19306f53eb4b516619a5ac"
 	*   }]
+	*   "perm": {"vc": 307, "vp": 1331}
   * }
 	*/
 // Get Portfolio Versions
@@ -2248,14 +2263,16 @@ router.route('/:vpid/portfolio')
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
 					count: listVPFfiltered.length,
-					vpf: listVPFfiltered
+					vpf: listVPFfiltered,
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			} else {
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Portfolios',
 					count: listVPF.length,
-					vpf: listVPF
+					vpf: listVPF,
+					perm: req.listVPPerm.getPerm(req.params.vpid).vp
 				});
 			}
 		});
@@ -2324,7 +2341,7 @@ router.route('/:vpid/portfolio')
 
 		req.auditDescription = 'Visbo Portfolio List (Create)';
 
-		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.combinedPerm);
+		logger4js.info("POST Visbo Portfolio for userid %s email %s and vp %s perm %O", userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
 		logger4js.debug("Variant %s Portfolio %O", variantName || "None", req.body);
 
@@ -2351,11 +2368,12 @@ router.route('/:vpid/portfolio')
 				vp: [req.oneVP]
 			});
 		}
-		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Modify))
-		&& !((req.combinedPerm.vp & (constPermVP.View + constPermVP.CreateVariant)) && variantName != '')) {
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)
+		&& !((req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant) && variantName != '')) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Project Portfolio no Permission to create Portfolio List'
+				message: 'No Permission to create Portfolio List',
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 
@@ -2396,6 +2414,7 @@ router.route('/:vpid/portfolio')
 			for (var i = 0; i < req.body.allItems.length; i++) {
 				// get the item, overwrite Project name with correct name
 				req.body.allItems[i].name = listVP.find(findVPList, req.body.allItems[i].vpid).name;
+				if (!req.body.allItems[i].variantName) req.body.allItems[i].variantName = "";
 				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}
@@ -2412,7 +2431,8 @@ router.route('/:vpid/portfolio')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Visbo Portfolio Version',
-					vpf: [onePortfolio]
+					vpf: [onePortfolio],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			});
 		});
@@ -2490,7 +2510,8 @@ router.route('/:vpid/portfolio/:vpfid')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Visbo Portfolios',
-				vpf: listVPF
+				vpf: listVPF,
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
 	})
@@ -2528,10 +2549,11 @@ router.route('/:vpid/portfolio/:vpfid')
 		req.auditDescription = 'Visbo Portfolio List (Delete)';
 
 		logger4js.debug("DELETE Visbo Portfolio in Project %s", req.oneVP.name);
-		if (!(req.combinedPerm.vp & (constPermVP.View + constPermVP.Delete))) {
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'Visbo Project Portfolio no Permission to delete Portfolio List'
+				message: 'No Permission to delete Portfolio List',
+				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		var query = {};
@@ -2569,12 +2591,13 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(423).send({
 					state: 'failure',
 					message: 'Visbo Portfolio Project locked',
-					vp: [req.oneVP]
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			// user needs to have Delete Permission or owns the Variant
 			var hasPerm = false;
-			if (req.combinedPerm.vp & constPermVP.Delete) {
+			if (req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete) {
 				hasPerm = true;
 			} else if (variantName != "" && req.oneVP.variant[variantIndex].email == useremail) {
 				hasPerm = true;
@@ -2583,7 +2606,8 @@ router.route('/:vpid/portfolio/:vpfid')
 				logger4js.warn("VP Portfolio List Delete no Permission %s %s", oneVP._id, variantName);
 				return res.status(403).send({
 					state: 'failure',
-					message: 'Visbo Portfolio List no permission to delete Version'
+					message: 'No permission to delete Portfolio List Version',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			oneVPF.deletedAt = new Date();

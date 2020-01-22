@@ -160,7 +160,7 @@ environment.config();
 
 // start express app
 var app = express();
-// MS TODO: PM2 Setup for multi server
+// PM2 Setup for multi server
 // var port = process.env.PORT ||'3484';
 // // app.set('port', port);
 // app.listen(port)

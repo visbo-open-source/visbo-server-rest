@@ -26,31 +26,13 @@ var ejs = require('ejs');
 
 var visbouser = mongoose.model('User');
 
-var visboParseUA = function(agent, stringUA) {
-	var shortUA = stringUA;
-	logger4js.trace("User Agent %s", JSON.stringify(agent), shortUA);
-	var index = stringUA.indexOf("(")
-	if (index >= 0) shortUA = shortUA.substring(0, index-1)
-	logger4js.trace("User Agent Shortened1 %s to %s", stringUA, shortUA);
-
-	if (agent.family == "Other") {
-		index = shortUA.indexOf("/")
-		if (index >= 0) {
-			agent.family = shortUA.substring(0, index)
-			shortUA = shortUA.substring(index+1, shortUA.length )
-			logger4js.trace("User Agent Shortened2 %s to %s", agent.family, shortUA);
-			index = shortUA.indexOf(".")
-			if (index >= 0) {
-				agent.major = shortUA.substring(0, index)
-				agent.minor = shortUA.substring(index+1, shortUA.length )
-				logger4js.trace("User Agent Major %s Minor %s", agent.major, agent.minor);
-			}
-		}
-	}
-	// agent.patch = 0;
-	// agent.family.patch = 0;
-	// agent.os.patch = 0;
-	logger4js.debug("User Agent %s, %s", JSON.stringify(agent), agent.toString());
+var visboShortUA = function(stringUA) {
+	var agent = useragent.parse(stringUA);
+	agent.patch = undefined;
+	agent.family.patch = undefined;
+	agent.os.patch = undefined;
+	logger4js.debug("User Agent %s", agent.toString());
+	return agent.toString();
 }
 
 var findUserAgent = function(currentUserAgent) {
@@ -139,9 +121,7 @@ router.route('/user/login')
 			});
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
-		var agent = useragent.parse(req.get('User-Agent'));
-		visboParseUA(agent, req.headers['user-agent']);
-		req.visboUserAgent = agent.toString();
+		req.visboUserAgent = visboShortUA(req.headers['user-agent']);
 		logger4js.debug("Shortened User Agent ", req.visboUserAgent);
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
@@ -160,7 +140,7 @@ router.route('/user/login')
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
-				// MS TODO: Send Mail to User with Register Link
+				// Send Mail to User with Register Link
 				sendMail.accountNotRegistered(req, user);
 				return res.status(401).send({
 					state: "failure",
@@ -279,10 +259,10 @@ router.route('/user/login')
 						user.session = undefined;
 						// Check user Agent and update or add it and send e-Mail about new login
 						var curAgent = {};
-						curAgent.userAgent = req.headers['user-agent'];
+						curAgent.userAgent = req.visboUserAgent;
 						curAgent.createdAt = new Date();
 						curAgent.lastUsedAt = curAgent.createdAt;
-						logger4js.trace("User Agent prepared %s", JSON.stringify(user.userAgents));
+						logger4js.trace("User Agent prepared %s", curAgent.userAgents);
 
 						if (!user.userAgents || user.userAgents.length == 0) {
 							user.userAgents = [];
@@ -299,9 +279,9 @@ router.route('/user/login')
 								sendMail.accountNewLogin(req, user);
 								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
-							// Cleanup old User Agents older than 1 year
+							// Cleanup old User Agents older than 3 Months
 							var expiredAt = new Date()
-							expiredAt.setFullYear(expiredAt.getFullYear()-1)
+							expiredAt.setMonth(expiredAt.getMonth()-3)
 							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
 							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
 						}
@@ -428,7 +408,6 @@ router.route('/user/pwforgotten')
 							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
 							return;
 						};
-						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  getSystemUrl();
@@ -515,7 +494,7 @@ router.route('/user/pwreset')
       if (err) {
         return res.status(401).send({
         	state: 'failure',
-        	message: 'Token is dead'
+        	message: 'Session has expired'
         });
       } else {
         // if everything is good, save to request for use in other routes

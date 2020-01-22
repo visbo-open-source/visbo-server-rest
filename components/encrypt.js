@@ -5,7 +5,6 @@ var crypto = require('crypto')
 var secrets = require('./../secrets/jwt.js');
 
 var algorithm = 'aes-256-cbc'
-var password = 'RJ23edrf'; // MS TODO to be changed
 var iv = undefined;
 
 function initIV (text) {

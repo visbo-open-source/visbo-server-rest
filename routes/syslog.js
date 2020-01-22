@@ -56,7 +56,7 @@ router.route('/')
 		req.auditSysAdmin = true;
 		req.auditTTLMode = 1;
 
-		logger4js.info("Get Log File List Perm system: %O ", req.combinedPerm);
+		logger4js.info("Get Log File List Perm system: %O ", req.listVCPerm.getPerm(0));
 
 		var ageDays = 7;
 		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays
@@ -73,7 +73,7 @@ router.route('/')
 		}
 		var fileList = [];
 
-		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
+		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',
@@ -150,7 +150,7 @@ router.route('/')
 		req.auditSysAdmin = true;
 
 		logger4js.info("Get Logfile %s/%s ", req.params.folder, req.params.filename);
-		if (!(req.combinedPerm.system & constPermSystem.ViewLog)) {
+		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewLog)) {
 			logger4js.debug("No Permission to View System Log for user %s", userId);
 			return res.status(403).send({
 				state: 'failure',
