@@ -536,10 +536,11 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
 
 		for (var j = 0; vpv.AllPhases[i].deliverables && j < vpv.AllPhases[i].deliverables.length; j++) {
+			var id = phase.name.concat('§', phase.deliverables[j])
 			if (addAll) {
-				allDeliverables.addDeliverable(phase.name, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate})
+				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate})
 			} else {
-				allDeliverables.updateDeliverable(phase.name, {description: phase.deliverables[j], dateVPV: endDate, done: 0.75})
+				allDeliverables.updateDeliverable(id, {description: phase.deliverables[j], dateVPV: endDate, done: 0.75})
 			}
 		}
 
@@ -551,10 +552,11 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 
 			for (var m = 0; milestone && milestone.deliverables && m < milestone.deliverables.length; m++){
 				// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, milestone.nameID);
+				var id = milestone.name.concat('§', milestone.deliverables[m])
 				if (addAll) {
-					allDeliverables.addDeliverable(milestone.name, {nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate})
+					allDeliverables.addDeliverable(id, {nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate})
 				} else {
-					allDeliverables.updateDeliverable(milestone.name, {description: milestone.deliverables[m], dateVPV: endDate, done: milestone.percentDone})
+					allDeliverables.updateDeliverable(id, {description: milestone.deliverables[m], dateVPV: endDate, done: milestone.percentDone})
 				}
 			}
 		}
