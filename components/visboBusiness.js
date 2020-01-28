@@ -1,7 +1,7 @@
 
 var logging = require('../components/logging');
 
-var logModule = "OTHER";
+var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -206,7 +206,7 @@ function calcDeliverables(vpv, pfv) {
 	var listDeliveries = allDeliverables.getAllDeliveries();
 
 	for (var element = 0; element < listDeliveries.length; element++) {
-		logger4js.debug("Add Project Delivery %s", JSON.stringify(listDeliveries[element]));
+		logger4js.trace("Add Project Delivery %s", JSON.stringify(listDeliveries[element]));
 		var name = listDeliveries[element].nameID || 'UNDEFINED';
 		compName = name.split("§");
 		if (compName.length >= 2) {
