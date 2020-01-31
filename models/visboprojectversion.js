@@ -37,7 +37,7 @@ var clsKostenart = new Schema({
 });
 
 var clsResult = new Schema({
-	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
+	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
 	name: { type: String },
 	verantwortlich: { type: String },
 	offset: { type: Number },
@@ -45,18 +45,18 @@ var clsResult = new Schema({
 	shortName: { type: String },
 	originalName: { type: String },
 	appearance: { type: String },
-	deliverables: [{ type: String }],
+	deliverables: [{ type: String, required: true }],
 	percentDone: { type: Number }
 });
 
 var clsPhase = new Schema({
-	AllRoles: [{ type: clsRole }],
-	AllCosts: [{ type: clsKostenart }],
-	AllResults: [{ type: clsResult }],
-	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung}}],
+	AllRoles: [{ type: clsRole, required: true }],
+	AllCosts: [{ type: clsKostenart, required: true}],
+	AllResults: [{ type: clsResult, required: true }],
+	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
 	percentDone: { type: Number },
 	responsible: { type: String },
-	deliverables: [{ type: String }],
+	deliverables: [{ type: String , required: true}],
 	ampelStatus: { type: Number },
 	ampelErlaeuterung: { type: String },
 	earliestStart: { type: Number },
@@ -74,6 +74,27 @@ var clsPhase = new Schema({
 	appearance: { type: String }
 });
 
+var clsKeyMetrics = new Schema({
+	costCurrentActual: { type: Number },
+	costCurrentTotal: { type: Number },
+	costBaseLastActual: { type: Number },
+	costBaseLastTotal: { type: Number },
+	timeCompletionCurrentActual: { type: Number },
+	timeCompletionBaseLastActual: { type: Number },
+	timeCompletionCurrentTotal: { type: Number },
+	timeCompletionBaseLastTotal: { type: Number },
+	timeDelayCurrentActual: { type: Number },
+  timeDelayCurrentTotal: { type: Number },
+	endDateCurrent: { type: Date },
+	endDateBaseLast: { type: Date },
+	deliverableCompletionCurrentActual: { type: Number },
+	deliverableCompletionCurrentTotal: { type: Number },
+	deliverableCompletionBaseLastActual: { type: Number },
+	deliverableCompletionBaseLastTotal: { type: Number },
+	deliverableDelayCurrentActual: { type: Number },
+  deliverableDelayCurrentTotal: { type: Number }
+});
+
 
 var visboProjectVersionSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256},
@@ -84,14 +105,12 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	variantDescription: { type: String, required: false, maxlength: 4096},
 	Risiko: { type: Number, required: false},
 	StrategicFit: { type: Number, required: false},
-  customDblFields: [{str: {type: String, required: true}, dbl: {type: Number, required: true}}],
+	customDblFields: [{str: {type: String, required: true}, dbl: {type: Number, required: true}}],
 	customStringFields: [{strkey: {type: String, required: true}, strvalue: {type: String, required: true}}],
 	customBoolFields: [{str: {type: String, required: true}, bool: {type: Boolean, required: true}}],
 	Erloes: { type: Number, required: false},
 	actualDataUntil: { type: Date, required: false},
 	leadPerson: { type: String, required: false, maxlength: 256},
-	tfSpalte: { type: Number, required: false},
-	tfZeile: { type: Number, required: false},
 	startDate: { type: Date, required: false},
 	endDate: { type: Date, required: false},
 	earliestStart: { type: Number, required: false},
@@ -106,15 +125,16 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Schriftfarbe: { type: Number, required: false},
 	VorlagenName: { type: String, required: false, maxlength: 256},
 	Dauer: { type: Number, required: false},
-	AllPhases: [{ type: clsPhase, required: false}],
+	AllPhases: [{ type: clsPhase, required: true}],
 	hierarchy: {
-		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode}} ]
+		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode, required: true}} ]
 	},
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
-	businessUnit: { type: String, required: false, maxlength: 256}
+	businessUnit: { type: String, required: false, maxlength: 256},
+	keyMetrics: { type: clsKeyMetrics }
 });
 // Set Creation and modification date automatically
 visboProjectVersionSchema.set('timestamps', true);

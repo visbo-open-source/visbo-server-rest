@@ -34,7 +34,6 @@ function cleanupLogFiles(task, finishedTask) {
 		ageDays =  task.specificValue.logAge || ageDays
 	var deleteLogDate = new Date();
 	var deletedCount = 0;
-	// MS TODO: use sysconfig Value for Log Age
 	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays)
 	deleteLogDate.setHours(0);
 	deleteLogDate.setMinutes(0);

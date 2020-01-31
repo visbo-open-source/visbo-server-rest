@@ -578,6 +578,30 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2019-10-31T00:00:00"
+if (currentVersion < dateBlock) {
+  // Create Portfolio Version Index if not exists
+
+  print ("Check if Portfolio Versions Index Exists")
+  indexes = db.visboportfolios.getIndexes();
+  var found = false;
+  for (var i=0; i<indexes.length; i++) {
+    if (indexes[i].name == 'refDate') {
+      found = true
+      break
+    }
+  }
+  if (!found) {
+    // create the indexes
+    print ("Create Portfolio Versions Index")
+    db.visboportfolios.createIndex( { vpid: 1, variantName: 1, timestamp: -1 }, { name: "refDate", unique: false } );
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
