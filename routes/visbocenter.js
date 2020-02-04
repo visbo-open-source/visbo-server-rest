@@ -447,6 +447,7 @@ router.route('/:vcid')
 		var useremail = req.decoded.email;
 		req.auditDescription = 'Visbo Center (Update)';
 		var isSysAdmin = req.query.sysadmin ? true : false;
+		var checkSystemPerm = false;
 
 		logger4js.info("PUT/Save Visbo Center for userid %s vc %s oneVC %s Perm %O ", userId, req.params.vcid, req.oneVC.name, req.listVCPerm.getPerm(req.params.vcid));
 
@@ -467,9 +468,10 @@ router.route('/:vcid')
 			vcUndelete = true;
 			logger4js.debug("Undelete VC %s flag %s", req.oneVC._id, req.oneVC.deletedAt);
 		}
-
-		if ((!vcUndelete && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.Modify))
-		|| (vcUndelete && !(req.listVCPerm.getPerm(0).system & constPermSystem.DeleteVC))) {
+		if (isSysAdmin) checkSystemPerm = true;
+		if (vcUndelete) checkSystemPerm = true;
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.Modify))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.DeleteVC))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to change Visbo Center',
@@ -751,13 +753,16 @@ router.route('/:vcid/audit')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
+		var checkSystemPerm = false;
 
 		req.auditDescription = 'Visbo Center Audit (Read)';
 		req.auditSysAdmin = isSysAdmin;
 
+		if (req.oneVC.system || req.query.sysadmin) checkSystemPerm = true;
+
 		logger4js.info("Get Visbo Center Audit Trail for userid %s email %s and vc %s oneVC %s Perm %O", userId, useremail, req.params.vcid, req.oneVC.name, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
-		if ((!req.oneVC.system && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit))
-		|| (req.oneVC.system && !(req.listVCPerm.getPerm(0).system & constPermSystem.ViewAudit))) {
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ViewAudit))) {
 			return res.status(403).send({
 					state: 'failure',
 					message: 'No View Audit permission to get audit trail',
@@ -1025,6 +1030,7 @@ router.route('/:vcid/group')
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
 		var groupType;
+		var checkSystemPerm = false;
 
 		req.body.name = req.body.name ? req.body.name.trim() : '';
 		if (!validate.validateName(req.body.name, false)) {
@@ -1046,11 +1052,14 @@ router.route('/:vcid/group')
 
 		req.auditDescription = 'Visbo Center Group (Create)';
 
+		if (groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
+		if (groupType != 'VC')  checkSystemPerm = true;
+
 		logger4js.info("Post a new Visbo Center Group with name %s executed by user %s ", req.body.name, useremail);
 		logger4js.trace("Post a new Visbo Center Group Req Body: %O Name %s Perm %O", req.body, req.body.name, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
 
-		if ((groupType == 'VC' && !(req.listVCPerm.getPerm(req.oneVC._id).vc & constPermVC.ManagePerm))
-		|| (groupType != 'VC' && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.oneVC._id).vc & constPermVC.ManagePerm))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to create Visbo Center Group',
@@ -1162,12 +1171,17 @@ router.route('/:vcid/group/:groupid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var checkSystemPerm = false;
+
 		req.auditDescription = 'Visbo Center Group (Delete)';
 		req.auditInfo = req.oneGroup.name;
 		logger4js.info("DELETE Visbo Center Group for userid %s email %s and vc %s group %s ", userId, useremail, req.params.vcid, req.params.groupid);
 
-		if ((req.oneGroup.groupType == 'VC' && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
-		|| (req.oneGroup.groupType != 'VC' && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+		if (req.oneGroup.groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
+		if (req.oneGroup.groupType != 'VC')  checkSystemPerm = true;
+
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete Visbo Center Group'
@@ -1235,6 +1249,7 @@ router.route('/:vcid/group/:groupid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var checkSystemPerm = false;
 
 		req.auditDescription = 'Visbo Center Group (Update)';
 
@@ -1259,8 +1274,11 @@ router.route('/:vcid/group/:groupid')
 
 		logger4js.info("PUT Visbo Center Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vcid, req.params.groupid, req.listVCPerm.getPerm(req.params.vcid));
 
-		if ((req.oneGroup.groupType == 'VC' && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
-		|| (req.oneGroup.groupType != 'VC' && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+		if (req.oneGroup.groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
+		if (req.oneGroup.groupType != 'VC')  checkSystemPerm = true;
+
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to change Visbo Center Group',
@@ -1411,6 +1429,7 @@ router.route('/:vcid/group/:groupid')
 		// User is authenticated already
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var checkSystemPerm = false;
 
 		logger4js.info("Post a new Visbo Center User with name %s  to group executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.listVCPerm.getPerm(req.params.vcid));
 		req.auditDescription = 'Visbo Center User (Add)';
@@ -1425,9 +1444,12 @@ router.route('/:vcid/group/:groupid')
 		}
 
 		req.auditInfo = req.body.email + ' / ' + req.oneGroup.name;
-		// verify check for System VC & SysAdmin
-		if ((req.oneGroup.groupType == 'VC' && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
-		|| (req.oneGroup.groupType != 'VC' && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+
+		if (req.oneGroup.groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
+		if (req.oneGroup.groupType != 'VC')  checkSystemPerm = true;
+
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Permission to add User to Visbo Center Group',
@@ -1628,6 +1650,7 @@ router.route('/:vcid/group/:groupid')
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var checkSystemPerm = false;
 
 		logger4js.info("DELETE Visbo Center User by userid %s email %s for user %s Group %s ", userId, useremail, req.params.userid, req.oneGroup._id);
 
@@ -1636,8 +1659,11 @@ router.route('/:vcid/group/:groupid')
 		var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
 		if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
-		if ((req.oneGroup.groupType == 'VC' && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
-		|| (req.oneGroup.groupType != 'VC' && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+		if (req.oneGroup.groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
+		if (req.oneGroup.groupType != 'VC')  checkSystemPerm = true;
+
+		if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm))
+		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Permission to Delete User from Group',

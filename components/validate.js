@@ -23,12 +23,12 @@ var validateName = function(name, allowEmpty) {
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty) {
 	if (!allowEmpty && !dateString) {
-		logger4js.debug("Check Date: DateString is empty! :%s:", !dateString);
+		logger4js.debug("validate Date: DateString is empty! :%s:", !dateString);
 		return undefined;
 	}
 	dateValue = dateString ? new Date(dateString) : new Date();
 	if (isNaN(dateValue)) {
-		logger4js.debug("Check Date: String contains no Date %s", dateString);
+		logger4js.debug("validate Date: String contains no Date %s", dateString);
 		return undefined;
 	}
 	return dateValue.toISOString();
@@ -37,11 +37,11 @@ var validateDate = function(dateString, allowEmpty) {
 // validate a date to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
 	if (!allowEmpty && isNaN(numberValue)) {
-		logger4js.debug("Check Number: Number is NaN! :%s:", numberValue);
+		logger4js.debug("validate Number: Number is NaN! :%s:", numberValue);
 		return undefined;
 	}
 	if (isNaN(numberValue)) {
-		logger4js.debug("Check Number: String contains no Number %s", numberValue);
+		logger4js.debug("validate Number: String contains no Number %s", numberValue);
 		return 0;
 	}
 	return numberValue;
@@ -50,9 +50,9 @@ var validateNumber = function(numberValue, allowEmpty) {
 // check if string has invalid content
 // validate a string to prevent XSS
 var validateObjectId = function(id, allowEmpty) {
-	logger4js.trace("Check ID:  %s Allow empty %s", id, allowEmpty);
+	logger4js.trace("validate ObjectID: %s Allow empty %s", id, allowEmpty);
 	if (allowEmpty != true && !id) {
-		logger4js.debug("debug ID: ID is empty!", id);
+		logger4js.debug("validate ObjectID: ID is empty!", id);
 		return false;
 	}
 	if (!id) {
