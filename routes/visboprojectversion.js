@@ -1055,7 +1055,10 @@ router.route('/:vpvid')
 		* @apiDescription Get returns the calculation for a specific VisboProjectVersion the user has access permission to the VisboProject
 		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		*
-		* @apiParam {String="Costs","Deliveries"} type Specifies the type of calculation for the VPV ("Costs": delivers the monthly costs (default), "Deliveries": delivers the List of Deliveries with Phase, Name, endDates and %Done)
+		* @apiParam {String="Costs","Deliveries","Deadlines", "KeyMetrics"} type Specifies the type of calculation for the VPV
+		* Costs: delivers the monthly costs (default)
+		* Deliveries: delivers the list of Deliveries with Phase, Name, endDates and %Done
+		* Deadlines: delivers the list of Milesones & Phases with PhaseName, Name, endDates, %Done
 		* @apiPermission Permission: Authenticated, View Visbo Project.
 		* @apiError {number} 400 Bad Values in paramter in URL
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1120,6 +1123,7 @@ router.route('/:vpvid')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
+					count: calcVPV.length,
 					vpv: [ {
 						_id: req.oneVPV._id,
 						timestamp: req.oneVPV.timestamp,
@@ -1130,8 +1134,40 @@ router.route('/:vpvid')
 					} ],
 					perm: perm
 				});
-			} else {
+			} else if (req.query.type == "Deadlines") {
+				var calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV)
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Project Version',
+					count: calcVPV.length,
+					vpv: [ {
+						_id: req.oneVPV._id,
+						timestamp: req.oneVPV.timestamp,
+						actualDataUntil: req.oneVPV.actualDataUntil,
+						vpid: req.oneVPV.vpid,
+						name: req.oneVPV.name,
+						deadlines: calcVPV
+					} ],
+					perm: perm
+				});
+			} else if (req.query.type == "Costs") {
 				var calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Visbo Project Version',
+					count: calcVPV.length,
+					vpv: [ {
+						_id: req.oneVPV._id,
+						timestamp: req.oneVPV.timestamp,
+						actualDataUntil: req.oneVPV.actualDataUntil,
+						vpid: req.oneVPV.vpid,
+						name: req.oneVPV.name,
+						cost: calcVPV
+					} ],
+					perm: perm
+				});
+			} else if (req.query.type == "KeyMetrics") {
+				var calcVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
@@ -1141,7 +1177,7 @@ router.route('/:vpvid')
 						actualDataUntil: req.oneVPV.actualDataUntil,
 						vpid: req.oneVPV.vpid,
 						name: req.oneVPV.name,
-						cost: calcVPV
+						keyMetrics: calcVPV
 					} ],
 					perm: perm
 				});
