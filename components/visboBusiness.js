@@ -1,13 +1,13 @@
 
 var logging = require('../components/logging');
 
-var logModule = "OTHER";
+var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var refMonth = undefined;
 
-var getColumnOfDate = function(value) {
+function getColumnOfDate(value) {
 	if (!refMonth) {
 		var d = new Date ("2015-01-01")
 		refMonth = d.getFullYear() * 12;
@@ -24,7 +24,7 @@ function addDays(dd, numDays) {
  }
 
 // calculate cost of personal for the requested project per month
-var getAllPersonalKosten = function(vpv, organisation) {
+function getAllPersonalKosten(vpv, organisation) {
 	costValues = [];
 	logger4js.debug("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
@@ -81,8 +81,8 @@ var getAllPersonalKosten = function(vpv, organisation) {
 
 
 // calculate all other Costs for the requested project per month
-var getAllOtherCost = function(vpv, organisation) {
-	OthercostValues = [];
+function getAllOtherCost(vpv, organisation) {
+	othercostValues = [];
 
 	logger4js.debug("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
@@ -101,7 +101,7 @@ var getAllOtherCost = function(vpv, organisation) {
 	var faktor = 1;
 
 	for (i=0 ; i < dauer; i++){
-		OthercostValues[i] = 0;
+		othercostValues[i] = 0;
 	}
 
 	if (dauer > 0) {
@@ -119,27 +119,29 @@ var getAllOtherCost = function(vpv, organisation) {
 						var dimension = cost.Bedarf.length;
 						for (var k = phasenStart; k < phasenStart + dimension; k++) {
 							// if OthercostValue[i] is not set yet use 0
-							OthercostValues[k] = (OthercostValues[k] || 0) + cost.Bedarf[k - phasenStart] * faktor // dieser Wert ist bereits in T € und muss nicht dividiert durch 1000
+							othercostValues[k] = (othercostValues[k] || 0) + cost.Bedarf[k - phasenStart] * faktor // dieser Wert ist bereits in T € und muss nicht dividiert durch 1000
 						}
 					}
 				}
 			}
 		//}
 	} else {
-		OthercostValues[0] = 0
+		othercostValues[0] = 0
 	}
 	//var endCalc = new Date();
 	//logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
-	return OthercostValues;
+	return othercostValues;
 
 }
 
-var calcCosts = function(vpv, pfv, organisation) {
+function calcCosts(vpv, pfv, organisation) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	if ( vpv && organisation ) {
 		var currentDate = new Date(vpv.startDate);
+		currentDate.setDate(1);
+		currentDate.setHours(0, 0, 0, 0);
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
@@ -156,6 +158,8 @@ var calcCosts = function(vpv, pfv, organisation) {
 	}
 	if ( pfv && organisation ) {
 		var currentDate = new Date(pfv.startDate);
+		currentDate.setDate(1);
+		currentDate.setHours(0, 0, 0, 0);
 		var startIndex = getColumnOfDate(pfv.startDate);
 		var endIndex = getColumnOfDate(pfv.endDate);
 		var dauer = endIndex - startIndex + 1;
@@ -184,7 +188,61 @@ var calcCosts = function(vpv, pfv, organisation) {
 	return allCostValuesIndexed;
 }
 
-var getSummeKosten = function(vpv, organisation, index){
+function getNamePart(str, part) {
+		var result;
+		if (!str || part < 0) {
+			return undefined;
+		}
+		var compName = str.split("§");
+		if (compName.length > part) {
+			result = compName[part];
+		} else {
+			result = ''
+		}
+		return result;
+}
+
+function calcDeliverables(vpv, pfv) {
+	var allDeliveryValuesIndexed = [];
+	var startCalc = new Date();
+
+	if (!vpv || !pfv ) {
+		logger4js.info("Calculate Project Deliveries missing at least one parameter ");
+		return allDeliveryValuesIndexed;
+	}
+
+	var hrchy_pfv = convertHierarchy(pfv);
+	var hrchy_vpv = convertHierarchy(vpv);
+	var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
+	allDeliverables = getAllDeliverables(vpv, hrchy_vpv, allDeliverables);
+
+	var j = 0, element;
+	var listDeliveries = allDeliverables.getAllDeliveries();
+
+	for (var element = 0; element < listDeliveries.length; element++) {
+		logger4js.trace("Add Project Delivery %s", JSON.stringify(listDeliveries[element]));
+		var name = getNamePart(listDeliveries[element].nameID || '§UNDEFINED', 1);
+		allDeliveryValuesIndexed[j] = {
+			'id': j+1,
+			'name': name,
+			'phasePFV': getNamePart(listDeliveries[element].phasePFV, 1),
+			'phaseVPV': getNamePart(listDeliveries[element].phaseVPV, 1),
+			'description': listDeliveries[element].description || 'UNDEFINED',
+			'datePFV': listDeliveries[element].datePFV || '',
+			'dateVPV': listDeliveries[element].dateVPV || '',
+			'changeDays': Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24),
+			'done': listDeliveries[element].done || 0
+		}
+		j++
+	}
+
+	var endCalc = new Date();
+	logger4js.info("Calculate Project Deliveries duration %s ms ", endCalc.getTime() - startCalc.getTime());
+	return allDeliveryValuesIndexed;
+}
+
+
+function getSummeKosten(vpv, organisation, index){
 	// calculate the total cost until index-month
 	var costSum = 0;
 
@@ -221,20 +279,59 @@ function deliverableValue (relMonth, wert){
 	this.wert = wert;
 }
 
-// check im elemId is milestone
-var elemIdIsMilestone = function(elemId) {
-	if (elemId != null) {
-		var isElemId = (elemId.search("1§") >= 0);
+// Deliverables for the Project combine INfo from baseline and vpv
+function VisboDeliverable() {
+  this.length = 0;
+  this.allDeliverables = {};
+  this.addDeliverable = function(id, valuesDeliverable) {
+		if (valuesDeliverable == undefined) return;
+		if (id == undefined) return;
+		if (this.allDeliverables[id] == undefined) {
+			this.allDeliverables[id] = {};
+			this.length += 1;
+		}
+		if (valuesDeliverable.nameID) this.allDeliverables[id].nameID =  valuesDeliverable.nameID;
+		if (valuesDeliverable.phase) this.allDeliverables[id].phasePFV =  valuesDeliverable.phase;
+		if (valuesDeliverable.description) this.allDeliverables[id].description =  valuesDeliverable.description;
+		if (valuesDeliverable.datePFV) this.allDeliverables[id].datePFV =  valuesDeliverable.datePFV;
+	};
+	this.updateDeliverable = function(id, valuesDeliverable) {
+		if (valuesDeliverable == undefined) return;
+		if (id == undefined) return;
+		if (this.allDeliverables[id] == undefined) return;
+		if (valuesDeliverable.phase) this.allDeliverables[id].phaseVPV =  valuesDeliverable.phase;
+		if (valuesDeliverable.description) this.allDeliverables[id].description =  valuesDeliverable.description;
+		if (valuesDeliverable.dateVPV) this.allDeliverables[id].dateVPV =  valuesDeliverable.dateVPV;
+		if (valuesDeliverable.done) this.allDeliverables[id].done =  valuesDeliverable.done;
+	};
+	this.getDelivery = function(id) {
+		var result = this.allDeliverables[id] || {};
+		return result
+	};
+	this.getAllDeliveries = function() {
+		var idList = [];
+		for (var id in this.allDeliverables) {
+			idList.push(this.allDeliverables[id])
+		}
+		return idList;
 	}
-	else{
-		isElemId = false;
+}
+
+// check im elemId is milestone
+function elemIdIsMilestone(elemId) {
+	var isElemId = false;
+
+	if (elemId) {
+		// is string at the beginning of the nameID
+		isElemId = (elemId.indexOf("1§") == 0);
 	}
 
 	return isElemId;
 }
 
 
-var getPhaseByID = function(hrchy, vpv, elemId){
+function getPhaseByID(hrchy, vpv, elemId){
+	var phase = undefined;
 
 	if (hrchy && hrchy[elemId] && hrchy[elemId].hryNode) {
 		var phIndex = hrchy[elemId].hryNode.indexOfElem;
@@ -242,25 +339,14 @@ var getPhaseByID = function(hrchy, vpv, elemId){
 			if ((phIndex >= 0) && (phIndex <= vpv.AllPhases.length)){
 				phase = vpv.AllPhases[phIndex-1];
 		   }
-		   else{
-			   phase = null;
-		   }
 		}
-		else{
-			phase = undefined;
-		}
-	} else {
-		phase = undefined;
 	}
 
 	logger4js.trace("find the the Phase %s of the project %s ", elemId, vpv.name);
 	return phase;
 }
 
-var getMilestoneByID = function(hrchy,vpv, elemId){
-
-	// prepared for direct access with elemId
-	// hrchy = vpv.hierarchy, orderd by elemId
+function getMilestoneByID(hrchy,vpv, elemId){
 
 	currentNode = hrchy[elemId].hryNode;
 	if (currentNode){
@@ -280,11 +366,11 @@ var getMilestoneByID = function(hrchy,vpv, elemId){
 }
 
 
-var getMsDate = function(hrchy, vpv, elemId){
+function getMsDate(hrchy, vpv, elemId){
 
 	var msDate = undefined;
 
-	currentNode = hrchy[elemId].hryNode;
+	currentNode = elemId && hrchy[elemId] && hrchy[elemId].hryNode;
 	if (currentNode){
 		 phaseID = currentNode.parentNodeKey;
 		 phase = getPhaseByID(hrchy, vpv, phaseID);
@@ -298,8 +384,9 @@ var getMsDate = function(hrchy, vpv, elemId){
 	}
 	return msDate;
 }
-// Herausfinden des EndDates der Phase phase
-var getPhEndDate = function(vpv, phase){
+
+// get endDate of Phase to use also for other elemenst like i.e. Deliveries
+function getPhEndDate(vpv, phase){
 	var phEndDate = new Date();
 
 	if (phase){
@@ -318,7 +405,7 @@ var getPhEndDate = function(vpv, phase){
 
 
 // find all milestones of one VisboProjectVersion
-var getMilestones = function(hrchy, vpv){
+function getMilestones(hrchy, vpv){
 
 	var milestones=[];
 
@@ -342,14 +429,11 @@ var getMilestones = function(hrchy, vpv){
 			}
 		}
 	}
-	else{
-
-	}
 	return milestones.reverse();
 }
 
 // find all phases of One VisboProjectVersion vpv
-var getPhases = function(hrchy, vpv){
+function getPhases(hrchy, vpv){
 
 	var phases = [];
 
@@ -373,20 +457,14 @@ var getPhases = function(hrchy, vpv){
 						phases[phaseDate] = currentNodeID;
 					}
 				}
-
 			}
 		}
-
-	}
-	else{
-
 	}
 return phases.reverse();
 }
 
-
 // Calculate all Deliverables for the requested Project/BaseProject
-var getAllDeliverables = function(vpv) {
+var getAllDeliverablesOld = function(vpv) {
 
 	allDelivNames=[];
 
@@ -441,7 +519,66 @@ var getAllDeliverables = function(vpv) {
 	return allDelivNames;
 }
 
-var getDeliverableOutOfPhase = function(hrchy, vpv, deliverable, bezugsdatum, total){
+
+// Calculate all Deliverables for the requested Project/BaseProject
+function getAllDeliverables(vpv, hrchy, allDeliverables) {
+
+	logger4js.trace("Calculate all Deliverables of %s  ", vpv && vpv._id);
+
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var dauer = endIndex - startIndex + 1;
+	var addAll = false;
+
+	if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
+		return undefined;
+	}
+
+	if (vpv.variantName == 'pfv') {
+		addAll = true;
+		// initialise the deliverables for the project version
+		allDeliverables = new VisboDeliverable();
+	} else if (!allDeliverables) {
+		addAll = true;
+		allDeliverables = new VisboDeliverable();
+	}
+
+	for (var i = 0; i < vpv.AllPhases.length; i++) {
+		var phase = vpv.AllPhases[i];
+		var endDate = getPhEndDate(vpv, phase);
+		var phasenStart = phase.relStart - 1;
+		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
+
+		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
+			var id = phase.deliverables[j]
+			if (addAll) {
+				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate})
+			} else {
+				allDeliverables.updateDeliverable(id, {description: phase.deliverables[j], dateVPV: endDate, done: 0.75})
+			}
+		}
+
+		for (var k = 0; phase && phase.AllResults && k < phase.AllResults.length; k++){
+			var milestone = phase.AllResults[k];
+			var endDate = getMsDate(hrchy, vpv, milestone.name);
+
+			// logger4js.trace("Calculate Milestone %s Deliverables %s", i, phase.AllResults.length);
+
+			for (var m = 0; milestone && milestone.deliverables && m < milestone.deliverables.length; m++){
+				// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, milestone.nameID);
+				var id = milestone.deliverables[m]
+				if (addAll) {
+					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate})
+				} else {
+					allDeliverables.updateDeliverable(id, {description: milestone.deliverables[m], dateVPV: endDate, done: milestone.percentDone})
+				}
+			}
+		}
+	}
+	return allDeliverables;
+}
+
+function getDeliverableOutOfPhase(hrchy, vpv, deliverable, bezugsdatum, total){
 
 	var deliverableComplValue = new deliverableValue(0,0);
 	var deliverableComplValueArray = [];
@@ -504,7 +641,7 @@ var getDeliverableOutOfPhase = function(hrchy, vpv, deliverable, bezugsdatum, to
 	return deliverableComplValueArray;
 }
 
-var getDeliverableOutOfMilestone = function(hrchy,vpv, deliverable, bezugsdatum, total){
+function getDeliverableOutOfMilestone(hrchy,vpv, deliverable, bezugsdatum, total){
 
 	// var deliverableMSComplValue = new deliverableValue(0,0);
 	var deliverableMSComplValue = new deliverableValue(0,0);
@@ -584,7 +721,7 @@ var getDeliverableOutOfMilestone = function(hrchy,vpv, deliverable, bezugsdatum,
 	return deliverableMSComplValueArray;
 }
 
-var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezugsdatum, total){
+function getDeliverableCompletionMetric(vpv, hrchy, baseDeliverables, bezugsdatum, total){
 
 	var sum = 0;
 
@@ -602,13 +739,6 @@ var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezu
 		for (i=0 ; i < dauer; i++){
 			deliverableCompletionValues[i] = 0;
 		}
-
-		// prepare hierarchy for direct access with elemId
-		// var hrchy = [];
-		// for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-		// 	hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
-		// }
-
 
 		if (dauer > 0) {
 
@@ -663,7 +793,7 @@ var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezu
 
 						if (vpv.variantName != "pfv"){
 
-							var vpv_Deliverables = getAllDeliverables(vpv);
+							var vpv_Deliverables = getAllDeliverablesOld(vpv);
 
 							// baseDeliv.nameID belongs perhaps to another phase or milestone
 							for (j= 0; vpv_Deliverables && j < vpv_Deliverables.length; j++){
@@ -711,7 +841,7 @@ var getDeliverableCompletionMetric = function(vpv, hrchy, baseDeliverables, bezu
 }
 
 
-var getTimeCompletionMetric= function(vpv, hrchy, baseMilestones, basePhases, bezugsdatum, total){
+function getTimeCompletionMetric(vpv, hrchy, baseMilestones, basePhases, bezugsdatum, total){
 
 	var sum = 0;
 
@@ -729,12 +859,6 @@ var getTimeCompletionMetric= function(vpv, hrchy, baseMilestones, basePhases, be
 		for (i=0 ; i < dauer; i++){
 			timeCompletionValues[i] = 0;
 		}
-
-		// var hrchy = [];
-		// for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-		// 	hrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
-		// }
-
 
 		if (dauer > 0) {
 			for (x in basePhases) {
@@ -849,8 +973,19 @@ var getTimeCompletionMetric= function(vpv, hrchy, baseMilestones, basePhases, be
 	return sum;
  }
 
+function convertHierarchy(vpv) {
+	var indexedHrchy = [];
+	if (!vpv || !vpv.hierarchy || !vpv.hierarchy.allNodes ) {
+		// not a full blown vpv, return empty list
+		return indexedHrchy;
+	}
+	for (var i = 0; i < vpv.hierarchy.allNodes.length; i++) {
+		indexedHrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
+	}
+	return indexedHrchy;
+};
 
-var calcKeyMetrics = function(vpv, pfv, organisation) {
+function calcKeyMetrics(vpv, pfv, organisation) {
 	var keyMetrics = {};
 	var oldkeyMetrics = {};
 	var startCalc = new Date();
@@ -880,12 +1015,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 
 			}
 
-
-			var hrchy_vpv = [];
-			for (var i = 0; vpv.hierarchy && vpv.hierarchy.allNodes && i < vpv.hierarchy.allNodes.length; i++) {
-				hrchy_vpv[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
-			}
-
+			var hrchy_vpv = convertHierarchy(vpv);
 
 			keyMetrics.endDateCurrent= vpv.endDate;
 
@@ -894,10 +1024,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 				keyMetrics.endDateBaseLast = pfv.endDate;
 
 				// prepare hierarchy of pfv for direct access
-				var hrchy_pfv = [];
-				for (var i = 0; pfv.hierarchy && pfv.hierarchy.allNodes && i < pfv.hierarchy.allNodes.length; i++) {
-					hrchy_pfv[pfv.hierarchy.allNodes[i].hryNodeKey] = pfv.hierarchy.allNodes[i];
-				}
+				var hrchy_pfv = convertHierarchy(pfv);
 
 				baseMilestones = getMilestones(hrchy_pfv, pfv);
 				basePhases = getPhases(hrchy_pfv, pfv);
@@ -918,7 +1045,7 @@ var calcKeyMetrics = function(vpv, pfv, organisation) {
 				}
 
 
-				baseDeliverables = getAllDeliverables(pfv);
+				baseDeliverables = getAllDeliverablesOld(pfv);
 
 				if (pfv_Deliverables){
 					keyMetrics.deliverableCompletionBaseLastActual= getDeliverableCompletionMetric(pfv, hrchy_pfv, baseDeliverables, vpv.timestamp, false);
@@ -993,5 +1120,6 @@ module.exports = {
 	getAllPersonalKosten: getAllPersonalKosten,
 	getAllOtherCost: getAllOtherCost,
 	calcKeyMetrics: calcKeyMetrics,
-	calcCosts: calcCosts
+	calcCosts: calcCosts,
+	calcDeliverables: calcDeliverables
 };

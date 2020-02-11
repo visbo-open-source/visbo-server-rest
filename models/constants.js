@@ -41,7 +41,7 @@ function VisboPermission() {
 				idList.push(id)
 			}
 		}
-		return idList || [];
+		return idList;
 	}
 	this.getVPIDs = function(requiredPerm) {
 		var idList = [];
@@ -50,7 +50,7 @@ function VisboPermission() {
 				idList.push(id)
 			}
 		}
-		return idList || [];
+		return idList;
 	}
 }
 

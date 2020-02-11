@@ -193,7 +193,9 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug("Found Visbo Project %s Access", oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug("Calculate verifyVPV getVPV %s ms ", endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && urlComponent[2] == "calc") {
+			if (urlComponent.length == 3 &&
+				((urlComponent[2] == "calc" && req.query.type != 'Deliveries')
+				|| (urlComponent[2] == "copy")) ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -274,10 +276,10 @@ function getPortfolioVPs(req, res, next) {
 
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
-	logger4js.debug("VPV getVCOrgs Information");
+	var baseUrl = req.url.split("?")[0]
 	// fetch the organization in case of POST VPV to calculate keyMetrics
 
-	if (req.method != "POST") return next();
+	if (req.method != "POST" && baseUrl != '/') return next();
 
 	if (!req.oneVCID) {
 		logger4js.warn("No Visbo Center identified");
@@ -375,13 +377,13 @@ function getCurrentVPVpfv(req, res, next) {
 	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
-		logger4js.warn("Copy VPV mal formed timestamp %s", vpid, timestamp);
+		logger4js.warn("GET VPF for VPV mal formed timestamp %s", vpid, timestamp);
 		return res.status(400).send({
 			state: "failure",
 			message: "Timestamp not recognised"
 		})
 	}
-	logger4js.debug("VPV copyVPV pfv base line for VPID %s TimeStamp %s", req.oneVPV.vpid, timestamp);
+	logger4js.debug("GET VPF for VPV for VPID %s TimeStamp %s", req.oneVPV.vpid, timestamp);
 
 	var queryvpv = {};
 	queryvpv.deletedAt = {$exists: false};
