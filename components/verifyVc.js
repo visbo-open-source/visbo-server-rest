@@ -9,6 +9,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 
 var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = "VC";
 var log4js = require('log4js');
@@ -18,7 +19,6 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of System / VC depending on the case
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var vcid = undefined;
 
@@ -41,8 +41,6 @@ function getAllGroups(req, res, next) {
 	}
 
 	var query = {};
-	var acceptEmpty = true;
-	var checkDeleted = req.query.deleted == true;
 	query = {'users.userId': userId};	// search for VC groups where user is member
 
 	if (vcid) {
@@ -81,9 +79,6 @@ function getAllGroups(req, res, next) {
 
 // Get VC with vcid including View permission check and others depending on parameters
 function getVC(req, res, next, vcid) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
@@ -109,7 +104,7 @@ function getVC(req, res, next, vcid) {
 		});
 	}
 
-	var query = {};
+	query = {};
 	query._id = vcid;
 	query.deletedAt =  {$exists: checkDeleted};
 	var queryVC = VisboCenter.findOne(query);
@@ -135,7 +130,6 @@ function getVC(req, res, next, vcid) {
 // Generate the Groups where the user is member of System / VC depending on the case
 function getSystemGroups(req, res, next) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	req.oneVC = systemVC.getSystemVC();
 
 	// get the System Groups the user is member of

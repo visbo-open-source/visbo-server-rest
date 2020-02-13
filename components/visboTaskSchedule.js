@@ -6,17 +6,13 @@ require('../models/visbocenter');
 require('../models/visboproject');
 require('../models/vcsetting');
 require('../models/visboaudit');
-var VisboCenter = mongoose.model('VisboCenter');
 var VCSetting = mongoose.model('VCSetting');
 var VisboAudit = mongoose.model('VisboAudit');
-var VisboProject = mongoose.model('VisboProject');
 
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
 var visboRedis = require('./../components/visboRedis');
 var errorHandler = require('./../components/errorhandler').handler;
 var visboAudit = require('./../components/visboAudit');
@@ -57,7 +53,7 @@ function createTaskAudit(task, duration) {
   if (!task || !task.value || !task.value.taskSpecific) {
     logger4js.warn("Finished Task Audit no Values");
     return;
-  };
+  }
   var auditEntry = new VisboAudit();
   auditEntry.action = "PUT";
   auditEntry.url = "Task"
@@ -76,11 +72,11 @@ function createTaskAudit(task, duration) {
   auditEntry.actionDescription = "Task: " + task.name;
   auditEntry.actionInfo = task.value.taskSpecific.result;
   auditEntry.result = {};
-  auditEntry.result.time = (new Date()) - task.value.lastRun;
+  auditEntry.result.time = duration;
   auditEntry.result.status = task.value.taskSpecific.result != 0 ? 200 : 304;
   auditEntry.result.statusText = "Success"
   // auditEntry.result.size = taskSpecific.result;
-  auditEntry.save(function(err, auditEntryResult) {
+  auditEntry.save(function(err) {
     if (err) {
       logger4js.error("Save VisboAudit failed to save %O", err);
     }
@@ -155,49 +151,49 @@ function checkNextRun() {
           logger4js.debug("CheckNextRun Task(%s/%s): %s needs execution next %s new lock %s", listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun.toISOString(), listTask[i].value.lockedUntil.toISOString());
           // Do not update if locked and check result that it has updated the item
           var updateQuery = {_id: listTask[i]._id, "$or": [{"value.lockedUntil": {$exists: false}}, {"value.lockedUntil": {$lt: new Date()}}]};
-        	var updateOption = {upsert: false};
-      		var updateUpdate = {$set : {'value.lastRun' : listTask[i].value.lastRun, 'value.nextRun' : listTask[i].value.nextRun, 'value.lockedUntil' : listTask[i].value.lockedUntil} };
+          var updateOption = {upsert: false};
+          var updateUpdate = {$set : {'value.lastRun' : listTask[i].value.lastRun, 'value.nextRun' : listTask[i].value.nextRun, 'value.lockedUntil' : listTask[i].value.lockedUntil} };
           var task = listTask[i];
 
-        	VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-              if (err) {
-                errorHandler(err, undefined, `DB: Update Task`, undefined)
+          VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+            if (err) {
+              errorHandler(err, undefined, `DB: Update Task`, undefined)
+            }
+            logger4js.debug("CheckNextRun Task (%s/%s) Saved Items %s", task.name, task._id, result.nModified);
+            if (result.nModified == 1) {
+              // call specific operation for task
+              switch(task.name) {
+                case 'Audit Cleanup':
+                  visboAudit.cleanupAudit(task, finishedTask);
+                  break;
+                case 'Audit Squeeze':
+                  visboAudit.squeezeAudit(task, finishedTask);
+                  break;
+                case 'Log File Cleanup':
+                  var config = getSystemVCSetting('Log Age')
+                  var age = 30;
+                  if (config && config.value && config.value.duration)
+                    age = config.value.duration;
+                  task.specificValue = { 'logAge': age }
+                  logger4js.debug("Execute Log Delete Age %O", task.specificValue);
+                  logging.cleanupLogFiles(task, finishedTask);
+                  break;
+                case 'Lock Cleanup':
+                  lock.cleanupAllVPLock(task, finishedTask);
+                  break;
+                case 'System Config':
+                  refreshSystemSetting(task, finishedTask);
+                  break;
+                case 'Task Test':
+                  taskTest(task, finishedTask);
+                  break;
+                default:
+                  finishedTask(task, false)
               }
-              logger4js.debug("CheckNextRun Task (%s/%s) Saved Items %s", task.name, task._id, result.nModified);
-              if (result.nModified == 1) {
-                // call specific operation for task
-                switch(task.name) {
-                  case 'Audit Cleanup':
-                    visboAudit.cleanupAudit(task, finishedTask);
-                    break;
-                  case 'Audit Squeeze':
-                    visboAudit.squeezeAudit(task, finishedTask);
-                    break;
-                  case 'Log File Cleanup':
-                    var config = getSystemVCSetting('Log Age')
-                    var age = 30;
-                    if (config && config.value && config.value.duration)
-                      age = config.value.duration;
-                    task.specificValue = { 'logAge': age }
-                    logger4js.debug("Execute Log Delete Age %O", task.specificValue);
-                    logging.cleanupLogFiles(task, finishedTask);
-                    break;
-                  case 'Lock Cleanup':
-                    lock.cleanupAllVPLock(task, finishedTask);
-                    break;
-                  case 'System Config':
-                    refreshSystemSetting(task, finishedTask);
-                    break;
-                  case 'Task Test':
-                    taskTest(task, finishedTask);
-                    break;
-                  default:
-                    finishedTask(task, false)
-                }
-              } else {
-                logger4js.info("CheckNextRun Task (%s/%s) locked already by another Server", task.name, task._id);
-              }
-        	})
+            } else {
+              logger4js.info("CheckNextRun Task (%s/%s) locked already by another Server", task.name, task._id);
+            }
+          })
           // execute only one per round, otherwise task Object is incorrect
           break;
         }

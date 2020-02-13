@@ -101,7 +101,7 @@ function squeezeAudit(task, finishedTask) {
 		var squeezeCount = 0;
 		for (var i=0; i<listAudits.length; i++) {
 			squeezeCount += listAudits[i].count - 1;
-		  logger4js.debug("Check vpvid %s user %s Count %s First %s", listAudits[i]._id.vpvid, listAudits[i]._id.user, listAudits[i].count, listAudits[i].first)
+			logger4js.debug("Check vpvid %s user %s Count %s First %s", listAudits[i]._id.vpvid, listAudits[i]._id.user, listAudits[i].count, listAudits[i].first)
 			squeezeDelete(listAudits[i], endSqueeze);
 		}
 		// Without wait for the Delete to finish??
@@ -210,7 +210,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 	if (status == 500) auditEntry.result.statusText = "Server Error"
 
 	auditEntry.result.size = Math.round(Number(tokens.res(req, res, 'content-length')||0)/factor);
-	auditEntry.save(function(err, auditEntryResult) {
+	auditEntry.save(function(err) {
 		if (err) {
 			logger4js.error("Save VisboAudit failed to save %O", err);
 		}

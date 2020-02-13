@@ -1,7 +1,4 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
-var constPermVC = Const.constPermVC
 
 var VisboGroup = mongoose.model('VisboGroup');
 
@@ -15,11 +12,10 @@ var logger4js = log4js.getLogger(logModule);
 // Check the GroupId parameter from URL
 function getGroupId(req, res, next, groupId) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	var vcid = req.params.vcid ? req.params.vcid : undefined;
 	var vpid = req.params.vpid ? req.params.vpid : undefined;
 
-	logger4js.debug("Check GroupId %s for vcid %s vpid %s ", groupId, vcid, vpid);
+	logger4js.debug("Check GroupId %s for user %s and vcid %s vpid %s ", groupId, userId, vcid, vpid);
 	if (!validate.validateObjectId(groupId, false) || !validate.validateObjectId(vcid, true) || !validate.validateObjectId(vpid, true)) {
 		logger4js.warn("Groups Bad Parameter groupid %s vcid %s vpid %s", groupId, vcid, vpid);
 		return res.status(400).send({
@@ -41,7 +37,7 @@ function getGroupId(req, res, next, groupId) {
 			return;
 		}
 		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);
-	 	// Convert the result to request
+		// Convert the result to request
 		if (listVG.length != 1) {
 			logger4js.warn("GroupId %s for VC/VP %s not found", groupId, vcid||vpid);
 			// do not accept requests without a group assignement especially to System Group
@@ -52,7 +48,7 @@ function getGroupId(req, res, next, groupId) {
 		}
 		req.oneGroup = listVG[0];
 		return next();
- 	});
+	});
 }
 
 

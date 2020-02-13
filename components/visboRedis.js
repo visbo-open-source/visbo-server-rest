@@ -10,7 +10,6 @@ var initialised = false;
 var redisClient;
 var currentHost = 'localhost'
 var currentPort = 6379
-var debug = false;
 
 // Initialise Redis
 function VisboRedisInit(host, port) {
@@ -49,7 +48,7 @@ function VisboRedisInit(host, port) {
 
 	logger4js.trace("Redis all prepared return Client ");
 	return redisClient;
-};
+}
 
 module.exports = {
 	VisboRedisInit: VisboRedisInit

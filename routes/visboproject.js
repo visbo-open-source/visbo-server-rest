@@ -4,7 +4,6 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
 
-var assert = require('assert');
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -28,11 +27,9 @@ var VisboAudit = mongoose.model('VisboAudit');
 var Const = require('../models/constants')
 var constPermVC = Const.constPermVC
 var constPermVP = Const.constPermVP
-var constPermSystem = Const.constPermSystem
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
-var read = require('fs').readFileSync;
 var sanitizeHtml = require('sanitize-html');
 
 var logModule = "VP";
@@ -43,38 +40,27 @@ var validateName = validate.validateName;
 
 var constVPTypes = Object.freeze({"project":0, "portfolio":1, "projecttemplate":2});
 
-// find a user in a simple array of user names
-var findUser = function(currentUser) {
-		return currentUser == this;
-}
-
-// find a user in an array of a structured user (name, id, ...)
-var findUserList = function(currentUser) {
-		//console.log("compare %s %s", currentUser.email, this);
-		return currentUser.email == this;
-}
-
 // find a user in an array of users by userId
-var findUserById = function(currentUser) {
+function findUserById(currentUser) {
 	// logger4js.info("FIND User by ID %s with %s result %s", this, currentUser.userId, currentUser.userId.toString() == this.toString());
 	return currentUser.userId.toString() == this.toString();
 }
 
 // find a project in a simple array of project ids
-var findVP = function(vpid) {
+function findVP(vpid) {
 		return vpid == this;
 }
 
 // find a project in an array of a structured projects (name, id)
-var findVPList = function(vp) {
+function findVPList(vp) {
 		//console.log("compare %s %s result %s", vp._id.toString(), this.toString(), vp._id.toString() == this.toString());
 		return vp._id.toString() == this.toString();
 }
 
 // Generates hash using bCrypt
-var createHash = function(secret){
+function createHash(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
-};
+}
 
 // updates the VP Count in the VC after create/delete/undelete Visbo Project
 var updateVPCount = function(vcid, increment){
@@ -113,7 +99,7 @@ var updateVCName = function(vp){
 			logger4js.debug("Update VP %s for correct VC Name %s ", vp._id, vc.name)
 			VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					errorHandler(err, undefined, `DB: Problem updating VC name in VP ${vpid}`, undefined)
+					errorHandler(err, undefined, `DB: Problem updating VC name in VP ${vp._id}`, undefined)
 				}
 				logger4js.trace("Updated VP %s for VC Name changed %d %d", vp._id, result.n, result.nModified)
 			})
@@ -141,7 +127,7 @@ var updateVPName = function(vpid, name, type){
 	var updatePFOption = {arrayFilters: [ { "elem.vpid": vpid } ], upsert: false, multi: "true"};
 	VisboPortfolio.updateMany(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
 		if (err){
-			errorHandler(err, res, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Visbo Project')
+			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Visbo Project')
 			return;
 		}
 		logger4js.trace("Updated VP %s New Name %s in Portfolio Lists changed %d %d", vpid, name, result.n, result.nModified)
@@ -155,7 +141,7 @@ var updateVPName = function(vpid, name, type){
 
 			VisboPortfolio.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					errorHandler(err, res, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Visbo Project')
+					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Visbo Project')
 					return;
 				}
 				logger4js.debug("Update Portfolio %s Name found %d updated %d", vpid, result.n, result.nModified)
@@ -328,7 +314,6 @@ router.route('/')
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Visbo Project (Read)';
@@ -364,7 +349,7 @@ router.route('/')
 			if (err) {
 				errorHandler(err, res, `DB: GET VP find ${query}`, `Error getting VisboCenters`)
 				return;
-			};
+			}
 			logger4js.trace("Found Projects\n%O", listVP);
 			logger4js.debug("Found %d Projects", listVP.length);
 			req.auditInfo = listVP.length;
@@ -432,7 +417,7 @@ router.route('/')
 
 		req.auditDescription = 'Visbo Project (Create)';
 
-		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
+		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
 			logger4js.warn("No VCID or Name in Body");
 			return res.status(400).send({
 				state: 'failure',
@@ -456,7 +441,6 @@ router.route('/')
 			});
 		}
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
-		var newVP = new VisboProject();
 
 		logger4js.debug("Check VC Permission %O", req.listVCPerm.getPerm(vcid));
 		var requiredPerm = constPermVC.View + constPermVC.CreateVP
@@ -478,7 +462,7 @@ router.route('/')
 					state: 'failure',
 					message: 'Visbo Centers not found or no Admin'
 				});
-			};
+			}
 			req.oneVC = vc;
 			logger4js.debug("User has permission to create Project %s in  %s", vpname, req.oneVC.name);
 			// check duplicate Name
@@ -498,13 +482,13 @@ router.route('/')
 						state: 'failure',
 						message: 'Project with same name exists'
 					});
-				};
+				}
 				var newVP = new VisboProject;
 				newVP.name = vpname;
 				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
-				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
+				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
 					newVP.vpType = 0;
 				} else {
 					newVP.vpType = req.body.vpType;
@@ -522,7 +506,7 @@ router.route('/')
 				newVG.users = [{email: useremail, userId: userId}];
 
 				logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
-				newVG.save(function(err, vg) {
+				newVG.save(function(err) {
 					if (err) {
 						errorHandler(err, undefined, `DB: POST VP Create Group for VP ${newVP._id}`, undefined)
 					}
@@ -702,7 +686,7 @@ router.route('/:vpid')
 		}
 
 		if ((vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete))
-		|| (!vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify))) {
+		|| (!vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify))) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Visbo Project or no Permission'
@@ -745,7 +729,7 @@ router.route('/:vpid')
 					state: 'failure',
 					message: 'Project with same name exists'
 				});
-			};
+			}
 			logger4js.debug("PUT VP: save now %O populate %s unDelete %s", req.oneVP, vpPopulate, vpUndelete);
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
@@ -866,7 +850,7 @@ router.route('/:vpid')
 			})
 
 			// Delete all VP Groups
-			queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'}
+			var queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'}
 			VisboGroup.deleteMany(queryvpgroup, function (err) {
 				if (err){
 					errorHandler(err, undefined, `DB: DELETE(Destory) VP Groups`, undefined)
@@ -979,13 +963,13 @@ router.route('/:vpid/audit')
 			var text = req.query.text;
 			var expr;
 			try {
-			    expr = new RegExp(text, "i");
+				expr = new RegExp(text, "i");
 			} catch(e) {
-					logger4js.info("System Audit RegEx corrupt: %s ", text);
-					return res.status(400).send({
-						state: 'failure',
-						message: 'No Valid Regular Expression'
-					});
+				logger4js.info("System Audit RegEx corrupt: %s ", text);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No Valid Regular Expression'
+				});
 			}
 			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
 				logger4js.debug("Get Audit Search for ObjectID %s", text);
@@ -1106,7 +1090,7 @@ router.route('/:vpid/audit')
 															email: listVPGroup[i].users[j].email,
 															groupId: listVPGroup[i]._id,
 															groupName: listVPGroup[i].name,
-														  groupType: listVPGroup[i].groupType,
+															groupType: listVPGroup[i].groupType,
 															internal: listVPGroup[i].internal})
 						}
 					}
@@ -1170,8 +1154,7 @@ router.route('/:vpid/audit')
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
 			var groupType = 'VP';
 
 			var vgName = (req.body.name || '').trim();
@@ -1192,7 +1175,7 @@ router.route('/:vpid/audit')
 
 			req.auditDescription = 'Visbo Project Group (Create)';
 
-			logger4js.info("Post a new Visbo Project Group with name %s executed by user %s ", req.body.name, useremail);
+			logger4js.info("Post a new Visbo Project Group with name %s executed by user %s ", req.body.name, userId);
 			logger4js.debug("Post a new Visbo Project Group Req Body: %O Name %s Perm %O", req.body, vgName, req.listVPPerm.getPerm(req.params.vpid));
 
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
@@ -1313,7 +1296,7 @@ router.route('/:vpid/audit')
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 			}
-			req.oneGroup.remove(function(err, empty) {
+			req.oneGroup.remove(function(err) {
 				if (err) {
 					errorHandler(err, res, `DB: DELETE VP Group`, `Error deleting Visbo Project Group`)
 					return;
@@ -1491,7 +1474,7 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.info("Post a new Visbo Project User with name %s  to group %s executed by user %s with perm %s ", req.body.email, req.oneGroup.name, useremail, req.listVPPerm.getPerm(req.params.vpid));
+			logger4js.info("Post a new Visbo Project User with name %s to group %s executed by user %s with perm %s ", req.body.email, req.oneGroup.name, userId, req.listVPPerm.getPerm(req.params.vpid));
 			req.auditDescription = 'Visbo Project User (Add)';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
@@ -1601,7 +1584,7 @@ router.route('/:vpid/audit')
 									return res.status(200).send({
 										state: "success",
 										message: "Successfully added User to Visbo Project",
-										groups: [ vpGroup ]
+										groups: [ vgGroup ]
 									});
 								});
 							}
@@ -1802,7 +1785,7 @@ router.route('/:vpid/lock')
 			expiredAt = dateNow
 			// set the lock date to 1 hour later
 			expiredAt.setHours(expiredAt.getHours() + 1);
-		} 
+		}
 		logger4js.info("POST Lock Visbo Project %s Check variant %s does exists  ", req.params.vpid, variantName);
 
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
@@ -1860,7 +1843,7 @@ router.route('/:vpid/lock')
 				errorHandler(err, res, `DB: POST VP Lock`, `Error updating Visbo Project Locks`)
 				return;
 			}
-			newLock = req.oneVP.lock.filter(lock => (lock.email == newLock.email && lock.expiresAt == newLock.expiresAt && lock.variantName == newLock.variantName && lock.createdAt == newLock.createdAt ))[0];
+			newLock = oneVP.lock.filter(lock => (lock.email == newLock.email && lock.expiresAt == newLock.expiresAt && lock.variantName == newLock.variantName && lock.createdAt == newLock.createdAt ))[0];
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated Visbo Project Locks',
@@ -1932,7 +1915,7 @@ router.route('/:vpid/lock')
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
 		logger4js.debug("Delete Lock for VP :%s: after Modification has %d Locks", req.oneVP.name, req.oneVP.lock.length);
 
-		req.oneVP.save(function(err, empty) {
+		req.oneVP.save(function(err) {
 			if (err) {
 				errorHandler(err, res, `DB: DELETE VP Lock`, `Error deleting Visbo Project Locks`)
 				return;
@@ -2008,7 +1991,7 @@ router.route('/:vpid/variant')
 		}
 		logger4js.trace("Variant %s current list %O", variantName, variantList);
 		var variantDuplicate = false
-		for (i = 0; i < variantList.length; i++) {
+		for (var i = 0; i < variantList.length; i++) {
 			if (variantList[i].variantName == variantName ) {
 				variantDuplicate = true;
 				break;
@@ -2024,7 +2007,7 @@ router.route('/:vpid/variant')
 		});
 		}
 		logger4js.trace("Variant List %d orig %O ", variantList.length, variantList);
-		newVariant = new Variant;
+		var newVariant = new Variant;
 		newVariant.email = useremail;
 		newVariant.variantName = variantName;
 		newVariant.createdAt = new Date();
@@ -2079,6 +2062,7 @@ router.route('/:vpid/variant/:vid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var variantId = req.params.vid;
+		var lockResult;
 
 		req.auditDescription = 'Visbo Project Variant (Delete)';
 		req.auditInfo = req.body.variantId;
@@ -2129,7 +2113,7 @@ router.route('/:vpid/variant/:vid')
 
 		// MS TODO Destroy the Deleted Variant Versions of the Project
 
-		req.oneVP.save(function(err, empty) {
+		req.oneVP.save(function(err) {
 			if (err) {
 				errorHandler(err, res, `DB: DELETE VP Variant`, `Error deleting Visbo Project Variant`)
 				return;
@@ -2201,7 +2185,6 @@ router.route('/:vpid/portfolio')
 		// no need to check authentication, already done centrally
 
 		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Visbo Portfolio List (Read)';
@@ -2241,7 +2224,7 @@ router.route('/:vpid/portfolio')
 			if (err) {
 				errorHandler(err, res, `DB: GET VPF`, `Error getting Visbo Project Portfolio`)
 				return;
-			};
+			}
 			logger4js.debug("Found %d Portfolios", listVPF.length);
 			logger4js.trace("Found Portfolios/n", listVPF);
 
@@ -2390,7 +2373,7 @@ router.route('/:vpid/portfolio')
 			if (validate.validateObjectId(req.body.allItems[i].vpid, false) && !listVPid.find(findVP, req.body.allItems[i].vpid)){
 				listVPid.push(req.body.allItems[i].vpid)
 			}
-		};
+		}
 		logger4js.debug("Check vpids if they exist %s", JSON.stringify(listVPid));
 		var query = {'_id': {'$in': listVPid}};
 		var queryVP = VisboProject.find(query);
@@ -2484,8 +2467,6 @@ router.route('/:vpid/portfolio/:vpfid')
 // Get specific portfolio version
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
-		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Visbo Portfolio List (Read)';
@@ -2503,7 +2484,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			if (err) {
 				errorHandler(err, res, `DB: GET VPF Version find`, `Error getting Versions of Portfolio`)
 				return;
-			};
+			}
 			logger4js.debug("Found %d Portfolios", listVPF.length);
 			logger4js.trace("Found Portfolios/n", listVPF);
 
@@ -2542,7 +2523,6 @@ router.route('/:vpid/portfolio/:vpfid')
 	*/
 // Delete Portfolio Version
 	.delete(function(req, res) {
-		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
 
@@ -2572,21 +2552,18 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No Visbo Portfolio or no Permission'
 				});
 			}
-			var variantExists = false;
 			var variantIndex;
 			var variantName = oneVPF.variantName
 			if (variantName != "") {
 				// check that the Variant exists
-				variantExists = true;
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VP PortfolioList Delete Variant does not exist %s %s", req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
 					variantName = ""
-					variantExists = false;
-				};
+				}
 			}
-			lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
+			var lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
 			if (lockResult.locked) {
 				return res.status(423).send({
 					state: 'failure',
@@ -2603,7 +2580,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				hasPerm = true;
 			}
 			if (!hasPerm) {
-				logger4js.warn("VP Portfolio List Delete no Permission %s %s", oneVP._id, variantName);
+				logger4js.warn("VP Portfolio List Delete no Permission %s %s", req.params.vpid, variantName);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No permission to delete Portfolio List Version',

@@ -3,7 +3,6 @@ var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 
-var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
@@ -112,17 +111,17 @@ router.route('/')
 					}
 				]});
 			break;
-	  case "sys":
+		case "sys":
 			areaCondition.push({"vc.vcid": req.oneVC._id.toString()});
-	    break;
+			break;
 		case "vc":
 			areaCondition.push({"$or": [{"$and": [{"vc": {$exists: true}}, {"vc.vcid": {$ne: req.oneVC._id.toString()}}]},
 									{"$and": [{"vc": {$exists: false}}, {"url": /^.vc/}]}]});
 			areaCondition.push({"vp": {$exists: false}});
-	    break;
-	  case "vp":
+			break;
+		case "vp":
 			areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
-	    break;
+			break;
 	}
 	if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
 	if (req.query.text) {
