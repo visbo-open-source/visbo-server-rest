@@ -1,6 +1,4 @@
 
-var logging = require('../components/logging');
-
 var logModule = "VPV";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -44,13 +42,13 @@ function getAllPersonalKosten(vpv, organisation) {
 	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
-	for (var i=0 ; i < dauer; i++){
+	for (i=0 ; i < dauer; i++){
 		costValues[i] = 0;
 	}
 
 	if (dauer > 0) {
 		//for (var x = 0; x < 1; x++) { // for performance Test do it several times
-			for (var i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
+			for (i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
 
@@ -73,7 +71,7 @@ function getAllPersonalKosten(vpv, organisation) {
 	else {
 		costValues[0] = 0
 	}
-	var endCalc = new Date();
+	endCalc = new Date();
 	logger4js.debug("Calculate Personal Cost duration %s ", endCalc.getTime() - startCalc.getTime());
 	return costValues;
 }
@@ -99,13 +97,13 @@ function getAllOtherCost(vpv, organisation) {
 	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
-	for (var i=0 ; i < dauer; i++){
+	for (i=0 ; i < dauer; i++){
 		othercostValues[i] = 0;
 	}
 
 	if (dauer > 0) {
 
-			for (var i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
+			for (i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
 				// logger4js.trace("Calculate Phase %s Costs %s", i, phase.AllCosts.length);
@@ -156,17 +154,17 @@ function calcCosts(vpv, pfv, organisation) {
 		}
 	}
 	if ( pfv && organisation ) {
-		var currentDate = new Date(pfv.startDate);
+		currentDate = new Date(pfv.startDate);
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
-		var startIndex = getColumnOfDate(pfv.startDate);
-		var endIndex = getColumnOfDate(pfv.endDate);
-		var dauer = endIndex - startIndex + 1;
+		startIndex = getColumnOfDate(pfv.startDate);
+		endIndex = getColumnOfDate(pfv.endDate);
+		dauer = endIndex - startIndex + 1;
 
-		var personalCost = getAllPersonalKosten(pfv, organisation);
-		var allOtherCost = getAllOtherCost(pfv, organisation);
+		personalCost = getAllPersonalKosten(pfv, organisation);
+		allOtherCost = getAllOtherCost(pfv, organisation);
 
-		for (var i = 0 ; i < dauer; i++){
+		for (i = 0 ; i < dauer; i++){
 			if (!allCostValues[currentDate]) allCostValues[currentDate] = {}
 			allCostValues[currentDate].baseLineCost = personalCost[i] + allOtherCost[i];
 			currentDate.setMonth(currentDate.getMonth() + 1);
@@ -196,7 +194,9 @@ function getNamePart(str, part) {
 		if (compName.length > part) {
 			result = compName[part];
 		} else { // gilt für die rootphase - hier ist der Name "."
-			if (compName[compName.length - 1] = "0") result = "."
+			if (compName[compName.length - 1] == "0") {
+				result = "."
+			} 
 		}
 		return result;
 }
@@ -218,7 +218,7 @@ function calcDeadlines(vpv, pfv) {
 	var j = 0, element;
 	var listDeadlines = allDeadlines.getAllDeadlines();
 
-	for (var element = 0; element < listDeadlines.length; element++) {
+	for (element = 0; element < listDeadlines.length; element++) {
 		logger4js.trace("Add Project Deadline %s", JSON.stringify(listDeadlines[element]));
 		var name = getNamePart(listDeadlines[element].nameID || '§UNDEFINED', 1);
 		allDeadlineValuesIndexed[j] = {
@@ -255,7 +255,7 @@ function calcDeliverables(vpv, pfv) {
 	var j = 0, element;
 	var listDeliveries = allDeliverables.getAllDeliveries();
 
-	for (var element = 0; element < listDeliveries.length; element++) {
+	for (element = 0; element < listDeliveries.length; element++) {
 		logger4js.trace("Add Project Delivery %s", JSON.stringify(listDeliveries[element]));
 		var name = getNamePart(listDeliveries[element].nameID || '§UNDEFINED', 1);
 		allDeliveryValuesIndexed[j] = {
@@ -294,7 +294,7 @@ function getSummeKosten(vpv, organisation, index){
 			index = dauer - 1
 		}
 
-		for (i = 0 ; i <= index; i++){
+		for (var i = 0 ; i <= index; i++){
 			allCostValues[i] = personalCost[i] + allOtherCost[i];
 			costSum += allCostValues[i];
 		}
@@ -409,11 +409,11 @@ function getMilestoneByID(hrchy,vpv, elemId){
 	var ms = undefined;
 
 	if (hrchy && hrchy[elemId]) {
-		currentNode = hrchy[elemId].hryNode;
+		var currentNode = hrchy[elemId].hryNode;
 		if (currentNode){
-			 var phaseID = currentNode.parentNodeKey;
-			 var phase = getPhaseByID(hrchy,vpv,phaseID);
-			 var msIndex = currentNode.indexOfElem;
+			var phaseID = currentNode.parentNodeKey;
+			var phase = getPhaseByID(hrchy,vpv,phaseID);
+			var msIndex = currentNode.indexOfElem;
 
 			if (phase && phase.AllResults){
 				ms = phase.AllResults[msIndex-1];
@@ -425,19 +425,19 @@ function getMilestoneByID(hrchy,vpv, elemId){
 }
 
 function getMsDate(hrchy, vpv, elemId){
-	var msDate = undefined;
+	var msDate = new Date();
 
-	currentNode = elemId && hrchy[elemId] && hrchy[elemId].hryNode;
+	var currentNode = elemId && hrchy[elemId] && hrchy[elemId].hryNode;
 	if (currentNode){
-		 phaseID = currentNode.parentNodeKey;
-		 phase = getPhaseByID(hrchy, vpv, phaseID);
+		var phaseID = currentNode.parentNodeKey;
+		var phase = getPhaseByID(hrchy, vpv, phaseID);
 
-		 var msIndex = currentNode.indexOfElem;
-		 if (phase ) {
-			ms = phase.AllResults[msIndex-1];
+		var msIndex = currentNode.indexOfElem;
+		if (phase ) {
+			var ms = phase.AllResults[msIndex-1];
 			logger4js.trace("get the Date of Milestone %s in %s ", ms.name, phase.name);
-   			msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
-		 }
+			msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
+		}
 	}
 	return msDate;
 }
@@ -545,8 +545,8 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 
 	for (var i = 0; i < vpv.AllPhases.length; i++) {
 		var phase = vpv.AllPhases[i];
-		var endDate = getPhEndDate(vpv, phase);
-		var phasenStart = phase.relStart - 1;
+		var endDate = getPhEndDate(vpv, phase);		
+		
 		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
 
 		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
@@ -560,13 +560,13 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 
 		for (var k = 0; phase && phase.AllResults && k < phase.AllResults.length; k++){
 			var milestone = phase.AllResults[k];
-			var endDate = getMsDate(hrchy, vpv, milestone.name);
+			endDate = getMsDate(hrchy, vpv, milestone.name);
 
 			// logger4js.trace("Calculate Milestone %s Deliverables %s", i, phase.AllResults.length);
 
 			for (var m = 0; milestone && milestone.deliverables && m < milestone.deliverables.length; m++){
 				// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, milestone.nameID);
-				var id = milestone.deliverables[m]
+				id = milestone.deliverables[m]
 				if (addAll) {
 					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate})
 				} else {
@@ -610,9 +610,6 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 
 	logger4js.trace("Calculate all Deadlines of %s  ", vpv && vpv._id);
 
-	var startIndex = getColumnOfDate(vpv.startDate);
-	var endIndex = getColumnOfDate(vpv.endDate);
-	var dauer = endIndex - startIndex + 1;
 	var addAll = false;
 
 	if (!vpv || !vpv.hierarchy || !vpv.hierarchy.allNodes || !vpv.AllPhases || !hrchy) {
@@ -643,9 +640,9 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				}
 			} else {
 				// currentNode is a phase
-				var phase = getPhaseByID(hrchy, vpv, currentNodeID);
-				var endDate = getPhEndDate(vpv, phase);
-				var name = currentNodeID;
+				phase = getPhaseByID(hrchy, vpv, currentNodeID);
+				endDate = getPhEndDate(vpv, phase);
+				name = currentNodeID;
 				
 				// ur: 20200215: get rid of root node "0" in trash
 				if (name  && endDate) {
@@ -700,19 +697,15 @@ function convertHierarchy(vpv) {
 		indexedHrchy[vpv.hierarchy.allNodes[i].hryNodeKey] = vpv.hierarchy.allNodes[i];
 	}
 	return indexedHrchy;
-};
+}
 
 function calcKeyMetrics(vpv, pfv, organisation) {
 	var keyMetrics = {};
-	var oldkeyMetrics = {};
 	var startCalc = new Date();
-	var pfv_Deliverables = [];
-	var vpv_Deliverables = [];
 
 	if (vpv && pfv){
 
-		// Calculate keyMetrics Values here
-		oldkeyMetrics = vpv.keyMetrics;
+		// Calculate keyMetrics Values here		
 		keyMetrics = vpv.keyMetrics || {};
 		logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
 
@@ -767,9 +760,6 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 	var endCalc = new Date();
 	logger4js.info("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
-
-	var  aDeadlineValInd = [];
-	aDeadlineValiInd = calcDeadlines(vpv, pfv);
 
 	return keyMetrics;
 
