@@ -1,4 +1,3 @@
-var logging = require('../components/logging');
 var mongoose = require('mongoose');
 
 var logModule = "OTHER";
@@ -26,7 +25,7 @@ var validateDate = function(dateString, allowEmpty) {
 		logger4js.trace("validate Date: DateString is empty! :%s:", !dateString);
 		return undefined;
 	}
-	dateValue = dateString ? new Date(dateString) : new Date();
+	var dateValue = dateString ? new Date(dateString) : new Date();
 	if (isNaN(dateValue)) {
 		logger4js.info("validate Date: String contains no Date %s", dateString);
 		return undefined;
@@ -76,7 +75,7 @@ var validateEmail = function(email, allowEmpty) {
 	}
 	email = email || '';
 	// if (email.replace(/ \t\n\\\/%$!,:;<>[]"/g,"") != email) {
-	if (email.replace(/[ \t!\\\/%,:;]/ig,"") != email) {
+	if (email.replace(/[ \t!\\/%,:;]/ig,"") != email) {
 		logger4js.info("Check Name: Name contains Illegal Characters? %s", email);
 		return false;
 	}

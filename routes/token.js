@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var url = require('url') ;
+
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
@@ -407,7 +407,7 @@ router.route('/user/pwforgotten')
 						if (err) {
 							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
 							return;
-						};
+						}
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
 						var uiUrl =  getSystemUrl();
@@ -493,8 +493,8 @@ router.route('/user/pwreset')
     jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
       if (err) {
         return res.status(401).send({
-        	state: 'failure',
-        	message: 'Session has expired'
+					state: 'failure',
+					message: 'Session has expired'
         });
       } else {
         // if everything is good, save to request for use in other routes
@@ -525,7 +525,7 @@ router.route('/user/pwreset')
 					user.status.lockedUntil = undefined;
 					user.status.lastPWResetAt = undefined; // Reset the Date, so that the user can ask for password reset again without a time limit
 					user.status.expiresAt = undefined;
-					user.save(function(err, user) {
+					user.save(function(err) {
 						if (err) {
 							logger4js.error("Forgot Password Save user Error DB Connection %s", err.message);
 							return res.status(500).send({

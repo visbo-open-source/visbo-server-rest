@@ -5,7 +5,6 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var fs = require('fs');
-var util = require('util');
 var path = require('path');
 var systemVC = require('./../components/systemVC');
 var getSystemVCSetting = systemVC.getSystemVCSetting;
@@ -13,7 +12,6 @@ var getSystemVCSetting = systemVC.getSystemVCSetting;
 var transporter;
 var mailUser;
 var initialised = false;
-var debug = false;
 
 // Send Mail to User
 function VisboSendMail(message) {
@@ -36,15 +34,15 @@ function VisboSendMail(message) {
 				var dkimPrivKey = '';
 				var keyStatusOk = false
 				try {
-			    // Query the entry and catch exception if file does not exists
-			    stats = fs.statSync(dkimPrivKeyFile);
+					// Query the entry and catch exception if file does not exists
+					stats = fs.statSync(dkimPrivKeyFile);
 					logger4js.debug("MAIL SMTP Config DKIM File Length %s", stats.size);
-			    if (!stats.isDirectory()) {
-		        var content = fs.readFileSync(dkimPrivKeyFile);
+					if (!stats.isDirectory()) {
+						var content = fs.readFileSync(dkimPrivKeyFile);
 						logger4js.debug("MAIL SMTP Config has DKIM Key Start %s ", content.toString().substring(0,50));
 						dkimPrivKey = content.toString();
 						keyStatusOk = true
-			    }
+					}
 				}
 				catch (e) {
 					logger4js.debug("MAIL SMTP Config Access to DKIM Key File %s failed %O", dkimPrivKeyFile);
@@ -76,7 +74,7 @@ function VisboSendMail(message) {
 	}
 	// verify connection configuration
 	// logger4js.debug("Mail all prepared, now verify the eMail");
-	transporter.verify(function(error, success) {
+	transporter.verify(function(error) {
 		if (error) {
 			logger4js.error("MAIL Error sending Mail %s", error);
 		} else {
@@ -89,14 +87,14 @@ function VisboSendMail(message) {
 		message.replyTo = message.from;
 	}
 	message.from = mailUser;
-	transporter.sendMail(message, function(error, response){
+	transporter.sendMail(message, function(error) {
     if (error) {
-      logger4js.error("MAIL Mail delivery failed %s to %s", error, message.to);;
+      logger4js.error("MAIL Mail delivery failed %s to %s", error, message.to);
     } else {
       logger4js.debug("MAIL Mail delivery finished: %s", message.to);
     }
 	});
-};
+}
 
 module.exports = {
 	VisboSendMail: VisboSendMail
