@@ -25,7 +25,7 @@ function addDays(dd, numDays) {
 
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
-	costValues = [];
+	var costValues = [];
 	logger4js.debug("Calculate Personal Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 
@@ -44,19 +44,18 @@ function getAllPersonalKosten(vpv, organisation) {
 	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
-	for (i=0 ; i < dauer; i++){
+	for (var i=0 ; i < dauer; i++){
 		costValues[i] = 0;
 	}
 
 	if (dauer > 0) {
-		//for (x = 0; x < 1; x++) { // for performance Test do it several times
+		//for (var x = 0; x < 1; x++) { // for performance Test do it several times
 			for (var i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1
 
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
-					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);
-					//????
+					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);					
 					var role = phase.AllRoles[j];
 					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
@@ -82,7 +81,7 @@ function getAllPersonalKosten(vpv, organisation) {
 
 // calculate all other Costs for the requested project per month
 function getAllOtherCost(vpv, organisation) {
-	othercostValues = [];
+	var othercostValues = [];
 
 	logger4js.debug("Calculate all other Cost of Visbo Project Version %s start %s end %s organisation TS %s", vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
@@ -100,7 +99,7 @@ function getAllOtherCost(vpv, organisation) {
 	var dauer = endIndex - startIndex + 1;
 	var faktor = 1;
 
-	for (i=0 ; i < dauer; i++){
+	for (var i=0 ; i < dauer; i++){
 		othercostValues[i] = 0;
 	}
 
@@ -112,8 +111,8 @@ function getAllOtherCost(vpv, organisation) {
 				// logger4js.trace("Calculate Phase %s Costs %s", i, phase.AllCosts.length);
 				for (var j = 0; phase && phase.AllCosts && j < phase.AllCosts.length; j++) {
 					var cost = phase.AllCosts[j];
-					var costTyp = cost.KostenTyp;
-					var tagessatz = allCosts[cost.KostenTyp].budget;
+					//var costTyp = cost.KostenTyp;
+					//var tagessatz = allCosts[cost.KostenTyp].budget;
 					// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
 					if (cost.Bedarf) {
 						var dimension = cost.Bedarf.length;
@@ -196,6 +195,8 @@ function getNamePart(str, part) {
 		var compName = str.split("§");
 		if (compName.length > part) {
 			result = compName[part];
+		} else { // gilt für die rootphase - hier ist der Name "."
+			if (compName[compName.length - 1] = "0") result = "."
 		}
 		return result;
 }
@@ -766,6 +767,9 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 	var endCalc = new Date();
 	logger4js.info("Calculate KeyMetrics duration %s ms ", endCalc.getTime() - startCalc.getTime());
+
+	var  aDeadlineValInd = [];
+	aDeadlineValiInd = calcDeadlines(vpv, pfv);
 
 	return keyMetrics;
 
