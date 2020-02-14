@@ -340,7 +340,7 @@ function VisboDeliverable() {
 	}
 }
 
-// Deliverables for the Project combine INfo from baseline and vpv
+// Deadlines for the Project combine INfo from baseline and vpv
 function VisboDeadlines() {
   this.length = 0;
   this.allDeadlines = {};
@@ -645,8 +645,9 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				var phase = getPhaseByID(hrchy, vpv, currentNodeID);
 				var endDate = getPhEndDate(vpv, phase);
 				var name = currentNodeID;
-				// get rid of root node "0"
-				if (name && name.length > 2 && endDate) {
+				
+				// ur: 20200215: get rid of root node "0" in trash
+				if (name  && endDate) {
 					if (addAll) {
 						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: "Phase", name: name, phasePFV: name, endDatePFV: endDate})
 					} else {
