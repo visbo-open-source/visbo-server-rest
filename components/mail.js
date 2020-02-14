@@ -32,7 +32,7 @@ function VisboSendMail(message) {
 				var dkimPrivKeyFile = path.join('/etc/visbo/', smtpConfig.dkim.domainName.concat('.priv'));
 				var stats = undefined;
 				var dkimPrivKey = '';
-				var keyStatusOk = false
+				var keyStatusOk = false;
 				try {
 					// Query the entry and catch exception if file does not exists
 					stats = fs.statSync(dkimPrivKeyFile);
@@ -41,7 +41,7 @@ function VisboSendMail(message) {
 						var content = fs.readFileSync(dkimPrivKeyFile);
 						logger4js.debug("MAIL SMTP Config has DKIM Key Start %s ", content.toString().substring(0,50));
 						dkimPrivKey = content.toString();
-						keyStatusOk = true
+						keyStatusOk = true;
 					}
 				}
 				catch (e) {
@@ -49,10 +49,10 @@ function VisboSendMail(message) {
 				}
 				if (keyStatusOk) {
 					logger4js.debug("MAIL SMTP Config has DKIM key in %s", dkimPrivKeyFile);
-					smtpConfig.dkim.privateKey = dkimPrivKey
+					smtpConfig.dkim.privateKey = dkimPrivKey;
 				} else {
 					logger4js.warn("MAIL SMTP Config has no corresponding DKIM key for %s in %s", smtpConfig.dkim.domainName, dkimPrivKeyFile);
-					delete smtpConfig.dkim
+					delete smtpConfig.dkim;
 				}
 			}
 			logger4js.debug("MAIL SMTP gateway %s with user %s", smtpConfig.host, smtpConfig.auth.user);
@@ -63,7 +63,7 @@ function VisboSendMail(message) {
 		}
 		logger4js.debug("MAIL Initialise e-Mail sending connection for %s", smtpConfig.auth.user);
 
-		transporter = nodemailer.createTransport(smtpConfig)
+		transporter = nodemailer.createTransport(smtpConfig);
 		if (!transporter) {
 			logger4js.error("MAIL Initialise e-Mail sending failed");
 			return;

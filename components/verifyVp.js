@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants')
-var constPermVP = Const.constPermVP
+var Const = require('../models/constants');
+var constPermVP = Const.constPermVP;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -48,10 +48,10 @@ function getAllGroups(req, res, next) {
 
 	logger4js.debug("Query VGs %s", JSON.stringify(query));
 	var queryVG = VisboGroup.find(query);
-	queryVG.select('name permission vcid vpids groupType')
+	queryVG.select('name permission vcid vpids groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: VP Group all Find`, `Error getting Visbo Groups `)
+			errorHandler(err, res, `DB: VP Group all Find`, `Error getting Visbo Groups `);
 			return;
 		}
 		logger4js.debug("Found VGs %d", listVG.length);
@@ -61,15 +61,15 @@ function getAllGroups(req, res, next) {
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
 			if (permGroup.groupType == "System") {
-				listVPPerm.addPerm(0, permGroup.permission)
-				listVCPerm.addPerm(0, permGroup.permission)
+				listVPPerm.addPerm(0, permGroup.permission);
+				listVCPerm.addPerm(0, permGroup.permission);
 			} else if (permGroup.groupType == "VC") {
 				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
 			}
 			if (permGroup.groupType != "System" && permGroup.vpids) {
 				// Check all VPIDs in Group
 				for (var j=0; j < permGroup.vpids.length; j++) {
-          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission)
+          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission);
 				}
 			}
 		}
@@ -118,7 +118,7 @@ function checkVpfid(req, res, next, vpfid) {
 	// queryVP.select('name users updatedAt createdAt');
 	queryVPF.exec(function (err, oneVPF) {
 		if (err) {
-			errorHandler(err, res, `DB: VP Get VPF List`, `Error getting Visbo Project Portfolio List`)
+			errorHandler(err, res, `DB: VP Get VPF List`, `Error getting Visbo Project Portfolio List`);
 			return;
 		}
 		if (!oneVPF) {
@@ -127,7 +127,7 @@ function checkVpfid(req, res, next, vpfid) {
 				message: 'No Visbo Project Portfolio or no Permission'
 			});
 		}
-		req.oneVPF = oneVPF
+		req.oneVPF = oneVPF;
 		logger4js.debug("Found Visbo Project Portfolio %s ", vpfid);
 		return next();
 	});
@@ -171,7 +171,7 @@ function getVP(req, res, next, vpid) {
 	// queryVP.select('name users updatedAt createdAt');
 	queryVP.exec(function (err, oneVP) {
 		if (err) {
-			errorHandler(err, res, `DB: VP Group Get VP`, `Error getting Visbo Project`)
+			errorHandler(err, res, `DB: VP Group Get VP`, `Error getting Visbo Project`);
 			return;
 		}
 		if (!oneVP) {
@@ -180,7 +180,7 @@ function getVP(req, res, next, vpid) {
 				message: 'No Visbo Project or no Permission'
 			});
 		}
-		req.oneVP = oneVP
+		req.oneVP = oneVP;
 
 		logger4js.debug("Found Visbo Project %s Access Permission %O", vpid, req.listVPPerm.getPerm(vpid));
 		return next();

@@ -3,7 +3,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
-var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting
+var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
 
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
@@ -15,16 +15,16 @@ var isAllowedPassword = function(password){
 
 	if (!password) return false;
 	if (!pwPolicy) {
-		var pwPolicySetting = getSystemVCSetting('PW Policy')
+		var pwPolicySetting = getSystemVCSetting('PW Policy');
 		if (pwPolicySetting) {
 			logger4js.trace("Check Password Policy from DB %O len %s", pwPolicySetting, pwPolicySetting.value.PWPolicy.length);
 			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicy) {
-				pwPolicy = pwPolicySetting.value.PWPolicy
+				pwPolicy = pwPolicySetting.value.PWPolicy;
 			}
 		}
 		if (!pwPolicy) {
 			logger4js.trace("Check Password Policy from .env %s", process.env.PWPOLICY);
-			pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$"
+			pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$";
 		}
 
 		pwPolicyPattern = new RegExp(pwPolicy);
@@ -32,7 +32,7 @@ var isAllowedPassword = function(password){
 	}
 
 	logger4js.trace("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
-	var result = password.match(pwPolicyPattern)
+	var result = password.match(pwPolicyPattern);
 	return result;
 };
 

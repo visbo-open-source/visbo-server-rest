@@ -8,7 +8,7 @@ var bCrypt = require('bcrypt-nodejs');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var errorHandler = require('./../components/errorhandler').handler;
-var getSystemUrl = require('./../components/systemVC').getSystemUrl
+var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var mail = require('../components/mail');
 var ejs = require('ejs');
@@ -82,7 +82,7 @@ router.route('/profile')
 
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: GET Profile ${req.decoded._id} Find `, `Error get profile failed`)
+				errorHandler(err, res, `DB: GET Profile ${req.decoded._id} Find `, `Error get profile failed`);
 				return;
 			}
 			user.password = undefined;
@@ -154,7 +154,7 @@ router.route('/profile')
 		logger4js.info("Put/Update user %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Find `, `Error update profile failed`)
+				errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Find `, `Error update profile failed`);
 				return;
 			}
 			if (!req.body.profile || !req.body.profile.firstName || !req.body.profile.lastName ) {
@@ -182,7 +182,7 @@ router.route('/profile')
 			user.save(function(err, user) {
 				logger4js.debug("Put/Update after Save");
 				if (err) {
-					errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error update profile failed`)
+					errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error update profile failed`);
 					return;
 				}
 				user.password = undefined;
@@ -228,7 +228,7 @@ router.route('/passwordchange')
 		logger4js.info("Put/Update user password %s", req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT Change Password ${req.decoded._id} Find `, `Error change password failed`)
+				errorHandler(err, res, `DB: PUT Change Password ${req.decoded._id} Find `, `Error change password failed`);
 				return;
 			}
 			if (!req.body.password || !req.body.oldpassword ) {
@@ -261,12 +261,12 @@ router.route('/passwordchange')
 				user.status.expiresAt = undefined;
 				user.save(function(err, user) {
 					if (err) {
-						errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error chaneg password failed`)
+						errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Save `, `Error chaneg password failed`);
 						return;
 					}
 					user.password = undefined;
 					// now send an e-Mail to the user for pw change
-					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs')
+					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs');
 					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/pwforgotten/');
 					var eMailSubject = 'Your password has been changed';
@@ -309,7 +309,7 @@ router.route('/passwordchange')
 				});
 			}
 		});
-	})
+	});
 
 router.route('/logout')
 /**
@@ -342,7 +342,7 @@ router.route('/logout')
 			state: "success",
 			message: "You have successfully logged out"
 		});
-	})
+	});
 
 
 module.exports = router;

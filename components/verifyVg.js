@@ -25,15 +25,15 @@ function getGroupId(req, res, next, groupId) {
 	}
 	var query = {};
 	if (vcid) query.vcid = vcid;
-	if (vpid)  { query.vpids = vpid }
-	query._id = groupId
+	if (vpid)  { query.vpids = vpid; }
+	query._id = groupId;
 	logger4js.trace("Search VGs %O", query);
 
 	var queryVG = VisboGroup.find(query);
 	// queryVG.select('name permission vcid')
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: Group Find`, `Error getting Visbo Groups `)
+			errorHandler(err, res, `DB: Group Find`, `Error getting Visbo Groups `);
 			return;
 		}
 		logger4js.trace("Found VGs %d groups %O", listVG.length, listVG);

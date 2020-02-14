@@ -1,9 +1,9 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
-var constPermVC = Const.constPermVC
+var Const = require('../models/constants');
+var constPermSystem = Const.constPermSystem;
+var constPermVC = Const.constPermVC;
 
-var systemVC = require('./../components/systemVC')
+var systemVC = require('./../components/systemVC');
 
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -56,10 +56,10 @@ function getAllGroups(req, res, next) {
 	}
 
 	var queryVG = VisboGroup.find(query);
-	queryVG.select('name permission vcid groupType')
+	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: VC Groups get all`, `Error getting Visbo Centers`)
+			errorHandler(err, res, `DB: VC Groups get all`, `Error getting Visbo Centers`);
 			return;
 		}
 		logger4js.trace("Found VGs %d", listVG.length);
@@ -67,7 +67,7 @@ function getAllGroups(req, res, next) {
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
 			if (permGroup.groupType == "System") {
-				listVCPerm.addPerm(0, permGroup.permission)
+				listVCPerm.addPerm(0, permGroup.permission);
 			} else if (permGroup.groupType == "VC") {
 				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
 			}
@@ -111,7 +111,7 @@ function getVC(req, res, next, vcid) {
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {
-			errorHandler(err, res, `DB: VC Groups get specific VC`, `Error getting Visbo Center`)
+			errorHandler(err, res, `DB: VC Groups get specific VC`, `Error getting Visbo Center`);
 			return;
 		}
 		if (!oneVC) {
@@ -120,7 +120,7 @@ function getVC(req, res, next, vcid) {
 				message: 'No Visbo Center or no Permission'
 			});
 		}
-		req.oneVC = oneVC
+		req.oneVC = oneVC;
 
 		logger4js.debug("Found VisboCenter %s Access Permission %O", vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
 		return next();
@@ -140,10 +140,10 @@ function getSystemGroups(req, res, next) {
 	query.groupType = 'System';						// search for System Groups only
 
 	var queryVG = VisboGroup.find(query);
-	queryVG.select('name permission vcid groupType')
+	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: System Groups get all`, `Error getting Visbo Centers`)
+			errorHandler(err, res, `DB: System Groups get all`, `Error getting Visbo Centers`);
 			return;
 		}
 		logger4js.trace("Found VGs %d", listVG.length);
@@ -157,7 +157,7 @@ function getSystemGroups(req, res, next) {
 		var listVCPerm = new VisboPermission();
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
-			listVCPerm.addPerm(0, permGroup.permission)
+			listVCPerm.addPerm(0, permGroup.permission);
 		}
 		req.listVCPerm = listVCPerm;
 		return next();

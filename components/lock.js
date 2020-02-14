@@ -40,7 +40,7 @@ function lockCleanup(listLock) {
 	logger4js.debug("lock CleanUP expired locks from list %d ", listLock.length);
 	for (var i = 0; i < listLock.length; i++) {
 		if (listLock[i].expiresAt >=  dateNow ){			// the lock is still valid
-			listLockNew.push(listLock[i]) 							// keep the lock
+			listLockNew.push(listLock[i]); 							// keep the lock
 		} else {
 			logger4js.debug("POST Lock check lock %O expired %s", listLock[i], dateNow);
 		}
@@ -54,7 +54,7 @@ function cleanupAllVPLock(task, finishedTask) {
 	var startUnLock = new Date("2018-01-01");
 	if (!task.value.taskSpecific) task.value.taskSpecific = {};
 	if (validate.validateDate(task.value.taskSpecific.lastSuccess, false)) {
-		startUnLock = new Date(task.value.taskSpecific.lastSuccess)
+		startUnLock = new Date(task.value.taskSpecific.lastSuccess);
 		startUnLock.setMonth(startUnLock.getMonth()-1); // one month back
 		logger4js.debug("cleanuplock startUnLock %O", startUnLock);
 	}
@@ -66,15 +66,15 @@ function cleanupAllVPLock(task, finishedTask) {
 
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating all VPs`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating all VPs`, undefined);
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: cleanup expired Locks'};
 			finishedTask(task, false);
 			return;
 		}
-		task.value.taskSpecific = {lastSuccess: actDate, result: result.nModified, resultDescription: `Updated ${result.nModified} expired Lock Entries`}
-		logger4js.info("Task: cleanuplock Result %d", result.nModified)
+		task.value.taskSpecific = {lastSuccess: actDate, result: result.nModified, resultDescription: `Updated ${result.nModified} expired Lock Entries`};
+		logger4js.info("Task: cleanuplock Result %d", result.nModified);
 		finishedTask(task, false);
-	})
+	});
 }
 
 module.exports = {

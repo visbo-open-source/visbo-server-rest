@@ -8,8 +8,8 @@ var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
 var errorHandler = require('./../components/errorhandler').handler;
 
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
+var Const = require('../models/constants');
+var constPermSystem = Const.constPermSystem;
 
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -79,8 +79,8 @@ router.route('/')
 	var query = {};
 	var from, to, maxcount = 1000, action, area;
 	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
-	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
-	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from);
+	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to);
 	if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 	if (req.query.action) action = req.query.action.trim();
 	if (req.query.area) area = req.query.area.trim();
@@ -123,7 +123,7 @@ router.route('/')
 			areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
 			break;
 	}
-	if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
+	if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition});
 	if (req.query.text) {
 		var textCondition = [];
 		var text = req.query.text;
@@ -159,12 +159,12 @@ router.route('/')
 		textCondition.push({"vc.vcjson": expr});
 		textCondition.push({"vp.vpjson": expr});
 		textCondition.push({"url": expr});
-		queryListCondition.push({"$or": textCondition})
+		queryListCondition.push({"$or": textCondition});
 	}
 	var ttlCondition = [];
 	ttlCondition.push({"ttl": {$exists: false}});
 	ttlCondition.push({"ttl": {$gt: new Date()}});
-	queryListCondition.push({"$or": ttlCondition})
+	queryListCondition.push({"$or": ttlCondition});
 
 	query["$and"] = queryListCondition;
 	logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
@@ -175,7 +175,7 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			errorHandler(err, res, `DB: GET System Audit`, `Error getting System Audit`)
+			errorHandler(err, res, `DB: GET System Audit`, `Error getting System Audit`);
 			return;
 		}
 		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
@@ -183,10 +183,10 @@ router.route('/')
 			if (!listVCAudit[i].user || !listVCAudit[i].user.email) {
 				listVCAudit[i].user = {"email": "unknown"};
 			}
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vpv && listVCAudit[i].vpv.name) listVCAudit[i].actionInfo = listVCAudit[i].vpv.name
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vp && listVCAudit[i].vp.name) listVCAudit[i].actionInfo = listVCAudit[i].vp.name
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vc && listVCAudit[i].vc.name) listVCAudit[i].actionInfo = listVCAudit[i].vc.name
-			if (!listVCAudit[i].actionDescription) listVCAudit[i].actionDescription = listVCAudit[i].action
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vpv && listVCAudit[i].vpv.name) listVCAudit[i].actionInfo = listVCAudit[i].vpv.name;
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vp && listVCAudit[i].vp.name) listVCAudit[i].actionInfo = listVCAudit[i].vp.name;
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vc && listVCAudit[i].vc.name) listVCAudit[i].actionInfo = listVCAudit[i].vc.name;
+			if (!listVCAudit[i].actionDescription) listVCAudit[i].actionDescription = listVCAudit[i].action;
 
 		}
 		return res.status(200).send({
@@ -196,6 +196,6 @@ router.route('/')
 			audit: listVCAudit
 		});
 	});
-})
+});
 
 module.exports = router;

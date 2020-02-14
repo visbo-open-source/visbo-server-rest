@@ -8,7 +8,7 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
-var getSystemUrl = require('./../components/systemVC').getSystemUrl
+var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var moment = require('moment');
 moment.locale('de');
@@ -33,12 +33,12 @@ var visboShortUA = function(stringUA) {
 	agent.os.patch = undefined;
 	logger4js.debug("User Agent %s", agent.toString());
 	return agent.toString();
-}
+};
 
 var findUserAgent = function(currentUserAgent) {
 	// logger4js.trace("FIND UserAgent %O with %s result %s", this, currentUserAgent.userAgent, currentUserAgent.userAgent == this.userAgent);
 	return currentUserAgent.userAgent == this.userAgent;
-}
+};
 
 var isValidHash = function(hash, secret){
 	return bCrypt.compareSync(secret, hash);
@@ -126,7 +126,7 @@ router.route('/user/login')
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: POST Login ${req.body.email} Find `, `Error Login Failed`)
+				errorHandler(err, res, `DB: POST Login ${req.body.email} Find `, `Error Login Failed`);
 				return;
 			}
 			if (!user) {
@@ -148,7 +148,7 @@ router.route('/user/login')
 				});
 			}
 			logger4js.debug("Login: User %s Check Login Retries %s", req.body.email, user.status.loginRetries);
-			var loginRetries = 3
+			var loginRetries = 3;
 			var lockMinutes = 15;
 			var loginFailedIntervalMinute = 4 * 60;
 			if (user.status.lockedUntil && user.status.lockedUntil.getTime() > currentDate.getTime()) {
@@ -163,7 +163,7 @@ router.route('/user/login')
 				var lastLoginFailedAt = user.status.lastLoginFailedAt || new Date(0);
 				// save user and increment wrong password count and timestamp
 				logger4js.debug("Login: Wrong password", req.body.email);
-				if (!user.status.loginRetries) user.status.loginRetries = 0
+				if (!user.status.loginRetries) user.status.loginRetries = 0;
 				if ((currentDate.getTime() - (lastLoginFailedAt.getTime() || 0))/1000/60 > loginFailedIntervalMinute ) {
 					// reset retry count if last login failed is older than loginFailedIntervalMinute
 					user.status.loginRetries = 0;
@@ -197,21 +197,21 @@ router.route('/user/login')
 			} else {
 				// Login Successful
 				var currenDate = new Date();
-				var message = "Successfully logged in."
+				var message = "Successfully logged in.";
 				if (!auth.isAllowedPassword(req.body.password)) {
 					logger4js.info("Login Password: current password does not match password rules");
 					if (!user.status) user.status = {};
 					if (!user.status.expiresAt) {
 						user.status.expiresAt = currenDate;
-						user.status.expiresAt.setDate(currenDate.getDate() + 1) // allow 1 day to change
+						user.status.expiresAt.setDate(currenDate.getDate() + 1); // allow 1 day to change
 					}
 					// show expiration in Hours / Minutes
-					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600)
+					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600);
 					var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
 					message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
 					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info("Login Password expired at: %s", user.status.expiresAt.toISOString());
-						sendMail.passwordExpired(req, user)
+						sendMail.passwordExpired(req, user);
 						return res.status(401).send({
 							state: "failure",
 							message: "email or password mismatch"
@@ -251,7 +251,7 @@ router.route('/user/login')
 						// set the last login and reset the password retries
 
 						if (!user.status) user.status = {};
-						if (!user.status.loginRetries) user.status.loginRetries = 0
+						if (!user.status.loginRetries) user.status.loginRetries = 0;
 						user.status.lastLoginAt = currentDate;
 						user.status.loginRetries = 0;
 						user.status.lockedUntil = undefined;
@@ -266,24 +266,24 @@ router.route('/user/login')
 
 						if (!user.userAgents || user.userAgents.length == 0) {
 							user.userAgents = [];
-							user.userAgents.push(curAgent)
+							user.userAgents.push(curAgent);
 							logger4js.debug("Init User Agent first Login %s", JSON.stringify(user.userAgents));
 						} else {
 							// Check List of User Agents and add or updated
-							var index = user.userAgents.findIndex(findUserAgent, curAgent)
+							var index = user.userAgents.findIndex(findUserAgent, curAgent);
 							if (index >= 0) {
-								user.userAgents[index].lastUsedAt = curAgent.lastUsedAt
+								user.userAgents[index].lastUsedAt = curAgent.lastUsedAt;
 							} else {
-								user.userAgents.push(curAgent)
+								user.userAgents.push(curAgent);
 								// Send Mail about new Login with unknown User Agent
 								sendMail.accountNewLogin(req, user);
 								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
 							// Cleanup old User Agents older than 3 Months
-							var expiredAt = new Date()
-							expiredAt.setMonth(expiredAt.getMonth()-3)
+							var expiredAt = new Date();
+							expiredAt.setMonth(expiredAt.getMonth()-3);
 							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
-							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
+							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ));
 						}
 						logger4js.trace("User before Save User Agents %s", JSON.stringify(user.userAgents));
 						user.save(function(err, user) {
@@ -346,7 +346,7 @@ router.route('/user/pwforgotten')
 		var query = { "email" : req.body.email };
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: POST Forgot PW ${req.body.email} Find `, `Password Forgotten Failed`)
+				errorHandler(err, res, `DB: POST Forgot PW ${req.body.email} Find `, `Password Forgotten Failed`);
 				return;
 			}
 			// we return success to prevent eMail probing and count the request to prevent eMail spamming
@@ -405,11 +405,11 @@ router.route('/user/pwforgotten')
 					{ expiresIn: jwtSecret.register.expiresIn },
 					function(err, token) {
 						if (err) {
-							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
+							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`);
 							return;
 						}
 						// Send e-Mail with Token to registered Users
-						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
+						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs');
 						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
@@ -499,10 +499,10 @@ router.route('/user/pwreset')
       } else {
         // if everything is good, save to request for use in other routes
 				logger4js.debug("Forgot PW Token Check for User %s and _id %s", decoded.email, decoded._id);
-				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt }
+				var query = { "email" : decoded.email, "updatedAt": decoded.updatedAt };
 				visbouser.findOne(query, function(err, user) {
 					if (err) {
-						errorHandler(err, res, `DB: POST PW Reset Find `, `Error password reset failed`)
+						errorHandler(err, res, `DB: POST PW Reset Find `, `Error password reset failed`);
 						return;
 					}
 					if (!user) {
@@ -640,7 +640,7 @@ router.route('/user/signup')
 		}
 		visbouser.findOne(query, function(err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: POST Signup ${req.body.email} Find `, `Signup failed`)
+				errorHandler(err, res, `DB: POST Signup ${req.body.email} Find `, `Signup failed`);
 				return;
 			}
 			if (user) req.body.email = user.email.toLowerCase();
@@ -711,7 +711,7 @@ router.route('/user/signup')
 				logger4js.trace("User Registration %s RegisteredAt %s. Confirm e-mail?", user.email, user.status.registeredAt);
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
-					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
+					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs');
 					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'Please confirm your eMail address ';
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
@@ -831,7 +831,7 @@ router.route('/user/signup')
 			var query = {_id: req.body._id};
 			visbouser.findOne(query, function(err, user) {
 				if (err) {
-					errorHandler(err, res, `DB: POST User confirm ${req.body._id} Find `, `Error signup confirm failed`)
+					errorHandler(err, res, `DB: POST User confirm ${req.body._id} Find `, `Error signup confirm failed`);
 					return;
 				}
 				// if user exists and is registered already refuse to register again

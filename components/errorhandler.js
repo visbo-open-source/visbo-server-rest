@@ -32,7 +32,7 @@ var handler = function(err, res, logMesage, restMessage) {
 			error: error
 		});
 	}
-}
+};
 
 
 module.exports = {

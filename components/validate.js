@@ -17,7 +17,7 @@ var validateName = function(name, allowEmpty) {
 		return false;
 	}
 	return true;
-}
+};
 
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty) {
@@ -31,7 +31,7 @@ var validateDate = function(dateString, allowEmpty) {
 		return undefined;
 	}
 	return dateValue.toISOString();
-}
+};
 
 // validate a date to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
@@ -44,7 +44,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 		return 0;
 	}
 	return numberValue;
-}
+};
 
 // check if string has invalid content
 // validate a string to prevent XSS
@@ -64,7 +64,7 @@ var validateObjectId = function(id, allowEmpty) {
 	}
 	logger4js.trace("Check ID: OBjectId %s ok", id);
 	return true;
-}
+};
 
 // check if email has invalid content
 // validate a string to prevent XSS
@@ -80,7 +80,7 @@ var validateEmail = function(email, allowEmpty) {
 		return false;
 	}
 	return true;
-}
+};
 
 module.exports = {
 	validateName: validateName,

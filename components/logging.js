@@ -5,7 +5,7 @@ var log4js = require('log4js');
 var logger4js = undefined;
 
 var logObj = undefined;
-var logConfig = undefined
+var logConfig = undefined;
 
 function setLogLevelConfig(newConfigDebug) {
 	if ( newConfigDebug == undefined ) {
@@ -13,10 +13,10 @@ function setLogLevelConfig(newConfigDebug) {
 	}
 	for (var category in newConfigDebug) {
 		if (logConfig.categories[category]) {
-			logger4js.trace("LogLevel Set %O Value %s", category, newConfigDebug[category])
+			logger4js.trace("LogLevel Set %O Value %s", category, newConfigDebug[category]);
 			// logConfig.categories[category].level = newConfigDebug[category]
 			var logger = log4js.getLogger(category);
-			logger.level = newConfigDebug[category]
+			logger.level = newConfigDebug[category];
 		}
 	}
 	// console.log("LOG LEVEL SET: %O", newConfigDebug)
@@ -27,10 +27,10 @@ function cleanupLogFiles(task, finishedTask) {
 	if (!task || !task.value) finishedTask(task, false);
 	var ageDays = 30;
 	if (task.specificValue)
-		ageDays =  task.specificValue.logAge || ageDays
+		ageDays =  task.specificValue.logAge || ageDays;
 	var deleteLogDate = new Date();
 	var deletedCount = 0;
-	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays)
+	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays);
 	deleteLogDate.setHours(0);
 	deleteLogDate.setMinutes(0);
 	deleteLogDate.setSeconds(0);
@@ -43,7 +43,7 @@ function cleanupLogFiles(task, finishedTask) {
 
 	logger4js.debug("Delete Log File from Directory: %s Date %s", dir, deleteLogDate);
 	var folders = fs.readdirSync(dir);
-	var stats = {}
+	var stats = {};
 
 	for (var i in folders) {
 		var folder = path.join(dir, folders[i]);
@@ -58,18 +58,18 @@ function cleanupLogFiles(task, finishedTask) {
 			// Browse Host Directory for Log Files per Host
 			var files = fs.readdirSync(folder);
 			var emptyFolder = true;
-			stats = {}
+			stats = {};
 			for (var j in files) {
 				var file = path.join(folder, files[j]);
 				if (files[j].substring(0, 1) == '.') {
 					logger4js.debug("Ignore dot files %s in log folder", file);
-					emptyFolder = false
+					emptyFolder = false;
 					continue;
 				}
 				stats = fs.statSync(file);
 				if ( !stats.isFile()) {
 					logger4js.debug("Ignore non native file %s in log folder", file);
-					emptyFolder = false
+					emptyFolder = false;
 				} else {
 					if (stats.mtime < deleteLogDate) {
 						var fullFileName = path.join(folder, files[j]);
@@ -83,7 +83,7 @@ function cleanupLogFiles(task, finishedTask) {
 						}
 					} else {
 						logger4js.debug("Keep Log File %s from %s Modified %s AgeFilter %s", files[j], folders[i], stats.mtime, deleteLogDate);
-						emptyFolder = false
+						emptyFolder = false;
 					}
 				}
 			}
@@ -98,7 +98,7 @@ function cleanupLogFiles(task, finishedTask) {
 			}
 		}
 	}
-	task.value.taskSpecific = {result: deletedCount, resultDescription: `Deleted ${deletedCount} expired Log Files`}
+	task.value.taskSpecific = {result: deletedCount, resultDescription: `Deleted ${deletedCount} expired Log Files`};
 	finishedTask(task, false);
 }
 
@@ -125,12 +125,12 @@ function initLog4js(fsLogPath) {
 			// ,
 			// pm2: true,
 			// pm2InstanceVar: 'INSTANCE_ID'
-		}
+		};
 		logObj = log4js.configure(logConfig);
 		// log4js.level = 'info';
 		logger4js = log4js.getLogger("OTHER");
 
-		logger4js.info("LogPath %s", fsLogPath)
+		logger4js.info("LogPath %s", fsLogPath);
 	}
 }
 

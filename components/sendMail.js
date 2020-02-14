@@ -2,7 +2,7 @@
 var logModule = "MAIL";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var getSystemUrl = require('./../components/systemVC').getSystemUrl
+var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var moment = require('moment');
 moment.locale('de');
@@ -15,28 +15,28 @@ var ejs = require('ejs');
 
 var visboParseUA = function(agent, stringUA) {
 	var shortUA = stringUA;
-	var index = stringUA.indexOf("(")
-	if (index >= 0) shortUA = shortUA.substring(0, index-1)
+	var index = stringUA.indexOf("(");
+	if (index >= 0) shortUA = shortUA.substring(0, index-1);
 	logger4js.trace("User Agent Shortened1 %s to %s", stringUA, shortUA);
 
-	index = shortUA.indexOf("/")
+	index = shortUA.indexOf("/");
 	if (index >= 0) {
-		agent.family = shortUA.substring(0, index)
-		shortUA = shortUA.substring(index+1, shortUA.length )
+		agent.family = shortUA.substring(0, index);
+		shortUA = shortUA.substring(index+1, shortUA.length );
 		logger4js.trace("User Agent Shortened2 %s to %s", agent.family, shortUA);
-		index = shortUA.indexOf(".")
+		index = shortUA.indexOf(".");
 		if (index >= 0) {
-			agent.major = shortUA.substring(0, index)
-			agent.minor = shortUA.substring(index+1, shortUA.length )
+			agent.major = shortUA.substring(0, index);
+			agent.minor = shortUA.substring(index+1, shortUA.length );
 			logger4js.trace("User Agent Major %s Minor %s", agent.major, agent.minor);
 		}
 	}
-}
+};
 
 // Send Mail about account locked
 function accountLocked(req, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs')
+	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs');
 	var uiUrl =  getSystemUrl();
 	var eMailSubject = 'Your account has been locked';
 	var info = {};
@@ -64,7 +64,7 @@ function accountLocked(req, user) {
 // Send Mail about password expired
 function passwordExpired(req, user) {
 	// Send Mail to password forgotten
-	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs')
+	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -86,7 +86,7 @@ function passwordExpired(req, user) {
 // Send Mail about password expires soon
 function passwordExpiresSoon(req, user, expiresAt) {
 	// send Mail to User about Password expiration
-	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs')
+	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
@@ -107,7 +107,7 @@ function passwordExpiresSoon(req, user, expiresAt) {
 
 // Send Mail about user not registered
 function accountNotRegistered(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs')
+	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -128,7 +128,7 @@ function accountNotRegistered(req, user) {
 
 // Send Mail about user not registered
 function accountRegisteredSuccess(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userRegisteredSuccess.ejs')
+	var template = __dirname.concat('/../emailTemplates/userRegisteredSuccess.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -150,7 +150,7 @@ function accountRegisteredSuccess(req, user) {
 // Send Mail about account locked
 function accountNewLogin(req, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs')
+	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	var eMailSubject = 'New Login from a new device or programm';

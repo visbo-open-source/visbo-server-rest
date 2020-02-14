@@ -88,7 +88,7 @@ router.route('/')
 		.lean()
 		.exec(function (err, listUsers) {
 			if (err) {
-				errorHandler(err, res, `DB: GET System User`, `Error getting Sys Users`)
+				errorHandler(err, res, `DB: GET System User`, `Error getting Sys Users`);
 				return;
 			}
 			logger4js.debug("Found Users %d", listUsers.length);
@@ -98,6 +98,6 @@ router.route('/')
 				user: listUsers
 			});
 		});
-	})
+	});
 
 module.exports = router;

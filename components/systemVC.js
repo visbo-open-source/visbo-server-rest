@@ -37,7 +37,7 @@ var createSystemVC = function (body) {
 	var query = {system: true};
 	VisboCenter.findOne(query, function(err, vc) {
 		if (err) {
-			errorHandler(err, undefined, `DB: System VC Find error`, undefined)
+			errorHandler(err, undefined, `DB: System VC Find error`, undefined);
 			return undefined;
 		}
 		if (vc) {
@@ -56,26 +56,26 @@ var createSystemVC = function (body) {
 		newVC.vpCount = 0;
 		newVC.save(function(err, vc) {
 			if (err) {
-				errorHandler(err, undefined, `DB: System VC save error`, undefined)
-				return undefined
+				errorHandler(err, undefined, `DB: System VC save error`, undefined);
+				return undefined;
 			}
 			vcSystem = vc;
-			redisClient.set('vcSystem', vcSystem._id.toString())
+			redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
 
 			var newUser = new User();
 			newUser.email = body.users[0].email;
 			newUser.save(function(err, user) {
 				if (err) {
-					errorHandler(err, undefined, `DB: System VC User Create error`, undefined)
-					return undefined
+					errorHandler(err, undefined, `DB: System VC User Create error`, undefined);
+					return undefined;
 				}
 				var newGroup = new VisboGroup();
-				newGroup.groupType = 'System'
+				newGroup.groupType = 'System';
 				newGroup.global = false;
 				newGroup.name = 'SysAdmin';
 				newGroup.vcid = vc._id;
-				newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permDeleteVC: true, permManagePerm: true}}
+				newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permDeleteVC: true, permManagePerm: true}};
 				newGroup.users.push({userId: user._id, email: user.email});
 				newGroup.save(function(err, group) {
 					if (err) {
@@ -84,16 +84,16 @@ var createSystemVC = function (body) {
 					}
 					logger4js.warn("System VisboCenter Group Created, group: %O", group);
 					return vc;
-				})
+				});
 			});
 		});
 	});
-}
+};
 
 var getSystemVC = function () {
 	logger4js.info("Get System Visbo Center");
 	return vcSystem;
-}
+};
 
 var initSystemSettings = function() {
 	// Get the Default Log Level from DB
@@ -104,7 +104,7 @@ var initSystemSettings = function() {
 	var queryVCSetting = VCSetting.find(query);
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
-			errorHandler(err, undefined, `DB: Get System Setting Select `, undefined)
+			errorHandler(err, undefined, `DB: Get System Setting Select `, undefined);
 		}
 		logger4js.info("Setting %d found for System VC", listVCSetting ? listVCSetting.length : undefined);
 		vcSystemSetting = listVCSetting;
@@ -120,15 +120,15 @@ var initSystemSettings = function() {
 				redisClient.set('vcSystem', vcSystem._id.toString());
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
-				lastUpdatedAt = vcSystemSetting[i].updatedAt
+				lastUpdatedAt = vcSystemSetting[i].updatedAt;
 			}
 		}
-		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4)
-		logging.setLogLevelConfig(getSystemVCSetting("DEBUG").value)
+		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4);
+		logging.setLogLevelConfig(getSystemVCSetting("DEBUG").value);
 
 		logger4js.info("Cache System Setting last Updated %s", lastUpdatedAt.toISOString());
 	});
-}
+};
 
 var refreshSystemSetting = function(task, finishedTask) {
 	if (!task || !task.value) finishedTask(task, false);
@@ -136,7 +136,7 @@ var refreshSystemSetting = function(task, finishedTask) {
 	// Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
 		if (err) {
-			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined)
+			errorHandler(err, undefined, `REDIS: Get System Setting vcSystemConfigUpdatedAt Error `, undefined);
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
 			finishedTask(task, false);
 			return;
@@ -144,24 +144,24 @@ var refreshSystemSetting = function(task, finishedTask) {
 		var result = {};
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
 			logger4js.trace("Task(%s) refreshSystemSetting Init Settings %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
-			initSystemSettings()
-			result = {result: 1, resultDescription: 'Init System Settings'}
+			initSystemSettings();
+			result = {result: 1, resultDescription: 'Init System Settings'};
 		} else {
 			logger4js.trace("Task(%s) refreshSystemSetting Settings Still UpToDate %s %s", task._id, newUpdatedAt, lastUpdatedAt.toISOString());
-			result = {result: 0, resultDescription: 'System Settings Still up to date'}
+			result = {result: 0, resultDescription: 'System Settings Still up to date'};
 		}
 		task.value.taskSpecific = result;
 		finishedTask(task, task.value.taskSpecific.result == 0);
 		logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
-	})
-}
+	});
+};
 
 var reloadSystemSetting = function() {
 	logger4js.info("reloadSystemSetting from DB");
 	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
 	redisClient.del('vcSystemConfigUpdatedAt', function(err, response) {
 		if (err) {
-			errorHandler(err, undefined, `REDIS: Del System Setting vcSystemConfigUpdatedAt Error `, undefined)
+			errorHandler(err, undefined, `REDIS: Del System Setting vcSystemConfigUpdatedAt Error `, undefined);
 			return;
 		}
 		if (response) {
@@ -169,9 +169,9 @@ var reloadSystemSetting = function() {
 		} else  {
 			logger4js.warn("REDIS: vcSystemConfigUpdatedAt Deletion Problem");
 		}
-		initSystemSettings()
-	})
-}
+		initSystemSettings();
+	});
+};
 
 var getSystemVCSetting = function (name) {
 	logger4js.trace("Get System Visbo Center Setting: %s", name);
@@ -179,19 +179,19 @@ var getSystemVCSetting = function (name) {
 	for (var i = 0; i < vcSystemSetting.length; i++) {
 		if (vcSystemSetting[i].name == name) {
 			logger4js.debug("Get System Visbo Center Setting: %s found", name);
-			return vcSystemSetting[i]
+			return vcSystemSetting[i];
 		}
 	}
 	var value = undefined;
 
 	if (name == "DEBUG") {
 		// Set Default Values
-		value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"}
+		value = {"VC": "info", "VP": "info", "VPV": "info", "USER":"info", "OTHER": "info", "MAIL": "info", "All": "info"};
 	} else if (name == "PW Policy") {
-		value = {PWPolicy: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\"\\'\\\\]).{8,}$", Description: "At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."}
+		value = {PWPolicy: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\"\\'\\\\]).{8,}$", Description: "At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."};
 	} else if (name == "UI URL") {
 		// Check Environment and update DB
-		value = {UIUrl: process.env.UI_URL || 'http://localhost:4200'}
+		value = {UIUrl: process.env.UI_URL || 'http://localhost:4200'};
 	} else if (name == "SMTP") {
 		// Check Environment and update DB
 		if (process.env.SMTP != undefined) {
@@ -205,7 +205,7 @@ var getSystemVCSetting = function (name) {
 		vcSetting.vcid = vcSystem._id;
 		vcSetting.value = value;
 		vcSetting.type = 'SysConfig';
-		var vcSettingCopy = JSON.parse(JSON.stringify(vcSetting))
+		var vcSettingCopy = JSON.parse(JSON.stringify(vcSetting));
 		if (vcSetting.name == "SMTP") {
 			if (vcSetting.value && vcSetting.value.auth && vcSetting.value.auth.pass) {
 				logger4js.info("MAIL Encrypt Password");
@@ -215,23 +215,23 @@ var getSystemVCSetting = function (name) {
 		vcSystemSetting.push(vcSettingCopy);
 		vcSetting.save(function(err) {
 			if (err) {
-				errorHandler(err, undefined, `DB: POST System VC Setting`, undefined)
+				errorHandler(err, undefined, `DB: POST System VC Setting`, undefined);
 				return;
 			}
 		});
-		return vcSetting
+		return vcSetting;
 	}
 	logger4js.info("Get System Visbo Center Setting: %s not found", name);
 	return undefined;
-}
+};
 
 var getSystemUrl = function () {
-	var vcSetting = getSystemVCSetting("UI URL")
+	var vcSetting = getSystemVCSetting("UI URL");
 	var result = vcSetting.value && vcSetting.value.UIUrl;
 	logger4js.debug("Get Visbo System Url: %s", result);
 
-	return result
-}
+	return result;
+};
 
 module.exports = {
 	createSystemVC: createSystemVC,

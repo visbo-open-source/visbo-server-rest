@@ -26,9 +26,9 @@ var VCCost = mongoose.model('VCCost');
 var VCSetting = mongoose.model('VCSetting');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var Const = require('../models/constants')
-var constPermVC = Const.constPermVC
-var constPermSystem = Const.constPermSystem
+var Const = require('../models/constants');
+var constPermVC = Const.constPermVC;
+var constPermSystem = Const.constPermSystem;
 
 var mail = require('../components/mail');
 var ejs = require('ejs');
@@ -66,14 +66,14 @@ var updateVCName = function(vcid, name){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$set: {"vc.name": name}};
 
-	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
+	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name);
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid}`, undefined);
 		}
-		logger4js.trace("Updated VP for VC %s Populate Name changed %d %d", vcid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated VP for VC %s Populate Name changed %d %d", vcid, result.n, result.nModified);
+	});
+};
 
 // undelete the VPs after undelete VC and set the actual VC Name
 var unDeleteVP = function(vcid, name){
@@ -82,14 +82,14 @@ var unDeleteVP = function(vcid, name){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}, $set: {"vc.name": name}};
 
-	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name)
+	logger4js.debug("Update VPs for VC %s with new Name %s", vcid, name);
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid} set undelete`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid} set undelete`, undefined);
 		}
-		logger4js.trace("Updated VP for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated VP for VC %s set undelete changed %d %d", vcid, result.n, result.nModified);
+	});
+};
 
 // undelete the Groups after undelete VC
 var unDeleteGroup = function(vcid){
@@ -97,14 +97,14 @@ var unDeleteGroup = function(vcid){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'deletedByParent': ''}};
 
-	logger4js.debug("Update Groups for VC %s", vcid)
+	logger4js.debug("Update Groups for VC %s", vcid);
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating Groups for VC ${vcid} set undelete`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating Groups for VC ${vcid} set undelete`, undefined);
 		}
-		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vcid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated Groups for VC %s set undelete changed %d %d", vcid, result.n, result.nModified);
+	});
+};
 
 /////////////////
 // Visbo Center API
@@ -164,9 +164,9 @@ router.route('/')
 
 			// check for deleted only for sysAdmins
 			if (isSysAdmin && req.query.deleted) {
-				query.deletedAt = {$exists: true}				//  deleted
+				query.deletedAt = {$exists: true};				//  deleted
 			} else {
-				query.deletedAt = {$exists: false}				// Not deleted
+				query.deletedAt = {$exists: false};				// Not deleted
 			}
 			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
 			logger4js.trace("Check for VC query %O", query);
@@ -175,7 +175,7 @@ router.route('/')
 			queryVC.select('-users');
 			queryVC.exec(function (err, listVC) {
 				if (err) {
-					errorHandler(err, res, `DB: GET VCs`, `Error getting VisboCenters`)
+					errorHandler(err, res, `DB: GET VCs`, `Error getting VisboCenters`);
 					return;
 				}
 				logger4js.debug("Found VCs %d", listVC.length);
@@ -267,7 +267,7 @@ router.route('/')
 		query.deletedAt = {$exists: false};
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VC ${req.body.name} Find`, `Create Visbo Center ${req.body.name} failed`)
+				errorHandler(err, res, `DB: POST VC ${req.body.name} Find`, `Create Visbo Center ${req.body.name} failed`);
 				return;
 			}
 			if (vc) {
@@ -284,11 +284,11 @@ router.route('/')
 
 			// Create new VC Group and add current user to the new Group
 			var newVG = new VisboGroup();
-			newVG.name = 'Visbo Center Admin'
+			newVG.name = 'Visbo Center Admin';
 			newVG.groupType = 'VC';
 			newVG.internal = true;
 			newVG.global = true;
-			newVG.permission = {vc: Const.constPermVCAll }
+			newVG.permission = {vc: Const.constPermVCAll };
 			newVG.vcid = newVC._id;
 			newVG.users = [];
 			newVG.users.push({email: useremail, userId: userId});
@@ -296,14 +296,14 @@ router.route('/')
 			logger4js.trace("VC Post Create Admin Group for vc %s group %O ", newVC._id, newVG);
 			newVG.save(function(err) {
 				if (err) {
-					errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined)
+					errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined);
 				}
 			});
 
 			logger4js.debug("Save VisboCenter %s %s", newVC.name, newVC._id);
 			newVC.save(function(err, vc) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VC ${req.body.name} Save`, `Failed to create Visbo Center ${req.body.name}`)
+					errorHandler(err, res, `DB: POST VC ${req.body.name} Save`, `Failed to create Visbo Center ${req.body.name}`);
 					return;
 				}
 				req.oneVC = vc;
@@ -314,7 +314,7 @@ router.route('/')
 				});
 			});
 		});
-	})
+	});
 
 router.route('/:vcid')
  /**
@@ -474,13 +474,13 @@ router.route('/:vcid')
 		}
 		// check that VC Name is unique
 		var query = {};
-		query._id = {$ne: req.oneVC._id}
+		query._id = {$ne: req.oneVC._id};
 		query.name = req.body.name;								// Name Duplicate check
 		query.deletedAt = {$exists: false};
 
 		VisboCenter.findOne(query, function(err, vc) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Unique Name Check`, `Error updating Visbo Center ${req.oneVC.name}`)
+				errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Unique Name Check`, `Error updating Visbo Center ${req.oneVC.name}`);
 				return;
 			}
 			if (vc) {
@@ -493,7 +493,7 @@ router.route('/:vcid')
 			logger4js.debug("PUT VC: save now");
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Save`, `Error updating Visbo Center ${req.oneVC.name}`)
+					errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Save`, `Error updating Visbo Center ${req.oneVC.name}`);
 					return;
 				}
 				// Update underlying projects if name has changed
@@ -561,31 +561,31 @@ router.route('/:vcid')
 			logger4js.trace("Delete Visbo Center after permission check %s %O", req.params.vcid, req.oneVC);
 			req.oneVC.save(function(err, oneVC) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id}`, `Error deleting Visbo Center ${req.oneVC.name}`)
+					errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id}`, `Error deleting Visbo Center ${req.oneVC.name}`);
 					return;
 				}
 				req.oneVC = oneVC;
 				logger4js.debug("VC Delete %s: Update SubProjects to %s", req.oneVC._id, req.oneVC.name);
-				var updateQuery = {}
+				var updateQuery = {};
 				var deleteDate = new Date();
 				updateQuery.vcid = req.oneVC._id;
 				var updateUpdate = {$set: {'vc.deletedAt': deleteDate}};
 				var updateOption = {upsert: false, multi: "true"};
 				VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 					if (err){
-						errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Projects`, `Error deleting Visbo Center ${req.oneVC.name}`)
+						errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Projects`, `Error deleting Visbo Center ${req.oneVC.name}`);
 						return;
 					}
-					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified)
+					logger4js.debug("VC Delete found %d VPs and updated %d VPs", result.n, result.nModified);
 					updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};
 					updateUpdate = {$set: {'deletedByParent': 'VC'}};
 					var updateOption = {upsert: false, multi: "true"};
 					VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 						if (err){
-							errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Groups`, `Error deleting Visbo Center ${req.oneVC.name}`)
+							errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Groups`, `Error deleting Visbo Center ${req.oneVC.name}`);
 							return;
 						}
-						logger4js.debug("VC Delete found %d Groups and updated %d Groups", result.n, result.nModified)
+						logger4js.debug("VC Delete found %d Groups and updated %d Groups", result.n, result.nModified);
 						return res.status(200).send({
 							state: 'success',
 							message: 'Deleted Visbo Center'
@@ -598,13 +598,13 @@ router.route('/:vcid')
 			// Collect all ProjectIDs of this VC
 			req.auditDescription = 'Visbo Center (Destroy)';
 			var query = {};
-			query.vcid = req.oneVC._id
+			query.vcid = req.oneVC._id;
 			var queryVP = VisboProject.find(query);
 			queryVP.select = '_id';
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} Destroy Find`, `Error deleting Visbo Center ${req.oneVC.name}`)
+					errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} Destroy Find`, `Error deleting Visbo Center ${req.oneVC.name}`);
 					return;
 				}
 				logger4js.debug("VC Destroy: Found %d Projects", listVP.length);
@@ -617,23 +617,23 @@ router.route('/:vcid')
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VPVs %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VPVs Deleted", req.oneVC._id)
-				})
+					logger4js.trace("VC Destroy: %s VPVs Deleted", req.oneVC._id);
+				});
 				// Delete all VP Portfolios relating to these ProjectIDs
 				var queryvpf = {vpid: {$in: vpidList}};
 				VisboPortfolio.deleteMany(queryvpf, function (err) {
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VP Portfolios %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VP Portfolios Deleted", req.oneVC._id)
-				})
+					logger4js.trace("VC Destroy: %s VP Portfolios Deleted", req.oneVC._id);
+				});
 				// Delete Audit Trail of VPs & VPVs
 				var queryaudit = {'vp.vpid': {$in: vpidList}};
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting Audit %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VP Audit Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VP Audit Deleted", req.oneVC._id);
 				});
 				// Delete all VPs regarding these ProjectIDs
 				var queryvp = {_id: {$in: vpidList}};
@@ -641,7 +641,7 @@ router.route('/:vcid')
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VPs %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VPs Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VPs Deleted", req.oneVC._id);
 				});
 				// Delete all VCCosts
 				var queryvcid = {vcid: req.oneVC._id};
@@ -649,21 +649,21 @@ router.route('/:vcid')
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC Cost %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Costs Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Costs Deleted", req.oneVC._id);
 				});
 				// Delete all VCRoles
 				VCRole.deleteMany(queryvcid, function (err) {
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC Role %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id);
 				});
 				// Delete all VCSettings
 				VCSetting.deleteMany(queryvcid, function (err) {
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC Role %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Roles Deleted", req.oneVC._id);
 				});
 
 				// Delete all Groups
@@ -671,17 +671,17 @@ router.route('/:vcid')
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC Groups %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Groups Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Groups Deleted", req.oneVC._id);
 				});
 
 				// Delete Audit Trail of VC
 				queryaudit = {'vc.vcid': req.oneVC._id};
-				queryaudit.action = {$ne: 'DELETE'}
+				queryaudit.action = {$ne: 'DELETE'};
 				VisboAudit.deleteMany(queryaudit, function (err) {
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC Audit %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Audit Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Audit Deleted", req.oneVC._id);
 				});
 				// Delete the VC  itself
 				var queryvc = {_id: req.oneVC._id};
@@ -689,7 +689,7 @@ router.route('/:vcid')
 					if (err){
 						logger4js.error("DB: Destroy VC %s, Problem deleting VC %s", req.oneVC._id, err.message);
 					}
-					logger4js.trace("VC Destroy: %s VC Deleted", req.oneVC._id)
+					logger4js.trace("VC Destroy: %s VC Deleted", req.oneVC._id);
 				});
 				return res.status(200).send({
 					state: 'success',
@@ -697,7 +697,7 @@ router.route('/:vcid')
 				});
 			});
 		}
-	})
+	});
 
 router.route('/:vcid/audit')
  /**
@@ -758,8 +758,8 @@ router.route('/:vcid/audit')
 
 		var from, to, maxcount = 1000, action, area;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
-		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
-		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from);
+		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to);
 		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 		if (req.query.action) action = req.query.action.trim();
 		if (req.query.area) area = req.query.area.trim();
@@ -768,7 +768,7 @@ router.route('/:vcid/audit')
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
-			from.setTime(0)
+			from.setTime(0);
 		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
@@ -791,7 +791,7 @@ router.route('/:vcid/audit')
 				// areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
 				break;
 		}
-		if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
+		if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition});
 		if (req.query.text) {
 			var textCondition = [];
 			var text = req.query.text;
@@ -823,12 +823,12 @@ router.route('/:vcid/audit')
 			textCondition.push({"vc.vcjson": expr});
 			textCondition.push({"vp.vpjson": expr});
 			textCondition.push({"url": expr});
-			queryListCondition.push({"$or": textCondition})
+			queryListCondition.push({"$or": textCondition});
 		}
 		var ttlCondition = [];
 		ttlCondition.push({"ttl": {$exists: false}});
 		ttlCondition.push({"ttl": {$gt: new Date()}});
-		queryListCondition.push({"$or": ttlCondition})
+		queryListCondition.push({"$or": ttlCondition});
 
 		query["$and"] = queryListCondition;
 		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
@@ -839,7 +839,7 @@ router.route('/:vcid/audit')
 		.lean()
 		.exec(function (err, listVCAudit) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VC Audit ${req.oneVC._id} `, `Error getting Audit for Visbo Center ${req.oneVC.name}`)
+				errorHandler(err, res, `DB: GET VC Audit ${req.oneVC._id} `, `Error getting Audit for Visbo Center ${req.oneVC.name}`);
 				return;
 			}
 			logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
@@ -850,7 +850,7 @@ router.route('/:vcid/audit')
 				audit: listVCAudit
 			});
 		});
-	})
+	});
 
 router.route('/:vcid/group')
 
@@ -911,7 +911,7 @@ router.route('/:vcid/group')
 		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, listVCGroup) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VC Groups ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`)
+				errorHandler(err, res, `DB: GET VC Groups ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`);
 				return;
 			}
 			logger4js.info("Found %d Groups for VC", listVCGroup.length);
@@ -924,7 +924,7 @@ router.route('/:vcid/group')
 														groupId: listVCGroup[i]._id,
 														groupName: listVCGroup[i].name,
 														groupType: listVCGroup[i].groupType,
-														internal: listVCGroup[i].internal})
+														internal: listVCGroup[i].internal});
 					}
 				}
 				var aggregateQuery = [
@@ -949,7 +949,7 @@ router.route('/:vcid/group')
 				var queryVCAllUsers = VisboGroup.aggregate(aggregateQuery);
 				queryVCAllUsers.exec(function (err, listVPUsers) {
 					if (err) {
-						errorHandler(err, res, `DB: GET VC All Users ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`)
+						errorHandler(err, res, `DB: GET VC All Users ${req.oneVC._id} `, `Error getting Groups for Visbo Center ${req.oneVC.name}`);
 						return;
 					}
 					return res.status(200).send({
@@ -1029,9 +1029,9 @@ router.route('/:vcid/group')
 		var vgGlobal = req.body.global == true;
 		groupType = req.oneVC.system ? 'System' : 'VC';
 		if ( req.body.permission ) {
-			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
-			if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
-			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll;
+			if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll;
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 		}
 		if (req.body.name) req.body.name = req.body.name.trim();
 
@@ -1057,7 +1057,7 @@ router.route('/:vcid/group')
 		queryVCGroup.lean();
 		queryVCGroup.exec(function (err, oneVCGroup) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Group ${req.body.name} `, `Error updating Group for Visbo Center ${req.oneVC.name} `)
+				errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Group ${req.body.name} `, `Error updating Group for Visbo Center ${req.oneVC.name} `);
 				return;
 			}
 			if (oneVCGroup) {
@@ -1078,7 +1078,7 @@ router.route('/:vcid/group')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Get Projects `, `Error creating Group for Visbo Center ${req.oneVC.name} `)
+					errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Get Projects `, `Error creating Group for Visbo Center ${req.oneVC.name} `);
 					return;
 				}
 				logger4js.debug("VC Create Group: Found %d Projects", listVP.length);
@@ -1096,7 +1096,7 @@ router.route('/:vcid/group')
 					logger4js.debug("Set Global Flag %s", vgGlobal);
 					vcGroup.vpids = [];
 					for (var i = 0; i<listVP.length; i++) {
-						vcGroup.vpids.push(listVP[i]._id)
+						vcGroup.vpids.push(listVP[i]._id);
 					}
 					logger4js.debug("Updated Projects/n", vcGroup.vpids);
 				} else {
@@ -1104,7 +1104,7 @@ router.route('/:vcid/group')
 				}
 				vcGroup.save(function(err, oneVcGroup) {
 					if (err) {
-						errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Save Group ${req.body.name} `, `Error creating Group for Visbo Center ${req.oneVC.name} `)
+						errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Save Group ${req.body.name} `, `Error creating Group for Visbo Center ${req.oneVC.name} `);
 						return;
 					}
 					req.oneGroup = oneVcGroup;
@@ -1125,7 +1125,7 @@ router.route('/:vcid/group')
 				});
 			});
 		});
-	})
+	});
 
 router.route('/:vcid/group/:groupid')
 
@@ -1184,7 +1184,7 @@ router.route('/:vcid/group/:groupid')
 		}
 		req.oneGroup.remove(function(err) {
 			if (err) {
-				errorHandler(err, res, `DB: DELETE VC Group ${req.oneGroup._id} `, `Error deleting Visbo Center Group ${req.oneGroup.name} `)
+				errorHandler(err, res, `DB: DELETE VC Group ${req.oneGroup._id} `, `Error deleting Visbo Center Group ${req.oneGroup.name} `);
 				return;
 			}
 			return res.status(200).send({
@@ -1252,9 +1252,9 @@ router.route('/:vcid/group/:groupid')
 			vgGlobal = req.body.global == true;
 		logger4js.debug("Get Global Flag %s process %s", req.body.global, vgGlobal);
 		if ( req.body.permission ) {
-			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll
-			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll
-			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll;
+			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll;
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 		}
 
 		logger4js.info("PUT Visbo Center Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vcid, req.params.groupid, req.listVCPerm.getPerm(req.params.vcid));
@@ -1304,7 +1304,7 @@ router.route('/:vcid/group/:groupid')
 		query.groupType = "VC";
 		VisboGroup.find(query, function(err, listVCGroup) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VC Group ${req.body.name} Find`, `Update Visbo Center Group ${req.body.name} failed`)
+				errorHandler(err, res, `DB: PUT VC Group ${req.body.name} Find`, `Update Visbo Center Group ${req.body.name} failed`);
 				return;
 			}
 			if (listVCGroup.length > 1 || (listVCGroup.length == 1 &&  listVCGroup[0]._id.toString() != req.oneGroup._id.toString())) {
@@ -1324,7 +1324,7 @@ router.route('/:vcid/group/:groupid')
 			queryVP.lean();
 			queryVP.exec(function (err, listVP) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Group, Get Projects `, `Error updating Group for Visbo Center ${req.oneVC.name} `)
+					errorHandler(err, res, `DB: PUT VC ${req.oneVC._id} Group, Get Projects `, `Error updating Group for Visbo Center ${req.oneVC.name} `);
 					return;
 				}
 				logger4js.debug("Found %d Projects", listVP.length);
@@ -1339,7 +1339,7 @@ router.route('/:vcid/group/:groupid')
 					req.oneGroup.vpids = [];
 					if (vgGlobal == true) {
 						for (var i = 0; i<listVP.length; i++) {
-							req.oneGroup.vpids.push(listVP[i]._id)
+							req.oneGroup.vpids.push(listVP[i]._id);
 						}
 						logger4js.debug("Updated Projects/n", req.oneGroup.vpids);
 					} else {
@@ -1350,7 +1350,7 @@ router.route('/:vcid/group/:groupid')
 				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 				req.oneGroup.save(function(err, oneVcGroup) {
 					if (err) {
-						errorHandler(err, res, `DB: PUT VC Group ${req.oneGroup._id} Save `, `Error updating Visbo Center Group ${req.oneGroup.name} `)
+						errorHandler(err, res, `DB: PUT VC Group ${req.oneGroup._id} Save `, `Error updating Visbo Center Group ${req.oneGroup.name} `);
 						return;
 					}
 					var resultGroup = {};
@@ -1370,7 +1370,7 @@ router.route('/:vcid/group/:groupid')
 				});
 			});
 		});
-	})
+	});
 
 	router.route('/:vcid/group/:groupid/user')
 
@@ -1467,12 +1467,12 @@ router.route('/:vcid/group/:groupid')
 			});
 		}
 		// check if the user exists and get the UserId or create the user
-		var query = {'email': vcUser.email}
+		var query = {'email': vcUser.email};
 		var queryUsers = User.findOne(query);
 		//queryUsers.select('email');
 		queryUsers.exec(function (err, user) {
 			if (err) {
-				errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Find User `, `Error adding User to Visbo Center Group ${req.oneGroup.name} `)
+				errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Find User `, `Error adding User to Visbo Center Group ${req.oneGroup.name} `);
 				return;
 			}
 			if (!user) {
@@ -1481,21 +1481,21 @@ router.route('/:vcid/group/:groupid')
 				logger4js.debug("Create new User %s for VC in Group %s", vcUser.email, req.oneGroup._id);
 				user.save(function(err, user) {
 					if (err) {
-						errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Create new User `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`)
+						errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Create new User `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`);
 						return;
 					}
 					// user exists now, now the VC can be updated
 					vcUser.userId = user._id;
 
-					req.oneGroup.users.push(vcUser)
+					req.oneGroup.users.push(vcUser);
 					req.oneGroup.save(function(err, vcGroup) {
 						if (err) {
-							errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Save Group `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`)
+							errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Save Group `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`);
 							return;
 						}
 						req.oneGroup = vcGroup;
 						// now send an e-Mail to the user for registration
-						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs')
+						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs');
 						var uiUrl =  getSystemUrl();
 
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
@@ -1538,21 +1538,21 @@ router.route('/:vcid/group/:groupid')
 								});
 							});
 						}
-					})
+					});
 				});
 			} else {
 				vcUser.userId = user._id;
-				req.oneGroup.users.push(vcUser)
+				req.oneGroup.users.push(vcUser);
 				req.oneGroup.save(function(err, vcGroup) {
 					if (err) {
-						errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Save Group `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`)
+						errorHandler(err, res, `DB: POST User to VC Group ${req.oneGroup._id} Save Group `, `Error adding User to Visbo Center Group ${req.oneGroup.name}`);
 						return;
 					}
 					req.oneGroup = vcGroup;
 					// now send an e-Mail to the user for registration/login
 					var template = __dirname.concat('/../emailTemplates/');
 					var uiUrl =  getSystemUrl();
-					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name
+					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name;
 					logger4js.trace("E-Mail User Status %O %s", user.status, user.status.registeredAt);
 					if (user.status && user.status.registeredAt) {
 						// send e-Mail to a registered user
@@ -1601,10 +1601,10 @@ router.route('/:vcid/group/:groupid')
 							});
 						});
 					}
-				})
+				});
 			}
-		})
-	})
+		});
+	});
 
 	router.route('/:vcid/group/:groupid/user/:userid')
 
@@ -1642,7 +1642,7 @@ router.route('/:vcid/group/:groupid')
 
 		req.auditDescription = 'Visbo Center User (Delete)';
 
-		var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
+		var delUser = req.oneGroup.users.find(findUserById, req.params.userid);
 		if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
 		if (req.oneGroup.groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
@@ -1662,7 +1662,7 @@ router.route('/:vcid/group/:groupid')
 				message: 'not a Visbo Center Group'
 			});
 		}
-		var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )))
+		var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )));
 		logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 		logger4js.trace("DELETE Visbo Center Filtered User List %O ", newUserList);
 		if (newUserList.length == req.oneGroup.users.length) {
@@ -1684,7 +1684,7 @@ router.route('/:vcid/group/:groupid')
 		req.oneGroup.users = newUserList;
 		req.oneGroup.save(function(err, vg) {
 			if (err) {
-				errorHandler(err, res, `DB: DELETE User from VC Group ${req.oneGroup._id} Save Group `, `Error deleting User from Visbo Center Group ${req.oneGroup.name} `)
+				errorHandler(err, res, `DB: DELETE User from VC Group ${req.oneGroup._id} Save Group `, `Error deleting User from Visbo Center Group ${req.oneGroup.name} `);
 				return;
 			}
 			req.oneGroup = vg;
@@ -1694,8 +1694,8 @@ router.route('/:vcid/group/:groupid')
 				groups: [req.oneGroup],
 				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
-		})
-	})
+		});
+	});
 
 	router.route('/:vcid/setting')
 
@@ -1758,7 +1758,7 @@ router.route('/:vcid/group/:groupid')
 				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
 				latestOnly = true;
 			}
-			query.vcid = req.oneVC._id
+			query.vcid = req.oneVC._id;
 			if (req.query.name) query.name = req.query.name;
 			if (req.query.type) query.type = req.query.type;
 			if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) query.userId = req.query.userId;
@@ -1767,20 +1767,20 @@ router.route('/:vcid/group/:groupid')
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext)
-				queryVCSetting.sort('type name userId +timestamp')
+				queryVCSetting.sort('type name userId +timestamp');
 			else
-				queryVCSetting.sort('type name userId -timestamp')
+				queryVCSetting.sort('type name userId -timestamp');
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
 				if (err) {
-					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`)
+					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`);
 					return;
 				}
 				for (let i = 0; i < listVCSetting.length; i++){
 					// Remove Password Information
 					if (listVCSetting[i].type == "SysConfig" && listVCSetting[i].name == "SMTP"
 					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
-						listVCSetting[i].value.auth.pass = ""
+						listVCSetting[i].value.auth.pass = "";
 						break;
 					}
 				}
@@ -1793,7 +1793,7 @@ router.route('/:vcid/group/:groupid')
 						if (listVCSetting[i].type != listVCSetting[i-1].type
 						|| listVCSetting[i].name != listVCSetting[i-1].name
 						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
-							listVCSettingfiltered.push(listVCSetting[i])
+							listVCSettingfiltered.push(listVCSetting[i]);
 							logger4js.trace("compare unequal: ", listVCSetting[i]._id != listVCSetting[i-1]._id);
 						}
 					}
@@ -1905,7 +1905,7 @@ router.route('/:vcid/group/:groupid')
 
 			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VisboCenter Setting ${req.oneVC.name}`)
+					errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VisboCenter Setting ${req.oneVC.name}`);
 					return;
 				}
 				req.oneVCSetting = oneVCSetting;
@@ -1916,7 +1916,7 @@ router.route('/:vcid/group/:groupid')
 					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 				});
 			});
-		})
+		});
 
 		router.route('/:vcid/setting/:settingid')
 
@@ -1968,7 +1968,7 @@ router.route('/:vcid/group/:groupid')
 			// queryVCSetting.select('_id vcid name');
 			queryVCSetting.exec(function (err, oneVCSetting) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Find`, `Error deleting VisboCenter Setting ${req.params.settingid}`)
+					errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Find`, `Error deleting VisboCenter Setting ${req.params.settingid}`);
 					return;
 				}
 				if (!oneVCSetting) {
@@ -1990,7 +1990,7 @@ router.route('/:vcid/group/:groupid')
 				logger4js.info("Found the Setting for VC");
 				oneVCSetting.remove(function(err) {
 					if (err) {
-						errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VisboCenter Setting ${req.params.settingid}`)
+						errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VisboCenter Setting ${req.params.settingid}`);
 						return;
 					}
 					return res.status(200).send({
@@ -2076,7 +2076,7 @@ router.route('/:vcid/group/:groupid')
 		// queryVCSetting.select('_id vcid name');
 		queryVCSetting.exec(function (err, oneVCSetting) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Find`, `Error updating VisboCenter Setting ${req.params.settingid}`)
+				errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Find`, `Error updating VisboCenter Setting ${req.params.settingid}`);
 				return;
 			}
 			if (!oneVCSetting) {
@@ -2108,7 +2108,7 @@ router.route('/:vcid/group/:groupid')
 					if (oneVCSetting.name == "SMTP") {
 						if (oneVCSetting.value && oneVCSetting.value.auth && oneVCSetting.value.auth.pass)
 							settingChangeSMTP = true;
-							password = oneVCSetting.value.auth.pass
+							password = oneVCSetting.value.auth.pass;
 					}
 					if (req.body.value) oneVCSetting.value = req.body.value;
 					if (settingChangeSMTP) {
@@ -2133,13 +2133,13 @@ router.route('/:vcid/group/:groupid')
 				}
 				oneVCSetting.save(function(err, resultVCSetting) {
 					if (err) {
-						errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, `Error updating VisboCenter Setting`)
+						errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, `Error updating VisboCenter Setting`);
 						return;
 					}
 					if (isSysConfig) {
 						if (resultVCSetting.name == 'DEBUG') {
 							logger4js.info("Update System Log Setting");
-							logging.setLogLevelConfig(resultVCSetting.value)
+							logging.setLogLevelConfig(resultVCSetting.value);
 						}
 						reloadSystemSetting();
 					}
@@ -2169,7 +2169,7 @@ router.route('/:vcid/group/:groupid')
 
 				VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 						if (err) {
-							errorHandler(err, undefined, `DB: VC Setting Update Task`, undefined)
+							errorHandler(err, undefined, `DB: VC Setting Update Task`, undefined);
 						}
 						logger4js.debug("VC Seting Task (%s/%s) Saved %O", oneVCSetting.name, oneVCSetting._id, result);
 						if (result.nModified == 1) {
@@ -2189,9 +2189,9 @@ router.route('/:vcid/group/:groupid')
 								perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
 							});
 						}
-				})
+				});
 			}
 		});
-	})
+	});
 
 module.exports = router;

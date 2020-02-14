@@ -42,10 +42,10 @@ function finishedTask(task, ignoreAudit) {
   logger4js.trace("FinishedTask Task(%s/%s) unlock %O", task.name, task._id, updateUpdate);
   VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
       if (err) {
-        errorHandler(err, undefined, `DB: Update Task Unlock`, undefined)
+        errorHandler(err, undefined, `DB: Update Task Unlock`, undefined);
       }
       logger4js.debug("Finished Task Task(%s/%s) unlocked %s", task.name, task._id, result.nModified);
-  })
+  });
   if (!ignoreAudit) createTaskAudit(task, duration);
 }
 
@@ -56,15 +56,15 @@ function createTaskAudit(task, duration) {
   }
   var auditEntry = new VisboAudit();
   auditEntry.action = "PUT";
-  auditEntry.url = "Task"
+  auditEntry.url = "Task";
   auditEntry.host = os.hostname().split(".")[0];
   auditEntry.sysAdmin = true;
   auditEntry.user = {};
   auditEntry.user.email = "System";
   auditEntry.vc = {};
-  auditEntry.vc.vcid = vcSystemId
-  auditEntry.vc.name = "Visbo-System"
-  var vcjson = {"Info": task.value.taskSpecific.resultDescription}
+  auditEntry.vc.vcid = vcSystemId;
+  auditEntry.vc.name = "Visbo-System";
+  var vcjson = {"Info": task.value.taskSpecific.resultDescription};
   auditEntry.vc.vcjson = JSON.stringify(vcjson);
 
   auditEntry.ttl = new Date();
@@ -74,7 +74,7 @@ function createTaskAudit(task, duration) {
   auditEntry.result = {};
   auditEntry.result.time = duration;
   auditEntry.result.status = task.value.taskSpecific.result != 0 ? 200 : 304;
-  auditEntry.result.statusText = "Success"
+  auditEntry.result.statusText = "Success";
   // auditEntry.result.size = taskSpecific.result;
   auditEntry.save(function(err) {
     if (err) {
@@ -92,7 +92,7 @@ function checkNextRun() {
       logger4js.warn("Visbo Redis System returned %O ", err);
       return;
     }
-    vcSystemId = vcSystemIdRedis
+    vcSystemId = vcSystemIdRedis;
     logger4js.trace("Visbo Task Schedule Found Redis System VC %s ", vcSystemId);
     var query = {};
 		query.vcid = vcSystemId;
@@ -100,7 +100,7 @@ function checkNextRun() {
 		var queryVCSetting = VCSetting.find(query);
 		queryVCSetting.exec(function (err, listTask) {
 			if (err) {
-				errorHandler(err, undefined, `DB: Get System Setting Task Select `, undefined)
+				errorHandler(err, undefined, `DB: Get System Setting Task Select `, undefined);
         return;
       }
 			if (listTask) {
@@ -143,7 +143,7 @@ function checkNextRun() {
             listTask[i].value.nextRun.setMinutes(0);
             listTask[i].value.nextRun.setSeconds(0);
           }
-          var lockPeriod = 5*60
+          var lockPeriod = 5*60;
           lockPeriod = lockPeriod > listTask[i].value.interval ? listTask[i].value.interval / 2 : lockPeriod;
           listTask[i].value.lockedUntil = new Date(actual);
           listTask[i].value.lockedUntil.setTime(listTask[i].value.lockedUntil.getTime() + lockPeriod * 1000);
@@ -157,7 +157,7 @@ function checkNextRun() {
 
           VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
             if (err) {
-              errorHandler(err, undefined, `DB: Update Task`, undefined)
+              errorHandler(err, undefined, `DB: Update Task`, undefined);
             }
             logger4js.debug("CheckNextRun Task (%s/%s) Saved Items %s", task.name, task._id, result.nModified);
             if (result.nModified == 1) {
@@ -170,11 +170,11 @@ function checkNextRun() {
                   visboAudit.squeezeAudit(task, finishedTask);
                   break;
                 case 'Log File Cleanup':
-                  var config = getSystemVCSetting('Log Age')
+                  var config = getSystemVCSetting('Log Age');
                   var age = 30;
                   if (config && config.value && config.value.duration)
                     age = config.value.duration;
-                  task.specificValue = { 'logAge': age }
+                  task.specificValue = { 'logAge': age };
                   logger4js.debug("Execute Log Delete Age %O", task.specificValue);
                   logging.cleanupLogFiles(task, finishedTask);
                   break;
@@ -188,12 +188,12 @@ function checkNextRun() {
                   taskTest(task, finishedTask);
                   break;
                 default:
-                  finishedTask(task, false)
+                  finishedTask(task, false);
               }
             } else {
               logger4js.info("CheckNextRun Task (%s/%s) locked already by another Server", task.name, task._id);
             }
-          })
+          });
           // execute only one per round, otherwise task Object is incorrect
           break;
         }
@@ -204,7 +204,7 @@ function checkNextRun() {
 
 function taskTest(task, finishedTask) {
   if (!task && !task.value) {
-    finishedTask(task, true)
+    finishedTask(task, true);
   }
   logger4js.trace("TaskTest Execute %s Value %O", task && task._id, task.value);
   task.value.taskSpecific = {};
@@ -213,7 +213,7 @@ function taskTest(task, finishedTask) {
   task.value.taskSpecific.lastPeriod.setMinutes(0);
   task.value.taskSpecific.lastPeriod.setSeconds(0);
 
-  finishedTask(task, true)
+  finishedTask(task, true);
   logger4js.debug("TaskTest Done %s Result %O", task._id, task.value.taskSpecific);
 }
 

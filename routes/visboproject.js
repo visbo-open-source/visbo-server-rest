@@ -11,7 +11,7 @@ var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
-var getSystemUrl = require('./../components/systemVC').getSystemUrl
+var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var User = mongoose.model('User');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -24,9 +24,9 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var Const = require('../models/constants')
-var constPermVC = Const.constPermVC
-var constPermVP = Const.constPermVP
+var Const = require('../models/constants');
+var constPermVC = Const.constPermVC;
+var constPermVP = Const.constPermVP;
 
 var mail = require('./../components/mail');
 var ejs = require('ejs');
@@ -70,21 +70,21 @@ var updateVPCount = function(vcid, increment){
 
 	VisboCenter.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err) {
-			errorHandler(err, undefined, `DB: Problem updating VC ${vcid} set vpCount`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating VC ${vcid} set vpCount`, undefined);
 		}
-		logger4js.trace("Updated VC %s vpCount inc %d changed %d %d", vcid, increment, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated VC %s vpCount inc %d changed %d %d", vcid, increment, result.n, result.nModified);
+	});
+};
 
 // updates the VC Name in the VP after undelete as the name could have changed in between
 var updateVCName = function(vp){
-	logger4js.trace("Start Update VP%s with correct VC Name ", vp._id)
-	var query = {_id: vp.vcid}
+	logger4js.trace("Start Update VP%s with correct VC Name ", vp._id);
+	var query = {_id: vp.vcid};
 	var queryVC = VisboCenter.findOne(query);
 	queryVC.lean();
 	queryVC.exec(function (err, vc) {
 		if (err) {
-			errorHandler(err, undefined, `DB: Update VC Name`, undefined)
+			errorHandler(err, undefined, `DB: Update VC Name`, undefined);
 			return;
 		}
 		if (vc) {
@@ -96,30 +96,30 @@ var updateVCName = function(vp){
 			var updateQuery = {_id: vp._id};
 			var updateOption = {upsert: false};
 			var updateUpdate = {$set: {"vc": { "name": vc.name}}};
-			logger4js.debug("Update VP %s for correct VC Name %s ", vp._id, vc.name)
+			logger4js.debug("Update VP %s for correct VC Name %s ", vp._id, vc.name);
 			VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					errorHandler(err, undefined, `DB: Problem updating VC name in VP ${vp._id}`, undefined)
+					errorHandler(err, undefined, `DB: Problem updating VC name in VP ${vp._id}`, undefined);
 				}
-				logger4js.trace("Updated VP %s for VC Name changed %d %d", vp._id, result.n, result.nModified)
-			})
+				logger4js.trace("Updated VP %s for VC Name changed %d %d", vp._id, result.n, result.nModified);
+			});
 		}
 	});
-}
+};
 
 // updates the VP Name in the VPV after name change of Visbo Project
 var updateVPName = function(vpid, name, type){
-	logger4js.trace("Start Update VP %s New Name %s ", vpid, name)
+	logger4js.trace("Start Update VP %s New Name %s ", vpid, name);
 	var updateQuery = {vpid: vpid, deletedAt: {$exists: false}};
 	var updateUpdate = {$set: {name: name}};
 	var updateOption = {upsert: false};
 
 	VisboProjectVersion.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating Names in Versions of VP ${vpid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating Names in Versions of VP ${vpid}`, undefined);
 		}
-		logger4js.trace("Updated VP %s New Name %s changed %d %d", vpid, name, result.n, result.nModified)
-	})
+		logger4js.trace("Updated VP %s New Name %s changed %d %d", vpid, name, result.n, result.nModified);
+	});
 
 	// update Portfolio Links to new name
 	var updatePFQuery = { allItems: {$elemMatch: {vpid: vpid }}};
@@ -127,10 +127,10 @@ var updateVPName = function(vpid, name, type){
 	var updatePFOption = {arrayFilters: [ { "elem.vpid": vpid } ], upsert: false, multi: "true"};
 	VisboPortfolio.updateMany(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
 		if (err){
-			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Visbo Project')
+			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Visbo Project');
 			return;
 		}
-		logger4js.trace("Updated VP %s New Name %s in Portfolio Lists changed %d %d", vpid, name, result.n, result.nModified)
+		logger4js.trace("Updated VP %s New Name %s in Portfolio Lists changed %d %d", vpid, name, result.n, result.nModified);
 		if (type == constVPTypes.portfolio) {
 			var updateQuery = {};
 			updateQuery.vpid = vpid;
@@ -141,14 +141,14 @@ var updateVPName = function(vpid, name, type){
 
 			VisboPortfolio.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Visbo Project')
+					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Visbo Project');
 					return;
 				}
-				logger4js.debug("Update Portfolio %s Name found %d updated %d", vpid, result.n, result.nModified)
+				logger4js.debug("Update Portfolio %s Name found %d updated %d", vpid, result.n, result.nModified);
 			});
 		}
 	});
-}
+};
 
 // updates the Global VC Groups to add the VPID to the list
 var updatePermAddVP = function(vcid, vpid){
@@ -158,11 +158,11 @@ var updatePermAddVP = function(vcid, vpid){
 
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating global Groups add VP for VC ${vcid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating global Groups add VP for VC ${vcid}`, undefined);
 		}
-		logger4js.debug("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
-	})
-}
+		logger4js.debug("Updated VC %s Groups with VP %s changed %d %d", vcid, vpid, result.n, result.nModified);
+	});
+};
 
 // updates the Global VC Groups to remove the VPID from the list
 var updatePermRemoveVP = function(vcid, vpid){
@@ -170,14 +170,14 @@ var updatePermRemoveVP = function(vcid, vpid){
 	var updateUpdate = {$pull: {vpids: vpid}};
 	var updateOption = {upsert: false};
 
-	logger4js.debug("Updated VC %s Groups removed VP %s changed", vcid, vpid)
+	logger4js.debug("Updated VC %s Groups removed VP %s changed", vcid, vpid);
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err) {
-			errorHandler(err, undefined, `DB: Problem updating global Groups remove VP for VC ${vcid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating global Groups remove VP for VC ${vcid}`, undefined);
 		}
-		logger4js.debug("Updated VC %s Groups removed VP %s changed %d %d", vcid, vpid, result.n, result.nModified)
-	})
-}
+		logger4js.debug("Updated VC %s Groups removed VP %s changed %d %d", vcid, vpid, result.n, result.nModified);
+	});
+};
 
 // undelete the Groups after undelete Vp
 var unDeleteGroup = function(vpid){
@@ -185,14 +185,14 @@ var unDeleteGroup = function(vpid){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'deletedByParent': ''}};
 
-	logger4js.debug("Update Groups for VP %s", vpid)
+	logger4js.debug("Update Groups for VP %s", vpid);
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating global Groups undelete Group for VP ${vpid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating global Groups undelete Group for VP ${vpid}`, undefined);
 		}
-		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified);
+	});
+};
 
 // mark the Groups as deleted after delete Vp
 var markDeleteGroup = function(vpid){
@@ -200,14 +200,14 @@ var markDeleteGroup = function(vpid){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$set: {'deletedByParent': 'VP'}};
 
-	logger4js.debug("Update Groups for VP %s", vpid)
+	logger4js.debug("Update Groups for VP %s", vpid);
 	VisboGroup.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating global Groups delete Group for VP ${vpid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating global Groups delete Group for VP ${vpid}`, undefined);
 		}
-		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated Groups for VP %s set undelete changed %d %d", vpid, result.n, result.nModified);
+	});
+};
 
 // undelete the Versions after undelete Vp
 var unDeleteVersion = function(vpid){
@@ -215,14 +215,14 @@ var unDeleteVersion = function(vpid){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$unset: {'deletedByParent': ''}};
 
-	logger4js.debug("Update Versions for VP %s", vpid)
+	logger4js.debug("Update Versions for VP %s", vpid);
 	VisboProjectVersion.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating unDelete Versions for VP ${vpid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating unDelete Versions for VP ${vpid}`, undefined);
 		}
-		logger4js.trace("Updated Versions for VP %s unset deletedByParent changed %d %d", vpid, result.n, result.nModified)
-	})
-}
+		logger4js.trace("Updated Versions for VP %s unset deletedByParent changed %d %d", vpid, result.n, result.nModified);
+	});
+};
 
 // mark the Versions as deleted after delete Vp
 var markDeleteVersion = function(vpid){
@@ -230,14 +230,14 @@ var markDeleteVersion = function(vpid){
 	var updateOption = {upsert: false};
 	var updateUpdate = {$set: {'deletedByParent': 'VP'}};
 
-	logger4js.debug("Update Versions for VP %s", vpid)
+	logger4js.debug("Update Versions for VP %s", vpid);
 	VisboProjectVersion.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
 		}
-		logger4js.debug("Updated Versions for VP %s set deletedByParent changed %d %d", vpid, result.n, result.nModified)
-	})
-}
+		logger4js.debug("Updated Versions for VP %s set deletedByParent changed %d %d", vpid, result.n, result.nModified);
+	});
+};
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -324,14 +324,14 @@ router.route('/')
 
 		var query = {};
 		// Get all VPs there the user Group is assigned to
-		var requiredPerm = constPermVP.View
+		var requiredPerm = constPermVP.View;
 		if (!isSysAdmin && req.query.deleted) {
-			requiredPerm += constPermVP.Delete
+			requiredPerm += constPermVP.Delete;
 		}
 		if (!isSysAdmin) {
 			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm)};
 		}
-		query.deletedAt = {$exists: req.query.deleted ? true : false}				// Not deleted
+		query.deletedAt = {$exists: req.query.deleted ? true : false};				// Not deleted
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) {
@@ -347,7 +347,7 @@ router.route('/')
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VP find ${query}`, `Error getting VisboCenters`)
+				errorHandler(err, res, `DB: GET VP find ${query}`, `Error getting VisboCenters`);
 				return;
 			}
 			logger4js.trace("Found Projects\n%O", listVP);
@@ -424,7 +424,7 @@ router.route('/')
 				message: 'No valid Visbo Center'
 			});
 		}
-		var vcid = req.body.vcid
+		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || "").trim();
 		var kundennummer;
@@ -443,7 +443,7 @@ router.route('/')
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
 
 		logger4js.debug("Check VC Permission %O", req.listVCPerm.getPerm(vcid));
-		var requiredPerm = constPermVC.View + constPermVC.CreateVP
+		var requiredPerm = constPermVC.View + constPermVC.CreateVP;
 		if ((req.listVCPerm.getPerm(vcid).vc & requiredPerm) != requiredPerm) {
 				return res.status(403).send({
 				state: 'failure',
@@ -454,7 +454,7 @@ router.route('/')
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VP find one VC ${vcid} `, `Error creating Visbo Project`)
+				errorHandler(err, res, `DB: POST VP find one VC ${vcid} `, `Error creating Visbo Project`);
 				return;
 			}
 			if (!vc) {
@@ -473,7 +473,7 @@ router.route('/')
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP find one VP ${vpname} `, `Error creating Visbo Project`)
+					errorHandler(err, res, `DB: POST VP find one VP ${vpname} `, `Error creating Visbo Project`);
 					return;
 				}
 				logger4js.debug("Duplicate Name check returned %s", vp != undefined);
@@ -496,10 +496,10 @@ router.route('/')
 				newVP.vpvCount = 0;
 				// Create new VP Group
 				var newVG = new VisboGroup();
-				newVG.name = 'Visbo Project Admin'
+				newVG.name = 'Visbo Project Admin';
 				newVG.groupType = 'VP';
 				newVG.internal = true;
-				newVG.permission = {vp: Const.constPermVPAll }
+				newVG.permission = {vp: Const.constPermVPAll };
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
@@ -508,7 +508,7 @@ router.route('/')
 				logger4js.debug("VP Post Create 1. Group for vp %s group %O ", newVP._id, newVG);
 				newVG.save(function(err) {
 					if (err) {
-						errorHandler(err, undefined, `DB: POST VP Create Group for VP ${newVP._id}`, undefined)
+						errorHandler(err, undefined, `DB: POST VP Create Group for VP ${newVP._id}`, undefined);
 					}
 				});
 				// set the VP Name
@@ -517,7 +517,7 @@ router.route('/')
 				logger4js.debug("Save VisboProject %s %s", newVP.name, newVP._id);
 				newVP.save(function(err, vp) {
 					if (err) {
-						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Visbo Project ${req.body.name}`)
+						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Visbo Project ${req.body.name}`);
 						return;
 					}
 					req.oneVP = vp;
@@ -532,7 +532,7 @@ router.route('/')
 				});
 			});
 		});
-	})
+	});
 
 router.route('/:vpid')
 /**
@@ -714,13 +714,13 @@ router.route('/:vpid')
 		// check duplicate Name
 		var query = {};
 		query.vcid = req.oneVP.vcid;
-		query._id = {$ne: req.oneVP._id}
+		query._id = {$ne: req.oneVP._id};
 		query.name = name;
 		query.deletedAt = {$exists: false};
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VP find ${query}`, `Error updating Visbo Project`)
+				errorHandler(err, res, `DB: PUT VP find ${query}`, `Error updating Visbo Project`);
 				return;
 			}
 			if (vp) {
@@ -733,7 +733,7 @@ router.route('/:vpid')
 			logger4js.debug("PUT VP: save now %O populate %s unDelete %s", req.oneVP, vpPopulate, vpUndelete);
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VP Save`, `Error updating Visbo Project`)
+					errorHandler(err, res, `DB: PUT VP Save`, `Error updating Visbo Project`);
 					return;
 				}
 				req.oneVP = oneVP;
@@ -806,14 +806,14 @@ router.route('/:vpid')
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
-		var destroyVP = req.oneVP.deletedAt
+		var destroyVP = req.oneVP.deletedAt;
 		logger4js.debug("Delete Visbo Project %s %s after permission check deletedAt %s", req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
 			req.oneVP.deletedAt = new Date();
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VP`, `Error deleting Visbo Project`)
+					errorHandler(err, res, `DB: DELETE VP`, `Error deleting Visbo Project`);
 					return;
 				}
 				req.oneVP = oneVP;
@@ -833,10 +833,10 @@ router.route('/:vpid')
 			updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
 			// DELETE Versions of VP
 			var queryVPV = {};
-			queryVPV.vpid = req.oneVP._id
+			queryVPV.vpid = req.oneVP._id;
 			VisboProjectVersion.deleteMany(queryVPV, function(err) {
 				if (err) {
-					errorHandler(err, undefined, `DB: DELETE(Destory) VP VPVs`, undefined)
+					errorHandler(err, undefined, `DB: DELETE(Destory) VP VPVs`, undefined);
 				}
 				logger4js.debug("VP Destroy: Destroyed VP Versions");
 			});
@@ -844,34 +844,34 @@ router.route('/:vpid')
 			var queryvpf = {vpid: req.oneVP._id};
 			VisboPortfolio.deleteMany(queryvpf, function (err) {
 				if (err){
-					errorHandler(err, undefined, `DB: DELETE(Destory) VP Portfolios`, undefined)
+					errorHandler(err, undefined, `DB: DELETE(Destory) VP Portfolios`, undefined);
 				}
-				logger4js.trace("VP Destroy: %s VP Portfolios Deleted", req.oneVP._id)
-			})
+				logger4js.trace("VP Destroy: %s VP Portfolios Deleted", req.oneVP._id);
+			});
 
 			// Delete all VP Groups
-			var queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'}
+			var queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'};
 			VisboGroup.deleteMany(queryvpgroup, function (err) {
 				if (err){
-					errorHandler(err, undefined, `DB: DELETE(Destory) VP Groups`, undefined)
+					errorHandler(err, undefined, `DB: DELETE(Destory) VP Groups`, undefined);
 				}
-				logger4js.trace("VP Destroy: %s VP Groups Deleted", req.oneVP._id)
+				logger4js.trace("VP Destroy: %s VP Groups Deleted", req.oneVP._id);
 			});
 			// Delete Audit Trail of VPs & VPVs
 			var queryaudit = {'vp.vpid': req.oneVP._id};
 			VisboAudit.deleteMany(queryaudit, function (err) {
 				if (err){
-					errorHandler(err, undefined, `DB: DELETE(Destory) VP Audit`, undefined)
+					errorHandler(err, undefined, `DB: DELETE(Destory) VP Audit`, undefined);
 				}
-				logger4js.trace("VP Destroy: %s VP Audit Deleted", req.oneVP._id)
+				logger4js.trace("VP Destroy: %s VP Audit Deleted", req.oneVP._id);
 			});
 
 			// DESTROY VP itself
 			var queryVP = {};
-			queryVP._id = req.oneVP._id
+			queryVP._id = req.oneVP._id;
 			VisboProject.deleteOne(queryVP, function(err) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE(Destory) VP`, `Error deleting Visbo Project`)
+					errorHandler(err, res, `DB: DELETE(Destory) VP`, `Error deleting Visbo Project`);
 					return;
 				}
 				// no need to update vpCount in VC
@@ -881,7 +881,7 @@ router.route('/:vpid')
 				});
 			});
 		}
-	})
+	});
 
 router.route('/:vpid/audit')
  /**
@@ -937,8 +937,8 @@ router.route('/:vpid/audit')
 
 		var from, to, maxcount = 1000, action;
 		logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
-		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
-		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+		if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from);
+		if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to);
 		if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 		if (req.query.action) action = req.query.action.trim();
 		// no date is set to set to to current Date and recalculate from afterwards
@@ -946,7 +946,7 @@ router.route('/:vpid/audit')
 		logger4js.trace("Get Audit Trail at least one value is set %s %s", from, to);
 		if (!from) {
 			from = new Date(to);
-			from.setTime(0)
+			from.setTime(0);
 		}
 		logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
 
@@ -986,12 +986,12 @@ router.route('/:vpid/audit')
 			}
 			textCondition.push({"vp.vpjson": expr});
 			textCondition.push({"url": expr});
-			queryListCondition.push({"$or": textCondition})
+			queryListCondition.push({"$or": textCondition});
 		}
 		var ttlCondition = [];
 		ttlCondition.push({"ttl": {$exists: false}});
 		ttlCondition.push({"ttl": {$gt: new Date()}});
-		queryListCondition.push({"$or": ttlCondition})
+		queryListCondition.push({"$or": ttlCondition});
 
 		query["$and"] = queryListCondition;
 		logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
@@ -1003,7 +1003,7 @@ router.route('/:vpid/audit')
 		.lean()
 		.exec(function (err, listVPAudit) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VP Audit find ${query}`, `Error getting VisboProject Audit`)
+				errorHandler(err, res, `DB: GET VP Audit find ${query}`, `Error getting VisboProject Audit`);
 				return;
 			}
 			logger4js.debug("Found VP Audit Logs %d", listVPAudit.length);
@@ -1014,7 +1014,7 @@ router.route('/:vpid/audit')
 				audit: listVPAudit
 			});
 		});
-	})
+	});
 
 	router.route('/:vpid/group')
 
@@ -1071,14 +1071,14 @@ router.route('/:vpid/audit')
 			query.vpids = req.oneVP._id;
 			query.groupType = {$in: ['VC', 'VP']};
 			// VC Groups without global Permission are excluded, but deliver VP Groups without permission
-			query['permission.vp'] = { $exists: true }		// any permission set for VP Groups
+			query['permission.vp'] = { $exists: true };		// any permission set for VP Groups
 			logger4js.trace("Get Visbo Project Group Query %O", query);
 			var queryVCGroup = VisboGroup.find(query);
 			queryVCGroup.select('-vpids');
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: GET VP Groups find ${query}`, `Error getting VisboProject Groups`)
+					errorHandler(err, res, `DB: GET VP Groups find ${query}`, `Error getting VisboProject Groups`);
 					return;
 				}
 				logger4js.info("Found %d Groups for VP", listVPGroup.length);
@@ -1091,7 +1091,7 @@ router.route('/:vpid/audit')
 															groupId: listVPGroup[i]._id,
 															groupName: listVPGroup[i].name,
 															groupType: listVPGroup[i].groupType,
-															internal: listVPGroup[i].internal})
+															internal: listVPGroup[i].internal});
 						}
 					}
 					return res.status(200).send({
@@ -1170,7 +1170,7 @@ router.route('/:vpid/audit')
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 			}
 
 			req.auditDescription = 'Visbo Project Group (Create)';
@@ -1199,7 +1199,7 @@ router.route('/:vpid/audit')
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, oneGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP Groups find ${query}`, `Error getting VisboProject Groups`)
+					errorHandler(err, res, `DB: POST VP Groups find ${query}`, `Error getting VisboProject Groups`);
 					return;
 				}
 				if (oneGroup) {
@@ -1222,7 +1222,7 @@ router.route('/:vpid/audit')
 				logger4js.debug("Post Group %s to VP %s now: %O", req.body.name, req.params.vpid, vgGroup);
 				vgGroup.save(function(err, oneGroup) {
 					if (err) {
-						errorHandler(err, res, `DB: POST VP Groups save`, `Error updating VisboProject Groups`)
+						errorHandler(err, res, `DB: POST VP Groups save`, `Error updating VisboProject Groups`);
 						return;
 					}
 					req.oneGroup = oneGroup;
@@ -1242,7 +1242,7 @@ router.route('/:vpid/audit')
 					});
 				});
 			});
-		})
+		});
 
 
 	router.route('/:vpid/group/:groupid')
@@ -1298,7 +1298,7 @@ router.route('/:vpid/audit')
 			}
 			req.oneGroup.remove(function(err) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VP Group`, `Error deleting Visbo Project Group`)
+					errorHandler(err, res, `DB: DELETE VP Group`, `Error deleting Visbo Project Group`);
 					return;
 				}
 				return res.status(200).send({
@@ -1359,7 +1359,7 @@ router.route('/:vpid/audit')
 				vgGlobal = req.body.global == true;
 			logger4js.debug("Get Global Flag %s process %s", req.body.global, vgGlobal);
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll
+				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 			}
 
 			logger4js.info("PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O", userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));
@@ -1393,7 +1393,7 @@ router.route('/:vpid/audit')
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, `Error getting VisboProject Groups`)
+					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, `Error getting VisboProject Groups`);
 					return;
 				}
 				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
@@ -1409,7 +1409,7 @@ router.route('/:vpid/audit')
 				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 				req.oneGroup.save(function(err, oneGroup) {
 					if (err) {
-						errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`)
+						errorHandler(err, res, `DB: PUT VP Group`, `Error updating Visbo Project Group`);
 						return;
 					}
 					var resultGroup = {};
@@ -1428,7 +1428,7 @@ router.route('/:vpid/audit')
 					});
 				});
 			});
-		})
+		});
 
 	router.route('/:vpid/group/:groupid/user')
 
@@ -1524,7 +1524,7 @@ router.route('/:vpid/audit')
 			//queryUsers.select('email');
 			queryUsers.exec(function (err, user) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP User to Group Find one ${query}`, `Error adding User to VisboProject Group`)
+					errorHandler(err, res, `DB: POST VP User to Group Find one ${query}`, `Error adding User to VisboProject Group`);
 					return;
 				}
 				if (!user) {
@@ -1533,21 +1533,21 @@ router.route('/:vpid/audit')
 					logger4js.debug("Create new User %s for VP as %s", vgUser.email, vgUser.groupName);
 					user.save(function(err, user) {
 						if (err) {
-							errorHandler(err, res, `DB: POST VP User to Group Add`, `Error adding User to VisboProject Group`)
+							errorHandler(err, res, `DB: POST VP User to Group Add`, `Error adding User to VisboProject Group`);
 							return;
 						}
 						// user exists now, now the group can be updated
 						vgUser.userId = user._id;
 
-						req.oneGroup.users.push(vgUser)
+						req.oneGroup.users.push(vgUser);
 						req.oneGroup.save(function(err, vgGroup) {
 							if (err) {
-								errorHandler(err, res, `DB: POST VP User to Group update`, `Error adding User to VisboProject Group`)
+								errorHandler(err, res, `DB: POST VP User to Group update`, `Error adding User to VisboProject Group`);
 								return;
 							}
 							req.oneGroup = vgGroup;
 							// now send an e-Mail to the user for registration
-							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs')
+							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs');
 							var uiUrl =  getSystemUrl();
 
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
@@ -1588,21 +1588,21 @@ router.route('/:vpid/audit')
 									});
 								});
 							}
-						})
+						});
 					});
 				} else {
 					vgUser.userId = user._id;
-					req.oneGroup.users.push(vgUser)
+					req.oneGroup.users.push(vgUser);
 					req.oneGroup.save(function(err, vgGroup) {
 						if (err) {
-							errorHandler(err, res, `DB: POST VP User to Group Add`, `Error adding User to VisboProject Group`)
+							errorHandler(err, res, `DB: POST VP User to Group Add`, `Error adding User to VisboProject Group`);
 							return;
 						}
 						req.oneGroup = vgGroup;
 						// now send an e-Mail to the user for registration/login
 						var template = __dirname.concat('/../emailTemplates/');
 						var uiUrl =  getSystemUrl();
-						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name
+						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name;
 						logger4js.debug("E-Mail User Status %O %s", user.status, user.status.registeredAt);
 						if (user.status && user.status.registeredAt) {
 							// send e-Mail to a registered user
@@ -1649,10 +1649,10 @@ router.route('/:vpid/audit')
 								});
 							});
 						}
-					})
+					});
 				}
-			})
-		})
+			});
+		});
 
 		router.route('/:vpid/group/:groupid/user/:userid')
 
@@ -1690,7 +1690,7 @@ router.route('/:vpid/audit')
 
 			req.auditDescription = 'Visbo Project User (Delete)';
 
-			var delUser = req.oneGroup.users.find(findUserById, req.params.userid)
+			var delUser = req.oneGroup.users.find(findUserById, req.params.userid);
 			if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
 
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
@@ -1705,7 +1705,7 @@ router.route('/:vpid/audit')
 					message: 'not a Visbo Project Group'
 				});
 			}
-			var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )))
+			var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )));
 			logger4js.debug("DELETE Visbo Group User List Length new %d old %d", newUserList.length, req.oneGroup.users.length);
 			logger4js.trace("DELETE Visbo Project Filtered User List %O ", newUserList);
 			if (newUserList.length == req.oneGroup.users.length) {
@@ -1719,7 +1719,7 @@ router.route('/:vpid/audit')
 			req.oneGroup.users = newUserList;
 			req.oneGroup.save(function(err, vg) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VP User from Group`, `Error delete User from VisboProject Group`)
+					errorHandler(err, res, `DB: DELETE VP User from Group`, `Error delete User from VisboProject Group`);
 					return;
 				}
 				req.oneGroup = vg;
@@ -1728,8 +1728,8 @@ router.route('/:vpid/audit')
 					message: "Successfully removed User from Visbo Project",
 					groups: [req.oneGroup]
 				});
-			})
-		})
+			});
+		});
 
 router.route('/:vpid/lock')
 /**
@@ -1782,7 +1782,7 @@ router.route('/:vpid/lock')
 		var dateNow = new Date();
 
 		if (expiredAt == undefined) {
-			expiredAt = dateNow
+			expiredAt = dateNow;
 			// set the lock date to 1 hour later
 			expiredAt.setHours(expiredAt.getHours() + 1);
 		}
@@ -1840,7 +1840,7 @@ router.route('/:vpid/lock')
 		}
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VP Lock`, `Error updating Visbo Project Locks`)
+				errorHandler(err, res, `DB: POST VP Lock`, `Error updating Visbo Project Locks`);
 				return;
 			}
 			newLock = oneVP.lock.filter(lock => (lock.email == newLock.email && lock.expiresAt == newLock.expiresAt && lock.variantName == newLock.variantName && lock.createdAt == newLock.createdAt ))[0];
@@ -1917,7 +1917,7 @@ router.route('/:vpid/lock')
 
 		req.oneVP.save(function(err) {
 			if (err) {
-				errorHandler(err, res, `DB: DELETE VP Lock`, `Error deleting Visbo Project Locks`)
+				errorHandler(err, res, `DB: DELETE VP Lock`, `Error deleting Visbo Project Locks`);
 				return;
 			}
 			return res.status(200).send({
@@ -1927,7 +1927,7 @@ router.route('/:vpid/lock')
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
-	})
+	});
 
 router.route('/:vpid/variant')
 /**
@@ -1990,7 +1990,7 @@ router.route('/:vpid/variant')
 			});
 		}
 		logger4js.trace("Variant %s current list %O", variantName, variantList);
-		var variantDuplicate = false
+		var variantDuplicate = false;
 		for (var i = 0; i < variantList.length; i++) {
 			if (variantList[i].variantName == variantName ) {
 				variantDuplicate = true;
@@ -2017,7 +2017,7 @@ router.route('/:vpid/variant')
 		logger4js.trace("Variant List new %O ", variantList);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VP Variant`, `Error creating Visbo Project Variant`)
+				errorHandler(err, res, `DB: POST VP Variant`, `Error creating Visbo Project Variant`);
 				return;
 			}
 			newVariant = oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
@@ -2028,7 +2028,7 @@ router.route('/:vpid/variant')
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		});
-	})
+	});
 
 router.route('/:vpid/variant/:vid')
 
@@ -2115,7 +2115,7 @@ router.route('/:vpid/variant/:vid')
 
 		req.oneVP.save(function(err) {
 			if (err) {
-				errorHandler(err, res, `DB: DELETE VP Variant`, `Error deleting Visbo Project Variant`)
+				errorHandler(err, res, `DB: DELETE VP Variant`, `Error deleting Visbo Project Variant`);
 				return;
 			}
 			return res.status(200).send({
@@ -2124,8 +2124,8 @@ router.route('/:vpid/variant/:vid')
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
-		})
-	})
+		});
+	});
 
 router.route('/:vpid/portfolio')
 /**
@@ -2196,7 +2196,7 @@ router.route('/:vpid/portfolio')
 			return res.status(400).send({
 				state: "failure",
 				message: "Bad Content in Query Parameters"
-			})
+			});
 		}
 		var query = {};
 		var latestOnly = false; 	// as default show all portfolio lists of the project
@@ -2208,7 +2208,7 @@ router.route('/:vpid/portfolio')
 		}
 		if (req.query.variantName != undefined){
 			logger4js.debug("Variant Query String :%s:", req.query.variantName);
-			query.variantName = req.query.variantName
+			query.variantName = req.query.variantName;
 		}
 		query.deletedAt = {$exists: false};
 
@@ -2216,13 +2216,13 @@ router.route('/:vpid/portfolio')
 
 		var queryVPF = VisboPortfolio.find(query);
 		if (req.query.refNext)
-			queryVPF.sort('vpid variantName +timestamp')
+			queryVPF.sort('vpid variantName +timestamp');
 		else
-			queryVPF.sort('vpid variantName -timestamp')
+			queryVPF.sort('vpid variantName -timestamp');
 		queryVPF.lean();
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VPF`, `Error getting Visbo Project Portfolio`)
+				errorHandler(err, res, `DB: GET VPF`, `Error getting Visbo Project Portfolio`);
 				return;
 			}
 			logger4js.debug("Found %d Portfolios", listVPF.length);
@@ -2236,7 +2236,7 @@ router.route('/:vpid/portfolio')
 					// logger4js.trace("compare: :%s: vs. :%s:", JSON.stringify(listVPF[i].vpid), JSON.stringify(listVPF[i-1].vpid), JSON.stringify(listVPF[i].variantName), JSON.stringify(listVPF[i-1].variantName) );
 					if (JSON.stringify(listVPF[i].vpid) != JSON.stringify(listVPF[i-1].vpid)
 					|| JSON.stringify(listVPF[i].variantName) != JSON.stringify(listVPF[i-1].variantName) ) {
-						listVPFfiltered.push(listVPF[i])
+						listVPFfiltered.push(listVPF[i]);
 						// logger4js.trace("compare unequal: ", listVPF[i].vpid != listVPF[i-1].vpid);
 					}
 				}
@@ -2371,7 +2371,7 @@ router.route('/:vpid/portfolio')
 		for (var i = 0; i < req.body.allItems.length; i++) {
 			// build up unique project list to check that they exist
 			if (validate.validateObjectId(req.body.allItems[i].vpid, false) && !listVPid.find(findVP, req.body.allItems[i].vpid)){
-				listVPid.push(req.body.allItems[i].vpid)
+				listVPid.push(req.body.allItems[i].vpid);
 			}
 		}
 		logger4js.debug("Check vpids if they exist %s", JSON.stringify(listVPid));
@@ -2380,7 +2380,7 @@ router.route('/:vpid/portfolio')
 		queryVP.select('_id name');
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VPF find`, `Error getting Projects for Portfolio`)
+				errorHandler(err, res, `DB: POST VPF find`, `Error getting Projects for Portfolio`);
 				return;
 			}
 			if (listVP.length != req.body.allItems.length) {
@@ -2407,7 +2407,7 @@ router.route('/:vpid/portfolio')
 
 			newPortfolio.save(function(err, onePortfolio) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VPF save`, `Error creating Portfolio`)
+					errorHandler(err, res, `DB: POST VPF save`, `Error creating Portfolio`);
 					return;
 				}
 				req.oneVPF = onePortfolio;
@@ -2419,7 +2419,7 @@ router.route('/:vpid/portfolio')
 				});
 			});
 		});
-	})
+	});
 
 router.route('/:vpid/portfolio/:vpfid')
 /**
@@ -2474,15 +2474,15 @@ router.route('/:vpid/portfolio/:vpfid')
 		req.auditTTLMode = 1;
 
 		logger4js.trace("Get Portfolio Versions");
-		var query = {}
-		query._id = req.params.vpfid
+		var query = {};
+		query._id = req.params.vpfid;
 		query.vpid = req.oneVP._id;
 		query.deletedAt = {$exists: false};
 
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VPF Version find`, `Error getting Versions of Portfolio`)
+				errorHandler(err, res, `DB: GET VPF Version find`, `Error getting Versions of Portfolio`);
 				return;
 			}
 			logger4js.debug("Found %d Portfolios", listVPF.length);
@@ -2543,7 +2543,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
-				errorHandler(err, res, `DB: DELETE VPF find`, `Error getting Visbo Portfolio`)
+				errorHandler(err, res, `DB: DELETE VPF find`, `Error getting Visbo Portfolio`);
 				return;
 			}
 			if (!oneVPF) {
@@ -2553,14 +2553,14 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			}
 			var variantIndex;
-			var variantName = oneVPF.variantName
+			var variantName = oneVPF.variantName;
 			if (variantName != "") {
 				// check that the Variant exists
-				variantIndex = variant.findVariant(req.oneVP, variantName)
+				variantIndex = variant.findVariant(req.oneVP, variantName);
 				if (variantIndex < 0) {
 					logger4js.warn("VP PortfolioList Delete Variant does not exist %s %s", req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
-					variantName = ""
+					variantName = "";
 				}
 			}
 			var lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
@@ -2590,7 +2590,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			oneVPF.deletedAt = new Date();
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VPF`, `Error deleting Visbo Portfolio`)
+					errorHandler(err, res, `DB: DELETE VPF`, `Error deleting Visbo Portfolio`);
 					return;
 				}
 				req.oneVPF = oneVPF;
@@ -2600,6 +2600,6 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			});
 		});
-	})
+	});
 
 module.exports = router;

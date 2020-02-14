@@ -3,13 +3,13 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var redis = require('redis');
-var bluebird = require('bluebird')
+var bluebird = require('bluebird');
 bluebird.promisifyAll(redis);
 
 var initialised = false;
 var redisClient;
-var currentHost = 'localhost'
-var currentPort = 6379
+var currentHost = 'localhost';
+var currentPort = 6379;
 
 // Initialise Redis
 function VisboRedisInit(host, port) {

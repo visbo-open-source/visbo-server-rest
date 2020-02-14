@@ -30,6 +30,8 @@
     "redis": "^2.8.0",
     "sanitize-html": "^1.20.1",
     "serve-favicon": "^2.5.0",
+    "to": "^0.2.9",
+    "update": "^0.7.4",
     "useragent": "^2.3.0"
   },
   "devDependencies": {

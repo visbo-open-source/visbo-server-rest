@@ -8,8 +8,8 @@ var path = require('path');
 var auth = require('../components/auth');
 var verifyVc = require('../components/verifyVc');
 
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
+var Const = require('../models/constants');
+var constPermSystem = Const.constPermSystem;
 
 var logModule = "OTHER";
 var log4js = require('log4js');
@@ -55,7 +55,7 @@ router.route('/')
 		logger4js.info("Get Log File List Perm system: %O ", req.listVCPerm.getPerm(0));
 
 		var ageDays = 7;
-		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays
+		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays;
 		var ageDate = new Date();
 		ageDate.setDate(ageDate.getDate() - ageDays);
 		ageDate.setHours(0);
@@ -78,7 +78,7 @@ router.route('/')
 		}
 		logger4js.debug("Get Log File from Directory: %s Date %s", dir, ageDate);
 		var folders = fs.readdirSync(dir);
-		var stats = {}
+		var stats = {};
     for (var i in folders){
 			var folder = path.join(dir, folders[i]);
 			if (folders[i].substring(0, 1) == '.') {
@@ -117,7 +117,7 @@ router.route('/')
 			message: 'Available Log Files',
 			files: fileList
 		});
-	})
+	});
 
 	router.route('/file/:folder/:filename')
 	/**
@@ -179,6 +179,6 @@ router.route('/')
 			}
 		});
 		// res.download(dir, fileName);
-	})
+	});
 
 module.exports = router;
