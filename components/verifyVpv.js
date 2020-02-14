@@ -1,10 +1,7 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
-var constPermVC = Const.constPermVC
 var constPermVP = Const.constPermVP
 
-var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -22,7 +19,6 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of and has VP Permission
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	var baseUrl = req.url.split("?")[0];
 	var startCalc = new Date();
 
@@ -126,14 +122,10 @@ function getAllVPVGroups(req, res, next) {
 
 // Get the VPV for the specific vpvid
 function getVPV(req, res, next, vpvid) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	var baseUrl = req.url.split("?")[0]
 	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
-	var specificVPID = undefined;
-	var specificSystem = undefined;
 	var startCalc = new Date();
 
 	if (!validate.validateObjectId(vpvid, false)) {
@@ -147,7 +139,7 @@ function getVPV(req, res, next, vpvid) {
 	query._id = vpvid;
 	query.deletedAt = {$exists: checkDeleted};
 	// Check sysadmin permission as vpid is unknown it could not be checked here
-	if (req.query.sysadmin && (req.listVPPerm.getPerm(0) & constPermVP.View) == 0) {
+	if (sysAdmin && (req.listVPPerm.getPerm(0) & constPermVP.View) == 0) {
 		logger4js.info("No Permission to get VPV as sysadmin %s", query);
 		return res.status(403).send({
 			state: 'failure',
@@ -206,8 +198,6 @@ function getVPV(req, res, next, vpvid) {
 
 // Generate the Groups where the user is member of and has VP Permission
 function getPortfolioVPs(req, res, next) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
 	var startCalc = new Date();
 	var baseUrl = req.url.split("?")[0]
 	if (baseUrl == '/' && req.method == "GET" && req.query.vpfid) {
@@ -361,7 +351,7 @@ function getVPVpfv(req, res, next) {
 		if (err) {
 			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
 			return;
-		};
+		}
 		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
@@ -377,7 +367,7 @@ function getCurrentVPVpfv(req, res, next) {
 	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
-		logger4js.warn("GET VPF for VPV mal formed timestamp %s", vpid, timestamp);
+		logger4js.warn("GET VPF for VPV mal formed timestamp %s", timestamp);
 		return res.status(400).send({
 			state: "failure",
 			message: "Timestamp not recognised"
@@ -400,7 +390,7 @@ function getCurrentVPVpfv(req, res, next) {
 		if (err) {
 			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
 			return;
-		};
+		}
 		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();

@@ -3,6 +3,7 @@ require('../models/visboproject');
 
 var VisboProject = mongoose.model('VisboProject');
 
+var errorHandler = require('./../components/errorhandler').handler;
 var validate = require('./../components/validate');
 var logModule = "VP";
 var log4js = require('log4js');
@@ -10,13 +11,13 @@ var logger4js = log4js.getLogger(logModule);
 
 
 // check if Visbo Project has a valid lock
-lockStatus = function(vp, useremail, variantName) {
+function lockStatus(vp, useremail, variantName) {
 
 	logger4js.trace("lockedVP Check Lock for VP %s for User %s and Variant :%s: Locks %O", vp._id, useremail, variantName, vp.lock);
 	var result = {locked: false, lockindex: "-1"};
 	var nowDate = new Date();
 	if (vp.lock) {
-		for (i = 0; i < vp.lock.length; i++) {
+		for (var i = 0; i < vp.lock.length; i++) {
 			logger4js.debug("Check Lock: Nr. %d %O %s", i, vp.lock[i], variantName);
 			if (vp.lock[i].expiresAt >= nowDate){	// lock is valid
 				if (vp.lock[i].variantName == variantName){ // lock for the specific variant
@@ -30,10 +31,10 @@ lockStatus = function(vp, useremail, variantName) {
 	}
 	// logger4js.debug("lockedVP check :%s: result %s", vp._id, result);
 	return result;
-};
+}
 
 // cleanup expired locks
-lockCleanup = function(listLock) {
+function lockCleanup(listLock) {
 	var listLockNew = [];
 	var dateNow = new Date();
 	logger4js.debug("lock CleanUP expired locks from list %d ", listLock.length);
@@ -45,7 +46,7 @@ lockCleanup = function(listLock) {
 		}
 	}
 	return listLockNew;
-};
+}
 
 function cleanupAllVPLock(task, finishedTask) {
 	logger4js.debug("cleanuplock Execute %s", task && task._id);
@@ -65,7 +66,7 @@ function cleanupAllVPLock(task, finishedTask) {
 
 	VisboProject.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
-			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid}`, undefined)
+			errorHandler(err, undefined, `DB: Problem updating all VPs`, undefined)
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: cleanup expired Locks'};
 			finishedTask(task, false);
 			return;

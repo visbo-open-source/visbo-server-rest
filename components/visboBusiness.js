@@ -340,7 +340,7 @@ function VisboDeliverable() {
 	}
 }
 
-// Deliverables for the Project combine INfo from baseline and vpv
+// Deadlines for the Project combine INfo from baseline and vpv
 function VisboDeadlines() {
   this.length = 0;
   this.allDeadlines = {};

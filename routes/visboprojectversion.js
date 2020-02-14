@@ -2,7 +2,6 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var assert = require('assert');
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -10,18 +9,11 @@ var lockVP = require('./../components/lock');
 var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
 var visboBusiness = require('./../components/visboBusiness');
-var User = mongoose.model('User');
-var VisboGroup = mongoose.model('VisboGroup');
-var VisboGroupUser = mongoose.model('VisboGroupUser');
-var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
-var Lock = mongoose.model('Lock');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var Const = require('../models/constants')
-var constPermVC = Const.constPermVC
 var constPermVP = Const.constPermVP
-var constPermSystem = Const.constPermSystem
 
 var logModule = "VPV";
 var log4js = require('log4js');
@@ -48,13 +40,14 @@ router.use('/:vpvid/calc', verifyVpv.getCurrentVPVpfv);
 var updateVPVCount = function(vpid, variantName, increment){
 	var updateQuery = {_id: vpid};
 	var updateOption = {upsert: false};
+	var updateUpdate;
 
 	if (!variantName) {
-		var updateUpdate = {$inc: {vpvCount: increment}};
+		updateUpdate = {$inc: {vpvCount: increment}};
 	} else {
 		// update a variant and increment the version counter
 		updateQuery['variant.variantName'] = variantName;
-		var updateUpdate = {$inc : {"variant.$.vpvCount" : increment} };
+		updateUpdate = {$inc : {"variant.$.vpvCount" : increment} };
 	}
 	logger4js.debug("Update VP %s with vpvCount inc %d update: %O with %O", vpid, increment, updateQuery, updateUpdate)
 	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
@@ -134,7 +127,6 @@ router.route('/')
 // Get Visbo Project Versions
 	.get(function(req, res) {
 		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Visbo Project Versions (Read)';
@@ -153,7 +145,7 @@ router.route('/')
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
 		|| (req.query.vpfid && !validate.validateObjectId(req.query.vpfid, false))
-		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
+		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
 			logger4js.warn("Get VPV mal formed query parameter %O ", req.query);
 			return res.status(400).send({
 				state: "failure",
@@ -180,7 +172,7 @@ router.route('/')
 				}
 			}
 		} else {
-			requiredPerm = constPermVP.View
+			var requiredPerm = constPermVP.View
 			if (req.query.keyMetrics) requiredPerm += constPermVP.ViewAudit
 			vpidList = req.listVPPerm.getVPIDs(requiredPerm);
 		}
@@ -240,7 +232,7 @@ router.route('/')
 			if (err) {
 				errorHandler(err, res, `DB: GET VPV Find Short`, `Error getting Visbo Project Versions `)
 				return;
-			};
+			}
 			var timeMongoEnd = new Date();
 			logger4js.debug("Found %d Project Versions in %s ms ", listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 			// if latestonly, reduce the list and deliver only the latest version of each project and variant
@@ -321,7 +313,7 @@ router.route('/')
 				if (err) {
 					errorHandler(err, res, `DB: GET VPV Find Full`, `Error getting Visbo Project Versions `)
 					return;
-				};
+				}
 				req.auditInfo = listVPV.length;
 				req.listVPV = listVPV;
 				for (var i = 0; i < listVPV.length; i++) {
@@ -412,7 +404,7 @@ router.route('/')
 		var variantName = (req.body.variantName  || '').trim();
 		var variantIndex = -1;
 
-		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
+		logger4js.info("Post a new Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var newVPV = new VisboProjectVersion();
 		var permCreateVersion = false
 		var perm = req.listVPPerm.getPerm(vpid);
@@ -432,7 +424,7 @@ router.route('/')
 			if (err) {
 				errorHandler(err, res, `DB: POST VPV Find VP`, `Error creating Visbo Project Versions `)
 				return;
-			};
+			}
 			if (!oneVP) {
 				return res.status(403).send({
 					state: 'failure',
@@ -440,12 +432,9 @@ router.route('/')
 				});
 			}
 			req.oneVP = oneVP;
-			var allowPost = false
-			var variantExists = true;
 
 			if (variantName != "") {
 				// check that the Variant exists
-				variantExists = false;
 				variantIndex = variant.findVariant(req.oneVP, variantName)
 				if (variantIndex < 0) {
 					logger4js.warn("VPV Post Variant does not exist %s %s", vpid, variantName);
@@ -454,7 +443,7 @@ router.route('/')
 						message: 'Visbo Project variant does not exist',
 						vp: [req.oneVP]
 					});
-				};
+				}
 			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
@@ -479,7 +468,7 @@ router.route('/')
 				if (err) {
 					errorHandler(err, res, `DB: POST VPV Find VPV`, `Error creating Visbo Project Versions `)
 					return;
-				};
+				}
 				if (req.body.updatedAt && Date.parse(req.body.updatedAt)) {
 					// check that the last VPV has the same date
 					var updatedAt = new Date(req.body.updatedAt);
@@ -789,21 +778,18 @@ router.route('/:vpvid')
 		req.auditDescription = 'Visbo Project Version (Delete)';
 
 		logger4js.info("DELETE Visbo Project Version for userid %s email %s and vc %s ", userId, useremail, req.params.vpvid);
-
 		logger4js.debug("DELETE Visbo Project Version DETAILS ", req.oneVPV._id, req.oneVP.name, req.oneVPV.variantName);
-		var variantExists = false;
+
 		var variantIndex;
 		var variantName = req.oneVPV.variantName
 		if (variantName != "") {
 			// check that the Variant exists
-			variantExists = true;
 			variantIndex = variant.findVariant(req.oneVP, variantName)
 			if (variantIndex < 0) {
 				logger4js.warn("VPV Delete Variant does not exist %s %s", req.params.vpvid, variantName);
 				// Allow Deleting of a version where Variant does not exists for Admins
 				variantName = ""
-				variantExists = false;
-			};
+			}
 		}
 		// user does not have admin permission and does not own the variant
 		var hasPerm = false;
@@ -834,7 +820,7 @@ router.route('/:vpvid')
 
 		if (!destroyVPV) {
 			logger4js.debug("Delete Visbo Project Version %s %s", req.params.vpvid, req.oneVPV._id);
-			var variantName = req.oneVPV.variantName;
+			variantName = req.oneVPV.variantName;
 
 			req.oneVPV.deletedAt = new Date();
 			req.oneVPV.save(function(err, oneVPV) {
@@ -933,15 +919,13 @@ router.route('/:vpvid')
 	// POST/Copy a Visbo Project Version with a new TimeStamp and a new calculation for keyMetrics
 		.post(function(req, res) {
 			var userId = req.decoded._id;
-			var useremail  = req.decoded.email;
 
 			req.auditDescription = 'Visbo Project Versions (Copy)';
-			var queryvpv = {};
 
 			var vpid = req.oneVPV.vpid;
 			var variantName = req.oneVPV.variantName
 
-			logger4js.info("Post a copy Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", useremail, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
+			logger4js.info("Post a copy Visbo Project Version for user %s with name %s variant :%s: in VisboProject %s updatedAt %s with Perm %O", userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 			var newVPV = new VisboProjectVersion();
 			var permCreateVersion = false
 			var perm = req.listVPPerm.getPerm(vpid);
@@ -1104,6 +1088,7 @@ router.route('/:vpvid')
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+			var calcVPV;
 
 			req.auditDescription = 'Visbo Project Version Calc (Read)';
 			req.auditSysAdmin = sysAdmin;
@@ -1119,7 +1104,7 @@ router.route('/:vpvid')
 
 			logger4js.info("Get Visbo Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s", userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 			if (req.query.type == "Deliveries") {
-				var calcVPV = visboBusiness.calcDeliverables(req.oneVPV, req.visboPFV)
+				calcVPV = visboBusiness.calcDeliverables(req.oneVPV, req.visboPFV)
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
@@ -1135,7 +1120,7 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			} else if (req.query.type == "Deadlines") {
-				var calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV)
+				calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV)
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
@@ -1151,7 +1136,7 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			} else if (req.query.type == "Costs") {
-				var calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
+				calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
@@ -1167,7 +1152,7 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			} else if (req.query.type == "KeyMetrics") {
-				var calcVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
+				calcVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined)
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',

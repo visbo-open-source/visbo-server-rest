@@ -1,6 +1,3 @@
-var log4js = require('log4js');
-var logger4js = log4js.getLogger('OTHER');
-
 var crypto = require('crypto')
 var secrets = require('./../secrets/jwt.js');
 
@@ -19,7 +16,6 @@ function encrypt(text){
 						secrets.internalEncryption.secret, iv);
   var crypted = cipher.update(text, 'utf8', 'hex');
   crypted += cipher.final('hex');
-	// logger4js.trace("Encrypted %s to %s", text, crypted);
   return crypted;
 }
 
@@ -30,7 +26,6 @@ function decrypt(text){
 						secrets.internalEncryption.secret, iv);
 	var dec = decipher.update(text, 'hex', 'utf8')
 	dec += decipher.final('utf8')
-	// logger4js.trace("Decrypted %s to %s", text, dec);
 	return dec;
 }
 

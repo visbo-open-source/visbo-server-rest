@@ -2,18 +2,15 @@ var express = require('express');
 var router = express.Router();
 
 var fs = require('fs');
-var util = require('util');
 var path = require('path');
 
 // var assert = require('assert');
 var auth = require('../components/auth');
 var verifyVc = require('../components/verifyVc');
-var systemVC = require('../components/systemVC')
 
 var Const = require('../models/constants')
 var constPermSystem = Const.constPermSystem
 
-var logging = require('./../components/logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -50,7 +47,6 @@ router.route('/')
 // get syslog file list
 	.get(function(req, res) {
 		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 
 		req.auditDescription = 'SysLog (Read)';
 		req.auditSysAdmin = true;
@@ -69,7 +65,7 @@ router.route('/')
 
 		var dir = path.join(__dirname, '../logging');
 		if (process.env.LOGPATH != undefined) {
-		  dir = process.env.LOGPATH;
+			dir = process.env.LOGPATH;
 		}
 		var fileList = [];
 
@@ -95,8 +91,7 @@ router.route('/')
 			} else {
 				// Browse Host Directory for Log Files per Host
 				var files = fs.readdirSync(folder);
-				var stats = {}
-		    for (var j in files){
+				for (var j in files){
 					var file = path.join(folder, files[j]);
 					if (files[j].substring(0, 1) == '.') {
 						logger4js.debug("Ignore dot files %s in log folder", file);
@@ -112,7 +107,7 @@ router.route('/')
 							logger4js.debug("Ignore Log File %s from %s Modified %s AgeFilter %s", folders[i], files[j], stats.mtime, ageDate);
 						}
 					}
-		    }
+				}
 			}
     }
 
@@ -151,7 +146,7 @@ router.route('/')
 
 		logger4js.info("Get Logfile %s/%s ", req.params.folder, req.params.filename);
 		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewLog)) {
-			logger4js.debug("No Permission to View System Log for user %s", userId);
+			logger4js.debug("No Permission to View System Log");
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to View System Log'
@@ -159,30 +154,29 @@ router.route('/')
 		}
 		var dir = path.join(__dirname, '../logging');
 		if (process.env.LOGPATH != undefined) {
-		  dir = process.env.LOGPATH;
+			dir = process.env.LOGPATH;
 		}
 		var fileName = path.join(dir, req.params.folder, req.params.filename);
-		stats = fs.statSync(fileName)
-		if (!stats) {
+		if (!fs.statSync(fileName)) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'File does not exists or no permission'
 			});
 		}
 		fs.readFile(fileName, function (err, content) {
-	    if (err) {
+			if (err) {
 				return res.status(400).send({
 					state: 'failure',
 					message: 'File does not exists or no permission'
 				});
-	    } else {
-	        //specify Content will be an attachment
-					// res.type('text/plain');
+			} else {
+				//specify Content will be an attachment
+				// res.type('text/plain');
 
-	        res.setHeader('Content-disposition', 'attachment; filename='+req.params.filename);
-					res.setHeader('Content-Type', 'text/plain');
-					res.end(content);
-	    }
+				res.setHeader('Content-disposition', 'attachment; filename='+req.params.filename);
+				res.setHeader('Content-Type', 'text/plain');
+				res.end(content);
+			}
 		});
 		// res.download(dir, fileName);
 	})

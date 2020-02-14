@@ -49,8 +49,8 @@ function verifyUser(req, res, next) {
       if (err) {
 				if (decoded) req.decoded = decoded;
         return res.status(401).send({
-        	state: 'failure',
-        	message: 'Session is no longer valid'
+					state: 'failure',
+					message: 'Session is no longer valid'
         });
       } else {
         // if everything is good, check IP and User Agent to prevent session steeling
@@ -65,9 +65,9 @@ function verifyUser(req, res, next) {
 				}
 				if (!sessionValid) {
 					return res.status(401).send({
-	        	state: 'failure',
-	        	message: 'Session is no longer valid'
-	        });
+						state: 'failure',
+						message: 'Session is no longer valid'
+					});
 				}
 				var redisClient = visboRedis.VisboRedisInit();
 				var token = req.headers['access-key'].split(".")[2];
@@ -75,32 +75,32 @@ function verifyUser(req, res, next) {
 					// logger4js.debug("Redis Token Check err %O reply %s", err, reply);
 					if (err) {
 						return res.status(500).send({
-		        	state: 'failure',
-		        	message: 'Logout Validation'
-		        });
+							state: 'failure',
+							message: 'Logout Validation'
+						});
 					}
 					logger4js.trace("Redis Token Found %s user %s", token, reply, );
 					if (reply) {
 						return res.status(401).send({
-		        	state: 'failure',
-		        	message: 'Session already terminated'
-		        });
+							state: 'failure',
+							message: 'Session already terminated'
+						});
 					}
 					// if everything is good, save to request for use in other routes
 					req.decoded = decoded;
-	        return next();
+					return next();
 				});
       }
     });
   }
   else {
-  	// if the user is not authenticated
+		// if the user is not authenticated
 		return res.status(401).send({
 			state: 'failure',
 			message: 'No token provided'
 		});
   }
-};
+}
 
 module.exports = {
 	verifyUser: verifyUser,

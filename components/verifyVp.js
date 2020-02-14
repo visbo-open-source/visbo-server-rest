@@ -1,11 +1,8 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
-var constPermVC = Const.constPermVC
 var constPermVP = Const.constPermVP
 
 var VisboProject = mongoose.model('VisboProject');
-var VisboCenter = mongoose.model('VisboCenter');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 
@@ -20,8 +17,6 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of and has VP Permission
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	var baseUrl = req.url.split("?")[0]
 	var vcid = undefined;
 	if (!vcid && req.method == "GET" && req.query.vcid) {
 		vcid = req.query.vcid;
@@ -40,8 +35,7 @@ function getAllGroups(req, res, next) {
 	// get the VP Groups the user is member of
 	// handle sysadmin case
 	logger4js.debug("Generate VP Groups for user %s for url %s", req.decoded.email, req.url);
-	var validateVCPerm = undefined;
-	var checkDeleted = req.query.deleted == true;
+	// var checkDeleted = req.query.deleted == true;
 	var query = {'users.userId': userId};	// search for VP groups where user is member
 	if (req.query.sysadmin) {
 		query.groupType = 'System';						// search for System Groups only
@@ -107,7 +101,7 @@ function getAllGroups(req, res, next) {
 function checkVpfid(req, res, next, vpfid) {
 	var sysAdmin = req.query.sysadmin ? true : false;
 
-	logger4js.debug("Check Portfolio ID vpfid %s user %s for url %s ", vpfid, req.decoded.email, req.url);
+	logger4js.debug("Check Portfolio ID vpfid %s user %s for url %s as SysAdmin %s", vpfid, req.decoded.email, req.url, sysAdmin);
 	if (!validate.validateObjectId(vpfid, false)) {
 		logger4js.warn("VC Groups Bad Parameter vpid %s", vpfid);
 		return res.status(400).send({
@@ -142,9 +136,6 @@ function checkVpfid(req, res, next, vpfid) {
 // Get the VP with vpid including View Permission Check and others depending on parameters
 function getVP(req, res, next, vpid) {
 	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-	var baseUrl = req.url.split("?")[0]
-	var urlComponent = baseUrl.split("/")
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 

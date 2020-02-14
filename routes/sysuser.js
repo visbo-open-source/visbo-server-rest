@@ -4,9 +4,6 @@ var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 
 var User = mongoose.model('User');
-var VisboCenter = mongoose.model('VisboCenter');
-var VisboProject = mongoose.model('VisboProject');
-var VisboAudit = mongoose.model('VisboAudit');
 
 // var assert = require('assert');
 var auth = require('./../components/auth');

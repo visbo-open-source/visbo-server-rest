@@ -59,7 +59,7 @@ function accountLocked(req, user) {
 		logger4js.info("Now send mail from %s to %s", message.from || 'System', message.to);
 		mail.VisboSendMail(message);
 	});
-};
+}
 
 // Send Mail about password expired
 function passwordExpired(req, user) {
@@ -81,7 +81,7 @@ function passwordExpired(req, user) {
 			mail.VisboSendMail(message);
 		}
 	});
-};
+}
 
 // Send Mail about password expires soon
 function passwordExpiresSoon(req, user, expiresAt) {
@@ -103,7 +103,7 @@ function passwordExpiresSoon(req, user, expiresAt) {
 			mail.VisboSendMail(message);
 		}
 	});
-};
+}
 
 // Send Mail about user not registered
 function accountNotRegistered(req, user) {
@@ -124,7 +124,7 @@ function accountNotRegistered(req, user) {
 			mail.VisboSendMail(message);
 		}
 	});
-};
+}
 
 // Send Mail about user not registered
 function accountRegisteredSuccess(req, user) {
@@ -145,7 +145,7 @@ function accountRegisteredSuccess(req, user) {
 			mail.VisboSendMail(message);
 		}
 	});
-};
+}
 
 // Send Mail about account locked
 function accountNewLogin(req, user) {
@@ -174,7 +174,7 @@ function accountNewLogin(req, user) {
 		logger4js.info("Now send mail from %s to %s", message.from || 'System', message.to);
 		mail.VisboSendMail(message);
 	});
-};
+}
 
 module.exports = {
 	accountLocked: accountLocked,

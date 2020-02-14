@@ -1,7 +1,6 @@
 var express = require('express');
 var router = express.Router();
 
-var logging = require('./../components/logging');
 var logModule = "OTHER";
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -143,30 +142,30 @@ router.route('/pwpolicy')
 
   router.route('/test')
   // get status/test
-  	.get(async function(req, res) {
-  		req.auditDescription = 'Status Test (Read)';
-  		req.auditTTLMode = 4;			// short Time to Live
-  		var message = "Say Hello World";
+    .get(async function(req, res) {
+      req.auditDescription = 'Status Test (Read)';
+      req.auditTTLMode = 4;			// short Time to Live
+      var message = "Say Hello World";
 
-  		var status = "UNDEFINED"
-  		logger4js.info("Get Status Test ");
-  		try {
-  			var result = await sleep(500)
-  			logger4js.info("Get Status after say hello: %s Result %O ", message, result);
-  			var status = message
-  		} catch (ex) {
-  			logger4js.info("Say Hello Again Catch Error %O", ex);
-  			return res.status(500).send({
-  				state: 'failure',
-  				message: 'Status Test Check Failed',
-  				error: JSON.stringify(ex)
-  			});
-  		}
-  		return res.status(200).send({
-  			state: 'success',
-  			message: 'Status Test Check',
-  			status: status
-  		});
-  	})
+      var status = "UNDEFINED"
+      logger4js.info("Get Status Test ");
+      try {
+        var result = await sleep(500)
+        logger4js.info("Get Status after say hello: %s Result %O ", message, result);
+        status = message
+      } catch (ex) {
+        logger4js.info("Say Hello Again Catch Error %O", ex);
+        return res.status(500).send({
+          state: 'failure',
+          message: 'Status Test Check Failed',
+          error: JSON.stringify(ex)
+        });
+      }
+      return res.status(200).send({
+        state: 'success',
+        message: 'Status Test Check',
+        status: status
+      });
+    })
 
 module.exports = router;

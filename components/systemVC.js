@@ -24,15 +24,6 @@ var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
-var findUser = function(currentUser) {
-		return currentUser == this;
-}
-
-var findUserList = function(currentUser) {
-		//console.log("compare %s %s", currentUser.email, this);
-		return currentUser.email == this;
-}
-
 // Verify/Create Visbo Center with an initial user
 var createSystemVC = function (body) {
 	logger4js.info("Create System Visbo Center if not existent");
@@ -41,7 +32,6 @@ var createSystemVC = function (body) {
 		return undefined;
 	}
 	redisClient = visboRedis.VisboRedisInit();
-	var users = body.users;
 	var nameSystemVC = "Visbo-System";
 	// check that VC name is unique
 	var query = {system: true};
@@ -109,7 +99,6 @@ var initSystemSettings = function() {
 	// Get the Default Log Level from DB
 	if (!vcSystem) return;
 	var query = {};
-	var listSetting;
 	query.vcid = vcSystem._id;
 	query.type = 'SysConfig';
 	var queryVCSetting = VCSetting.find(query);
@@ -163,7 +152,7 @@ var refreshSystemSetting = function(task, finishedTask) {
 		}
 		task.value.taskSpecific = result;
 		finishedTask(task, task.value.taskSpecific.result == 0);
-	  logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
+		logger4js.trace("Task(%s) refreshSystemSetting Done UpdatedAt %s", task._id, newUpdatedAt);
 	})
 }
 
@@ -224,9 +213,9 @@ var getSystemVCSetting = function (name) {
 			}
 		}
 		vcSystemSetting.push(vcSettingCopy);
-		vcSetting.save(function(err, oneVCSetting) {
+		vcSetting.save(function(err) {
 			if (err) {
-				errorHandler(err, undefined, `DB: POST VC Setting UI URl ${req.params.vcid} save`, undefined)
+				errorHandler(err, undefined, `DB: POST System VC Setting`, undefined)
 				return;
 			}
 		});

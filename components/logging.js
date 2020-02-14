@@ -1,16 +1,13 @@
 var fs = require('fs');
-var util = require('util');
 var path = require('path');
 
 var log4js = require('log4js');
 var logger4js = undefined;
 
-var configDebug = undefined;
-var fsLogPath = undefined;
 var logObj = undefined;
 var logConfig = undefined
 
-setLogLevelConfig = function(newConfigDebug) {
+function setLogLevelConfig(newConfigDebug) {
 	if ( newConfigDebug == undefined ) {
 		return;
 	}
@@ -23,7 +20,6 @@ setLogLevelConfig = function(newConfigDebug) {
 		}
 	}
 	// console.log("LOG LEVEL SET: %O", newConfigDebug)
-	configDebug = newConfigDebug
 }
 
 function cleanupLogFiles(task, finishedTask) {
@@ -44,7 +40,6 @@ function cleanupLogFiles(task, finishedTask) {
 	if (process.env.LOGPATH != undefined) {
 		dir = process.env.LOGPATH;
 	}
-	var fileList = [];
 
 	logger4js.debug("Delete Log File from Directory: %s Date %s", dir, deleteLogDate);
 	var folders = fs.readdirSync(dir);
@@ -62,8 +57,8 @@ function cleanupLogFiles(task, finishedTask) {
 		} else {
 			// Browse Host Directory for Log Files per Host
 			var files = fs.readdirSync(folder);
-			var stats = {}
 			var emptyFolder = true;
+			stats = {}
 			for (var j in files) {
 				var file = path.join(folder, files[j]);
 				if (files[j].substring(0, 1) == '.') {
@@ -80,9 +75,9 @@ function cleanupLogFiles(task, finishedTask) {
 						var fullFileName = path.join(folder, files[j]);
 						logger4js.trace("Delete Log File %s Modified %s AgeFilter %s", fullFileName, stats.mtime, deleteLogDate);
 						try {
-						  fs.unlinkSync(fullFileName);
+							fs.unlinkSync(fullFileName);
 							deletedCount += 1;
-						  logger4js.debug('Delete Log File %s successfully', fullFileName);
+							logger4js.debug('Delete Log File %s successfully', fullFileName);
 						} catch (err) {
 							logger4js.warn('Delete Log File %s failed', fullFileName);
 						}
@@ -107,8 +102,8 @@ function cleanupLogFiles(task, finishedTask) {
 	finishedTask(task, false);
 }
 
-initLog4js = function(fsLogPath) {
-	// if (!logObj) {
+function initLog4js(fsLogPath) {
+	if (!logObj) {
 		logConfig = {
 			appenders: {
 				out: { type: 'stdout' },
@@ -136,7 +131,7 @@ initLog4js = function(fsLogPath) {
 		logger4js = log4js.getLogger("OTHER");
 
 		logger4js.info("LogPath %s", fsLogPath)
-	// }
+	}
 }
 
 module.exports = {
