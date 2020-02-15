@@ -3,13 +3,13 @@ var Schema = mongoose.Schema;
 
 var vpfItem = new Schema({
 	vpid: {type: Schema.Types.ObjectId, ref: 'VisboProject', required: true},
-	name: { type: String },
+	name: { type: String, maxlength: 256 },
 	variantName: { type: String, required: false, maxlength: 256},
 	Start: { type: Date, required: false},
 	show: { type: Boolean },
 	zeile: { type: Number },
-	reasonToInclude: { type: String },
-	reasonToExclude: { type: String }
+	reasonToInclude: { type: String, maxlength: 4096 },
+	reasonToExclude: { type: String, maxlength: 4096 }
 });
 
 var visboPortfolioSchema = new mongoose.Schema({

@@ -8,6 +8,7 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
+var getSystemUrl = require('./../components/systemVC').getSystemUrl
 
 var moment = require('moment');
 moment.locale('de');
@@ -25,31 +26,13 @@ var ejs = require('ejs');
 
 var visbouser = mongoose.model('User');
 
-var visboParseUA = function(agent, stringUA) {
-	var shortUA = stringUA;
-	logger4js.trace("User Agent %s", JSON.stringify(agent), shortUA);
-	var index = stringUA.indexOf("(")
-	if (index >= 0) shortUA = shortUA.substring(0, index-1)
-	logger4js.trace("User Agent Shortened1 %s to %s", stringUA, shortUA);
-
-	if (agent.family == "Other") {
-		index = shortUA.indexOf("/")
-		if (index >= 0) {
-			agent.family = shortUA.substring(0, index)
-			shortUA = shortUA.substring(index+1, shortUA.length )
-			logger4js.trace("User Agent Shortened2 %s to %s", agent.family, shortUA);
-			index = shortUA.indexOf(".")
-			if (index >= 0) {
-				agent.major = shortUA.substring(0, index)
-				agent.minor = shortUA.substring(index+1, shortUA.length )
-				logger4js.trace("User Agent Major %s Minor %s", agent.major, agent.minor);
-			}
-		}
-	}
-	// agent.patch = 0;
-	// agent.family.patch = 0;
-	// agent.os.patch = 0;
-	logger4js.debug("User Agent %s, %s", JSON.stringify(agent), agent.toString());
+var visboShortUA = function(stringUA) {
+	var agent = useragent.parse(stringUA);
+	agent.patch = undefined;
+	agent.family.patch = undefined;
+	agent.os.patch = undefined;
+	logger4js.debug("User Agent %s", agent.toString());
+	return agent.toString();
 }
 
 var findUserAgent = function(currentUserAgent) {
@@ -126,7 +109,6 @@ router.route('/user/login')
 // Post Login
 	.post(function(req, res) {
 		var currentDate = new Date();
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Login';
 
 		logger4js.info("Try to Login %s", req.body.email);
@@ -139,9 +121,7 @@ router.route('/user/login')
 			});
 		}
 		req.body.email = req.body.email.toLowerCase().trim();
-		var agent = useragent.parse(req.get('User-Agent'));
-		visboParseUA(agent, req.headers['user-agent']);
-		req.visboUserAgent = agent.toString();
+		req.visboUserAgent = visboShortUA(req.headers['user-agent']);
 		logger4js.debug("Shortened User Agent ", req.visboUserAgent);
 
 		visbouser.findOne({ "email" : req.body.email }, function(err, user) {
@@ -160,7 +140,7 @@ router.route('/user/login')
 
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn("Login: User %s not Registered User Status %s", req.body.email, user.status ? true: false);
-				// MS TODO: Send Mail to User with Register Link
+				// Send Mail to User with Register Link
 				sendMail.accountNotRegistered(req, user);
 				return res.status(401).send({
 					state: "failure",
@@ -171,6 +151,13 @@ router.route('/user/login')
 			var loginRetries = 3
 			var lockMinutes = 15;
 			var loginFailedIntervalMinute = 4 * 60;
+			if (user.status.lockedUntil && user.status.lockedUntil.getTime() > currentDate.getTime()) {
+				logger4js.info("Login: User %s locked until %s", req.body.email, user.status.lockedUntil);
+				return res.status(401).send({
+					state: "failure",
+					message: "email or password mismatch"
+				});
+			}
 			logger4js.debug("Login: Check password for %s user", req.body.email);
 			if (!isValidPassword(user, req.body.password)) {
 				var lastLoginFailedAt = user.status.lastLoginFailedAt || new Date(0);
@@ -272,10 +259,10 @@ router.route('/user/login')
 						user.session = undefined;
 						// Check user Agent and update or add it and send e-Mail about new login
 						var curAgent = {};
-						curAgent.userAgent = req.headers['user-agent'];
+						curAgent.userAgent = req.visboUserAgent;
 						curAgent.createdAt = new Date();
 						curAgent.lastUsedAt = curAgent.createdAt;
-						logger4js.trace("User Agent prepared %s", JSON.stringify(user.userAgents));
+						logger4js.trace("User Agent prepared %s", curAgent.userAgents);
 
 						if (!user.userAgents || user.userAgents.length == 0) {
 							user.userAgents = [];
@@ -292,9 +279,9 @@ router.route('/user/login')
 								sendMail.accountNewLogin(req, user);
 								logger4js.debug("New Login with new User Agent %s", req.visboUserAgent);
 							}
-							// Cleanup old User Agents older than 1 year
+							// Cleanup old User Agents older than 3 Months
 							var expiredAt = new Date()
-							expiredAt.setFullYear(expiredAt.getFullYear()-1)
+							expiredAt.setMonth(expiredAt.getMonth()-3)
 							logger4js.trace("User before Filter %s User Agents %s", expiredAt, JSON.stringify(user.userAgents));
 							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ))
 						}
@@ -344,7 +331,6 @@ router.route('/user/pwforgotten')
 
 // Forgot Password
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Forgot Password';
 
 		logger4js.info("Requested Password Reset through e-Mail %s", req.body.email);
@@ -422,15 +408,10 @@ router.route('/user/pwforgotten')
 							errorHandler(err, res, `Sign: POST Forgot Password `, `Token generation failed`)
 							return;
 						};
-						// MS TODO: Send mail to non registered users how to register
 						// Send e-Mail with Token to registered Users
 						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs')
-						var uiUrl =  'http://localhost:4200'
-						if (process.env.UI_URL != undefined) {
-						  uiUrl = process.env.UI_URL;
-						}
+						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
-						// var url = 'http://'.concat(req.headers.host, url.parse(req.url).pathname, '?token=', token);
 						logger4js.debug("E-Mail template %s, url %s", template, pwreseturl.substring(0, 40));
 						ejs.renderFile(template, {user: user, url: pwreseturl}, function(err, emailHtml) {
 							if (err) {
@@ -452,10 +433,23 @@ router.route('/user/pwforgotten')
 									// html: ejs.renderFile(template)
 							};
 							mail.VisboSendMail(message);
-							return res.status(200).send({
-								state: "success",
-								message: "Successfully Requested Password Reset through e-Mail"
-							});
+							logger4js.trace("PW Reset Env %s uiUrl %s debug %s.", process.env.NODE_ENV, uiUrl, req.body.debug);
+							if (process.env.NODE_ENV == "development" && uiUrl == "http://localhost:4200" && req.body.debug) {
+								// deliver more details to do automatic testing without mail verification
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully Requested Password Reset through e-Mail",
+									debug: {
+										url: pwreseturl,
+										token: token
+									}
+								});
+							} else {
+								return res.status(200).send({
+									state: "success",
+									message: "Successfully Requested Password Reset through e-Mail"
+								});
+							}
 						});
 					}
 				);
@@ -485,10 +479,9 @@ router.route('/user/pwreset')
 
 	// Password Reset
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Password Reset';
 
-		logger4js.info("Password Reset Change through e-Mail");
+		logger4js.info("Password Reset Change through e-Mail Token %s PW %s", req.body.token && "Token Available", req.body.password && "PW Available");
 		if (!req.body.token || !req.body.password) {
 			return res.status(400).send({
 				state: "failure",
@@ -501,7 +494,7 @@ router.route('/user/pwreset')
       if (err) {
         return res.status(401).send({
         	state: 'failure',
-        	message: 'Token is dead'
+        	message: 'Session has expired'
         });
       } else {
         // if everything is good, save to request for use in other routes
@@ -620,7 +613,6 @@ router.route('/user/signup')
 
 // Post Signup User
 	.post(function(req, res) {
-		logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 		req.auditDescription = 'Signup';
 
 		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
@@ -720,18 +712,15 @@ router.route('/user/signup')
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
 					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs')
-					var uiUrl =  'http://localhost:4200'
+					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'Please confirm your eMail address ';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
-					uiUrl = uiUrl.concat('/registerconfirm?id=', user._id, '&hash=', hash);
+					var registerconfirm = uiUrl.concat('/registerconfirm?id=', user._id, '&hash=', hash);
 
-					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
+					logger4js.debug("E-Mail template %s, url %s", template, registerconfirm);
+					ejs.renderFile(template, {userTo: user, url: registerconfirm}, function(err, emailHtml) {
 						if (err) {
 							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
 							return res.status(500).send({
@@ -749,14 +738,29 @@ router.route('/user/signup')
 						};
 						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
 						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully signed up",
-							user: user
-						});
+						logger4js.warn("PW Reset Env %s uiUrl %s debug %s.", process.env.NODE_ENV, uiUrl, req.body.debug);
+						if (process.env.NODE_ENV == "development" && uiUrl == "http://localhost:4200" && req.body.debug) {
+							// deliver more details to do automatic testing without mail verification
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully signed up",
+								user: user,
+								debug: {
+									url: registerconfirm,
+									hash: hash
+								}
+							});
+						} else {
+							return res.status(200).send({
+								state: "success",
+								message: "Successfully signed up",
+								user: user
+							});
+						}
 					});
 				} else {
 					logger4js.info("User Registration completed with Hash %s", user.email);
+					sendMail.accountRegisteredSuccess(req, user);
 					return res.status(200).send({
 						state: "success",
 						message: "Successfully signed up",
@@ -814,7 +818,6 @@ router.route('/user/signup')
 	  */
 	// Post User Confirm
 		.post(function(req, res) {
-			logger4js.level = debugLogLevel(logModule); // default level is OFF - which means no logs at all.
 			req.auditDescription = 'Register Confirm';
 
 			logger4js.info("e-Mail confirmation for user %s hash %s", req.body._id, req.body.hash);
@@ -865,39 +868,12 @@ router.route('/user/signup')
 							error: err
 						});
 					}
-					// now send the eMail for confirmation of the e-Mail address
-					var template = __dirname.concat('/../emailTemplates/confirmResultUser.ejs')
-					var uiUrl =  'http://localhost:4200'
-					var eMailSubject = 'Successful eMail confirmation';
-					if (process.env.UI_URL != undefined) {
-						uiUrl = process.env.UI_URL;
-					}
-
-					uiUrl = uiUrl.concat('/login?email=', user.email);
-
-					logger4js.debug("E-Mail template %s, url %s", template, uiUrl);
-					ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
-						if (err) {
-							logger4js.warn("E-Mail Rendering failed %s %s", template, err.message);
-							return res.status(500).send({
-								state: "failure",
-								message: "E-Mail Rendering failed",
-								error: err
-							});
-						}
-						var message = {
-								// from: useremail,
-								to: user.email,
-								subject: eMailSubject,
-								html: '<p> '.concat(emailHtml, " </p>")
-						};
-						logger4js.info("Now send mail from %s to %s", message.from || 'system', message.to);
-						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: "success",
-							message: "Successfully confirmed eMail",
-							user: user
-						});
+					// now send the eMail for successfully signup of the e-Mail address
+					sendMail.accountRegisteredSuccess(req, user);
+					return res.status(200).send({
+						state: "success",
+						message: "Successfully confirmed eMail",
+						user: user
 					});
 				});
 			});

@@ -1,0 +1,6 @@
+VisboR=$HOME/GitHub/visbo-server-rest
+VisboU=$HOME/GitHub/visbo-ui-build
+VisboL=/var/log/visbo
+alias VR='cd $VisboR'
+alias VU='cd $VisboU'
+alias VL='cd $VisboL'
