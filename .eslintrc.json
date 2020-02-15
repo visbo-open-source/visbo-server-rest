@@ -14,6 +14,7 @@
     },
     "rules": {
         "semi": ["warn", "always"],
-        "quotes": ["warn", "single"]
+        "quotes": ["warn", "single"],
+        "object-curly-newline": ["error", { "multiline": true }]
     }
 }

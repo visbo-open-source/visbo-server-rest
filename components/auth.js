@@ -1,4 +1,4 @@
-var logModule = "OTHER";
+var logModule = 'OTHER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -17,21 +17,21 @@ var isAllowedPassword = function(password){
 	if (!pwPolicy) {
 		var pwPolicySetting = getSystemVCSetting('PW Policy');
 		if (pwPolicySetting) {
-			logger4js.trace("Check Password Policy from DB %O len %s", pwPolicySetting, pwPolicySetting.value.PWPolicy.length);
+			logger4js.trace('Check Password Policy from DB %O len %s', pwPolicySetting, pwPolicySetting.value.PWPolicy.length);
 			if (pwPolicySetting.value && pwPolicySetting.value.PWPolicy) {
 				pwPolicy = pwPolicySetting.value.PWPolicy;
 			}
 		}
 		if (!pwPolicy) {
-			logger4js.trace("Check Password Policy from .env %s", process.env.PWPOLICY);
-			pwPolicy = process.env.PWPOLICY || "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$";
+			logger4js.trace('Check Password Policy from .env %s', process.env.PWPOLICY);
+			pwPolicy = process.env.PWPOLICY || '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*([^a-zA-Z\\d\\s])).{8,}$';
 		}
 
 		pwPolicyPattern = new RegExp(pwPolicy);
-		logger4js.debug("Initialise Password Policy %s", pwPolicy);
+		logger4js.debug('Initialise Password Policy %s', pwPolicy);
 	}
 
-	logger4js.trace("Check Password Policy against %s result %s", pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
+	logger4js.trace('Check Password Policy against %s result %s', pwPolicy, password.match(pwPolicyPattern)|| 'NULL');
 	var result = password.match(pwPolicyPattern);
 	return result;
 };
@@ -55,12 +55,12 @@ function verifyUser(req, res, next) {
       } else {
         // if everything is good, check IP and User Agent to prevent session steeling
 				var sessionValid = true;
-				if (decoded.session.ip != (req.headers["x-real-ip"] || req.ip)) {
-					logger4js.warn("User %s: Different IPs for Session %s vs %s", decoded.email, decoded.session.ip, req.headers["x-real-ip"] || req.ip);
+				if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
+					logger4js.warn('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
 					sessionValid = false;
 				}
 				if (decoded.session.ticket != req.get('User-Agent')) {
-					logger4js.warn("User %s: Different UserAgents for Session %s vs %s", decoded.email, decoded.session.ticket, req.get('User-Agent'));
+					logger4js.warn('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
 					sessionValid = false;
 				}
 				if (!sessionValid) {
@@ -70,16 +70,16 @@ function verifyUser(req, res, next) {
 					});
 				}
 				var redisClient = visboRedis.VisboRedisInit();
-				var token = req.headers['access-key'].split(".")[2];
+				var token = req.headers['access-key'].split('.')[2];
 				redisClient.get('token.'+token, function(err, reply) {
-					// logger4js.debug("Redis Token Check err %O reply %s", err, reply);
+					// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
 					if (err) {
 						return res.status(500).send({
 							state: 'failure',
 							message: 'Logout Validation'
 						});
 					}
-					logger4js.trace("Redis Token Found %s user %s", token, reply, );
+					logger4js.trace('Redis Token Found %s user %s', token, reply, );
 					if (reply) {
 						return res.status(401).send({
 							state: 'failure',

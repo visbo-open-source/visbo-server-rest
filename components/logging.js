@@ -13,17 +13,17 @@ function setLogLevelConfig(newConfigDebug) {
 	}
 	for (var category in newConfigDebug) {
 		if (logConfig.categories[category]) {
-			logger4js.trace("LogLevel Set %O Value %s", category, newConfigDebug[category]);
+			logger4js.trace('LogLevel Set %O Value %s', category, newConfigDebug[category]);
 			// logConfig.categories[category].level = newConfigDebug[category]
 			var logger = log4js.getLogger(category);
 			logger.level = newConfigDebug[category];
 		}
 	}
-	// console.log("LOG LEVEL SET: %O", newConfigDebug)
+	// console.log('LOG LEVEL SET: %O', newConfigDebug)
 }
 
 function cleanupLogFiles(task, finishedTask) {
-	logger4js.debug("cleanupLogFiles Execute %s", task && task._id);
+	logger4js.debug('cleanupLogFiles Execute %s', task && task._id);
 	if (!task || !task.value) finishedTask(task, false);
 	var ageDays = 30;
 	if (task.specificValue)
@@ -41,19 +41,19 @@ function cleanupLogFiles(task, finishedTask) {
 		dir = process.env.LOGPATH;
 	}
 
-	logger4js.debug("Delete Log File from Directory: %s Date %s", dir, deleteLogDate);
+	logger4js.debug('Delete Log File from Directory: %s Date %s', dir, deleteLogDate);
 	var folders = fs.readdirSync(dir);
 	var stats = {};
 
 	for (var i in folders) {
 		var folder = path.join(dir, folders[i]);
 		if (folders[i].substring(0, 1) == '.') {
-			logger4js.debug("Ignore dot folders %s in log folder", folder);
+			logger4js.debug('Ignore dot folders %s in log folder', folder);
 			continue;
 		}
 		stats = fs.statSync(folder);
 		if ( !stats.isDirectory()) {
-			logger4js.debug("Ignore native file %s in log folder", folder);
+			logger4js.debug('Ignore native file %s in log folder', folder);
 		} else {
 			// Browse Host Directory for Log Files per Host
 			var files = fs.readdirSync(folder);
@@ -62,18 +62,18 @@ function cleanupLogFiles(task, finishedTask) {
 			for (var j in files) {
 				var file = path.join(folder, files[j]);
 				if (files[j].substring(0, 1) == '.') {
-					logger4js.debug("Ignore dot files %s in log folder", file);
+					logger4js.debug('Ignore dot files %s in log folder', file);
 					emptyFolder = false;
 					continue;
 				}
 				stats = fs.statSync(file);
 				if ( !stats.isFile()) {
-					logger4js.debug("Ignore non native file %s in log folder", file);
+					logger4js.debug('Ignore non native file %s in log folder', file);
 					emptyFolder = false;
 				} else {
 					if (stats.mtime < deleteLogDate) {
 						var fullFileName = path.join(folder, files[j]);
-						logger4js.trace("Delete Log File %s Modified %s AgeFilter %s", fullFileName, stats.mtime, deleteLogDate);
+						logger4js.trace('Delete Log File %s Modified %s AgeFilter %s', fullFileName, stats.mtime, deleteLogDate);
 						try {
 							fs.unlinkSync(fullFileName);
 							deletedCount += 1;
@@ -82,7 +82,7 @@ function cleanupLogFiles(task, finishedTask) {
 							logger4js.warn('Delete Log File %s failed', fullFileName);
 						}
 					} else {
-						logger4js.debug("Keep Log File %s from %s Modified %s AgeFilter %s", files[j], folders[i], stats.mtime, deleteLogDate);
+						logger4js.debug('Keep Log File %s from %s Modified %s AgeFilter %s', files[j], folders[i], stats.mtime, deleteLogDate);
 						emptyFolder = false;
 					}
 				}
@@ -114,13 +114,13 @@ function initLog4js(fsLogPath) {
 			},
 			categories: {
 				default: { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"VC": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'info' },
-				"VP": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"VPV": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"USER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"MAIL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"ALL": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
-				"OTHER": { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
+				'VC': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'info' },
+				'VP': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+				'VPV': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+				'USER': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+				'MAIL': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+				'ALL': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' },
+				'OTHER': { appenders: ['just-errors', 'just-errors2', 'everything'], level: 'debug' }
 			}
 			// ,
 			// pm2: true,
@@ -128,9 +128,9 @@ function initLog4js(fsLogPath) {
 		};
 		logObj = log4js.configure(logConfig);
 		// log4js.level = 'info';
-		logger4js = log4js.getLogger("OTHER");
+		logger4js = log4js.getLogger('OTHER');
 
-		logger4js.info("LogPath %s", fsLogPath);
+		logger4js.info('LogPath %s', fsLogPath);
 	}
 }
 

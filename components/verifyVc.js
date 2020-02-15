@@ -11,7 +11,7 @@ var VisboGroup = mongoose.model('VisboGroup');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 
-var logModule = "VC";
+var logModule = 'VC';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var VisboPermission = Const.VisboPermission;
@@ -24,16 +24,16 @@ function getAllGroups(req, res, next) {
 
 	// get the VC Groups the user is member of
 	// handle sysadmin and systemvc case
-	logger4js.trace("Generate VC Groups for user %s for url %s", req.decoded.email, req.url);
+	logger4js.trace('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
 
-	if (!vcid && req.method == "GET" && req.query.vcid) {
+	if (!vcid && req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
 	}
-	if (!vcid && req.method == "POST" && req.body.vcid) {
+	if (!vcid && req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
 	}
 	if (!validate.validateObjectId(vcid, true)) {
-		logger4js.warn("VC Get all Groups Bad Parameter vcid %s", vcid);
+		logger4js.warn('VC Get all Groups Bad Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid VisboCenter'
@@ -59,16 +59,16 @@ function getAllGroups(req, res, next) {
 	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: VC Groups get all`, `Error getting Visbo Centers`);
+			errorHandler(err, res, 'DB: VC Groups get all', 'Error getting Visbo Centers');
 			return;
 		}
-		logger4js.trace("Found VGs %d", listVG.length);
+		logger4js.trace('Found VGs %d', listVG.length);
 		var listVCPerm = new VisboPermission();
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
-			if (permGroup.groupType == "System") {
+			if (permGroup.groupType == 'System') {
 				listVCPerm.addPerm(0, permGroup.permission);
-			} else if (permGroup.groupType == "VC") {
+			} else if (permGroup.groupType == 'VC') {
 				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
 			}
 		}
@@ -86,10 +86,10 @@ function getVC(req, res, next, vcid) {
 	req.auditSysAdmin = isSysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
-	logger4js.debug("Generate VC Groups for vcid %s user %s for url %s isSysAdmin %s", vcid, req.decoded.email, req.url, isSysAdmin);
+	logger4js.debug('Generate VC Groups for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
 	var query = {};
 	if (!validate.validateObjectId(vcid, false)) {
-		logger4js.warn("VC Groups Bad Parameter vcid %s", vcid);
+		logger4js.warn('VC Groups Bad Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid VisboCenter'
@@ -111,7 +111,7 @@ function getVC(req, res, next, vcid) {
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {
-			errorHandler(err, res, `DB: VC Groups get specific VC`, `Error getting Visbo Center`);
+			errorHandler(err, res, 'DB: VC Groups get specific VC', 'Error getting Visbo Center');
 			return;
 		}
 		if (!oneVC) {
@@ -122,7 +122,7 @@ function getVC(req, res, next, vcid) {
 		}
 		req.oneVC = oneVC;
 
-		logger4js.debug("Found VisboCenter %s Access Permission %O", vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
+		logger4js.debug('Found VisboCenter %s Access Permission %O', vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
 		return next();
 	});
 }
@@ -133,7 +133,7 @@ function getSystemGroups(req, res, next) {
 	req.oneVC = systemVC.getSystemVC();
 
 	// get the System Groups the user is member of
-	logger4js.trace("Generate System Groups for user %s for url %s", req.decoded.email, req.url);
+	logger4js.trace('Generate System Groups for user %s for url %s', req.decoded.email, req.url);
 	var query = {};
 
 	query = {'users.userId': userId};	// search for VC groups where user is member
@@ -143,10 +143,10 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: System Groups get all`, `Error getting Visbo Centers`);
+			errorHandler(err, res, 'DB: System Groups get all', 'Error getting Visbo Centers');
 			return;
 		}
-		logger4js.trace("Found VGs %d", listVG.length);
+		logger4js.trace('Found VGs %d', listVG.length);
 		if (listVG.length == 0) {
 			// do not accept requests without a group assignement especially to System Group
 			return res.status(403).send({

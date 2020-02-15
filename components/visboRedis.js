@@ -1,4 +1,4 @@
-var logModule = "OTHER";
+var logModule = 'OTHER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -16,12 +16,12 @@ function VisboRedisInit(host, port) {
 
 	host = host || currentHost;
 	port = port != undefined ? port : currentPort;
-	logger4js.trace("Redis Client Setup Host %s:%d", host, port);
+	logger4js.trace('Redis Client Setup Host %s:%d', host, port);
 
 	if (redisClient) {
 		// redis Client already initialised check if host or port Changes
 		if (host != currentHost || port != currentPort) {
-			logger4js.trace("Redis Client Change Host %s:%d", host, port);
+			logger4js.trace('Redis Client Change Host %s:%d', host, port);
 			redisClient.quit();
 			initialised = false;
 		}
@@ -29,7 +29,7 @@ function VisboRedisInit(host, port) {
 
 	// if there is no client initialised do it
 	if (!initialised) {
-		logger4js.trace("Redis Client  Init");
+		logger4js.trace('Redis Client  Init');
 		currentHost = host;
 		currentPort = port;
 		redisClient = redis.createClient({host : currentHost, port : currentPort});
@@ -46,10 +46,9 @@ function VisboRedisInit(host, port) {
 		initialised = true;
 	}
 
-	logger4js.trace("Redis all prepared return Client ");
+	logger4js.trace('Redis all prepared return Client ');
 	return redisClient;
 }
 
-module.exports = {
-	VisboRedisInit: VisboRedisInit
-};
+module.exports =
+	{ VisboRedisInit: VisboRedisInit };

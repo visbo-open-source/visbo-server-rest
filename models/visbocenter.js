@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
 
 var visboCenterSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256 },
