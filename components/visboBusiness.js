@@ -711,13 +711,16 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 		if (vpv.variantName != "pfv"){
 
-			var indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
-			var indexActual = getColumnOfDate(vpv.timestamp) - getColumnOfDate(vpv.startDate);
+			
 
 			if (organisation){
+				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
+				var indexActual = getColumnOfDate(vpv.timestamp) - getColumnOfDate(pfv.startDate);
 				keyMetrics.costBaseLastActual = getSummeKosten(pfv, organisation, indexActual);
 				keyMetrics.costBaseLastTotal = getSummeKosten(pfv, organisation, indexTotal);
 
+				indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
+				indexActual = getColumnOfDate(vpv.timestamp) - getColumnOfDate(vpv.startDate);
 				keyMetrics.costCurrentTotal= getSummeKosten(vpv, organisation, indexTotal);
 				keyMetrics.costCurrentActual= getSummeKosten(vpv, organisation, indexActual);
 			}
