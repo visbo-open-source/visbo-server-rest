@@ -42,9 +42,7 @@ var adminSchema = new mongoose.Schema({
 			maxlength: 20,
 			default: 'not set'
 		},
-		updated_at: {
-			type: Date
-		}
+		updated_at: { type: Date }
 	},
 	logs: [{
 		type: Schema.Types.ObjectId,

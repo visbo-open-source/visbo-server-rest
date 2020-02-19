@@ -13,5 +13,8 @@
         "sourceType": "module"
     },
     "rules": {
+        "semi": ["warn", "always"],
+        "quotes": ["warn", "single"],
+        "object-curly-newline": ["error", { "multiline": true }]
     }
 }

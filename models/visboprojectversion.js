@@ -127,7 +127,9 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	Dauer: { type: Number, required: false},
 	AllPhases: [{ type: clsPhase, required: true}],
 	hierarchy: {
-		allNodes: [{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode, required: true}} ]
+		allNodes: [
+			{hryNodeKey: {type: String, required: true}, hryNode: {type: clsHierarchyNode, required: true}}
+		]
 	},
 	timestamp: { type: Date, required: false},
 	volumen: { type: Number, required: false},

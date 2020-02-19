@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants')
-var constPermVP = Const.constPermVP
+var Const = require('../models/constants');
+var constPermVP = Const.constPermVP;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
@@ -11,7 +11,7 @@ var VCSetting = mongoose.model('VCSetting');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 
-var logModule = "VPV";
+var logModule = 'VPV';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var VisboPermission = Const.VisboPermission;
@@ -19,12 +19,12 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of and has VP Permission
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
-	var baseUrl = req.url.split("?")[0];
+	var baseUrl = req.url.split('?')[0];
 	var startCalc = new Date();
 
 	// get the VP Groups where the user is member of
 	// handle sysadmin case
-	logger4js.debug("Generate VPV Groups for user %s for url %s", req.decoded.email, req.url);
+	logger4js.debug('Generate VPV Groups for user %s for url %s', req.decoded.email, req.url);
 	var query = {};
 	var specificVPID = undefined;
 	var specificSystem = undefined;
@@ -33,7 +33,7 @@ function getAllVPVGroups(req, res, next) {
 	// independent of the delete Flag the VP (or the related groups) must be undeleted
 	query.deletedByParent = {$exists: false};
 	if (!validate.validateObjectId(req.query.vcid, true) || !validate.validateObjectId(req.query.vpid, true)) {
-		logger4js.warn("VC Bad Query Parameter vcid %s vpid %s", req.query.vcid, req.query.vpid);
+		logger4js.warn('VC Bad Query Parameter vcid %s vpid %s', req.query.vcid, req.query.vpid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Parameter for Visbo Center / Visbo Project'
@@ -48,14 +48,14 @@ function getAllVPVGroups(req, res, next) {
 	}
 
 	// Permission check for GET & POST
-	if (req.method == "GET") {
+	if (req.method == 'GET') {
 		if (req.query.sysadmin) {
 			query.groupType = 'System';						// search for System Groups only
 			specificSystem = true;
 		} else {
 			query.groupType = {$in: ['VC', 'VP']};				// search for VP and VC Groups only
 		}
-	} else if (req.method == "POST" && baseUrl == "/") {
+	} else if (req.method == 'POST' && baseUrl == '/') {
 		// Only Create VP Request, check vpid from Body
 		if (!validate.validateObjectId(req.body.vpid, false)) {
 			return res.status(400).send({
@@ -70,34 +70,34 @@ function getAllVPVGroups(req, res, next) {
 		query.groupType = {$in: ['VC', 'VP']};				// search for VP and VC Groups only
 	}
 
-	logger4js.debug("Query VGs %s", JSON.stringify(query));
+	logger4js.debug('Query VGs %s', JSON.stringify(query));
 	var queryVG = VisboGroup.find(query);
-	queryVG.select('name permission vcid vpids groupType')
+	queryVG.select('name permission vcid vpids groupType');
 	queryVG.lean();
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, `DB: VPV Group all find`, `Error getting Visbo Project Versions `)
+			errorHandler(err, res, 'DB: VPV Group all find', 'Error getting Visbo Project Versions ');
 			return;
 		}
-		logger4js.debug("Found VGs %d", listVG.length);
+		logger4js.debug('Found VGs %d', listVG.length);
 		// Convert the permission to request
 		var listVPPerm = new VisboPermission();
 		for (var i=0; i < listVG.length; i++) {
 			// Check all VPIDs in Group
 			var permGroup = listVG[i];
 			req.oneVCID = permGroup.vcid;	// store VCID in case of POST VPV the same VCID is defined in every group
-			if (permGroup.groupType == "System") {
-				listVPPerm.addPerm(0, permGroup.permission)
+			if (permGroup.groupType == 'System') {
+				listVPPerm.addPerm(0, permGroup.permission);
 			} else if (permGroup.vpids) {
 				for (var j=0; j < permGroup.vpids.length; j++) {
-          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission)
+          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission);
 				}
 			}
 		}
-		logger4js.trace("VPV Combined Perm List %s Len %s", JSON.stringify(listVPPerm), listVPPerm.length);
+		logger4js.trace('VPV Combined Perm List %s Len %s', JSON.stringify(listVPPerm), listVPPerm.length);
 		req.listVPPerm = listVPPerm;
 
-		logger4js.trace("Found VPGroups %s", JSON.stringify(listVG));
+		logger4js.trace('Found VPGroups %s', JSON.stringify(listVG));
 		if ( specificVPID) {
 				if ((listVPPerm.getPerm(specificVPID).vp & constPermVP.View) == 0) {
 					return res.status(403).send({
@@ -115,21 +115,21 @@ function getAllVPVGroups(req, res, next) {
 			}
 		}
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV Perm All Groups %s ms", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate verifyVPV Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
 
 // Get the VPV for the specific vpvid
 function getVPV(req, res, next, vpvid) {
-	var baseUrl = req.url.split("?")[0]
-	var urlComponent = baseUrl.split("/")
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 	var startCalc = new Date();
 
 	if (!validate.validateObjectId(vpvid, false)) {
-		logger4js.warn("VPV Bad Parameter vpvid %s", vpvid);
+		logger4js.warn('VPV Bad Parameter vpvid %s', vpvid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Visbo Project Version'
@@ -140,19 +140,19 @@ function getVPV(req, res, next, vpvid) {
 	query.deletedAt = {$exists: checkDeleted};
 	// Check sysadmin permission as vpid is unknown it could not be checked here
 	if (sysAdmin && (req.listVPPerm.getPerm(0) & constPermVP.View) == 0) {
-		logger4js.info("No Permission to get VPV as sysadmin %s", query);
+		logger4js.info('No Permission to get VPV as sysadmin %s', query);
 		return res.status(403).send({
 			state: 'failure',
 			message: 'No Visbo Project or no Permission'
 		});
 	} else {
-		query.vpid = {$in: req.listVPPerm.getVPIDs(constPermVP.View)}
+		query.vpid = {$in: req.listVPPerm.getVPIDs(constPermVP.View)};
 	}
 	var queryVPV = VisboProjectVersion.findOne(query);
 
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
-			errorHandler(err, res, `DB: VPV specific find`, `Error getting Visbo Project Version `)
+			errorHandler(err, res, 'DB: VPV specific find', 'Error getting Visbo Project Version ');
 			return;
 		}
 		if (!oneVPV) {
@@ -166,12 +166,12 @@ function getVPV(req, res, next, vpvid) {
 		query._id = oneVPV.vpid;
 		// prevent that the user gets access to Versions of Deleted VPs or Deleted VCs
 		query.deletedAt =  {$exists: false};
-		query['vc.deletedAt'] = {$exists: false}
-		logger4js.trace("Get Visbo Project Query %O", query);
+		query['vc.deletedAt'] = {$exists: false};
+		logger4js.trace('Get Visbo Project Query %O', query);
 		var queryVP = VisboProject.findOne(query);
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VP specific from VPV find`, `Error getting Visbo Project Version `)
+				errorHandler(err, res, 'DB: GET VP specific from VPV find', 'Error getting Visbo Project Version ');
 				return;
 			}
 			if (!oneVP) {
@@ -180,14 +180,14 @@ function getVPV(req, res, next, vpvid) {
 					message: 'No Visbo Project or no Permission'
 				});
 			}
-			req.oneVP = oneVP
+			req.oneVP = oneVP;
 
-			logger4js.debug("Found Visbo Project %s Access", oneVPV.vpid);
+			logger4js.debug('Found Visbo Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
-			logger4js.debug("Calculate verifyVPV getVPV %s ms ", endCalc.getTime() - startCalc.getTime());
+			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
 			if (urlComponent.length == 3 &&
-				((urlComponent[2] == "calc" && req.query.type != 'Deliveries')
-				|| (urlComponent[2] == "copy")) ) {
+				((urlComponent[2] == 'calc' && req.query.type != 'Deliveries')
+				|| (urlComponent[2] == 'copy')) ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -199,12 +199,12 @@ function getVPV(req, res, next, vpvid) {
 // Generate the Groups where the user is member of and has VP Permission
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
-	var baseUrl = req.url.split("?")[0]
-	if (baseUrl == '/' && req.method == "GET" && req.query.vpfid) {
+	var baseUrl = req.url.split('?')[0];
+	if (baseUrl == '/' && req.method == 'GET' && req.query.vpfid) {
 		// get the VP List of a VPF
-		logger4js.debug("Generate Project List of Portfolio for user %s for url %s", req.decoded.email, req.url);
+		logger4js.debug('Generate Project List of Portfolio for user %s for url %s', req.decoded.email, req.url);
 		if (!validate.validateObjectId(req.query.vpfid, false)) {
-			logger4js.warn("VC Bad Query Parameter vpfid %s ", req.query.vpfid);
+			logger4js.warn('VC Bad Query Parameter vpfid %s ', req.query.vpfid);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid Parameter for Visbo Portfolio Version'
@@ -214,13 +214,13 @@ function getPortfolioVPs(req, res, next) {
 		var query = {};
 		query._id = req.query.vpfid;
 
-		logger4js.debug("Query VPF %s", JSON.stringify(query));
+		logger4js.debug('Query VPF %s', JSON.stringify(query));
 		// get the Project List from VPF
 		var queryVPF = VisboPortfolio.findOne(query);
-		queryVPF.select('_id vpid variantName allItems')
+		queryVPF.select('_id vpid variantName allItems');
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
-				errorHandler(err, res, `DB: listVPF find`, `Error getting Visbo Project Versions `)
+				errorHandler(err, res, 'DB: listVPF find', 'Error getting Visbo Project Versions ');
 				return;
 			}
 			if (!oneVPF) {
@@ -236,10 +236,10 @@ function getPortfolioVPs(req, res, next) {
 					message: 'No valid Portfolio'
 				});
 			}
-			logger4js.debug("Found VPF with Projects %d", oneVPF.allItems.length);
+			logger4js.debug('Found VPF with Projects %d', oneVPF.allItems.length);
 			// check if VP of Portfolio list is in the list of projects, to verify that the user has permission to View the Portfolio
 			if ((req.listVPPerm.getPerm(oneVPF.vpid).vp & constPermVP.View) == 0) {
-				logger4js.info("No Access to Portfolio VPID", oneVPF.vpid);
+				logger4js.info('No Access to Portfolio VPID', oneVPF.vpid);
 				// do not accept requests without access to VPF ID
 				return res.status(403).send({
 					state: 'failure',
@@ -253,26 +253,26 @@ function getPortfolioVPs(req, res, next) {
 				listVPVariant.push({vpid: oneVPF.allItems[i].vpid, variantName: oneVPF.allItems[i].variantName});
 			}
 			req.listPortfolioVP = listVP;
-			req.listPortfolioVPVariant = listVPVariant
+			req.listPortfolioVPVariant = listVPVariant;
 			var endCalc = new Date();
-			logger4js.debug("Calculate verifyVPV getPortfolioVPs %s ms", endCalc.getTime() - startCalc.getTime());
+			logger4js.debug('Calculate verifyVPV getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
 			return next();
 		});
 	} else {
-		// not the baseUrl "/" do nothing
+		// not the baseUrl '/' do nothing
 		return next();
 	}
 }
 
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
-	var baseUrl = req.url.split("?")[0]
+	var baseUrl = req.url.split('?')[0];
 	// fetch the organization in case of POST VPV to calculate keyMetrics
 
-	if (req.method != "POST" && baseUrl != '/') return next();
+	if (req.method != 'POST' && baseUrl != '/') return next();
 
 	if (!req.oneVCID) {
-		logger4js.warn("No Visbo Center identified");
+		logger4js.warn('No Visbo Center identified');
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No Visbo Center or Organization'
@@ -282,30 +282,30 @@ function getVCOrgs(req, res, next) {
 }
 
 function getVCOrganisation(vcid, req, res, next) {
-	logger4js.debug("VPV getVCOrgs organization for VCID %s", vcid);
+	logger4js.debug('VPV getVCOrgs organization for VCID %s', vcid);
 	var startCalc = new Date();
 	var query = {};
 	query.vcid = vcid;
 	query.name = 'organisation';
 	query.type = 'organisation';
 
-	logger4js.debug("getVCOrgs: Find VC Settings with query %O", query);
+	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
 	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
 	queryVCSetting.select('-value.allRoles.kapazitaet');
-	queryVCSetting.sort('type name userId -timestamp')
+	queryVCSetting.sort('type name userId -timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
-			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`)
+			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VisboCenter ${req.oneVC.name}`);
 			return;
 		}
 		req.visboOrganisations = listVCSetting;
 		for (var i = 0; i < listVCSetting.length; i++) {
-			logger4js.debug("getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s", i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
+			logger4js.debug('getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s', i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
 		}
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getVCOrganisation %s ms", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate verifyVPV getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -313,28 +313,28 @@ function getVCOrganisation(vcid, req, res, next) {
 // Get the base line (pfv) for keyMetrics calculation
 function getVPVpfv(req, res, next) {
 	var startCalc = new Date();
-	var baseUrl = req.url.split("?")[0];
+	var baseUrl = req.url.split('?')[0];
 	var vpid = req.body.vpid;
 	var timestamp = req.body.timestamp;
 
-	logger4js.trace("VPV getVPVpfv Information");
+	logger4js.trace('VPV getVPVpfv Information');
 	// fetch the base line in case of POST VPV to calculate keyMetrics
-	if (req.method != "POST" || baseUrl != '/' || req.body.variantName == 'pfv') {
+	if (req.method != 'POST' || baseUrl != '/' || req.body.variantName == 'pfv') {
 		return next();
 	}
 	// check that vpid is present and is a valid ObjectID
 	if (!validate.validateObjectId(vpid, false)
 	|| !validate.validateDate(timestamp, true)) {
-		logger4js.warn("Get VPV mal formed or missing vpid %s or timestamp %s", vpid, timestamp);
+		logger4js.warn('Get VPV mal formed or missing vpid %s or timestamp %s', vpid, timestamp);
 		return res.status(400).send({
-			state: "failure",
-			message: "Visbo Project ID missing"
-		})
+			state: 'failure',
+			message: 'Visbo Project ID missing'
+		});
 	}
 	if (!timestamp) {
 		timestamp = new Date();
 	}
-	logger4js.debug("VPV getVPVpfv base line for VPID %s TimeStamp %s", vpid, timestamp);
+	logger4js.debug('VPV getVPVpfv base line for VPID %s TimeStamp %s', vpid, timestamp);
 
 	var queryvpv = {};
 	queryvpv.deletedAt = {$exists: false};
@@ -349,13 +349,13 @@ function getVPVpfv(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, pfvVPV) {
 		if (err) {
-			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
+			errorHandler(err, res, 'DB: GET VPV pfv', 'Error getting Visbo Project Versions ');
 			return;
 		}
-		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
+		logger4js.debug('VPV getVPVpfv: Found a pfv Version %s ', pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getVPVpfv %s ms", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate verifyVPV getVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -363,17 +363,17 @@ function getVPVpfv(req, res, next) {
 // Get the current base line (pfv) for keyMetrics calculation
 function getCurrentVPVpfv(req, res, next) {
 	var startCalc = new Date();
-	var timestamp = req.method == "POST" ? req.body.timestamp : req.oneVPV.timestamp;
+	var timestamp = req.method == 'POST' ? req.body.timestamp : req.oneVPV.timestamp;
 	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
-		logger4js.warn("GET VPF for VPV mal formed timestamp %s", timestamp);
+		logger4js.warn('GET VPF for VPV mal formed timestamp %s', timestamp);
 		return res.status(400).send({
-			state: "failure",
-			message: "Timestamp not recognised"
-		})
+			state: 'failure',
+			message: 'Timestamp not recognised'
+		});
 	}
-	logger4js.debug("GET VPF for VPV for VPID %s TimeStamp %s", req.oneVPV.vpid, timestamp);
+	logger4js.debug('GET VPF for VPV for VPID %s TimeStamp %s', req.oneVPV.vpid, timestamp);
 
 	var queryvpv = {};
 	queryvpv.deletedAt = {$exists: false};
@@ -388,13 +388,13 @@ function getCurrentVPVpfv(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, pfvVPV) {
 		if (err) {
-			errorHandler(err, res, `DB: GET VPV pfv`, `Error getting Visbo Project Versions `)
+			errorHandler(err, res, 'DB: GET VPV pfv', 'Error getting Visbo Project Versions ');
 			return;
 		}
-		logger4js.debug("VPV getVPVpfv: Found a pfv Version %s ", pfvVPV && pfvVPV._id);
+		logger4js.debug('VPV getVPVpfv: Found a pfv Version %s ', pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug("Calculate verifyVPV getCurrentVPVpfv %s ms", endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate verifyVPV getCurrentVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
