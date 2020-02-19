@@ -1049,8 +1049,8 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Visbo Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc
-	 	* @apiSuccessExample {json} Success-Response:
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Costs
+	 	* @apiSuccessExample {json} Cost-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   'state':'success',
@@ -1061,26 +1061,55 @@ router.route('/:vpvid')
 		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
 		* 		'cost': [{
 		* 		   'currentDate':  '2018-03-01T00:00:00.000Z',
-		* 		   'costCurrentTotal': 125,
-		* 		   'costBaseLastActual': 115,
-		* 		   'costBaseLastTotal': 115,
-		* 		   'timeCompletionCurrentActual': 12,
-		* 		   'timeCompletionBaseLastActual': 14,
-		* 		   'timeCompletionCurrentTotal': 20,
-		* 		   'timeCompletionBaseLastTotal': 20,
-		* 		   'endDateCurrent': '2020-12-31',
-		* 		   'endDateBaseLast': '2020-12-31',
-		* 		   'deliverableCompletionCurrentActual': 9.3,
-		* 		   'deliverableCompletionCurrentTotal': 20,
-		* 		   'deliverableCompletionBaseLastActual': 10,
-		* 		   'deliverableCompletionBaseLastTotal': 20,
-		* 		   'timeDelayCurrentActual': 10,
-		* 		   'timeDelayCurrentTotal':1,
-		* 		   'deliverableDelayCurrentActual': 1,
-		* 		   'deliverableDelayCurrentTotal':10
-		* 		 }]
+		* 		   'baseLineCost': 125,
+		* 		   'currentCost': 115
+		*     }]
 	 	*   }]
 	 	* }
+		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Costs
+	 	* @apiSuccessExample {json} Delivery-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Returned Visbo Project Versions',
+	 	*   'vpv': [{
+	 	*     '_id':'vpv5c754feaa',
+		*     'timestamp': '2019-03-19T11:04:12.094Z',
+		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+		* 		'deliveries': [{
+		* 		   'name':  Name,
+		* 		   'phasePFV':  'Name of Phase in PFV',
+		* 		   'phaseVPV':  'Name of Phase in VPV',
+		* 		   'description':  'Long Description of the delivery',
+		* 		   'datePFV': '2019-05-01T00:00:00.000Z',
+		* 		   'dateVPV': '2019-05-02T00:00:00.000Z',
+		* 		   'changeDays': 1,
+		* 		   'percentDone': 1,
+		*     }]
+	 	*   }]
+	 	* }
+		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Deadlines
+		* @apiSuccessExample {json} Deadline-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Returned Visbo Project Versions',
+	 	*   'vpv': [{
+	 	*     '_id':'vpv5c754feaa',
+		*     'timestamp': '2019-03-19T11:04:12.094Z',
+		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+		* 		'deadlines': [{
+		* 		   'name':  Name,
+		* 		   'phasePFV':  'Name of Phase in PFV',
+		* 		   'type':  'Phase or Milestone',
+		* 		   'datePFV': '2019-05-01T00:00:00.000Z',
+		* 		   'dateVPV': '2019-05-02T00:00:00.000Z',
+		* 		   'changeDays': 1,
+		* 		   'percentDone': 1,
+		*     }]
+	 	*   }]
+	 	* }
+		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Deliveries
 		*/
 	// Get keyMetrics calculation for a specific Visbo Project Version
 		.get(function(req, res) {
