@@ -1,6 +1,6 @@
 var nodemailer = require('nodemailer');
 
-var logModule = "MAIL";
+var logModule = 'MAIL';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -17,71 +17,71 @@ var initialised = false;
 function VisboSendMail(message) {
 	var smtpConfig = undefined;
 	var smtpSetting = undefined;
-	logger4js.debug("MAIL Send Mail to :%s:", message.to);
+	logger4js.debug('MAIL Send Mail to :%s:', message.to);
 
 	// make mail inititialisation only once or refresh if closed later
 	if (!initialised) {
-		logger4js.info("MAIL Evaluate SMTP Config");
+		logger4js.info('MAIL Evaluate SMTP Config');
 		smtpSetting = getSystemVCSetting('SMTP');
 		smtpConfig = smtpSetting && smtpSetting.value;
-		logger4js.debug("MAIL Check Config %O", smtpConfig);
+		logger4js.debug('MAIL Check Config %O', smtpConfig);
 		if (smtpConfig) {
 			if (smtpConfig.dkim) {
-				logger4js.debug("MAIL SMTP Config has DKIM Setting %O", smtpConfig.dkim);
+				logger4js.debug('MAIL SMTP Config has DKIM Setting %O', smtpConfig.dkim);
 				// now check if we have the private key for the domain
 				var dkimPrivKeyFile = path.join('/etc/visbo/', smtpConfig.dkim.domainName.concat('.priv'));
 				var stats = undefined;
 				var dkimPrivKey = '';
-				var keyStatusOk = false
+				var keyStatusOk = false;
 				try {
 					// Query the entry and catch exception if file does not exists
 					stats = fs.statSync(dkimPrivKeyFile);
-					logger4js.debug("MAIL SMTP Config DKIM File Length %s", stats.size);
+					logger4js.debug('MAIL SMTP Config DKIM File Length %s', stats.size);
 					if (!stats.isDirectory()) {
 						var content = fs.readFileSync(dkimPrivKeyFile);
-						logger4js.debug("MAIL SMTP Config has DKIM Key Start %s ", content.toString().substring(0,50));
+						logger4js.debug('MAIL SMTP Config has DKIM Key Start %s ', content.toString().substring(0,50));
 						dkimPrivKey = content.toString();
-						keyStatusOk = true
+						keyStatusOk = true;
 					}
 				}
 				catch (e) {
-					logger4js.debug("MAIL SMTP Config Access to DKIM Key File %s failed %O", dkimPrivKeyFile);
+					logger4js.debug('MAIL SMTP Config Access to DKIM Key File %s failed %O', dkimPrivKeyFile);
 				}
 				if (keyStatusOk) {
-					logger4js.debug("MAIL SMTP Config has DKIM key in %s", dkimPrivKeyFile);
-					smtpConfig.dkim.privateKey = dkimPrivKey
+					logger4js.debug('MAIL SMTP Config has DKIM key in %s', dkimPrivKeyFile);
+					smtpConfig.dkim.privateKey = dkimPrivKey;
 				} else {
-					logger4js.warn("MAIL SMTP Config has no corresponding DKIM key for %s in %s", smtpConfig.dkim.domainName, dkimPrivKeyFile);
-					delete smtpConfig.dkim
+					logger4js.warn('MAIL SMTP Config has no corresponding DKIM key for %s in %s', smtpConfig.dkim.domainName, dkimPrivKeyFile);
+					delete smtpConfig.dkim;
 				}
 			}
-			logger4js.debug("MAIL SMTP gateway %s with user %s", smtpConfig.host, smtpConfig.auth.user);
+			logger4js.debug('MAIL SMTP gateway %s with user %s', smtpConfig.host, smtpConfig.auth.user);
 			mailUser = smtpConfig.auth.user;
 		} else {
-			logger4js.fatal("MAIL SMTP Configuration Missing in Environment");
+			logger4js.fatal('MAIL SMTP Configuration Missing in Environment');
 			return;
 		}
-		logger4js.debug("MAIL Initialise e-Mail sending connection for %s", smtpConfig.auth.user);
+		logger4js.debug('MAIL Initialise e-Mail sending connection for %s', smtpConfig.auth.user);
 
-		transporter = nodemailer.createTransport(smtpConfig)
+		transporter = nodemailer.createTransport(smtpConfig);
 		if (!transporter) {
-			logger4js.error("MAIL Initialise e-Mail sending failed");
+			logger4js.error('MAIL Initialise e-Mail sending failed');
 			return;
 		} else {
-			logger4js.info("MAIL Initialise e-Mail sending success");
+			logger4js.info('MAIL Initialise e-Mail sending success');
 			initialised = true;
 		}
 	}
 	// verify connection configuration
-	// logger4js.debug("Mail all prepared, now verify the eMail");
+	// logger4js.debug('Mail all prepared, now verify the eMail');
 	transporter.verify(function(error) {
 		if (error) {
-			logger4js.error("MAIL Error sending Mail %s", error);
+			logger4js.error('MAIL Error sending Mail %s', error);
 		} else {
-			logger4js.trace("MAIL Mail Server is ready to take our messages");
+			logger4js.trace('MAIL Mail Server is ready to take our messages');
 		}
 	});
-	logger4js.debug("MAIL Mail all prepared, now fire the email to %s ", message.to);
+	logger4js.debug('MAIL Mail all prepared, now fire the email to %s ', message.to);
 
 	if (message.from && message.from != mailUser) {
 		message.replyTo = message.from;
@@ -89,13 +89,12 @@ function VisboSendMail(message) {
 	message.from = mailUser;
 	transporter.sendMail(message, function(error) {
     if (error) {
-      logger4js.error("MAIL Mail delivery failed %s to %s", error, message.to);
+      logger4js.error('MAIL Mail delivery failed %s to %s', error, message.to);
     } else {
-      logger4js.debug("MAIL Mail delivery finished: %s", message.to);
+      logger4js.debug('MAIL Mail delivery finished: %s', message.to);
     }
 	});
 }
 
-module.exports = {
-	VisboSendMail: VisboSendMail
-};
+module.exports =
+	{ VisboSendMail: VisboSendMail };

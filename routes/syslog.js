@@ -8,10 +8,10 @@ var path = require('path');
 var auth = require('../components/auth');
 var verifyVc = require('../components/verifyVc');
 
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
+var Const = require('../models/constants');
+var constPermSystem = Const.constPermSystem;
 
-var logModule = "OTHER";
+var logModule = 'OTHER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -35,12 +35,12 @@ router.route('/')
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
-	*  "state":"success",
-	*  "message":"Available Log Files",
-	*  "files":[{
-	*    "name":"all-the-logs.log",
-	*    "updatedAt":"2018-03-20T10:31:27.216Z",
-	*    "size":"123000"
+	*  'state':'success',
+	*  'message':'Available Log Files',
+	*  'files':[{
+	*    'name':'all-the-logs.log',
+	*    'updatedAt':'2018-03-20T10:31:27.216Z',
+	*    'size':'123000'
 	*  }]
 	*}
 	*/
@@ -52,10 +52,10 @@ router.route('/')
 		req.auditSysAdmin = true;
 		req.auditTTLMode = 1;
 
-		logger4js.info("Get Log File List Perm system: %O ", req.listVCPerm.getPerm(0));
+		logger4js.info('Get Log File List Perm system: %O ', req.listVCPerm.getPerm(0));
 
 		var ageDays = 7;
-		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays
+		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays;
 		var ageDate = new Date();
 		ageDate.setDate(ageDate.getDate() - ageDays);
 		ageDate.setHours(0);
@@ -70,54 +70,54 @@ router.route('/')
 		var fileList = [];
 
 		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewLog)) {
-			logger4js.debug("No Permission to View System Log for user %s", userId);
+			logger4js.debug('No Permission to View System Log for user %s', userId);
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to View System Log'
 			});
 		}
-		logger4js.debug("Get Log File from Directory: %s Date %s", dir, ageDate);
+		logger4js.debug('Get Log File from Directory: %s Date %s', dir, ageDate);
 		var folders = fs.readdirSync(dir);
-		var stats = {}
+		var stats = {};
     for (var i in folders){
 			var folder = path.join(dir, folders[i]);
 			if (folders[i].substring(0, 1) == '.') {
-				logger4js.debug("Ignore dot folders %s in log folder", folder);
+				logger4js.debug('Ignore dot folders %s in log folder', folder);
 				continue;
 			}
 			stats = fs.statSync(folder);
 			if ( !stats.isDirectory()) {
-				logger4js.debug("Ignore native file %s in log folder", folder);
+				logger4js.debug('Ignore native file %s in log folder', folder);
 			} else {
 				// Browse Host Directory for Log Files per Host
 				var files = fs.readdirSync(folder);
 				for (var j in files){
 					var file = path.join(folder, files[j]);
 					if (files[j].substring(0, 1) == '.') {
-						logger4js.debug("Ignore dot files %s in log folder", file);
+						logger4js.debug('Ignore dot files %s in log folder', file);
 						continue;
 					}
 					stats = fs.statSync(file);
 					if ( !stats.isFile()) {
-						logger4js.debug("Ignore non native file %s in log folder", file);
+						logger4js.debug('Ignore non native file %s in log folder', file);
 					} else {
 						if (stats.mtime > ageDate) {
 							fileList.push({folder: folders[i], name: files[j], size: stats.size, updatedAt: stats.mtime});
 						} else {
-							logger4js.debug("Ignore Log File %s from %s Modified %s AgeFilter %s", folders[i], files[j], stats.mtime, ageDate);
+							logger4js.debug('Ignore Log File %s from %s Modified %s AgeFilter %s', folders[i], files[j], stats.mtime, ageDate);
 						}
 					}
 				}
 			}
     }
 
-		logger4js.info("Get SysLog ");
+		logger4js.info('Get SysLog ');
 		return res.status(200).send({
 			state: 'success',
 			message: 'Available Log Files',
 			files: fileList
 		});
-	})
+	});
 
 	router.route('/file/:folder/:filename')
 	/**
@@ -134,9 +134,9 @@ router.route('/')
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
-		*  "state":"success",
-		*  "message":"Downlaod Log File Successful",
-		*  "file": filecontent
+		*  'state':'success',
+		*  'message':'Downlaod Log File Successful',
+		*  'file': filecontent
 		*}
 		*/
 	// get syslog file
@@ -144,9 +144,9 @@ router.route('/')
 		req.auditDescription = 'SysLogs (Read)';
 		req.auditSysAdmin = true;
 
-		logger4js.info("Get Logfile %s/%s ", req.params.folder, req.params.filename);
+		logger4js.info('Get Logfile %s/%s ', req.params.folder, req.params.filename);
 		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewLog)) {
-			logger4js.debug("No Permission to View System Log");
+			logger4js.debug('No Permission to View System Log');
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to View System Log'
@@ -179,6 +179,6 @@ router.route('/')
 			}
 		});
 		// res.download(dir, fileName);
-	})
+	});
 
 module.exports = router;
