@@ -81,10 +81,21 @@ var validateEmail = function(email, allowEmpty) {
 	return true;
 };
 
+var evaluateLanguage = function(req) {
+	var lang;
+	if (req) {
+		lang = req.acceptsLanguages('en', 'de');
+	}
+	if (!lang) { lang = 'en'; }
+	logger4js.warn('evaluate Language: %s', lang);
+	return lang;
+}
+
 module.exports = {
 	validateName: validateName,
 	validateObjectId: validateObjectId,
 	validateEmail: validateEmail,
 	validateDate: validateDate,
-	validateNumber: validateNumber
+	validateNumber: validateNumber,
+	evaluateLanguage: evaluateLanguage
 };

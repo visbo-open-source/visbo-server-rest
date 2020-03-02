@@ -1498,7 +1498,8 @@ router.route('/:vcid/group/:groupid')
 						}
 						req.oneGroup = vcGroup;
 						// now send an e-Mail to the user for registration
-						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs');
+						var lang = validate.evaluateLanguage(req);
+						var template = __dirname.concat(eMailTemplates, lang, '/inviteVCNewUser.ejs');
 						var uiUrl =  getSystemUrl();
 
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
@@ -1553,7 +1554,8 @@ router.route('/:vcid/group/:groupid')
 					}
 					req.oneGroup = vcGroup;
 					// now send an e-Mail to the user for registration/login
-					var template = __dirname.concat('/../emailTemplates/');
+					var lang = validate.evaluateLanguage(req);
+					var template = __dirname.concat(eMailTemplates, lang);
 					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name;
 					logger4js.trace('E-Mail User Status %O %s', user.status, user.status.registeredAt);

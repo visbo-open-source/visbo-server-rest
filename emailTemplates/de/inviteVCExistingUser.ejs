@@ -1,0 +1,33 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  Sie wurden in ein Visbo Center eingeladen
+</h1>
+<p>
+  <%if (userFrom.profile && userFrom.profile.firstName ) { %>
+    <%= userFrom.profile.firstName %>
+  <% } %>
+  <%if (userFrom.profile && userFrom.profile.lastName ) { %>
+    <%= userFrom.profile.lastName %>
+  <% } %>
+  (<%= userFrom.email %>) hat Sie in das Visbo Center: <b><%= vc.name %></b> mit <%= vc.vpCount %> Projekten eingeladen.
+</p>
+<p>
+  Nachricht: <br>
+  <h5>
+    <%- message.replace(/\n/g, '<br/>')  %>
+  </h5>
+</p>
+<h4>
+  Um auf das Visbo Center zuzugreifen, folgen Sie dem Link: <a href="<%= url %>">Anmeldung Visbo</a>
+</h4>
+<p>
+  Benutzen Sie Ihre e-Mail Adresse <%= userTo.email %> für die Anmeldung.
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

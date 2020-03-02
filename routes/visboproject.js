@@ -29,6 +29,7 @@ var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
 
 var mail = require('./../components/mail');
+var eMailTemplates = "/../emailTemplates/";
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 
@@ -1549,7 +1550,8 @@ router.route('/:vpid/audit')
 							}
 							req.oneGroup = vgGroup;
 							// now send an e-Mail to the user for registration
-							var template = __dirname.concat('/../emailTemplates/inviteVPNewUser.ejs');
+							var lang = validate.evaluateLanguage(req);
+							var template = __dirname.concat(eMailTemplates, lang, '/inviteVPNewUser.ejs');
 							var uiUrl =  getSystemUrl();
 
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
@@ -1602,7 +1604,8 @@ router.route('/:vpid/audit')
 						}
 						req.oneGroup = vgGroup;
 						// now send an e-Mail to the user for registration/login
-						var template = __dirname.concat('/../emailTemplates/');
+						var lang = validate.evaluateLanguage(req);
+						var template = __dirname.concat(eMailTemplates, lang);
 						var uiUrl =  getSystemUrl();
 						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name;
 						logger4js.debug('E-Mail User Status %O %s', user.status, user.status.registeredAt);

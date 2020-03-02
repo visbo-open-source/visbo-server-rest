@@ -14,6 +14,7 @@ var moment = require('moment');
 moment.locale('de');
 
 var useragent = require('useragent');
+var eMailTemplates = "/../emailTemplates/";
 
 var logModule = 'USER';
 var log4js = require('log4js');
@@ -113,6 +114,8 @@ router.route('/user/login')
 
 		logger4js.info('Try to Login %s', req.body.email);
 		logger4js.debug('Login Headers %O', req.headers);
+		var lang = validate.evaluateLanguage(req);
+    logger4js.debug('The Accepted Language is: ' + lang);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug('Authentication Missing email or password %s', req.body.email);
 			return res.status(400).send({
@@ -397,7 +400,8 @@ router.route('/user/pwforgotten')
 				userShort.createdAt = user.createdAt;
 				userShort._id = user._id;
 
-				logger4js.debug('Requested Password Reset through e-Mail %s expires in %s', user.email, jwtSecret.register.expiresIn);
+				var lang = validate.evaluateLanguage(req);
+				logger4js.debug('Requested Password Reset through e-Mail %s expires in %s Language %s', user.email, jwtSecret.register.expiresIn, lang);
 				// logger4js.debug('Requested Password Reset Request %O', req);
 				// delete user.profile;
 				// delete user.status;
@@ -409,7 +413,7 @@ router.route('/user/pwforgotten')
 							return;
 						}
 						// Send e-Mail with Token to registered Users
-						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs');
+						var template = __dirname.concat(eMailTemplates, lang, '/pwreset1.ejs');
 						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						logger4js.debug('E-Mail template %s, url %s', template, pwreseturl.substring(0, 40));
@@ -708,10 +712,12 @@ router.route('/user/signup')
 				}
 				user.password = undefined;
 				// now send the eMail for confirmation of the e-Mail address
-				logger4js.trace('User Registration %s RegisteredAt %s. Confirm e-mail?', user.email, user.status.registeredAt);
+				var lang = validate.evaluateLanguage(req);
+
+				logger4js.trace('User Registration %s RegisteredAt %s. Confirm e-mail Language %s', user.email, user.status.registeredAt, lang);
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
-					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs');
+					var template = __dirname.concat(eMailTemplates, lang, '/confirmUser.ejs');
 					var uiUrl =  getSystemUrl();
 					var eMailSubject = 'Please confirm your eMail address ';
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());

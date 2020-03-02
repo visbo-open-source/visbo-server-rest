@@ -8,8 +8,10 @@ var moment = require('moment');
 moment.locale('de');
 
 var useragent = require('useragent');
+var validate = require('./../components/validate');
 
 var mail = require('./../components/mail');
+var eMailTemplates = "/../emailTemplates/";
 var ejs = require('ejs');
 
 
@@ -36,7 +38,9 @@ var visboParseUA = function(agent, stringUA) {
 // Send Mail about account locked
 function accountLocked(req, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs');
+
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordRetriesExceeded.ejs');
 	var uiUrl =  getSystemUrl();
 	var eMailSubject = 'Your account has been locked';
 	var info = {};
@@ -64,7 +68,8 @@ function accountLocked(req, user) {
 // Send Mail about password expired
 function passwordExpired(req, user) {
 	// Send Mail to password forgotten
-	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordExpired.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -86,7 +91,8 @@ function passwordExpired(req, user) {
 // Send Mail about password expires soon
 function passwordExpiresSoon(req, user, expiresAt) {
 	// send Mail to User about Password expiration
-	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordExpiresSoon.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
@@ -107,7 +113,8 @@ function passwordExpiresSoon(req, user, expiresAt) {
 
 // Send Mail about user not registered
 function accountNotRegistered(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/userNotRegistered.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -128,7 +135,8 @@ function accountNotRegistered(req, user) {
 
 // Send Mail about user not registered
 function accountRegisteredSuccess(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userRegisteredSuccess.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/userRegisteredSuccess.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
@@ -150,7 +158,8 @@ function accountRegisteredSuccess(req, user) {
 // Send Mail about account locked
 function accountNewLogin(req, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/accountNewLogin.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	var eMailSubject = 'New Login from a new device or programm';

@@ -1,0 +1,30 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  Ein neuer Login wurde festgestellt
+</h1>
+<p>
+ Ein neues Gerät oder ein neues Programm wurde verwendet um sich beim Visbo System mit ihrem Benutzer <%= userTo.email %><br>
+ Bite prüfen Sie, ob diese Aktion von Ihnen veranlasst wurde.
+</p>
+<p><b>
+  Angemeldet um: <%= info.changedAt %><br>
+  IP: <%= info.ip %><br>
+  Anwendung: <%= info.userAgent %><br>
+</b></p>
+<h4>
+  Wenn Sie sich nicht selbst angemeldet haben:
+</h4>
+<p>
+  melden Sie sich bitte an und ändern ihr Passwort über diesen Link: <a href="<%= url %>">Anmeldung Visbo</a>
+</p>
+<p>
+  Ihre e-Mail Adresse <%= userTo.email %> verwenden Sie bitte für die Passwortänderung.
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

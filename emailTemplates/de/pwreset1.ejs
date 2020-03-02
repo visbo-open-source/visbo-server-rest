@@ -1,0 +1,23 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  Passwort zurücksetzen
+</h1>
+<p>
+  für <%= user.profile.firstName %> <%= user.profile.lastName %> <%= user.email %>
+</p>
+<h4>
+  Es wurde eine Anfrage zum Zurücksetzen des Passworts angefordert.
+</h4>
+<p>
+  Bitte bestätigen Sie das zurücksetzen des Passworts über folgenden Link: <a href="<%= url %>">Passwort zurücksetzen</a>
+  <br>
+  Wenn das zurücksetzen nicht von Ihnen angefordert wurde, löschen Sie diese Mail bitte.
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

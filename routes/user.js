@@ -11,8 +11,10 @@ var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var mail = require('../components/mail');
+var eMailTemplates = "/../emailTemplates/";
 var ejs = require('ejs');
 var useragent = require('useragent');
+var validate = require('./../components/validate');
 
 var logModule = 'USER';
 var log4js = require('log4js');
@@ -266,7 +268,8 @@ router.route('/passwordchange')
 					}
 					user.password = undefined;
 					// now send an e-Mail to the user for pw change
-					var template = __dirname.concat('/../emailTemplates/passwordChanged.ejs');
+					var lang = validate.evaluateLanguage(req);
+					var template = __dirname.concat(eMailTemplates, lang, '/passwordChanged.ejs');
 					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/pwforgotten/');
 					var eMailSubject = 'Your password has been changed';

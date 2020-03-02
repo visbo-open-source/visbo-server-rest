@@ -1,14 +1,14 @@
 <head>
-    <% include ../emailTemplates/partials/head %>
+    <% include partials/head %>
 </head>
 <header>
-    <% include ../emailTemplates/partials/header %>
+    <% include partials/header %>
 </header>
 <h1>
   A new login was detected
 </h1>
 <p>
- A new Device or a new program was used to access the Visbo System with your User Name <%= userTo.email %></br>
+ A new Device or a new program was used to access the Visbo System with your User Name <%= userTo.email %><br>
  Please verify if you have done this on your own.
 </p>
 <p><b>
@@ -26,5 +26,5 @@
   Your e-Mail address <%= userTo.email %> is related to the password change.
 </p>
 <footer>
-    <% include ../emailTemplates/partials/footer %>
+    <% include partials/footer %>
 </footer>

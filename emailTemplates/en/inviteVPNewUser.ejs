@@ -1,8 +1,8 @@
 <head>
-    <% include ../emailTemplates/partials/head %>
+    <% include partials/head %>
 </head>
 <header>
-    <% include ../emailTemplates/partials/header %>
+    <% include partials/header %>
 </header>
 <h1>
   You have been invited to a Visbo Project
@@ -23,14 +23,14 @@
   </h5>
 </p>
 <h4>
-  Please Login to Visbo
+  Please Register your account at Visbo
 </h4>
 <p>
-  To access the Visbo Project follow this link: <a href="<%= url %>">Login Visbo</a>
+  To access the Visbo Project you have to register first by following this link: <a href="<%= url %>">Register</a>
 </p>
 <p>
   Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
 <footer>
-    <% include ../emailTemplates/partials/footer %>
+    <% include partials/footer %>
 </footer>
