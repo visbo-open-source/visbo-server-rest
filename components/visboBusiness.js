@@ -21,6 +21,14 @@ function addDays(dd, numDays) {
 	return inputDate;
  }
 
+// returns the date of the end of the previous month
+function getDateEndOfPreviousMonth(dd) {
+	var inputDate = new Date(dd);
+	var numDays = inputDate.getDate();
+    inputDate.setDate(inputDate.getDate() - numDays);
+    return inputDate;
+  }
+
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
 	var costValues = [];
@@ -715,12 +723,14 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 			if (organisation){
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
-				var indexActual = getColumnOfDate(vpv.timestamp) - getColumnOfDate(pfv.startDate);
+				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
+				var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
+				var indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(pfv.startDate);
 				keyMetrics.costBaseLastActual = getSummeKosten(pfv, organisation, indexActual);
 				keyMetrics.costBaseLastTotal = getSummeKosten(pfv, organisation, indexTotal);
 
 				indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
-				indexActual = getColumnOfDate(vpv.timestamp) - getColumnOfDate(vpv.startDate);
+				indexActual = getColumnOfDate(vpv.actualDataUntil) - getColumnOfDate(vpv.startDate);
 				keyMetrics.costCurrentTotal= getSummeKosten(vpv, organisation, indexTotal);
 				keyMetrics.costCurrentActual= getSummeKosten(vpv, organisation, indexActual);
 			}
