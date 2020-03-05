@@ -18,13 +18,14 @@
 </p>
 <p>
   Nachricht: <br>
-  <h5>
-    <%- message.replace(/\n/g, '<br/>')  %>
-  </h5>
 </p>
 <h4>
-  Um auf das Visbo Center zuzugreifen, folgen Sie dem Link: <a href="<%= url %>">Anmeldung Visbo</a>
+  <%- message.replace(/\n/g, '<br/>')  %>
 </h4>
+<br>
+<p>
+  Um auf das Visbo Center zuzugreifen, folgen Sie dem Link: <b><a href="<%= url %>">Anmeldung Visbo</a></b>
+</p>
 <p>
   Benutzen Sie Ihre e-Mail Adresse <%= userTo.email %> für die Anmeldung.
 </p>

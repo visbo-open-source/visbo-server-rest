@@ -272,7 +272,7 @@ router.route('/passwordchange')
 					var template = __dirname.concat(eMailTemplates, lang, '/passwordChanged.ejs');
 					var uiUrl =  getSystemUrl();
 					uiUrl = uiUrl.concat('/pwforgotten/');
-					var eMailSubject = 'Your password has been changed';
+					var eMailSubject = res.__('Mail.Subject.PWChange');
 					var info = {};
 					logger4js.debug('E-Mail template %s, url %s', template, uiUrl);
 					info.changedAt = new Date();

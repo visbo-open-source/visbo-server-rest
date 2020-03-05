@@ -1553,6 +1553,7 @@ router.route('/:vpid/audit')
 							var lang = validate.evaluateLanguage(req);
 							var template = __dirname.concat(eMailTemplates, lang, '/inviteVPNewUser.ejs');
 							var uiUrl =  getSystemUrl();
+							var eMailSubject = res.__('Mail.Subject.VPInvite') + ' ' + req.oneVP.name;
 
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
@@ -1580,7 +1581,7 @@ router.route('/:vpid/audit')
 									var message = {
 											from: useremail,
 											to: user.email,
-											subject: 'You have been invited to a Visbo Project ' + req.oneVP.name,
+											subject: eMailSubject,
 											html: '<p> '.concat(emailHtml, ' </p>')
 									};
 									logger4js.info('Now send mail from %s to %s', message.from, message.to);
@@ -1607,15 +1608,15 @@ router.route('/:vpid/audit')
 						var lang = validate.evaluateLanguage(req);
 						var template = __dirname.concat(eMailTemplates, lang);
 						var uiUrl =  getSystemUrl();
-						var eMailSubject = 'You have been invited to a Visbo Project ' + req.oneVP.name;
+						var eMailSubject = res.__('Mail.Subject.VPInvite') + ' ' + req.oneVP.name;
 						logger4js.debug('E-Mail User Status %O %s', user.status, user.status.registeredAt);
 						if (user.status && user.status.registeredAt) {
 							// send e-Mail to a registered user
-							template = template.concat('inviteVPExistingUser.ejs');
-							uiUrl = uiUrl.concat('/vpv/', req.oneVP._id);
+							template = template.concat('/inviteVPExistingUser.ejs');
+							uiUrl = uiUrl.concat('/vpKeyMetrics/', req.oneVP._id);
 						} else {
 							// send e-Mail to an existing but unregistered user
-							template = template.concat('inviteVPNewUser.ejs');
+							template = template.concat('/inviteVPNewUser.ejs');
 							var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 							var hash = createHash(secret);
 							uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);

@@ -53,7 +53,7 @@ function getAllPersonalKosten(vpv, organisation) {
 				var phasenStart = phase.relStart - 1
 
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
-					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);					
+					logger4js.trace("Calculate Phase %s Roles %s", i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
 					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
@@ -196,7 +196,7 @@ function getNamePart(str, part) {
 		} else { // gilt für die rootphase - hier ist der Name "."
 			if (compName[compName.length - 1] == "0") {
 				result = "."
-			} 
+			}
 		}
 		return result;
 }
@@ -226,6 +226,8 @@ function calcDeadlines(vpv, pfv) {
 			'phasePFV': getNamePart(listDeadlines[element].phasePFV, 1),
 			'phaseVPV': getNamePart(listDeadlines[element].phaseVPV, 1),
 			'type': listDeadlines[element].type || 'UNDEFINED',
+			'startDatePFV': listDeadlines[element].startDatePFV || '',
+			'startDateVPV': listDeadlines[element].startDateVPV || '',
 			'endDatePFV': listDeadlines[element].endDatePFV || '',
 			'endDateVPV': listDeadlines[element].endDateVPV || '',
 			'changeDays': Math.round((listDeadlines[element].endDateVPV - listDeadlines[element].endDatePFV) / 1000 / 3600 / 24),
@@ -357,6 +359,7 @@ function VisboDeadlines() {
 		if (newDeadline.name) this.allDeadlines[id].name =  newDeadline.name;
 		if (newDeadline.type) this.allDeadlines[id].type =  newDeadline.type;
 		if (newDeadline.endDatePFV) this.allDeadlines[id].endDatePFV =  newDeadline.endDatePFV;
+		if (newDeadline.startDatePFV) this.allDeadlines[id].startDatePFV =  newDeadline.startDatePFV;
 	};
 	this.updateDeadline = function(id, updateDeadline) {
 		if (updateDeadline == undefined) return;
@@ -364,6 +367,7 @@ function VisboDeadlines() {
 		if (this.allDeadlines[id] == undefined) return;
 		if (updateDeadline.phaseVPV) this.allDeadlines[id].phaseVPV =  updateDeadline.phaseVPV;
 		if (updateDeadline.endDateVPV) this.allDeadlines[id].endDateVPV =  updateDeadline.endDateVPV;
+		if (updateDeadline.startDateVPV) this.allDeadlines[id].startDateVPV =  updateDeadline.startDateVPV;
 		if (updateDeadline.percentDone) this.allDeadlines[id].percentDone =  updateDeadline.percentDone;
 	};
 	this.getDeadline = function(id) {
@@ -459,66 +463,17 @@ function getPhEndDate(vpv, phase){
 	return phEndDate;
 }
 
+// get endDate of Phase to use also for other elemenst like i.e. Deliveries
+function getPhStartDate(vpv, phase){
+	var phStartDate = new Date();
 
+	if (phase){
+		logger4js.trace("find the startDate of the Phase %s  ", phase.name);
+		phStartDate = addDays(vpv.startDate, phase.startOffsetinDays);
+	}
 
-// find all milestones of one VisboProjectVersion
-// function getMilestonesOld(hrchy, vpv){
-
-// 	var milestones=[];
-
-// 	if (vpv && vpv.hierarchy && vpv.hierarchy.allNodes && hrchy){
-
-// 		logger4js.trace("Calculate all milestones of %s  ", vpv._id);
-
-// 		for (var i = 0; i < vpv.hierarchy.allNodes.length; i++) {
-// 			var currentNodeID = vpv.hierarchy.allNodes[i].hryNodeKey;
-// 			if (elemIdIsMilestone(currentNodeID)){
-// 				var msDate = getMsDate(hrchy, vpv, currentNodeID);
-// 				if (msDate){
-// 					while (milestones[msDate] != null) {
-// 						//add one millisecond to  msDate to make the key unique
-// 						msDate.setMilliseconds(msDate.getMilliseconds + 1);
-// 					}
-// 					milestones[msDate] = currentNodeID;
-
-// 				}
-
-// 			}
-// 		}
-// 	}
-// 	return milestones.reverse();
-// }
-
-// find all phases of One VisboProjectVersion vpv
-// function getPhasesOld(hrchy, vpv){
-
-// 	var phases = [];
-
-// 	if (vpv && vpv.hierarchy && vpv.hierarchy.allNodes && hrchy){
-
-// 		logger4js.trace("Calculate all phases of %s  ", vpv._id);
-
-// 		for (var i = 0; i < vpv.hierarchy.allNodes.length; i++) {
-// 			var currentNodeID = vpv.hierarchy.allNodes[i].hryNodeKey;
-
-// 			if (!elemIdIsMilestone(currentNodeID)){
-// 				if (currentNodeID != null){
-// 					var phase = getPhaseByID(hrchy, vpv, currentNodeID);
-// 					var phaseDate = getPhEndDate(vpv, phase);
-
-// 					if (phaseDate){
-// 						while (phases[phaseDate] != null) {
-// 							//add one millisecond to  phaseDate to make the key unique
-// 							phaseDate.setMilliseconds(phaseDate.getMilliseconds + 1);
-// 						}
-// 						phases[phaseDate] = currentNodeID;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return phases.reverse();
-// }
+	return phStartDate;
+}
 
 // Calculate all Deliverables for the requested Project/BaseProject
 function getAllDeliverables(vpv, hrchy, allDeliverables) {
@@ -545,8 +500,8 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 
 	for (var i = 0; i < vpv.AllPhases.length; i++) {
 		var phase = vpv.AllPhases[i];
-		var endDate = getPhEndDate(vpv, phase);		
-		
+		var endDate = getPhEndDate(vpv, phase);
+
 		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
 
 		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
@@ -627,12 +582,12 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 		var currentNodeID = hryElement.hryNodeKey;
 		if (currentNodeID) {
 			var isMS = elemIdIsMilestone(currentNodeID);
-			if (isMS) {				
+			if (isMS) {
 				var name = currentNodeID;
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
 				var endDate = getMsDate(hrchy, vpv, currentNodeID);
 				var phaseName = hryElement.hryNode && hryElement.hryNode.parentNodeKey;
-				var phase = getPhaseByID(hrchy, vpv, phaseName);				
+				var phase = getPhaseByID(hrchy, vpv, phaseName);
 				if (addAll) {
 					allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: "Milestone", name: name, phasePFV: phaseName, endDatePFV: endDate})
 				} else {
@@ -640,16 +595,17 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				}
 			} else {
 				// currentNode is a phase
-				phase = getPhaseByID(hrchy, vpv, currentNodeID);
-				endDate = getPhEndDate(vpv, phase);
-				name = currentNodeID;
-				
+				var phase = getPhaseByID(hrchy, vpv, currentNodeID);
+				var endDate = getPhEndDate(vpv, phase);
+				var startDate = getPhStartDate(vpv, phase);
+				var name = currentNodeID;
+
 				// ur: 20200215: get rid of root node "0" in trash
 				if (name  && endDate) {
 					if (addAll) {
-						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: "Phase", name: name, phasePFV: name, endDatePFV: endDate})
+						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: "Phase", name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate})
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, percentDone: (phase && phase.percentDone) || 0})
+						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0})
 					}
 				}
 			}
@@ -705,7 +661,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 	if (vpv && pfv){
 
-		// Calculate keyMetrics Values here		
+		// Calculate keyMetrics Values here
 		keyMetrics = vpv.keyMetrics || {};
 		logger4js.debug("Calculate KeyMetrics for %s with pfv %s and organization %s result %s ", vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
 
@@ -734,11 +690,11 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 			var allDeadlines = getDeadlines(pfv, hrchy_pfv, undefined);
 			// update the deadlines with properties of vpv (only those, which are in the pfv too)
 			allDeadlines = getDeadlines(vpv, hrchy_vpv, allDeadlines);
- 
+
 			if (allDeadlines && allDeadlines.length > 0){
 				var timeKeyMetric = getTimeCompletionMetric(allDeadlines, vpv.timestamp);
 				keyMetrics.timeCompletionCurrentActual = timeKeyMetric.timeCompletionCurrentActual;
-				keyMetrics.timeCompletionBaseLastActual = timeKeyMetric.timeCompletionBaseLastActual;				
+				keyMetrics.timeCompletionBaseLastActual = timeKeyMetric.timeCompletionBaseLastActual;
 				keyMetrics.timeCompletionCurrentTotal = timeKeyMetric.timeCompletionCurrentTotal;
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 			}

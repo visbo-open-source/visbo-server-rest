@@ -3,6 +3,7 @@ var path = require('path');
 var cors = require('cors');
 var logger = require('morgan');
 var fs = require('fs');
+var i18n = require('i18n');
 // var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
@@ -50,8 +51,8 @@ var visboAudit = require('./components/visboAudit');
 var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
-  // autoReconnect: true,
-  // reconnectInterval: 3000,
+  autoReconnect: true,
+  reconnectInterval: 3000,
   useNewUrlParser: true,
   useUnifiedTopology: true
 };
@@ -87,6 +88,7 @@ function delayString(seconds) {
   }
   return str;
 }
+
 function dbConnect(dbconnection) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
@@ -205,8 +207,13 @@ logger4js.warn('Starting in Environment %s', process.env.NODE_ENV);
 logger4js.warn('Starting Version %s', process.env.VERSION_REST);
 logger4js.warn('Starting with %s CPUs', require('os').cpus().length);
 
-// view engine setup
-//app.set('views', path.join(__dirname, 'views'));
+i18n.configure({
+    locales:['en', 'de'],
+    directory: __dirname + '/i18n'
+});
+app.use(i18n.init);
+// logger4js.warn('Starting Localised %s', i18n.__('Hello'));
+
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
 

@@ -87,7 +87,7 @@ var evaluateLanguage = function(req) {
 		lang = req.acceptsLanguages('en', 'de');
 	}
 	if (!lang) { lang = 'en'; }
-	logger4js.warn('evaluate Language: %s', lang);
+	logger4js.trace('evaluate Language: %s', lang);
 	return lang;
 }
 

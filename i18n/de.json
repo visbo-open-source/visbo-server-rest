@@ -1,0 +1,14 @@
+{
+  "Mail.Subject.RegisterSuccess": "Sie haben sich erfolgreich registriert!",
+  "Mail.Subject.NotRegistered": "Sie müssen sich zuerst registrieren!",
+  "Mail.Subject.PWReset": "Visbo Passwort zurücksetzen?",
+  "Mail.Subject.EMailConfirm": "Bitte bestätigen Sie Ihre e-Mail Adresse",
+  "Mail.Subject.PWChange": "Ihr Passwort wurde geändert",
+  "Mail.Subject.PWExpired": "Ihr Passwort ist verfallen!",
+  "Mail.Subject.PWExpiresSoon": "Ihr Passwort verfällt bald!",
+  "Mail.Subject.UserLocked": "Ihr Benutzer-Konto wurde gesperrt!",
+  "Mail.Subject.NewLogin": "Eine neue Anmeldung von einem neuen Gerät oder neuen Anwendung",
+  "Mail.Subject.VCInvite": "Sie wurden eingeladen in das Visbo Center:",
+  "Mail.Subject.VPInvite": "Sie wurden eingeladen in das Visbo Projekt:",
+  "Hello": "Hallo Deutsch"
+}
