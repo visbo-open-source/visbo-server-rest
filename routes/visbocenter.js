@@ -31,6 +31,7 @@ var constPermVC = Const.constPermVC;
 var constPermSystem = Const.constPermSystem;
 
 var mail = require('../components/mail');
+var eMailTemplates = "/../emailTemplates/";
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 
@@ -1498,12 +1499,14 @@ router.route('/:vcid/group/:groupid')
 						}
 						req.oneGroup = vcGroup;
 						// now send an e-Mail to the user for registration
-						var template = __dirname.concat('/../emailTemplates/inviteVCNewUser.ejs');
+						var lang = validate.evaluateLanguage(req);
+						var template = __dirname.concat(eMailTemplates, lang, '/inviteVCNewUser.ejs');
 						var uiUrl =  getSystemUrl();
 
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 						var hash = createHash(secret);
 						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);
+						var eMailSubject = res.__('Mail.Subject.VCInvite') + ' ' + req.oneVC.name;
 
 						logger4js.debug('E-Mail template %s, url %s', template, uiUrl);
 						if (eMailMessage === undefined) {
@@ -1528,7 +1531,7 @@ router.route('/:vcid/group/:groupid')
 								var message = {
 										from: useremail,
 										to: user.email,
-										subject: 'You have been invited to a Visbo Center ' + req.oneVC.name,
+										subject: eMailSubject,
 										html: '<p> '.concat(emailHtml, ' </p>')
 								};
 								logger4js.info('Now send mail from %s to %s', message.from, message.to);
@@ -1553,17 +1556,18 @@ router.route('/:vcid/group/:groupid')
 					}
 					req.oneGroup = vcGroup;
 					// now send an e-Mail to the user for registration/login
-					var template = __dirname.concat('/../emailTemplates/');
+					var lang = validate.evaluateLanguage(req);
+					var template = __dirname.concat(eMailTemplates, lang);
 					var uiUrl =  getSystemUrl();
-					var eMailSubject = 'You have been invited to a Visbo Center ' + req.oneVC.name;
+					var eMailSubject = res.__('Mail.Subject.VCInvite') + ' ' + req.oneVC.name;
 					logger4js.trace('E-Mail User Status %O %s', user.status, user.status.registeredAt);
 					if (user.status && user.status.registeredAt) {
 						// send e-Mail to a registered user
-						template = template.concat('inviteVCExistingUser.ejs');
+						template = template.concat('/inviteVCExistingUser.ejs');
 						uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
 					} else {
 						// send e-Mail to an existing but unregistered user
-						template = template.concat('inviteVCNewUser.ejs');
+						template = template.concat('/inviteVCNewUser.ejs');
 						var secret = 'register'.concat(user._id, user.updatedAt.getTime());
 						var hash = createHash(secret);
 						uiUrl = uiUrl.concat('/register/', user._id, '?hash=', hash);

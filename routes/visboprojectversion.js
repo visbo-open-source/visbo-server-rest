@@ -545,9 +545,14 @@ router.route('/')
 					newVPV.keyMetrics = undefined;
 					req.visboPFV = newVPV;	// use current version as PFV
 				}
-				newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
-				if (!newVPV.keyMetrics && req.body.keyMetrics && newVPV.variantName != 'pfv') {
-					newVPV.keyMetrics = req.body.keyMetrics;
+				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+				if (!obj || Object.keys(obj).length < 1) {
+					// no valid key Metrics delivered
+					if (req.body.keyMetrics && newVPV.variantName != 'pfv') {
+						newVPV.keyMetrics = req.body.keyMetrics;
+					}
+				} else {
+					newVPV.keyMetrics = obj;
 				}
 
 				logger4js.debug('Create VisboProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);

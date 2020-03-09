@@ -1,0 +1,23 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  Visbo Passwort zurücksetzen Anfrage
+</h1>
+<p>
+  für <%= user.profile.firstName %> <%= user.profile.lastName %> <%= user.email %>
+</p>
+<h4>
+  Es wurde eine Anfrage zum Zurücksetzen des Passworts angefordert.
+</h4>
+<p>
+  Bitte bestätigen Sie das zurücksetzen des Passworts über folgenden Link: <b><a href="<%= url %>">Passwort zurücksetzen</a></b>
+  <br>
+  Wenn das zurücksetzen nicht von Ihnen angefordert wurde, löschen Sie diese Mail bitte.
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

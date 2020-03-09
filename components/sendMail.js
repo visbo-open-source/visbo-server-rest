@@ -8,8 +8,10 @@ var moment = require('moment');
 moment.locale('de');
 
 var useragent = require('useragent');
+var validate = require('./../components/validate');
 
 var mail = require('./../components/mail');
+var eMailTemplates = "/../emailTemplates/";
 var ejs = require('ejs');
 
 
@@ -34,11 +36,13 @@ var visboParseUA = function(agent, stringUA) {
 };
 
 // Send Mail about account locked
-function accountLocked(req, user) {
+function accountLocked(req, res, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/passwordRetriesExceeded.ejs');
+
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordRetriesExceeded.ejs');
 	var uiUrl =  getSystemUrl();
-	var eMailSubject = 'Your account has been locked';
+	var eMailSubject = res.__('Mail.Subject.UserLocked');
 	var info = {};
 	logger4js.trace('E-Mail template %s, url %s', template, uiUrl);
 	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
@@ -50,23 +54,26 @@ function accountLocked(req, user) {
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
+		} else {
+			var message = {
+					to: user.email,
+					subject: eMailSubject,
+					html: '<p> '.concat(emailHtml, ' </p>')
+			};
+			logger4js.info('Now send mail from %s to %s', message.from || 'System', message.to);
+			mail.VisboSendMail(message);
 		}
-		var message = {
-				to: user.email,
-				subject: eMailSubject,
-				html: '<p> '.concat(emailHtml, ' </p>')
-		};
-		logger4js.info('Now send mail from %s to %s', message.from || 'System', message.to);
-		mail.VisboSendMail(message);
 	});
 }
 
 // Send Mail about password expired
-function passwordExpired(req, user) {
+function passwordExpired(req, res, user) {
 	// Send Mail to password forgotten
-	var template = __dirname.concat('/../emailTemplates/passwordExpired.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordExpired.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/pwforgotten', '?email=', user.email);
+	var eMailSubject = res.__('Mail.Subject.PWExpired');
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
@@ -74,7 +81,7 @@ function passwordExpired(req, user) {
 			// logger4js.debug('E-Mail Rendering done: %s', emailHtml);
 			var message = {
 					to: user.email,
-					subject: 'Your password has expired!',
+					subject: eMailSubject,
 					html: '<p> '.concat(emailHtml, ' </p>')
 			};
 			logger4js.info('Now send expired password mail to %s', message.to);
@@ -84,11 +91,13 @@ function passwordExpired(req, user) {
 }
 
 // Send Mail about password expires soon
-function passwordExpiresSoon(req, user, expiresAt) {
+function passwordExpiresSoon(req, res, user, expiresAt) {
 	// send Mail to User about Password expiration
-	var template = __dirname.concat('/../emailTemplates/passwordExpiresSoon.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/passwordExpiresSoon.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
+	var eMailSubject = res.__('Mail.Subject.PWExpiresSoon');
 	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
@@ -96,7 +105,7 @@ function passwordExpiresSoon(req, user, expiresAt) {
 			// logger4js.debug('E-Mail Rendering done: %s', emailHtml);
 			var message = {
 					to: user.email,
-					subject: 'Your password expires soon!',
+					subject: eMailSubject,
 					html: '<p> '.concat(emailHtml, ' </p>')
 			};
 			logger4js.info('Now send expiration soon mail to %s', message.to);
@@ -106,10 +115,12 @@ function passwordExpiresSoon(req, user, expiresAt) {
 }
 
 // Send Mail about user not registered
-function accountNotRegistered(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userNotRegistered.ejs');
+function accountNotRegistered(req, res, user) {
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/userNotRegistered.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/register', '?email=', user.email);
+	var eMailSubject = res.__('Mail.Subject.NotRegistered');
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
@@ -117,7 +128,7 @@ function accountNotRegistered(req, user) {
 			// logger4js.debug('E-Mail Rendering done: %s', emailHtml);
 			var message = {
 					to: user.email,
-					subject: 'You have to register first!',
+					subject: eMailSubject,
 					html: '<p> '.concat(emailHtml, ' </p>')
 			};
 			logger4js.info('Now send register mail to %s', message.to);
@@ -127,10 +138,13 @@ function accountNotRegistered(req, user) {
 }
 
 // Send Mail about user not registered
-function accountRegisteredSuccess(req, user) {
-	var template = __dirname.concat('/../emailTemplates/userRegisteredSuccess.ejs');
+function accountRegisteredSuccess(req, res, user) {
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/userRegisteredSuccess.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
+	var eMailSubject = res.__('Mail.Subject.RegisterSuccess');
+
 	ejs.renderFile(template, {userTo: user, url: uiUrl}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
@@ -138,7 +152,7 @@ function accountRegisteredSuccess(req, user) {
 			// logger4js.debug('E-Mail Rendering done: %s', emailHtml);
 			var message = {
 					to: user.email,
-					subject: 'You have successfully registered!',
+					subject: eMailSubject,
 					html: '<p> '.concat(emailHtml, ' </p>')
 			};
 			logger4js.info('Now send register success mail to %s', message.to);
@@ -148,12 +162,13 @@ function accountRegisteredSuccess(req, user) {
 }
 
 // Send Mail about account locked
-function accountNewLogin(req, user) {
+function accountNewLogin(req, res, user) {
 	// now send an e-Mail to the user for pw change
-	var template = __dirname.concat('/../emailTemplates/accountNewLogin.ejs');
+	var lang = validate.evaluateLanguage(req);
+	var template = __dirname.concat(eMailTemplates, lang, '/accountNewLogin.ejs');
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
-	var eMailSubject = 'New Login from a new device or programm';
+	var eMailSubject = res.__('Mail.Subject.NewLogin');
 	var info = {};
 	logger4js.trace('E-Mail template %s, url %s', template, uiUrl);
 	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
@@ -165,14 +180,15 @@ function accountNewLogin(req, user) {
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
+		} else {
+			var message = {
+					to: user.email,
+					subject: eMailSubject,
+					html: '<p> '.concat(emailHtml, ' </p>')
+			};
+			logger4js.info('Now send mail from %s to %s', message.from || 'System', message.to);
+			mail.VisboSendMail(message);
 		}
-		var message = {
-				to: user.email,
-				subject: eMailSubject,
-				html: '<p> '.concat(emailHtml, ' </p>')
-		};
-		logger4js.info('Now send mail from %s to %s', message.from || 'System', message.to);
-		mail.VisboSendMail(message);
 	});
 }
 
