@@ -1,8 +1,8 @@
 <head>
-    <% include ../emailTemplates/partials/head %>
+    <% include partials/head %>
 </head>
 <header>
-    <% include ../emailTemplates/partials/header %>
+    <% include partials/header %>
 </header>
 <h1>
   You have to register first
@@ -14,11 +14,11 @@
   Please Register your Account
 </h4>
 <p>
-  Register by following this link: <a href="<%= url %>">Register</a>
+  Register by following this link: <b><a href="<%= url %>">Register</a></b>
 </p>
 <p>
   Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
 <footer>
-    <% include ../emailTemplates/partials/footer %>
+    <% include partials/footer %>
 </footer>

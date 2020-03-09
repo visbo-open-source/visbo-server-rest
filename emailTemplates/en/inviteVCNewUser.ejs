@@ -1,8 +1,8 @@
 <head>
-    <% include ../emailTemplates/partials/head %>
+    <% include partials/head %>
 </head>
 <header>
-    <% include ../emailTemplates/partials/header %>
+    <% include partials/header %>
 </header>
 <h1>
   You have been invited to a Visbo Center
@@ -18,19 +18,17 @@
 </p>
 <p>
   Message: <br>
-  <h5>
-    <%- message.replace(/\n/g, '<br/>')  %>
-  </h5>
 </p>
 <h4>
-  Please Register your account at Visbo
+  <%- message.replace(/\n/g, '<br/>')  %>
 </h4>
+<br>
 <p>
-  To access the Visbo Center you have to register first by following this link: <a href="<%= url %>">Register</a>
+  To access the Visbo Center you have to register first by following this link: <b><a href="<%= url %>">Register</a></b>
 </p>
 <p>
   Your e-Mail address <%= userTo.email %> was used for the invitation.
 </p>
 <footer>
-    <% include ../emailTemplates/partials/footer %>
+    <% include partials/footer %>
 </footer>

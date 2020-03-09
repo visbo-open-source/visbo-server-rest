@@ -14,6 +14,8 @@ var moment = require('moment');
 moment.locale('de');
 
 var useragent = require('useragent');
+var eMailTemplates = "/../emailTemplates/";
+var fs = require('fs');
 
 var logModule = 'USER';
 var log4js = require('log4js');
@@ -113,6 +115,8 @@ router.route('/user/login')
 
 		logger4js.info('Try to Login %s', req.body.email);
 		logger4js.debug('Login Headers %O', req.headers);
+		var lang = validate.evaluateLanguage(req);
+    logger4js.debug('The Accepted Language is: ' + lang);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug('Authentication Missing email or password %s', req.body.email);
 			return res.status(400).send({
@@ -141,7 +145,7 @@ router.route('/user/login')
 			if (!user.status || !user.status.registeredAt || !user.password) {
 				logger4js.warn('Login: User %s not Registered User Status %s', req.body.email, user.status ? true: false);
 				// Send Mail to User with Register Link
-				sendMail.accountNotRegistered(req, user);
+				sendMail.accountNotRegistered(req, res, user);
 				return res.status(401).send({
 					state: 'failure',
 					message: 'email or password mismatch'
@@ -176,7 +180,7 @@ router.route('/user/login')
 						user.status.lockedUntil = new Date();
 						user.status.lockedUntil.setTime(currentDate.getTime() + lockMinutes*60*1000);
 						logger4js.debug('Login: Retry Count New LockedUntil %s', user.status.lockedUntil.toISOString());
-						sendMail.accountLocked(req, user);
+						sendMail.accountLocked(req, res, user);
 					}
 				}
 				user.save(function(err, user) {
@@ -211,13 +215,13 @@ router.route('/user/login')
 					message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
 					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info('Login Password expired at: %s', user.status.expiresAt.toISOString());
-						sendMail.passwordExpired(req, user);
+						sendMail.passwordExpired(req, res, user);
 						return res.status(401).send({
 							state: 'failure',
 							message: 'email or password mismatch'
 						});
 					}
-					sendMail.passwordExpiresSoon(req, user, user.status.expiresAt);
+					sendMail.passwordExpiresSoon(req, res, user, user.status.expiresAt);
 				}
 				logger4js.debug('Try to Login %s username&password accepted', req.body.email);
 				var passwordCopy = user.password;
@@ -276,7 +280,7 @@ router.route('/user/login')
 							} else {
 								user.userAgents.push(curAgent);
 								// Send Mail about new Login with unknown User Agent
-								sendMail.accountNewLogin(req, user);
+								sendMail.accountNewLogin(req, res, user);
 								logger4js.debug('New Login with new User Agent %s', req.visboUserAgent);
 							}
 							// Cleanup old User Agents older than 3 Months
@@ -397,7 +401,8 @@ router.route('/user/pwforgotten')
 				userShort.createdAt = user.createdAt;
 				userShort._id = user._id;
 
-				logger4js.debug('Requested Password Reset through e-Mail %s expires in %s', user.email, jwtSecret.register.expiresIn);
+				var lang = validate.evaluateLanguage(req);
+				logger4js.debug('Requested Password Reset through e-Mail %s expires in %s Language %s', user.email, jwtSecret.register.expiresIn, lang);
 				// logger4js.debug('Requested Password Reset Request %O', req);
 				// delete user.profile;
 				// delete user.status;
@@ -409,7 +414,14 @@ router.route('/user/pwforgotten')
 							return;
 						}
 						// Send e-Mail with Token to registered Users
-						var template = __dirname.concat('/../emailTemplates/pwreset1.ejs');
+						var template = __dirname.concat(eMailTemplates, lang, '/pwreset1.ejs');
+						if (!fs.existsSync(template)) {
+							logger4js.warn('E-Mail template %s does not exists', template);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'E-Mail Rendering Templates missing'
+							});
+						}
 						var uiUrl =  getSystemUrl();
 						var pwreseturl = uiUrl.concat('/pwreset', '?token=', token);
 						logger4js.debug('E-Mail template %s, url %s', template, pwreseturl.substring(0, 40));
@@ -422,11 +434,10 @@ router.route('/user/pwforgotten')
 									error: err
 								});
 							}
-							// logger4js.debug('E-Mail Rendering done: %s', emailHtml);
 							var message = {
 									// from: 'visbo@seyfried.bayern',
 									to: user.email,
-									subject: 'Visbo Password Reset Request',
+									subject: res.__('Mail.Subject.PWReset'),
 									// text: 'Password reset Token: '.concat(token, ' '),
 									// html: '<b>Password reset Token:</b><br><p>Password reset Token: '.concat(token, ' </p>')
 									html: '<p> '.concat(emailHtml, ' </p>')
@@ -708,12 +719,14 @@ router.route('/user/signup')
 				}
 				user.password = undefined;
 				// now send the eMail for confirmation of the e-Mail address
-				logger4js.trace('User Registration %s RegisteredAt %s. Confirm e-mail?', user.email, user.status.registeredAt);
+				var lang = validate.evaluateLanguage(req);
+
+				logger4js.trace('User Registration %s RegisteredAt %s. Confirm e-mail Language %s', user.email, user.status.registeredAt, lang);
 				if (!user.status.registeredAt) {
 					// send e-Mail confirmation
-					var template = __dirname.concat('/../emailTemplates/confirmUser.ejs');
+					var template = __dirname.concat(eMailTemplates, lang, '/confirmUser.ejs');
 					var uiUrl =  getSystemUrl();
-					var eMailSubject = 'Please confirm your eMail address ';
+					var eMailSubject = res.__('Mail.Subject.EMailConfirm');
 					var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 					var hash = createHash(secret);
 
@@ -760,7 +773,7 @@ router.route('/user/signup')
 					});
 				} else {
 					logger4js.info('User Registration completed with Hash %s', user.email);
-					sendMail.accountRegisteredSuccess(req, user);
+					sendMail.accountRegisteredSuccess(req, res, user);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Successfully signed up',
@@ -869,7 +882,7 @@ router.route('/user/signup')
 						});
 					}
 					// now send the eMail for successfully signup of the e-Mail address
-					sendMail.accountRegisteredSuccess(req, user);
+					sendMail.accountRegisteredSuccess(req, res, user);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Successfully confirmed eMail',
