@@ -609,9 +609,9 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				// ur: 20200215: get rid of root node "0" in trash
 				if (name  && endDate) {
 					if (addAll) {
-						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate});
+						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, percentDone: (phase && phase.percentDone) || 0});
+						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0});
 					}
 				}
 			}
