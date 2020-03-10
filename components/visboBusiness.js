@@ -464,6 +464,7 @@ function getPhEndDate(vpv, phase){
 		}
 	}
 
+	logger4js.trace('endDate of the Phase %s is %s', phase.name, phEndDate.toISOString());
 	return phEndDate;
 }
 
