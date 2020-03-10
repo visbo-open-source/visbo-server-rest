@@ -511,6 +511,7 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 
 		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
 			var id = phase.deliverables[j];
+			logger4js.trace("Phase Delivery: Action %s Delivery %s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, phase.deliverables[j], endDate.toISOString());
 			if (addAll) {
 				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate});
 			} else {
@@ -522,11 +523,11 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 			var milestone = phase.AllResults[k];
 			endDate = getMsDate(hrchy, vpv, milestone.name);
 
-			// logger4js.trace("Calculate Milestone %s Deliverables %s", i, phase.AllResults.length);
+			logger4js.trace("Calculate Milestone %s Deliverables %s with endDate %s", i, phase.AllResults.length, endDate.toISOString());
 
 			for (var m = 0; milestone && milestone.deliverables && m < milestone.deliverables.length; m++){
-				// logger4js.trace("fetch Deliverable %s of phase %s", deliv.name, milestone.nameID);
 				id = milestone.deliverables[m];
+				logger4js.trace("Phase Delivery: Action %s Delivery %s/%s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, milestone.name, milestone.deliverables[m], endDate.toISOString());
 				if (addAll) {
 					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate});
 				} else {
