@@ -61,7 +61,7 @@ function getAllPersonalKosten(vpv, organisation) {
 				var phasenStart = phase.relStart - 1;
 
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
-					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);					
+					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
 					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
@@ -202,7 +202,7 @@ function getNamePart(str, part) {
 		} else { // gilt für die rootphase - hier ist der Name "."
 			if (compName[compName.length - 1] == '0') {
 				result = '.';
-			} 
+			}
 		}
 		return result;
 }
@@ -456,11 +456,10 @@ function getPhEndDate(vpv, phase){
 	var phEndDate = new Date();
 
 	if (phase){
-		logger4js.trace('find the endDate of the Phase %s  ', phase.name);
-		if (phase.dauerInDays > 0){
+		logger4js.trace('find the endDate of the Phase %s start %s offset %s duration %s ', phase.name, vpv.startDate, phase.startOffsetinDays, phase.dauerInDays);
+		if (phase.dauerInDays > 0) {
 			phEndDate = addDays(vpv.startDate, phase.startOffsetinDays + phase.dauerInDays -1);
-		}
-		else{
+		} else {
 			phEndDate = addDays(vpv.startDate, phase.startOffsetinDays);
 		}
 	}
@@ -672,7 +671,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 		if (vpv.variantName != 'pfv'){
 
-			
+
 
 			if (organisation){
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
