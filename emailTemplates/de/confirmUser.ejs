@@ -1,0 +1,21 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  e-Mail Bestätigung
+</h1>
+<p>
+  für <%= userTo.profile.firstName %> <%= userTo.profile.lastName %> <%= userTo.email %>
+</p>
+<h4>
+  Bitte bestätigen Sie ihre e-Mail Adresse
+</h4>
+<p>
+  Bitte bestätigen Sie ihre e-Mail Adresse über den folgenden Link: <b><a href="<%= url %>">e-Mail Adresse bestätigen</a></b>
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

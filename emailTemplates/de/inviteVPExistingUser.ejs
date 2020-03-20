@@ -1,0 +1,34 @@
+<head>
+    <% include partials/head %>
+</head>
+<header>
+    <% include partials/header %>
+</header>
+<h1>
+  Sie wurden in ein Visbo Projekt eingeladen
+</h1>
+<p>
+  <%if (userFrom.profile && userFrom.profile.firstName ) { %>
+    <%= userFrom.profile.firstName %>
+  <% } %>
+  <%if (userFrom.profile && userFrom.profile.lastName ) { %>
+    <%= userFrom.profile.lastName %>
+  <% } %>
+  (<%= userFrom.email %>) hat Sie in das Visbo Projekt: <b><%= vp.name %></b> eingeladen.
+</p>
+<p>
+  Nachricht: <br>
+</p>
+<h4>
+  <%- message.replace(/\n/g, '<br/>')  %>
+</h4>
+<br>
+<p>
+  Um auf das Visbo Projekt zuzugreifen, verwenden Sie den folgenden Link: <b><a href="<%= url %>">Anmeldung Visbo</a></b>
+</p>
+<p>
+  Benutzen Sie Ihre e-Mail Adresse <%= userTo.email %> für die Anmeldung.
+</p>
+<footer>
+    <% include partials/footer %>
+</footer>

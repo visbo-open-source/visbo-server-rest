@@ -1,17 +1,17 @@
 // Permission Values
 var constPermSystem = Object.freeze({
-		"View":1, "ViewAudit":2, "ViewLog":4, "Modify":16, "ManagePerm":32,
-		"CreateVC":256, "DeleteVC":1024
-	})
+		'View':1, 'ViewAudit':2, 'ViewLog':4, 'Modify':16, 'ManagePerm':32,
+		'CreateVC':256, 'DeleteVC':1024
+	});
 const constPermSystemAll = 1+2+4+16+32+256+1024;
 
-var constPermVC = Object.freeze({
-	"View":1, "ViewAudit":2, "Modify":16, "ManagePerm":32, "CreateVP":256
-});
+var constPermVC = Object.freeze(
+	{'View':1, 'ViewAudit':2, 'Modify':16, 'ManagePerm':32, 'CreateVP':256}
+);
 const constPermVCAll = 1+2+16+32+256;
-var constPermVP = Object.freeze({
-	"View":1, "ViewAudit":2, "Modify":16, "ManagePerm":32, "CreateVariant":256, "Delete":1024
-})
+var constPermVP = Object.freeze(
+	{'View':1, 'ViewAudit':2, 'Modify':16, 'ManagePerm':32, 'CreateVariant':256, 'Delete':1024 }
+);
 const constPermVPAll = 1+2+16+32+256+1024;
 
 // Permission Handling Object
@@ -32,26 +32,26 @@ function VisboPermission() {
 	this.getPerm = function(id) {
 		var result = this.permList[id] || {system: 0, vc: 0, vp: 0};
 		if (id) delete result.system;
-		return result
+		return result;
 	};
 	this.getVCIDs = function(requiredPerm) {
 		var idList = [];
 		for (var id in this.permList) {
 			if ((this.permList[id].vc & requiredPerm) == requiredPerm) {
-				idList.push(id)
+				idList.push(id);
 			}
 		}
 		return idList;
-	}
+	};
 	this.getVPIDs = function(requiredPerm) {
 		var idList = [];
 		for (var id in this.permList) {
 			if ((this.permList[id].vp & requiredPerm) == requiredPerm) {
-				idList.push(id)
+				idList.push(id);
 			}
 		}
 		return idList;
-	}
+	};
 }
 
 module.exports = {
