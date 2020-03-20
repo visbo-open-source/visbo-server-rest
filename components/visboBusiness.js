@@ -6,6 +6,10 @@ var logger4js = log4js.getLogger(logModule);
 var refMonth = undefined;
 
 function getColumnOfDate(value) {
+	if (!value) {
+		// no valid argument
+		return 0;
+	}
 	if (!refMonth) {
 		var d = new Date ('2015-01-01');
 		refMonth = d.getFullYear() * 12;
