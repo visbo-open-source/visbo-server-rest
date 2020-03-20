@@ -1,9 +1,9 @@
 var express = require('express'); // MS Commment
 var path = require('path');
-var favicon = require('serve-favicon');
 var cors = require('cors');
 var logger = require('morgan');
 var fs = require('fs');
+var i18n = require('i18n');
 // var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var delay = require('delay');
@@ -14,8 +14,8 @@ var os = require( 'os' );
 
 var logging = require('./components/logging');
 var log4js = require('log4js');
-var logger4js = log4js.getLogger("OTHER");
-var logger4jsRest = log4js.getLogger("REST");
+var logger4js = log4js.getLogger('OTHER');
+var logger4jsRest = log4js.getLogger('REST');
 
 var visboRedis = require('./components/visboRedis');
 var visboTaskSchedule = require('./components/visboTaskSchedule');
@@ -53,7 +53,8 @@ var dbOptions = {
   keepAlive: 200,
   autoReconnect: true,
   reconnectInterval: 3000,
-  useNewUrlParser: true
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 };
 
 var reconnectTries = 0;
@@ -70,33 +71,34 @@ function delayString(seconds) {
   var str = '';
   if (hour>0) {
     str += hour;
-    str += ' hour'
+    str += ' hour';
     if (hour>1) str += 's';
     if (min>0 || sec>0) str += ', ';
   }
   if (min>0) {
     str += min;
-    str += ' minute'
+    str += ' minute';
     if (min>1) str += 's';
     if (sec>0) str += ', ';
   }
   if (sec>0) {
     str += sec;
-    str += ' second'
+    str += ' second';
     if (sec>1) str += 's';
   }
   return str;
 }
+
 function dbConnect(dbconnection) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
     // exit();
   } else {
-    var position = dbconnection.indexOf(":") + 1
-    position = dbconnection.indexOf(":", position) + 1
-    var cleanString = dbconnection.substring(0, position)
-    position = dbconnection.indexOf("@", position + 1)
-    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length))
+    var position = dbconnection.indexOf(':') + 1;
+    position = dbconnection.indexOf(':', position) + 1;
+    var cleanString = dbconnection.substring(0, position);
+    position = dbconnection.indexOf('@', position + 1);
+    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length));
     logger4js.mark('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri
@@ -107,7 +109,7 @@ function dbConnect(dbconnection) {
       // mongoose.set('debug', function (coll, method, query, doc, options) {
       //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
       // });
-      systemVC.createSystemVC({ users: [ { "email":"support@visbo.de" } ]})
+      systemVC.createSystemVC({ users: [ { 'email':'support@visbo.de' } ]});
 
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
@@ -140,21 +142,14 @@ var corsOptions = {
     if (!uiUrl) uiUrl = systemVC.getSystemUrl();
     // check if the origin is from same system or not set in case of ClientApp or Postman
     if (origin == uiUrl || origin == 'http://localhost:4200' || !origin) {
-      callback(null, true)
+      callback(null, true);
     } else {
-      logger4js.info("CorsOptions deny  %s vs allowed %s", origin, uiUrl);
-      callback(origin + ' is not allowed to access', null)
+      logger4js.info('CorsOptions deny  %s vs allowed %s', origin, uiUrl);
+      callback(origin + ' is not allowed to access', null);
     }
-    // if (whitelist.indexOf(origin) !== -1 || !origin) {
-    //   callback(null, true)
-    // } else {
-    //   logger4js.warn("CorsOptions deny  %s index %s", origin, whitelist.indexOf(origin));
-    //   //callback(null, true) // temporary enable cors for all sites
-    //   callback(origin + ' is not allowed to access', null)
-    //   // callback(new Error(origin + ' is not allowed to access'))
-    // }
   }
-}
+};
+
 // setup environment variables
 environment.config();
 
@@ -171,14 +166,13 @@ var stats;
 try {
   stats = fs.statSync(fsLogPath);
 } catch (err) {
-  console.log("LogPath %s does not exists or user has no permission: %O", fsLogPath, err)
+  console.log('LogPath %s does not exists or user has no permission: %O', fsLogPath, err);
   throw err;
 }
 if ( !stats.isDirectory()) {
-  console.log("LogPath %s exists but is no directory")
-  throw err;
+  console.log('LogPath %s exists but is no directory');
 } else {
-  // console.log("Basic LogPath exists, Check for the App Server Folder")
+  // console.log('Basic LogPath exists, Check for the App Server Folder')
   //
   // find out the IP addresses of the server
   // var networkInterfaces = os.networkInterfaces( );
@@ -186,45 +180,47 @@ if ( !stats.isDirectory()) {
 
   // now checck for the Folder Hostname is not exists try to create
   var hostname = os.hostname();
-  hostname = hostname.split(".")[0];
-  console.log("Hostname %s", hostname );
+  hostname = hostname.split('.')[0];
+  console.log('Hostname %s', hostname );
   fsLogPath = path.join(fsLogPath, hostname);
   try {
     stats = fs.statSync(fsLogPath);
   } catch (err) {
     try {
-      fs.mkdirSync(fsLogPath, { recursive: false })
+      fs.mkdirSync(fsLogPath, { recursive: false });
     } catch (err) {
-      console.log("Host Folder could not be created %s", fsLogPath)
-      throw err
+      console.log('Host Folder could not be created %s', fsLogPath);
+      throw err;
     }
   }
   if ( !stats.isDirectory()) {
-    console.log("LogPath %s exists but is no directory")
-    throw err
+    console.log('LogPath %s exists but is no directory');
   }
   // now all is in place fsLogPath exists for this server
 }
 
 logging.initLog4js(fsLogPath);
 // initialise with default debug
-var settingDebugInit = {"VC": "info", "VP": "info", "info": "info", "USER":"info", "OTHER": "info", "ALL": "debug"}
+var settingDebugInit = {'VC': 'info', 'VP': 'info', 'VPV': 'info', 'USER':'info', 'OTHER': 'info', 'ALL': 'debug'};
 logging.setLogLevelConfig(settingDebugInit);
-logger4js.warn("Starting in Environment %s", process.env.NODE_ENV);
-logger4js.warn("Starting Version %s", process.env.VERSION_REST);
-logger4js.warn("Starting with %s CPUs", require('os').cpus().length);
+logger4js.warn('Starting in Environment %s', process.env.NODE_ENV);
+logger4js.warn('Starting Version %s', process.env.VERSION_REST);
+logger4js.warn('Starting with %s CPUs', require('os').cpus().length);
 
-// view engine setup
-//app.set('views', path.join(__dirname, 'views'));
+i18n.configure({
+    locales:['en', 'de'],
+    directory: __dirname + '/i18n'
+});
+app.use(i18n.init);
+// logger4js.warn('Starting Localised %s', i18n.__('Hello'));
+
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 // define the log entry for processing pages
 app.use(logger(function (tokens, req, res) {
   // ignore calls for OPTIONS
-  if (["GET", "POST", "PUT", "DELETE"].indexOf(tokens.method(req, res)) >= 0 ) {
+  if (['GET', 'POST', 'PUT', 'DELETE'].indexOf(tokens.method(req, res)) >= 0 ) {
     visboAudit.visboAudit(tokens, req, res);
     var webLog = [
       tokens.method(req, res),
@@ -234,7 +230,7 @@ app.use(logger(function (tokens, req, res) {
       tokens.status(req, res),
       tokens.res(req, res, 'content-length')||0+' Bytes',
       Math.round(tokens['response-time'](req, res))+'ms',
-      req.headers["x-real-ip"] || req.ip,
+      req.headers['x-real-ip'] || req.ip,
       req.get('User-Agent'),
       ''
     ].join(' ');
@@ -243,13 +239,13 @@ app.use(logger(function (tokens, req, res) {
   }
   if (tokens.status(req, res) == 500) {
     var headers = JSON.parse(JSON.stringify(req.headers));
-    headers["access-key"] = undefined;
+    headers['access-key'] = undefined;
     logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
   }
-  return webLog
+  return webLog;
 }));
 
-var redisClient = visboRedis.VisboRedisInit();
+visboRedis.VisboRedisInit();
 
 // set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
@@ -265,15 +261,14 @@ var options = {
   index: 'index.html',
   maxAge: '1d',
   redirect: false,
-  setHeaders: function (res, path, stat) {
-    res.set('x-timestamp', Date.now())
+  setHeaders: function (res /*, path , stat*/) {
+    res.set('x-timestamp', Date.now());
   }
-}
+};
+
 app.use(express.static(path.join(__dirname, 'public'), options));
 // app.use(cookieParser());
-app.use(bodyParser.urlencoded({
-  extended: false
-}));
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
 
 // simple logger for this router's requests
@@ -302,12 +297,11 @@ app.use('/syslog', sysLog);
 app.use('/status', status);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  logger4js.warn("Error 404 OriginalURL :%s: Parameter %O; Query %O", req.originalUrl, req.params, req.query);
+app.use(function(req, res /*, next*/) {
+  logger4js.warn('Error 404 OriginalURL :%s: Parameter %O; Query %O', req.originalUrl, req.params, req.query);
   return res.status(404).send({
     state: 'failure',
-    message: "Sorry can't find the URL",
+    message: 'Sorry can\'t find the URL',
     url: req.originalUrl
   });
 });
@@ -317,10 +311,10 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (process.env.NODE_ENV === 'development') {
-  app.use(function(err, req, res, next) {
+  app.use(function(err, req, res /*, next*/) {
     var errCode = err.status || 500;
-    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
-    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
+    logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
     res.status(errCode);
     res.send({
       state: 'failure',
@@ -331,10 +325,10 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   // production error handler
   // no stacktraces leaked to user
-  app.use(function(err, req, res, next) {
+  app.use(function(err, req, res /*, next*/) {
     var errCode = err.status || 500;
-    var errMessage = errCode == 400 ? 'Bad Request' : "Server Error";
-    logger4js.warn("Error %s :%s: Error %O; Parameter %O; Query %O", req.originalUrl, errCode, err, req.params, req.query);
+    var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
+    logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
     res.status(errCode);
     res.send({
       state: 'failure',

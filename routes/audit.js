@@ -3,16 +3,15 @@ var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 
-var assert = require('assert');
 var auth = require('./../components/auth');
 var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
 var errorHandler = require('./../components/errorhandler').handler;
 
-var Const = require('../models/constants')
-var constPermSystem = Const.constPermSystem
+var Const = require('../models/constants');
+var constPermSystem = Const.constPermSystem;
 
-var logModule = "OTHER";
+var logModule = 'OTHER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
@@ -46,17 +45,17 @@ router.route('/')
 	* @apiError {number} 500 ServerIssue No DB Connection
 	* @apiExample Example usage:
 	* url: http://localhost:3484/audit
-	* url: http://localhost:3484/audit?from="2018-09-01"&to="2018-09-15"
+	* url: http://localhost:3484/audit?from='2018-09-01'&to='2018-09-15'
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
-	*   "state": "success",
-	*   "message": "Returned Audit Trail",
-	*   "audit":[{
-	*      "_id": "audit541c754feaa",
-	*      "updatedAt": "2018-03-16T12:39:54.042Z",
-	*      "createdAt": "2018-03-12T09:54:56.411Z",
-	*      "XXXXXXXX": "XXXXXXXX"
+	*   'state': 'success',
+	*   'message': 'Returned Audit Trail',
+	*   'audit':[{
+	*      '_id': 'audit541c754feaa',
+	*      'updatedAt': '2018-03-16T12:39:54.042Z',
+	*      'createdAt': '2018-03-12T09:54:56.411Z',
+	*      'XXXXXXXX': 'XXXXXXXX'
 	*   }]
 	* }
 	*/
@@ -67,10 +66,10 @@ router.route('/')
 	req.auditDescription = 'Visbo Audit';
 	req.auditSysAdmin = true;
 
-	logger4js.info("Get Audit Trail for userid %s email %s ", userId, useremail);
+	logger4js.info('Get Audit Trail for userid %s email %s ', userId, useremail);
 
 	if (!(req.listVCPerm.getPerm(0).system & constPermSystem.ViewAudit)) {
-		logger4js.debug("No Permission to View System Audit for user %s", userId);
+		logger4js.debug('No Permission to View System Audit for user %s', userId);
 		return res.status(403).send({
 			state: 'failure',
 			message: 'No Permission to View System Audit'
@@ -79,9 +78,9 @@ router.route('/')
 	// now fetch all entries system wide
 	var query = {};
 	var from, to, maxcount = 1000, action, area;
-	logger4js.debug("Get Audit Trail DateFilter from %s to %s", req.query.from, req.query.to);
-	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from)
-	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to)
+	logger4js.debug('Get Audit Trail DateFilter from %s to %s', req.query.from, req.query.to);
+	if (req.query.from && Date.parse(req.query.from)) from = new Date(req.query.from);
+	if (req.query.to && Date.parse(req.query.to)) to = new Date(req.query.to);
 	if (req.query.maxcount) maxcount = Number(req.query.maxcount) || 10;
 	if (req.query.action) action = req.query.action.trim();
 	if (req.query.area) area = req.query.area.trim();
@@ -91,84 +90,104 @@ router.route('/')
 		from = new Date();
 		from.setTime(0);
 	}
-	logger4js.trace("Get Audit Trail DateFilter after recalc from %s to %s", from, to);
-	query = {"createdAt": {"$gte": from, "$lt": to}};
+	logger4js.trace('Get Audit Trail DateFilter after recalc from %s to %s', from, to);
+	query = {'createdAt': {'$gte': from, '$lt': to}};
 	if (action) {
 		query.action = action;
 	}
 	var queryListCondition = [];
-	logger4js.info("Get Audit Trail for System VC %s", req.oneVC._id);
+	logger4js.info('Get Audit Trail for System VC %s', req.oneVC._id);
 	var areaCondition = [];
 	switch(area) {
-		case "other":
+		case 'other':
 			// get all changes on system and all others with Change or Error
-			areaCondition.push({"$or": [
-					{"vc.vcid": req.oneVC._id.toString(), "action": {$ne: "GET"}},
-					{"vc": {$exists: false}, "vp": {$exists: false},
-						"$or": [
-							{"action": {$ne: "GET"}},
-							{"result.status": {$nin: ["200", "304"]}}
+			areaCondition.push({
+				'$or': [
+					{
+						'vc.vcid': req.oneVC._id.toString(),
+						'action': {$ne: 'GET'}
+					},
+					{
+						'vc': {$exists: false}, 'vp': {$exists: false},
+						'$or': [
+							{'action': {$ne: 'GET'}},
+							{'result.status': {$nin: ['200', '304']}}
 						]
 					}
-				]});
+				]
+			});
 			break;
-	  case "sys":
-			areaCondition.push({"vc.vcid": req.oneVC._id.toString()});
-	    break;
-		case "vc":
-			areaCondition.push({"$or": [{"$and": [{"vc": {$exists: true}}, {"vc.vcid": {$ne: req.oneVC._id.toString()}}]},
-									{"$and": [{"vc": {$exists: false}}, {"url": /^.vc/}]}]});
-			areaCondition.push({"vp": {$exists: false}});
-	    break;
-	  case "vp":
-			areaCondition.push({"$or": [{"vp": {$exists: true}}, {"url": /^.vp/}]});
-	    break;
+		case 'sys':
+			areaCondition.push({'vc.vcid': req.oneVC._id.toString()});
+			break;
+		case 'vc':
+			areaCondition.push({
+				'$or': [
+					{
+						'$and': [
+							{'vc': {$exists: true}},
+							{'vc.vcid': {$ne: req.oneVC._id.toString()}}
+						]
+					},
+					{
+						'$and': [
+							{'vc': {$exists: false}},
+							{'url': /^.vc/}
+						]
+					}
+				]
+			});
+			areaCondition.push({'vp': {$exists: false}});
+			break;
+		case 'vp':
+			areaCondition.push({'$or': [{'vp': {$exists: true}}, {'url': /^.vp/}]});
+			break;
 	}
-	if (areaCondition.length > 0) queryListCondition.push({"$and": areaCondition})
+	if (areaCondition.length > 0) queryListCondition.push({'$and': areaCondition});
 	if (req.query.text) {
 		var textCondition = [];
 		var text = req.query.text;
 		var expr;
 		try {
-				expr = new RegExp(text, "i");
+				expr = new RegExp(text, 'i');
 		} catch(e) {
-				logger4js.info("System Audit RegEx corrupt: %s ", text);
+				logger4js.info('System Audit RegEx corrupt: %s ', text);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No Valid Regular Expression'
 				});
 		}
 		if (mongoose.Types.ObjectId.isValid(req.query.text)) {
-			logger4js.debug("Get Audit Search for ObjectID %s", text);
-			textCondition.push({"vc.vcid": text});
-			textCondition.push({"vp.vpid": text});
-			textCondition.push({"vpv.vpvid": text});
-			textCondition.push({"user.userId": text});
+			logger4js.debug('Get Audit Search for ObjectID %s', text);
+			textCondition.push({'vc.vcid': text});
+			textCondition.push({'vp.vpid': text});
+			textCondition.push({'vpv.vpvid': text});
+			textCondition.push({'user.userId': text});
 		} else {
-			textCondition.push({"user.email": expr});
-			textCondition.push({"vc.name": expr});
-			textCondition.push({"vp.name": expr});
-			textCondition.push({"vpv.name": expr});
-			textCondition.push({"host": expr});
-			textCondition.push({"url": expr});
-			textCondition.push({"action": expr});
-			textCondition.push({"actionInfo": expr});
-			textCondition.push({"actionDescription": expr});
-			textCondition.push({"result.statusText": expr});
-			textCondition.push({"userAgent": expr});
+			textCondition.push({'user.email': expr});
+			textCondition.push({'vc.name': expr});
+			textCondition.push({'vp.name': expr});
+			textCondition.push({'vpv.name': expr});
+			textCondition.push({'host': expr});
+			textCondition.push({'url': expr});
+			textCondition.push({'action': expr});
+			textCondition.push({'actionInfo': expr});
+			textCondition.push({'actionDescription': expr});
+			textCondition.push({'result.statusText': expr});
+			textCondition.push({'userAgent': expr});
 		}
-		textCondition.push({"vc.vcjson": expr});
-		textCondition.push({"vp.vpjson": expr});
-		textCondition.push({"url": expr});
-		queryListCondition.push({"$or": textCondition})
+		textCondition.push({'vc.vcjson': expr});
+		textCondition.push({'vp.vpjson': expr});
+		textCondition.push({'url': expr});
+		queryListCondition.push({'$or': textCondition});
 	}
 	var ttlCondition = [];
-	ttlCondition.push({"ttl": {$exists: false}});
-	ttlCondition.push({"ttl": {$gt: new Date()}});
-	queryListCondition.push({"$or": ttlCondition})
+	ttlCondition.push({'ttl': {$exists: false}});
+	ttlCondition.push({'ttl': {$gt: new Date()}});
+	queryListCondition.push({'$or': ttlCondition});
 
-	query["$and"] = queryListCondition;
-	logger4js.debug("Prepared Audit Query: %s", JSON.stringify(query));
+	query['$and'] = queryListCondition;
+	logger4js.debug('Prepared Audit Query: %s', JSON.stringify(query));
 
 	VisboAudit.find(query)
 	.limit(maxcount)
@@ -176,18 +195,18 @@ router.route('/')
 	.lean()
 	.exec(function (err, listVCAudit) {
 		if (err) {
-			errorHandler(err, res, `DB: GET System Audit`, `Error getting System Audit`)
+			errorHandler(err, res, 'DB: GET System Audit', 'Error getting System Audit');
 			return;
 		}
-		logger4js.debug("Found VC Audit Logs %d", listVCAudit.length);
+		logger4js.debug('Found VC Audit Logs %d', listVCAudit.length);
 		for(var i = 0; i < listVCAudit.length; i++) {
 			if (!listVCAudit[i].user || !listVCAudit[i].user.email) {
-				listVCAudit[i].user = {"email": "unknown"};
+				listVCAudit[i].user = {'email': 'unknown'};
 			}
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vpv && listVCAudit[i].vpv.name) listVCAudit[i].actionInfo = listVCAudit[i].vpv.name
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vp && listVCAudit[i].vp.name) listVCAudit[i].actionInfo = listVCAudit[i].vp.name
-			if (!listVCAudit[i].actionInfo && listVCAudit[i].vc && listVCAudit[i].vc.name) listVCAudit[i].actionInfo = listVCAudit[i].vc.name
-			if (!listVCAudit[i].actionDescription) listVCAudit[i].actionDescription = listVCAudit[i].action
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vpv && listVCAudit[i].vpv.name) listVCAudit[i].actionInfo = listVCAudit[i].vpv.name;
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vp && listVCAudit[i].vp.name) listVCAudit[i].actionInfo = listVCAudit[i].vp.name;
+			if (!listVCAudit[i].actionInfo && listVCAudit[i].vc && listVCAudit[i].vc.name) listVCAudit[i].actionInfo = listVCAudit[i].vc.name;
+			if (!listVCAudit[i].actionDescription) listVCAudit[i].actionDescription = listVCAudit[i].action;
 
 		}
 		return res.status(200).send({
@@ -197,6 +216,6 @@ router.route('/')
 			audit: listVCAudit
 		});
 	});
-})
+});
 
 module.exports = router;
