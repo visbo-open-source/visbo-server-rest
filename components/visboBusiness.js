@@ -65,7 +65,7 @@ function getAllPersonalKosten(vpv, organisation) {
 				var phasenStart = phase.relStart - 1;
 
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
-					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
+					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
 					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
 					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
@@ -151,6 +151,7 @@ function calcCosts(vpv, pfv, organisation) {
 		var currentDate = new Date(vpv.startDate);
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
+		logger4js.trace('Calculate Project Costs vpv currentDate %s ', currentDate.toISOString());
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
@@ -159,7 +160,8 @@ function calcCosts(vpv, pfv, organisation) {
 		var allOtherCost = getAllOtherCost(vpv, organisation);
 
 		for (var i = 0 ; i < dauer; i++){
-			allCostValues[currentDate] = { 'currentCost': personalCost[i] + allOtherCost[i] };
+			const currentDateISO = currentDate.toISOString();
+			allCostValues[currentDateISO] = { 'currentCost': personalCost[i] + allOtherCost[i] };
 			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
@@ -167,6 +169,7 @@ function calcCosts(vpv, pfv, organisation) {
 		currentDate = new Date(pfv.startDate);
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
+		logger4js.trace('Calculate Project Costs pfv currentDate %s ', currentDate.toISOString());
 		startIndex = getColumnOfDate(pfv.startDate);
 		endIndex = getColumnOfDate(pfv.endDate);
 		dauer = endIndex - startIndex + 1;
@@ -174,16 +177,19 @@ function calcCosts(vpv, pfv, organisation) {
 		personalCost = getAllPersonalKosten(pfv, organisation);
 		allOtherCost = getAllOtherCost(pfv, organisation);
 
-		for (i = 0 ; i < dauer; i++){
-			if (!allCostValues[currentDate]) allCostValues[currentDate] = {};
-			allCostValues[currentDate].baseLineCost = personalCost[i] + allOtherCost[i];
+		for (i = 0 ; i < dauer; i++) {
+			const currentDateISO = currentDate.toISOString();
+			if (!allCostValues[currentDateISO]) {
+				allCostValues[currentDateISO] = {};
+			}
+			allCostValues[currentDateISO].baseLineCost = personalCost[i] + allOtherCost[i];
 			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
 	var j = 0, element;
 	for (element in allCostValues) {
 		allCostValuesIndexed[j] = {
-			'currentDate': (new Date(element)).toISOString(),
+			'currentDate': element,
 			'baseLineCost': allCostValues[element].baseLineCost || 0,
 			'currentCost': allCostValues[element].currentCost || 0
 		};
