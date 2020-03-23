@@ -148,7 +148,9 @@ function calcCosts(vpv, pfv, organisation) {
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	if ( vpv && organisation ) {
+		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
 		var currentDate = new Date(vpv.startDate);
+		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
 		logger4js.trace('Calculate Project Costs vpv currentDate %s ', currentDate.toISOString());
