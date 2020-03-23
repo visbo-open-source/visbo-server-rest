@@ -30,7 +30,7 @@ router.route('/')
 	*  'state':'success',
 	*  'message':'Status of ReST Server',
 	*  'status':[{
-	*    'version':'V 2018-10-01 14:10:00 +02:00',
+	*    'version':'2018-10-01 14:10:00 +02:00',
 	*    'upTime':'2018-09-20T10:31:27.216Z'
 	*  }]
 	*}

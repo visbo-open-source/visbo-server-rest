@@ -1,8 +1,7 @@
 LogFile="/var/log/visbo/$HOSTNAME/"`date '+%Y-%m-%d_%H:%M:%S'`"_UpdateLog"
-echo $LogFile
+# echo $LogFile
 mkdir -p /var/log/visbo/$HOSTNAME/
-echo `date` "Execute Update of Visbo ReST by user" `whoami` | tee -a $LogFile
-echo `date` "Update ReST Server UI" | tee -a $LogFile
+echo `date` "Update ReST Server UI by user" `whoami` | tee -a $LogFile
 cd $HOME/GitHub/visbo-ui-build
 bash update-ui | tee -a $LogFile
 ExitStatus=${PIPESTATUS[0]}
@@ -11,7 +10,7 @@ then
   echo "FATAL: Update Visbo UI Branch failed. Exit $ExitStatus" | tee -a $LogFile
   exit $ExitStatus
 fi
-echo `date` "Update ReST Server" | tee -a $LogFile
+echo `date` "Update ReST Server by user" `whoami` | tee -a $LogFile
 cd $HOME/GitHub/visbo-server-rest
 bash update-rest force | tee -a $LogFile
 ExitStatus=${PIPESTATUS[0]}
