@@ -8,7 +8,6 @@ var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
-var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
@@ -20,6 +19,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var Variant = mongoose.model('Variant');
+var Restrict = mongoose.model('Restrict');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
@@ -244,6 +244,8 @@ var markDeleteVersion = function(vpid){
 router.use('/', auth.verifyUser);
 // register the VP middleware to get all Groups with VP Permissions for the user
 router.use('/', verifyVp.getAllGroups);
+// register the VP middleware to get all Groups of the VP
+router.use('/', verifyVg.getVPGroups);
 // register the VP middleware to check that the user has access to the VP
 router.param('vpid', verifyVp.getVP);
 // register the VP middleware to check that the vpfid is valid
@@ -330,7 +332,7 @@ router.route('/')
 			requiredPerm += constPermVP.Delete;
 		}
 		if (!isSysAdmin) {
-			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm)};
+			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm, true)};
 		}
 		query.deletedAt = {$exists: req.query.deleted ? true : false};				// Not deleted
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
@@ -345,6 +347,7 @@ router.route('/')
 		logger4js.trace('Get Project for user %s with query parameters %O', userId, query);
 
 		var queryVP = VisboProject.find(query);
+		queryVP.select('-restrict -lock -variant');
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
@@ -596,7 +599,9 @@ router.route('/:vpid')
 		// we have found the VP already in middleware
 
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
-
+		if ((req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid).vp & constPermVP.View) == 0) {
+			req.oneVP.restrict = undefined;
+		}
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Visbo Projects',
@@ -1802,7 +1807,7 @@ router.route('/:vpid/lock')
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
-		if (variantName != '' && variant.findVariant(req.oneVP, variantName) < 0) {
+		if (variantName != '' && req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
 				logger4js.warn('POST Lock Visbo Project %s variant %s does not exists  ', req.params.vpid, variantName);
 				return res.status(400).send({
 				state: 'failure',
@@ -1997,12 +2002,7 @@ router.route('/:vpid/variant')
 		}
 		logger4js.trace('Variant %s current list %O', variantName, variantList);
 		var variantDuplicate = false;
-		for (var i = 0; i < variantList.length; i++) {
-			if (variantList[i].variantName == variantName ) {
-				variantDuplicate = true;
-				break;
-			}
-		}
+		variantDuplicate = variantList.findIndex(variant => variant.variantName == variantName) >= 0;
 		logger4js.debug('Variant Duplicate %s Variant Name %s', variantDuplicate, variantName);
 		if (variantDuplicate || variantName == '') {
 			return res.status(409).send({
@@ -2075,7 +2075,7 @@ router.route('/:vpid/variant/:vid')
 
 		logger4js.info('DELETE Visbo Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
 
-		var variantIndex = variant.findVariantId(req.oneVP, variantId);
+		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString())
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2335,7 +2335,10 @@ router.route('/:vpid/portfolio')
 		logger4js.debug('Variant %s Portfolio %O', variantName || 'None', req.body);
 
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
-		var variantIndex = variantName == '' ? 0 : variant.findVariant(req.oneVP, variantName);
+		var variantIndex = 0;
+		if (variantName) {
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+		}
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2562,7 +2565,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var variantName = oneVPF.variantName;
 			if (variantName != '') {
 				// check that the Variant exists
-				variantIndex = variant.findVariant(req.oneVP, variantName);
+				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
 				if (variantIndex < 0) {
 					logger4js.warn('VP PortfolioList Delete Variant does not exist %s %s', req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
@@ -2607,5 +2610,183 @@ router.route('/:vpid/portfolio/:vpfid')
 			});
 		});
 	});
+
+	router.route('/:vpid/restrict')
+
+	/**
+		* @api {post} /vp/:vpid/restrict Create a Restriction
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Permission
+		* @apiName PostVisboProjectRestrict
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new group inside the Visbo Project
+		*
+		* @apiPermission Authenticated and System Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 missing name or group of Visbo Project Restriction during Creation
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Visbo Project Restriction
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/restrict
+		*  {
+		*     'name': 'Restriction Name',
+		*     'group': 'vpgroup5c754feaa',
+		*     'element': 'ElementName'
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned Visbo Project Restriction',
+		*   'restrict':[{
+		*     '_id':'vprestrict5c754feaa',
+		*     'name': 'Restriction Name',
+		*     'group': 'vpgroup5c754feaa',
+		*     'element': 'ElementName'
+		*   }]
+		* }
+		*/
+
+	// Create a Visbo Project Restriction
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			var groupType = 'VP';
+
+			var restrictName = (req.body.name || '').trim();
+			var groupId = req.body.group;
+			var element = (req.body.element || '').trim();
+
+			req.auditDescription = 'Visbo Project Restriction (Create)';
+
+			logger4js.info('Post a new Visbo Project Restriction with name %s executed by user %s ', restrictName, userId);
+			logger4js.debug('Post a new Visbo Project Restriction Req Body: %O Perm %O', req.body, req.listVPPerm.getPerm(req.params.vpid));
+
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to change Permission of Visbo Project',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+			if (!validateName(restrictName, false)
+			|| !validate.validateObjectId(groupId, false)
+			|| !validateName(element, false)) {
+				logger4js.info('POST Visbo Project Restrict bad format %O', req.body);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid Restrict Definition'
+				});
+			}
+			if (req.listVPGroup.findIndex(item => item._id.toString() === groupId.toString() && item.groupType == 'VP') < 0) {
+				logger4js.info('POST Visbo Project Restrict unknown VP Group ID', groupId);
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No permission for Group'
+				});
+			}
+			// MS TODO: implement validUntil functionality
+
+			var restrictList = req.oneVP.restrict || [];
+
+			logger4js.trace('Restrict %s current list %O', restrictName, restrictList);
+			var restrictDuplicate = false;
+			restrictDuplicate = restrictList.find(item => item.name == restrictName &&  item.group == groupId && item.element == element) >= 0;
+			logger4js.debug('Restrict Duplicate %s Restrict Name %s', restrictDuplicate, restrictName);
+			var newRestrict = new Restrict();
+			// fill in the required fields
+			newRestrict.name = restrictName;
+			newRestrict.groupid = groupId;
+			newRestrict.element = element;
+			newRestrict.createdAt = new Date();
+			logger4js.debug('Post Restrict to VP %s now: %O', req.params.vpid, newRestrict);
+			restrictList.push(newRestrict);
+			req.oneVP.restrict = restrictList;
+			req.oneVP.save(function(err, oneVP) {
+				if (err) {
+					errorHandler(err, res, 'DB: POST VP Restriction', 'Error creating Visbo Project Restriction');
+					return;
+				}
+				newRestrict = oneVP.restrict.filter(restrict => (restrict.name == newRestrict.name && restrict.groupid == newRestrict.groupid && restrict.element == newRestrict.element ))[0];
+				return res.status(200).send({
+					state: 'success',
+					message: 'Created Visbo Project Restriction',
+					restrict: [newRestrict],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			});
+
+		});
+
+	router.route('/:vpid/restrict/:rid')
+	/**
+		* @api {delete} /vp/:vpid/restrict/:rid Delete a Restriction
+		* @apiVersion 1.0.0
+		* @apiGroup Visbo Project Permission
+		* @apiName DeleteVisboProjectRestriction
+		* @apiDescription Deletes a specific Restriction for a group
+		* the user needs to have read access to the Visbo Project and Modify Permission in the Visbo Project
+		* @apiHeader {String} access-key User authentication token.
+		*
+		* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to delete Restriction in the Visbo Project
+		* @apiError {number} 409 Restriction does not exists
+		*
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/vp5aada025/restrict/restrict5aada
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Deleted Visbo Project Restriction',
+		* }
+		*/
+	// Delete Project Restriction
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var restrictId = req.params.rid;
+
+			req.auditDescription = 'Visbo Project Restrict (Delete)';
+			req.auditInfo = restrictId;
+
+			logger4js.info('DELETE Visbo Project Restriction for userid %s email %s and vp %s restrict :%s:', userId, useremail, req.params.vpid, req.params.rid);
+
+			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString())
+			if (restrictIndex < 0) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Restriction does not exists',
+					vp: [req.oneVP]
+				});
+			}
+			var restrictName = req.oneVP.restrict[restrictIndex].name;
+			req.auditInfo = restrictName;
+
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to delete Restriction',
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+			req.oneVP.restrict.splice(restrictIndex, 1);
+
+			req.oneVP.save(function(err) {
+				if (err) {
+					errorHandler(err, res, 'DB: DELETE VP Restriction', 'Error deleting Visbo Project Restriction');
+					return;
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Visbo Project Restriction',
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			});
+		});
 
 module.exports = router;

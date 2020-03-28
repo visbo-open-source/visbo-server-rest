@@ -219,7 +219,7 @@ function getNamePart(str, part) {
 		return result;
 }
 
-function calcDeadlines(vpv, pfv) {
+function calcDeadlines(vpv, pfv, getAll) {
 	var allDeadlineValuesIndexed = [];
 	var startCalc = new Date();
 
@@ -231,7 +231,7 @@ function calcDeadlines(vpv, pfv) {
 	var hrchy_pfv = convertHierarchy(pfv);
 	var hrchy_vpv = convertHierarchy(vpv);
 	var allDeadlines = getDeadlines(pfv, hrchy_pfv, undefined);
-	allDeadlines = getDeadlines(vpv, hrchy_vpv, allDeadlines);
+	allDeadlines = getDeadlines(vpv, hrchy_vpv, allDeadlines, getAll);
 
 	var j = 0, element;
 	var listDeadlines = allDeadlines.getAllDeadlines();
@@ -239,16 +239,17 @@ function calcDeadlines(vpv, pfv) {
 	for (element = 0; element < listDeadlines.length; element++) {
 		logger4js.trace('Add Project Deadline %s', JSON.stringify(listDeadlines[element]));
 		var name = getNamePart(listDeadlines[element].nameID || '§UNDEFINED', 1);
+		var changeDays = Math.round((listDeadlines[element].endDateVPV - listDeadlines[element].endDatePFV) / 1000 / 3600 / 24);
 		allDeadlineValuesIndexed[j] = {
 			'name': name || getNamePart(listDeadlines[element].phasePFV, 1),
 			'phasePFV': getNamePart(listDeadlines[element].phasePFV, 1),
 			'phaseVPV': getNamePart(listDeadlines[element].phaseVPV, 1),
-			'type': listDeadlines[element].type || 'UNDEFINED',
-			'startDatePFV': listDeadlines[element].startDatePFV || '',
-			'startDateVPV': listDeadlines[element].startDateVPV || '',
-			'endDatePFV': listDeadlines[element].endDatePFV || '',
-			'endDateVPV': listDeadlines[element].endDateVPV || '',
-			'changeDays': Math.round((listDeadlines[element].endDateVPV - listDeadlines[element].endDatePFV) / 1000 / 3600 / 24),
+			'type': listDeadlines[element].type || undefined,
+			'startDatePFV': listDeadlines[element].startDatePFV || undefined,
+			'startDateVPV': listDeadlines[element].startDateVPV || undefined,
+			'endDatePFV': listDeadlines[element].endDatePFV || undefined,
+			'endDateVPV': listDeadlines[element].endDateVPV || undefined,
+			'changeDays': changeDays || 0,
 			'percentDone': listDeadlines[element].percentDone || 0
 		};
 		j++;
@@ -258,7 +259,7 @@ function calcDeadlines(vpv, pfv) {
 	return allDeadlineValuesIndexed;
 }
 
-function calcDeliverables(vpv, pfv) {
+function calcDeliverables(vpv, pfv, getAll) {
 	var allDeliveryValuesIndexed = [];
 	var startCalc = new Date();
 
@@ -270,7 +271,7 @@ function calcDeliverables(vpv, pfv) {
 	var hrchy_pfv = convertHierarchy(pfv);
 	var hrchy_vpv = convertHierarchy(vpv);
 	var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
-	allDeliverables = getAllDeliverables(vpv, hrchy_vpv, allDeliverables);
+	allDeliverables = getAllDeliverables(vpv, hrchy_vpv, allDeliverables, getAll);
 
 	var j = 0, element;
 	var listDeliveries = allDeliverables.getAllDeliveries();
@@ -278,14 +279,15 @@ function calcDeliverables(vpv, pfv) {
 	for (element = 0; element < listDeliveries.length; element++) {
 		logger4js.trace('Add Project Delivery %s', JSON.stringify(listDeliveries[element]));
 		var name = getNamePart(listDeliveries[element].nameID || '§UNDEFINED', 1);
+		var changeDays = Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24);
 		allDeliveryValuesIndexed[j] = {
 			'name': name,
 			'phasePFV': getNamePart(listDeliveries[element].phasePFV, 1),
 			'phaseVPV': getNamePart(listDeliveries[element].phaseVPV, 1),
-			'description': listDeliveries[element].description || 'UNDEFINED',
-			'datePFV': listDeliveries[element].datePFV || '',
-			'dateVPV': listDeliveries[element].dateVPV || '',
-			'changeDays': Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24),
+			'description': listDeliveries[element].description || undefined,
+			'datePFV': listDeliveries[element].datePFV || undefined,
+			'dateVPV': listDeliveries[element].dateVPV || undefined,
+			'changeDays': changeDays || 0,
 			'percentDone': listDeliveries[element].percentDone || 0
 		};
 		j++;	}
@@ -338,10 +340,18 @@ function VisboDeliverable() {
 		if (newDeliverable.description) this.allDeliverables[id].description =  newDeliverable.description;
 		if (newDeliverable.datePFV) this.allDeliverables[id].datePFV =  newDeliverable.datePFV;
 	};
-	this.updateDeliverable = function(id, updateDeliverable) {
+	this.updateDeliverable = function(id, updateDeliverable, insertAll) {
 		if (updateDeliverable == undefined) return;
 		if (id == undefined) return;
-		if (this.allDeliverables[id] == undefined) return;
+		if (this.allDeliverables[id] == undefined) {
+			if (insertAll) {
+				this.allDeliverables[id] = {};
+				this.length += 1;
+			} else {
+				return;
+			}
+		}
+		if (!this.allDeliverables[id].nameID) this.allDeliverables[id].nameID =  updateDeliverable.nameID;
 		if (updateDeliverable.phase) this.allDeliverables[id].phaseVPV =  updateDeliverable.phase;
 		if (updateDeliverable.description) this.allDeliverables[id].description =  updateDeliverable.description;
 		if (updateDeliverable.dateVPV) this.allDeliverables[id].dateVPV =  updateDeliverable.dateVPV;
@@ -378,10 +388,18 @@ function VisboDeadlines() {
 		if (newDeadline.endDatePFV) this.allDeadlines[id].endDatePFV =  newDeadline.endDatePFV;
 		if (newDeadline.startDatePFV) this.allDeadlines[id].startDatePFV =  newDeadline.startDatePFV;
 	};
-	this.updateDeadline = function(id, updateDeadline) {
+	this.updateDeadline = function(id, updateDeadline, insertAll) {
 		if (updateDeadline == undefined) return;
 		if (id == undefined) return;
-		if (this.allDeadlines[id] == undefined) return;
+		if (this.allDeadlines[id] == undefined) {
+			if (insertAll) {
+				this.allDeadlines[id] = {};
+				this.length += 1;
+			} else {
+				return;
+			}
+		}
+		if (!this.allDeadlines[id].nameID) this.allDeadlines[id].nameID =  updateDeadline.nameID;
 		if (updateDeadline.phaseVPV) this.allDeadlines[id].phaseVPV =  updateDeadline.phaseVPV;
 		if (updateDeadline.endDateVPV) this.allDeadlines[id].endDateVPV =  updateDeadline.endDateVPV;
 		if (updateDeadline.startDateVPV) this.allDeadlines[id].startDateVPV =  updateDeadline.startDateVPV;
@@ -493,7 +511,7 @@ function getPhStartDate(vpv, phase){
 }
 
 // Calculate all Deliverables for the requested Project/BaseProject
-function getAllDeliverables(vpv, hrchy, allDeliverables) {
+function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 
 	logger4js.trace('Calculate all Deliverables of %s  ', vpv && vpv._id);
 
@@ -506,12 +524,11 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 		return undefined;
 	}
 
-	if (vpv.variantName == 'pfv') {
+	// get all for pfv or if the calculcation is done only for vpv
+	if (vpv.variantName == 'pfv'
+	|| !allDeliverables ) {
 		addAll = true;
 		// initialise the deliverables for the project version
-		allDeliverables = new VisboDeliverable();
-	} else if (!allDeliverables) {
-		addAll = true;
 		allDeliverables = new VisboDeliverable();
 	}
 
@@ -527,7 +544,7 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 			if (addAll) {
 				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate});
 			} else {
-				allDeliverables.updateDeliverable(id, {description: phase.deliverables[j], dateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0});
+				allDeliverables.updateDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], dateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0}, insertAll);
 			}
 		}
 
@@ -543,7 +560,7 @@ function getAllDeliverables(vpv, hrchy, allDeliverables) {
 				if (addAll) {
 					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate});
 				} else {
-					allDeliverables.updateDeliverable(id, {phase: phase.name, description: milestone.deliverables[m], dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0});
+					allDeliverables.updateDeliverable(id, {nameID: phase.name, phase: phase.name, description: milestone.deliverables[m], dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 				}
 			}
 		}
@@ -579,7 +596,7 @@ function getDeliverableCompletionMetric(allDeliverables, refDate){
 }
 
 // Calculate all Deadlines for the requested Project/BaseProject
-function getDeadlines(vpv, hrchy, allDeadlines) {
+function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 
 	logger4js.trace('Calculate all Deadlines of %s  ', vpv && vpv._id);
 
@@ -609,7 +626,7 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				if (addAll) {
 					allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Milestone', name: name, phasePFV: phaseName, endDatePFV: endDate});
 				} else {
-					allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0});
+					allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 				}
 			} else {
 				// currentNode is a phase
@@ -623,7 +640,7 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 					if (addAll) {
 						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0});
+						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0}, insertAll);
 					}
 				}
 			}
@@ -640,23 +657,23 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 		timeCompletionCurrentTotal: 0
 	};
 
-var listDeadlines = allDeadlines.getAllDeadlines();
-for (var element = 0; element < listDeadlines.length; element++) {
-	result.timeCompletionBaseLastTotal += 1;
-	// Item was found in VPV, add it to total
-	if (listDeadlines[element].endDateVPV) {
-		result.timeCompletionCurrentTotal += 1;
+	var listDeadlines = allDeadlines.getAllDeadlines();
+	for (var element = 0; element < listDeadlines.length; element++) {
+		result.timeCompletionBaseLastTotal += 1;
+		// Item was found in VPV, add it to total
+		if (listDeadlines[element].endDateVPV) {
+			result.timeCompletionCurrentTotal += 1;
+		}
+		// Item was planned before refDate in baseline
+		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
+			result.timeCompletionBaseLastActual += 1;
+		}
+		// Item was due in VPV, add it to actual weighted with percentDone
+		if (listDeadlines[element].endDateVPV && listDeadlines[element].endDateVPV.getTime() < refDate.getTime()) {
+			result.timeCompletionCurrentActual += 1 * (listDeadlines[element].percentDone || 0);
+		}
 	}
-	// Item was planned before refDate in baseline
-	if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
-		result.timeCompletionBaseLastActual += 1;
-	}
-	// Item was due in VPV, add it to actual weighted with percentDone
-	if (listDeadlines[element].endDateVPV && listDeadlines[element].endDateVPV.getTime() < refDate.getTime()) {
-		result.timeCompletionCurrentActual += 1 * (listDeadlines[element].percentDone || 0);
-	}
-}
-return result;
+	return result;
 }
 
 
@@ -741,7 +758,72 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	logger4js.info('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
 
 	return keyMetrics;
+}
 
+var cleanupRestrictedVersion = function(vpv, restriction) {
+	vpv.customDblFields = undefined;
+	vpv.customStringFields = undefined;
+	vpv.customBoolFields = undefined;
+	vpv.Risiko = undefined;
+	vpv.StrategicFit = undefined;
+	vpv.actualDataUntil = undefined;
+	vpv.Erloes = undefined;
+	vpv.leadPerson = undefined;
+	vpv.earliestStart = undefined;
+	vpv.earliestStartDate = undefined;
+	vpv.latestStart = undefined;
+	vpv.latestStartDate = undefined;
+	vpv.status = undefined;
+	vpv.ampelStatus = undefined;
+	vpv.ampelErlaeuterung = undefined;
+	vpv.volumen = undefined;
+	vpv.complexity = undefined;
+	if (vpv.AllPhases) {
+		var allPhases = vpv.AllPhases;
+		if (restriction) {
+			for (var i = 0; i < allPhases.length; i++) {
+				var findIndex = restriction.findIndex(restrict => restrict.element == allPhases[i].name);
+				if (findIndex < 0) {
+					// phase not selected, check if a milestone inside the phase is part of restriction
+					allResults = allPhases[i].AllResults;
+					for (var j = 0; j < allResults.length; j++) {
+						var findResultsIndex = restriction.findIndex(restrict => restrict.element == allResults[j].name);
+						if (findResultsIndex < 0) {
+							allResults.splice(j, 1);
+							j--; // check the next element as it has moved
+						}
+					}
+					if (allResults.length === 0) {
+						// phase does not match and also no Milestone so skip the item
+						allPhases.splice(i, 1);
+						i--; // check the next element as it has moved
+					}
+				}
+			}
+			logger4js.debug('AllPhases filtered vpid %s vpvid %s AllPhases(%s)', vpv.vpid, vpv._id, allPhases.length);
+		} else {
+			vpv.AllPhases = [];
+		}
+		for (var i = 0; i < allPhases.length; i++) {
+			allPhases[i].AllRoles = undefined;
+			allPhases[i].AllCosts = undefined;
+			allPhases[i].AllBewertungen = undefined;
+			allPhases[i].responsible = undefined;
+			allPhases[i].earliestStart = undefined;
+			allPhases[i].latestStart = undefined;
+			allPhases[i].minDauer = undefined;
+			allPhases[i].maxDauer = undefined;
+			allPhases[i].relStart = undefined;
+			allPhases[i].relEnde = undefined;
+			if (allPhases[i].AllResults) {
+				var allResults = allPhases[i].AllResults;
+				for (var j = 0; j < allResults.length; j++) {
+					allResults[j].bewertungen = undefined;
+					allResults[j].verantwortlich = undefined;
+				}
+			}
+		}
+	}
 }
 
 module.exports = {
@@ -750,5 +832,6 @@ module.exports = {
 	calcKeyMetrics: calcKeyMetrics,
 	calcCosts: calcCosts,
 	calcDeliverables: calcDeliverables,
-	calcDeadlines: calcDeadlines
+	calcDeadlines: calcDeadlines,
+	cleanupRestrictedVersion: cleanupRestrictedVersion
 };

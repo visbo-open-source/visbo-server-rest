@@ -152,7 +152,7 @@ function getVP(req, res, next, vpid) {
 	req.auditDescription = 'Visbo Project';
 	req.auditSysAdmin = sysAdmin;
 
-	if ((req.listVPPerm.getPerm(sysAdmin ? 0 : vpid).vp & constPermVP.View) == 0) {
+	if ((req.listVPPerm.getPerm(sysAdmin ? 0 : vpid).vp & (constPermVP.View | constPermVP.ViewRestricted)) == 0) {
 		// do not accept requests without a group assignement especially to System Group
 		return res.status(403).send({
 			state: 'failure',

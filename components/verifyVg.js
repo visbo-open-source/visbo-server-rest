@@ -51,7 +51,6 @@ function getGroupId(req, res, next, groupId) {
 	});
 }
 
-
 function checkUserId(req, res, next, userid) {
 	logger4js.debug('Check UserID %s user %s for url %s ', userid, req.decoded.email, req.url);
 	if (!validate.validateObjectId(userid, false)) {
@@ -64,7 +63,36 @@ function checkUserId(req, res, next, userid) {
 	return next();
 }
 
+function getVPGroups(req, res, next) {
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	logger4js.debug('Check if we need groups %s ', req.url);
+	if (req.method != 'POST' || urlComponent.length < 3 || urlComponent[2] != 'restrict') {
+		return next();
+	}
+	var vpid = urlComponent[1];
+	logger4js.debug('Get Groups for url %s vpid %s', req.url, vpid);
+
+	var query = {};
+	query.vpids = vpid;
+	query.groupType = {$in: ['VC', 'VP']};
+	logger4js.trace('Get Visbo Project Group Query %O', query);
+	var queryVCGroup = VisboGroup.find(query);
+	queryVCGroup.select('-vpids');
+	queryVCGroup.lean();
+	queryVCGroup.exec(function (err, listVPGroup) {
+		if (err) {
+			errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting VisboProject Groups');
+			return;
+		}
+		logger4js.info('Found %d Groups for VP', listVPGroup.length);
+		req.listVPGroup = listVPGroup;
+		return next();
+	});
+}
+
 module.exports = {
 	getGroupId: getGroupId,
-	checkUserId: checkUserId
+	checkUserId: checkUserId,
+	getVPGroups: getVPGroups
 };

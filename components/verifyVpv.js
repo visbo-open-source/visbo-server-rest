@@ -16,6 +16,34 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var VisboPermission = Const.VisboPermission;
 
+// Calculate the oneVP if a vpid is specified
+function getOneVP(req, res, next) {
+	var userId = req.decoded._id;
+	var baseUrl = req.url.split('?')[0];
+	var startCalc = new Date();
+
+	// get the VP that is specified in the URL
+	logger4js.debug('Generate oneVP for user %s for url %s', req.decoded.email, req.url);
+	if (!validate.validateObjectId(req.query.vpid, true) || baseUrl != '/') {
+		return next();
+	}
+
+	var query = {};
+	query._id = req.query.vpid;
+	var queryVP = VisboProject.findOne(query);
+	// queryVP.select('name users updatedAt createdAt');
+	queryVP.exec(function (err, oneVP) {
+		if (err) {
+			errorHandler(err, res, 'DB: VPV Group Get VP', 'Error getting Visbo Project Version');
+			return;
+		}
+		req.oneVP = oneVP;
+
+		logger4js.debug('Found Visbo Project %s', req.query.vpid);
+		return next();
+	});
+}
+
 // Generate the Groups where the user is member of and has VP Permission
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
@@ -90,7 +118,7 @@ function getAllVPVGroups(req, res, next) {
 				listVPPerm.addPerm(0, permGroup.permission);
 			} else if (permGroup.vpids) {
 				for (var j=0; j < permGroup.vpids.length; j++) {
-          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission);
+          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission, permGroup._id);
 				}
 			}
 		}
@@ -99,7 +127,7 @@ function getAllVPVGroups(req, res, next) {
 
 		logger4js.trace('Found VPGroups %s', JSON.stringify(listVG));
 		if ( specificVPID) {
-				if ((listVPPerm.getPerm(specificVPID).vp & constPermVP.View) == 0) {
+				if ((listVPPerm.getPerm(specificVPID).vp & (constPermVP.View | constPermVP.ViewRestricted)) == 0) {
 					return res.status(403).send({
 						state: 'failure',
 						message: 'No Visbo Project or no Permission'
@@ -146,7 +174,7 @@ function getVPV(req, res, next, vpvid) {
 			message: 'No Visbo Project or no Permission'
 		});
 	} else {
-		query.vpid = {$in: req.listVPPerm.getVPIDs(constPermVP.View)};
+		query.vpid = {$in: req.listVPPerm.getVPIDs(constPermVP.View, true)};
 	}
 	var queryVPV = VisboProjectVersion.findOne(query);
 
@@ -405,5 +433,6 @@ module.exports = {
 	getPortfolioVPs: getPortfolioVPs,
 	getVCOrgs: getVCOrgs,
 	getVPVpfv: getVPVpfv,
-	getCurrentVPVpfv: getCurrentVPVpfv
+	getCurrentVPVpfv: getCurrentVPVpfv,
+	getOneVP: getOneVP
 };

@@ -6,7 +6,6 @@ var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
-var variant = require('./../components/variant');
 var verifyVpv = require('./../components/verifyVpv');
 var visboBusiness = require('./../components/visboBusiness');
 var VisboProject = mongoose.model('VisboProject');
@@ -23,6 +22,7 @@ var logger4js = log4js.getLogger(logModule);
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
+router.use('/', verifyVpv.getOneVP);
 // register the organisation middleware to get the related organisation
 router.use('/', verifyVpv.getVCOrgs);
 // register the base line middleware to get the related base line version
@@ -321,7 +321,20 @@ router.route('/')
 					if ((perm.vp & constPermVP.ViewAudit) == 0) {
 						listVPV[i].keyMetrics = undefined;
 					}
+					if ((perm.vp & constPermVP.View) === 0) {
+						// only restricted View
+						var restriction = [];
+						if (req.oneVP) {
+							req.oneVP.restrict.forEach(function(item, index) {
+								if (req.listVPPerm.checkGroupMemberShip(item.groupid)) {
+									restriction.push(item);
+								}
+							})
+						}
+						visboBusiness.cleanupRestrictedVersion(listVPV[i], restriction);
+					}
 				}
+
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Versions',
@@ -435,7 +448,7 @@ router.route('/')
 
 			if (variantName != '') {
 				// check that the Variant exists
-				variantIndex = variant.findVariant(req.oneVP, variantName);
+				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
 				if (variantIndex < 0) {
 					logger4js.warn('VPV Post Variant does not exist %s %s', vpid, variantName);
 					return res.status(409).send({
@@ -643,6 +656,16 @@ router.route('/:vpvid')
 		if ((perm.vp & constPermVP.ViewAudit) == 0) {
 			req.oneVPV.keyMetrics = undefined;
 		}
+		if ((perm.vp & constPermVP.View) === 0) {
+			// only restricted View
+			var restriction = [];
+			req.oneVP.restrict.forEach(function(item, index) {
+				if (req.listVPPerm.checkGroupMemberShip(item.groupid)) {
+					restriction.push(item);
+				}
+			})
+			visboBusiness.cleanupRestrictedVersion(req.oneVPV, restriction);
+		}
 
 		return res.status(200).send({
 			state: 'success',
@@ -789,7 +812,7 @@ router.route('/:vpvid')
 		var variantName = req.oneVPV.variantName;
 		if (variantName != '') {
 			// check that the Variant exists
-			variantIndex = variant.findVariant(req.oneVP, variantName);
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
 			if (variantIndex < 0) {
 				logger4js.warn('VPV Delete Variant does not exist %s %s', req.params.vpvid, variantName);
 				// Allow Deleting of a version where Variant does not exists for Admins
@@ -1137,8 +1160,9 @@ router.route('/:vpvid')
 			}
 
 			logger4js.info('Get Visbo Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
+			var getAll = req.query.all == true;
 			if (req.query.type == 'Deliveries') {
-				calcVPV = visboBusiness.calcDeliverables(req.oneVPV, req.visboPFV);
+				calcVPV = visboBusiness.calcDeliverables(req.oneVPV, req.visboPFV, getAll);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
@@ -1154,7 +1178,7 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			} else if (req.query.type == 'Deadlines') {
-				calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV);
+				calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV, getAll);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Visbo Project Version',
