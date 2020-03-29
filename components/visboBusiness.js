@@ -299,7 +299,7 @@ function getSummeKosten(vpv, organisation, index){
 	// calculate the total cost until index-month
 	var costSum = 0;
 
-	if (vpv && organisation && index){
+	if (vpv && organisation && (index>=0)){
 		var allCostValues = {};
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
