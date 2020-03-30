@@ -316,10 +316,10 @@ router.route('/passwordchange')
 
 router.route('/logout')
 /**
-	* @api {post} /user/logout Logout and invalidate token
+	* @api {post} /user/logout User Logout
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup User Profile
+	* @apiGroup Authentication
 	* @apiName Logout
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error

@@ -24,11 +24,11 @@ var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
-// Verify/Create Visbo Center with an initial user
+// Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body) {
-	logger4js.info('Create System Visbo Center if not existent');
+	logger4js.info('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
-		logger4js.warn('No Body or no users System VisboCenter %s', body);
+		logger4js.warn('No Body or no users System VISBO Center %s', body);
 		return undefined;
 	}
 	redisClient = visboRedis.VisboRedisInit();
@@ -41,7 +41,7 @@ var createSystemVC = function (body) {
 			return undefined;
 		}
 		if (vc) {
-			logger4js.debug('System VisboCenter already exists');
+			logger4js.debug('System VISBO Center already exists');
 			vcSystem = vc;
 			redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
@@ -49,7 +49,7 @@ var createSystemVC = function (body) {
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
-		logger4js.debug('Create System Visbo Center ');
+		logger4js.debug('Create System VISBO Center ');
 		var newVC = new VisboCenter();
 		newVC.name = nameSystemVC;
 		newVC.system = true;
@@ -79,10 +79,10 @@ var createSystemVC = function (body) {
 				newGroup.users.push({userId: user._id, email: user.email});
 				newGroup.save(function(err, group) {
 					if (err) {
-						logger4js.warn('System VisboCenter Group Created failed: %s', err.message);
+						logger4js.warn('System VISBO Center Group Created failed: %s', err.message);
 						return undefined;
 					}
-					logger4js.warn('System VisboCenter Group Created, group: %O', group);
+					logger4js.warn('System VISBO Center Group Created, group: %O', group);
 					return vc;
 				});
 			});
@@ -91,7 +91,7 @@ var createSystemVC = function (body) {
 };
 
 var getSystemVC = function () {
-	logger4js.info('Get System Visbo Center');
+	logger4js.info('Get System VISBO Center');
 	return vcSystem;
 };
 
@@ -174,16 +174,13 @@ var reloadSystemSetting = function() {
 };
 
 var getSystemVCSetting = function (name) {
-	logger4js.trace('Get System Visbo Center Setting: %s', name);
+	logger4js.trace('Get System VISBO Center Setting: %s', name);
 	if (!vcSystemSetting) return undefined;
-	for (var i = 0; i < vcSystemSetting.length; i++) {
-		if (vcSystemSetting[i].name == name) {
-			logger4js.debug('Get System Visbo Center Setting: %s found', name);
-			return vcSystemSetting[i];
-		}
-	}
-	var value = undefined;
 
+	var setting = vcSystemSetting.find(item => item.name == name);
+	if (setting) return setting;
+
+	var value = undefined;
 	if (name == 'DEBUG') {
 		// Set Default Values
 		value = {'VC': 'info', 'VP': 'info', 'VPV': 'info', 'USER':'info', 'OTHER': 'info', 'MAIL': 'info', 'All': 'info'};
@@ -221,14 +218,14 @@ var getSystemVCSetting = function (name) {
 		});
 		return vcSetting;
 	}
-	logger4js.info('Get System Visbo Center Setting: %s not found', name);
+	logger4js.info('Get System VISBO Center Setting: %s not found', name);
 	return undefined;
 };
 
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');
 	var result = vcSetting.value && vcSetting.value.UIUrl;
-	logger4js.debug('Get Visbo System Url: %s', result);
+	logger4js.debug('Get VISBO System Url: %s', result);
 
 	return result;
 };

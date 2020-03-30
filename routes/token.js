@@ -582,7 +582,7 @@ router.route('/user/signup')
 	*     'profile': {
 	*       'firstName': 'First',
 	*       'lastName': 'Last',
-	*       'company': 'Visbo GmbH',
+	*       'company': 'VISBO GmbH',
 	*       'phone': '08024-112233',
 	*       'address': {
 	*         'street': 'Kurt-Koch-Str.',
@@ -607,7 +607,7 @@ router.route('/user/signup')
 	*     'profile': {
 	*       'firstName': 'First',
 	*       'lastName': 'Last',
-	*       'company': 'Visbo GmbH',
+	*       'company': 'VISBO GmbH',
 	*       'phone': '08024-112233',
 	*       'address': {
 	*         'street': 'Kurt-Koch-Str.',
@@ -815,7 +815,7 @@ router.route('/user/signup')
 		*     'profile': {
 		*       'firstName': 'First',
 		*       'lastName': 'Last',
-		*       'company': 'Visbo GmbH',
+		*       'company': 'VISBO GmbH',
 		*       'phone': '08024-112233',
 		*       'address': {
 		*         'street': 'Kurt-Koch-Str.',

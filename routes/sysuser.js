@@ -24,7 +24,7 @@ router.route('/')
 	* @api {get} /sysuser Get users list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup Visbo System
+	* @apiGroup VISBO System
 	* @apiName GetSysUsers
 	* @apiPermission user must be authenticated and has System View Permission
 	* @apiError {number} 401 Not Authenticated, no valid token
@@ -94,7 +94,7 @@ router.route('/')
 			logger4js.debug('Found Users %d', listUsers.length);
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Visbo Users',
+				message: 'Returned VISBO Users',
 				user: listUsers
 			});
 		});

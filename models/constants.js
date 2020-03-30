@@ -13,6 +13,7 @@ var constPermVP = Object.freeze(
 	{'View':1, 'ViewAudit':2, 'Modify':16, 'ManagePerm':32, 'CreateVariant':256, 'ViewRestricted':512, 'Delete':1024 }
 );
 const constPermVPAll = 1+2+16+32+256+512+1024;
+const constPermVPFull = 1+2+16+32+256+1024;
 
 // Permission Handling Object
 function VisboPermission() {
@@ -74,6 +75,7 @@ module.exports = {
 	constPermSystemAll: constPermSystemAll,
 	constPermVCAll: constPermVCAll,
 	constPermVPAll: constPermVPAll,
+	constPermVPFull: constPermVPFull,
 	constPermVP: constPermVP,
 	VisboPermission: VisboPermission
 };
