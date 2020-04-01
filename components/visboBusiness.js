@@ -602,6 +602,8 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 			var isMS = elemIdIsMilestone(currentNodeID);
 			if (isMS) {
 				var name = currentNodeID;
+				// ur: test
+				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
 				var endDate = getMsDate(hrchy, vpv, currentNodeID);
 				var phaseName = hryElement.hryNode && hryElement.hryNode.parentNodeKey;
@@ -617,6 +619,8 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				var endDate = getPhEndDate(vpv, phase);
 				var startDate = getPhStartDate(vpv, phase);
 				var name = currentNodeID;
+				// ur: test
+				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 
 				// ur: 20200215: get rid of root node "0" in trash
 				if (name  && endDate) {
@@ -659,6 +663,65 @@ for (var element = 0; element < listDeadlines.length; element++) {
 return result;
 }
 
+function getBreadCrumb(elemID, hrchy) {
+	var breadCrumb = undefined;
+	var tmpBC = "";
+	var trennZ = "/";
+	var rootKey = "0";
+	var rootphaseID = "0§.§"
+	var tmpEbene = 1;
+	var parentID = "";
+	var curElemID = elemID;
+	var rootReached = false;
+	var ok = true;
+	
+
+	logger4js.trace('Calculate the path of planelement %s  ', elemID );
+
+	if (!hrchy || !hrchy[elemID] || !elemID || !hrchy[elemID].hryNode) {
+		// not a full blown vpv, return empty list
+		breadCrumb = tmpBC;
+		return breadCrumb;
+	}
+	// prepare hierarchy of vpv for direct access
+	// var hrchy_vpv = convertHierarchy(vpv);
+	
+	if (curElemID != rootKey) {
+		while (curElemID && !rootReached && ok) {
+			if (hrchy[curElemID]) {
+				
+				parentID = hrchy[curElemID].hryNode.parentNodeKey;
+				if (parentID === "") {rootReached = true};
+				if (parentID === rootphaseID) {parentID = rootKey};
+				if (hrchy[parentID]) {
+					if (tmpEbene !=1) {
+						tmpBC = hrchy[parentID].hryNode.elemName + trennZ + tmpBC;
+					}
+					else { 
+						tmpBC = hrchy[parentID].hryNode.elemName;
+					}
+					curElemID = parentID;
+				}
+			}
+			else { 
+				ok = false;
+				if (tmpEbene !=1) {
+					ok = false;
+					tmpBC = "?" + tmpBC;
+				}
+				else {
+					tmpBC = "?";
+				}
+			}
+			tmpEbene++;
+			}
+		}
+		else {
+			tmpBC = "";
+		}
+	breadCrumb = tmpBC;
+	return breadCrumb;
+}
 
 
 function convertHierarchy(vpv) {
