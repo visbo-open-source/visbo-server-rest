@@ -10,7 +10,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 
-// check if Visbo Project has a valid lock
+// check if Project has a valid lock
 function lockStatus(vp, useremail, variantName) {
 
 	logger4js.trace('lockedVP Check Lock for VP %s for User %s and Variant :%s: Locks %O', vp._id, useremail, variantName, vp.lock);

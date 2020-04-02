@@ -8,7 +8,6 @@ var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
-var variant = require('./../components/variant');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
@@ -20,6 +19,7 @@ var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var Lock = mongoose.model('Lock');
 var Variant = mongoose.model('Variant');
+var Restrict = mongoose.model('Restrict');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
@@ -63,7 +63,7 @@ function createHash(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 }
 
-// updates the VP Count in the VC after create/delete/undelete Visbo Project
+// updates the VP Count in the VC after create/delete/undelete Project
 var updateVPCount = function(vcid, increment){
 	var updateQuery = {_id: vcid};
 	var updateUpdate = {$inc: {vpCount: increment}};
@@ -108,7 +108,7 @@ var updateVCName = function(vp){
 	});
 };
 
-// updates the VP Name in the VPV after name change of Visbo Project
+// updates the VP Name in the VPV after name change of Project
 var updateVPName = function(vpid, name, type){
 	logger4js.trace('Start Update VP %s New Name %s ', vpid, name);
 	var updateQuery = {vpid: vpid, deletedAt: {$exists: false}};
@@ -128,7 +128,7 @@ var updateVPName = function(vpid, name, type){
 	var updatePFOption = {arrayFilters: [ { 'elem.vpid': vpid } ], upsert: false, multi: 'true'};
 	VisboPortfolio.updateMany(updatePFQuery, updatePFUpdate, updatePFOption, function (err, result) {
 		if (err){
-			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Visbo Project');
+			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Project');
 			return;
 		}
 		logger4js.trace('Updated VP %s New Name %s in Portfolio Lists changed %d %d', vpid, name, result.n, result.nModified);
@@ -142,7 +142,7 @@ var updateVPName = function(vpid, name, type){
 
 			VisboPortfolio.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
 				if (err){
-					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Visbo Project');
+					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Project');
 					return;
 				}
 				logger4js.debug('Update Portfolio %s Name found %d updated %d', vpid, result.n, result.nModified);
@@ -244,6 +244,8 @@ var markDeleteVersion = function(vpid){
 router.use('/', auth.verifyUser);
 // register the VP middleware to get all Groups with VP Permissions for the user
 router.use('/', verifyVp.getAllGroups);
+// register the VP middleware to get all Groups of the VP
+router.use('/', verifyVg.getVPGroups);
 // register the VP middleware to check that the user has access to the VP
 router.param('vpid', verifyVp.getVP);
 // register the VP middleware to check that the vpfid is valid
@@ -254,7 +256,7 @@ router.param('groupid', verifyVg.getGroupId);
 router.param('userid', verifyVg.checkUserId);
 
 /////////////////
-// Visbo Projects API
+// VISBO Project API
 // /project
 /////////////////
 
@@ -264,20 +266,20 @@ router.route('/')
 /**
 	* @api {get} /vp Get Projects
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project
-	* @apiName GetVisboProjects
+	* @apiGroup VISBO Project
+	* @apiName GetVISBOProjects
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp retruns all Visbo Projects the user has access permission to
-	* In case of success it delivers an array of VPs, the array contains in each element a Visbo Project
-	* The lock section is empty if no lock is set, otherwise it delivers the list of locks that were set for the Visbo Project and the respective Variant.
+	* @apiDescription GET /vp retruns all Projects the user has access permission to
+	* In case of success it delivers an array of VPs, the array contains in each element a Project
+	* The lock section is empty if no lock is set, otherwise it delivers the list of locks that were set for the Project and the respective Variant.
 	* The variant section is empty if there are no variants for this Project, otherwise it contains a list of variants that exists for this project.
 	* the Project Type 0 means it is a project template, type 1 is a project and type 2 is a portfolio
-	* @apiParam (Parameter) {String} [vcid] Deliver only projects for a specific Visbo Center
+	* @apiParam (Parameter) {String} [vcid] Deliver only projects for a specific VISBO Center
 	* @apiParam (Parameter) {Number=0,1,2} [vpType] Deliver only projects of the specified Type, if not defined, deliver all types
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs, only allowed for users with DeleteVP Permission.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  if true, request VPs for Appl. Admin User
 	*
-	* @apiPermission Permission: Authenticated, View Visbo Project, Delete Visbo Project.
+	* @apiPermission Permission: Authenticated, View Project, Delete Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
@@ -287,12 +289,12 @@ router.route('/')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Visbo Projects',
+	*   'message':'Returned Projects',
 	*   'vp':[{
 	*       '_id':'vp541c754feaa',
 	*      'updatedAt':'2018-03-16T12:39:54.042Z',
 	*      'createdAt':'2018-03-12T09:54:56.411Z',
-	*      'name':'My new VisboProject',
+	*      'name':'My new Project',
 	*      'vcid': 'vc5aaf992',
 	*      'vpvCount': '0',
 	*      'vpType': '0',
@@ -311,13 +313,13 @@ router.route('/')
 	*   }]
 	* }
 	*/
-// Get Visbo projects
+// Get projects
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		var userId = req.decoded._id;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Visbo Project (Read)';
+		req.auditDescription = 'Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -330,7 +332,7 @@ router.route('/')
 			requiredPerm += constPermVP.Delete;
 		}
 		if (!isSysAdmin) {
-			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm)};
+			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm, true)};
 		}
 		query.deletedAt = {$exists: req.query.deleted ? true : false};				// Not deleted
 		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
@@ -345,10 +347,11 @@ router.route('/')
 		logger4js.trace('Get Project for user %s with query parameters %O', userId, query);
 
 		var queryVP = VisboProject.find(query);
+		queryVP.select('-restrict -lock -variant');
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VP find ${query}`, 'Error getting VisboCenters');
+				errorHandler(err, res, `DB: GET VP find ${query}`, 'Error getting VISBO Centers');
 				return;
 			}
 			logger4js.trace('Found Projects\n%O', listVP);
@@ -356,7 +359,7 @@ router.route('/')
 			req.auditInfo = listVP.length;
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Visbo Projects',
+				message: 'Returned Projects',
 				count: listVP.length,
 				vp: listVP
 			});
@@ -366,8 +369,8 @@ router.route('/')
 /**
 	* @api {post} /vp Create a Project
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project
-	* @apiName CreateVisboProjects
+	* @apiGroup VISBO Project
+	* @apiName CreateVISBOProjects
 	* @apiDescription Post creates a new VP
 	* with a unique name inside VC and the admins as defined in the body.
 	* If no admin is specified for the project the current user is added as Admin.
@@ -375,18 +378,18 @@ router.route('/')
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	* @apiHeader {String} access-key User authentication token.
   *
-	* @apiPermission Authenticated and Permission: View Visbo Project, Create Visbo Project.
+	* @apiPermission Authenticated and Permission: View Project, Create Project.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 missing name or Visbo Center ID of Visbo Project during Creation
+	* @apiError {number} 400 missing name or VISBO Center ID of Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Create Visbo Project
-	* @apiError {number} 409 Visbo Project with same name exists already
+	* @apiError {number} 403 No Permission to Create Project
+	* @apiError {number} 409 Project with same name exists already
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp
 	* {
-	*  'name':'My first Visbo Project',
-	*  'description':'Visbo Project Description',
+	*  'name':'My first Project',
+	*  'description':'Project Description',
 	*  'vcid': 'vc5aaf992',
 	*  'vpType': 0,
 	*  'kundennummer': 'customer project identifier'
@@ -395,12 +398,12 @@ router.route('/')
 	*     HTTP/1.1 200 OK
 	* {
 	*  'state':'success',
-	*  'message':'Successfully created new VisboProject',
+	*  'message':'Successfully created new Project',
 	*  'vp':[{
 	*   '__v':0,
 	*   'updatedAt':'2018-03-19T11:04:12.094Z',
 	*   'createdAt':'2018-03-19T11:04:12.094Z',
-	*   'name':'My first Visbo Project',
+	*   'name':'My first Project',
 	*   '_id':'vp5aaf882',
 	*   'vcid': 'vc5aaf992',
 	*   'vpvCount': '0',
@@ -416,29 +419,29 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project (Create)';
+		req.auditDescription = 'Project (Create)';
 
 		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
 			logger4js.warn('No VCID or Name in Body');
 			return res.status(400).send({
 				state: 'failure',
-				message: 'No valid Visbo Center'
+				message: 'No valid VISBO Center'
 			});
 		}
 		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer;
-		logger4js.info('Post a new Visbo Project for user %s with name %s in VisboCenter %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
-		logger4js.trace('Post a new Visbo Project body %O', req.body);
+		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.trace('Post a new Project body %O', req.body);
 
 		if (!validateName(vpname, false)
 		|| !validateName(vpdescription, true)
 		|| !validateName(kundennummer, true)) {
-			logger4js.info('POST Visbo Project contains illegal strings body %O', req.body);
+			logger4js.info('POST Project contains illegal strings body %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Visbo Project Body contains invalid strings'
+				message: 'Project Body contains invalid strings'
 			});
 		}
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
@@ -448,20 +451,20 @@ router.route('/')
 		if ((req.listVCPerm.getPerm(vcid).vc & requiredPerm) != requiredPerm) {
 				return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to create Visbo Project',
+				message: 'No Permission to create Project',
 				perm: req.listVCPerm.getPerm(vcid)
 			});
 		}
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VP find one VC ${vcid} `, 'Error creating Visbo Project');
+				errorHandler(err, res, `DB: POST VP find one VC ${vcid} `, 'Error creating Project');
 				return;
 			}
 			if (!vc) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'Visbo Centers not found or no Admin'
+					message: 'VISBO Centers not found or no Admin'
 				});
 			}
 			req.oneVC = vc;
@@ -474,7 +477,7 @@ router.route('/')
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP find one VP ${vpname} `, 'Error creating Visbo Project');
+					errorHandler(err, res, `DB: POST VP find one VP ${vpname} `, 'Error creating Project');
 					return;
 				}
 				logger4js.debug('Duplicate Name check returned %s', vp != undefined);
@@ -497,10 +500,10 @@ router.route('/')
 				newVP.vpvCount = 0;
 				// Create new VP Group
 				var newVG = new VisboGroup();
-				newVG.name = 'Visbo Project Admin';
+				newVG.name = 'VISBO Project Admin';
 				newVG.groupType = 'VP';
 				newVG.internal = true;
-				newVG.permission = {vp: Const.constPermVPAll };
+				newVG.permission = {vp: Const.constPermVPFull };
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
@@ -515,10 +518,10 @@ router.route('/')
 				// set the VP Name
 				newVP.vc.name = vc.name;
 				logger4js.trace('VP Create add VP Name %s %O', vc.name, newVP);
-				logger4js.debug('Save VisboProject %s %s', newVP.name, newVP._id);
+				logger4js.debug('Save Project %s %s', newVP.name, newVP._id);
 				newVP.save(function(err, vp) {
 					if (err) {
-						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Visbo Project ${req.body.name}`);
+						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Project ${req.body.name}`);
 						return;
 					}
 					req.oneVP = vp;
@@ -539,29 +542,29 @@ router.route('/:vpid')
 /**
  	* @api {get} /vp/:vpid Get a Project
 	* @apiVersion 1.0.0
- 	* @apiGroup Visbo Project
- 	* @apiName GetVisboProject
+ 	* @apiGroup VISBO Project
+ 	* @apiName GetVISBOProject
  	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Get a specific Visbo Project
+	* @apiDescription Get a specific Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
-	* @apiPermission Permission: Authenticated, View Visbo Project.
+	* @apiPermission Permission: Authenticated, View Project.
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View Visbo Project
+	* @apiError {number} 403 No Permission to View Project
  	* @apiExample Example usage:
  	*   url: http://localhost:3484/vp/5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
  	*   'state':'success',
- 	*   'message':'Returned Visbo Projects',
+ 	*   'message':'Returned Projects',
  	*   'vp': [{
  	*    '_id':'vp5c754feaa',
  	*    'updatedAt':'2018-03-16T12:39:54.042Z',
  	*    'createdAt':'2018-03-12T09:54:56.411Z',
- 	*    'name':'My new Visbo Project',
+ 	*    'name':'My new Project',
 	*		 'vcid': 'vc5aaf992',
 	*    'vpvCount': '0',
 	*    'vpType': '0',
@@ -580,54 +583,58 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
+		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
 
-		req.auditDescription = 'Visbo Project (Read)';
+		req.auditDescription = 'Project (Read)';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
-		logger4js.info('Get Visbo Project for userid %s email %s and vp %s oneVC %s', userId, useremail, req.params.vpid, req.oneVP.name);
+		logger4js.info('Get Project for userid %s email %s and vp %s oneVC %s', userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (req.query.deleted && !(req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid).vp & constPermVP.Delete)) {
+		if (req.query.deleted && !(perm.vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to deleted Visbo Projects'
+				message: 'No Permission to deleted Projects'
 			});
 		}
 		// we have found the VP already in middleware
 
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
-
+		if ((perm.vp & constPermVP.View) == 0) {
+			req.oneVP.restrict = undefined;
+			req.oneVP.lock = undefined;
+		}
 		return res.status(200).send({
 			state: 'success',
-			message: 'Returned Visbo Projects',
+			message: 'Returned Projects',
 			vp: [req.oneVP],
-			perm: req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid)
+			perm: perm
 		});
 	})
 
 /**
 	* @api {put} /vp/:vpid Update Project
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project
-	* @apiName UpdateVisboProjects
-	* @apiDescription Put updates a specific Visbo Project
-	* the system checks if the user has Modify permission to the Visbo Project.
+	* @apiGroup VISBO Project
+	* @apiName UpdateVISBOProjects
+	* @apiDescription Put updates a specific Project
+	* the system checks if the user has Modify permission to the Project.
 	* If an updatedAt Info is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 	* If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
-	* If the Visbo Project Name has changed, the Name will be populated to the Visbo Project Versions.
+	* If the Project Name has changed, the Name will be populated to the Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project. In case of undelete a Visbo Project the user needs to have Delete Visbo project permission.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project. In case of undelete a Project the user needs to have Delete Project permission.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 no Data provided in Body for updating the Visbp Project
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Modify Visbo Project
-	* @apiError {number} 423 Visbo Project is locked by another user
-	* @apiError {number} 409 Visbo Project with same name exists already or Visbo Project was updatd in between
+	* @apiError {number} 403 No Permission to Modify Project
+	* @apiError {number} 423 Project is locked by another user
+	* @apiError {number} 409 Project with same name exists already or Project was updatd in between
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5cf3da025
 	* {
-	*  'name':'My first Visbo Project Renamed',
+	*  'name':'My first Project Renamed',
 	*  'description': 'New Description for VP',
 	*  'kundennummer': 'Customer Project Identifier'
 	* }
@@ -635,12 +642,12 @@ router.route('/:vpid')
 	*     HTTP/1.1 200 OK
 	* {
 	*  'state':'success',
-	*  'message':'Successfully updated VisboProject Renamed',
+	*  'message':'Successfully updated Project Renamed',
 	*  'vp':[{
 	*   '__v':0,
 	*   'updatedAt':'2018-03-19T11:04:12.094Z',
 	*   'createdAt':'2018-03-19T11:04:12.094Z',
-	*   'name':'My first Visbo Project Renamed',
+	*   'name':'My first Project Renamed',
 	*   '_id':'vp5cf3da025',
 	*   'kundennummer': 'Customer Project Identifier'
 	*   'vcid': 'vc5aaf992',
@@ -649,14 +656,14 @@ router.route('/:vpid')
 	*  }]
 	* }
 	*/
-// Update Visbo Project
+// Update Project
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project (Update)';
+		req.auditDescription = 'Project (Update)';
 
-		logger4js.info('PUT/Save Visbo Project for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.info('PUT/Save Project for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
 		if (!req.body) {
 			return res.status(400).send({
@@ -670,17 +677,17 @@ router.route('/:vpid')
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
 		|| !validateName(kundennummer, true)) {
-			logger4js.info('PUT Visbo Project contains illegal strings body %O', req.body);
+			logger4js.info('PUT Project contains illegal strings body %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Visbo Project Body contains invalid strings'
+				message: 'Project Body contains invalid strings'
 			});
 		}
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVP.deletedAt) {
-			req.auditDescription = 'Visbo Project (Undelete)';
+			req.auditDescription = 'Project (Undelete)';
 			req.oneVP.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug('Undelete VP %s flag %O', req.oneVP._id, req.oneVP);
@@ -690,13 +697,13 @@ router.route('/:vpid')
 		|| (!vpUndelete && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify))) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project or no Permission'
+				message: 'No valid Project or no Permission'
 			});
 		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(423).send({
 				state: 'failure',
-				message: 'Visbo Project locked',
+				message: 'Project locked',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -721,7 +728,7 @@ router.route('/:vpid')
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
-				errorHandler(err, res, `DB: PUT VP find ${query}`, 'Error updating Visbo Project');
+				errorHandler(err, res, `DB: PUT VP find ${query}`, 'Error updating Project');
 				return;
 			}
 			if (vp) {
@@ -734,7 +741,7 @@ router.route('/:vpid')
 			logger4js.debug('PUT VP: save now %O populate %s unDelete %s', req.oneVP, vpPopulate, vpUndelete);
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					errorHandler(err, res, 'DB: PUT VP Save', 'Error updating Visbo Project');
+					errorHandler(err, res, 'DB: PUT VP Save', 'Error updating Project');
 					return;
 				}
 				req.oneVP = oneVP;
@@ -754,7 +761,7 @@ router.route('/:vpid')
 				}
 				return res.status(200).send({
 					state: 'success',
-					message: 'Updated Visbo Project',
+					message: 'Updated Project',
 					vp: [ oneVP ],
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
@@ -765,56 +772,56 @@ router.route('/:vpid')
 /**
 	* @api {delete} /vp/:vpid Delete a Project
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project
-	* @apiName DeleteVisboProject
-	* @apiDescription Deletes a specific Visbo Project.
+	* @apiGroup VISBO Project
+	* @apiName DeleteVISBOProject
+	* @apiDescription Deletes a specific Project.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
+	* @apiPermission Authenticated and Permission: View Project, Delete Project.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Delete Visbo Project
-	* @apiError {number} 423 Visbo Project is locked by another user
+	* @apiError {number} 403 No Permission to Delete Project
+	* @apiError {number} 423 Project is locked by another user
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Visbo Projects'
+	*   'message':'Deleted Projects'
 	* }
 	*/
-// Delete Visbo Project
+// Delete Project
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project (Delete)';
+		req.auditDescription = 'Project (Delete)';
 
-		logger4js.info('DELETE Visbo Project for userid %s email %s and vp %s oneVP %s  ', userId, useremail, req.params.vpid, req.oneVP.name);
+		logger4js.info('DELETE Project for userid %s email %s and vp %s oneVP %s  ', userId, useremail, req.params.vpid, req.oneVP.name);
 
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No permission to delete Visbo Project',
+				message: 'No permission to delete Project',
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(423).send({
 				state: 'failure',
-				message: 'Visbo Project locked',
+				message: 'Project locked',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
 		var destroyVP = req.oneVP.deletedAt;
-		logger4js.debug('Delete Visbo Project %s %s after permission check deletedAt %s', req.params.vpid, req.oneVP.name, destroyVP);
+		logger4js.debug('Delete Project %s %s after permission check deletedAt %s', req.params.vpid, req.oneVP.name, destroyVP);
 
 		if (!destroyVP) {
 			req.oneVP.deletedAt = new Date();
 			req.oneVP.save(function(err, oneVP) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE VP', 'Error deleting Visbo Project');
+					errorHandler(err, res, 'DB: DELETE VP', 'Error deleting Project');
 					return;
 				}
 				req.oneVP = oneVP;
@@ -824,11 +831,11 @@ router.route('/:vpid')
 				// updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
 				return res.status(200).send({
 					state: 'success',
-					message: 'Deleted Visbo Project'
+					message: 'Deleted Project'
 				});
 			});
 		} else {
-			req.auditDescription = 'Visbo Project (Destroy)';
+			req.auditDescription = 'Project (Destroy)';
 			logger4js.warn('VP DESTROY VP %s %s ', req.oneVP._id, req.oneVP.name);
 			// Delete VPID from global Groups
 			updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
@@ -872,13 +879,13 @@ router.route('/:vpid')
 			queryVP._id = req.oneVP._id;
 			VisboProject.deleteOne(queryVP, function(err) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE(Destory) VP', 'Error deleting Visbo Project');
+					errorHandler(err, res, 'DB: DELETE(Destory) VP', 'Error deleting Project');
 					return;
 				}
 				// no need to update vpCount in VC
 				return res.status(200).send({
 					state: 'success',
-					message: 'Destroyed Visbo Project'
+					message: 'Destroyed Project'
 				});
 			});
 		}
@@ -886,15 +893,15 @@ router.route('/:vpid')
 
 router.route('/:vpid/audit')
  /**
- 	* @api {get} /vp/:vpid/audit Get Visbo Project Audit Trail
+ 	* @api {get} /vp/:vpid/audit Get Project Audit Trail
  	* @apiVersion 1.0.0
- 	* @apiGroup Visbo Project
- 	* @apiName GetVisboProjectAudit
-	* @apiDescription Get Audit Trail for a specific Visbo Project
+ 	* @apiGroup VISBO Project
+ 	* @apiName GetVISBOProjectAudit
+	* @apiDescription Get Audit Trail for a specific Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Visbo Project, View Project Audit
+	* @apiPermission Authenticated and Permission: View Project, View Project Audit
 	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
@@ -902,7 +909,7 @@ router.route('/:vpid/audit')
 	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View Visbo Project Audit
+	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
  	* url: http://localhost:3484/vp/vp5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
@@ -924,10 +931,10 @@ router.route('/:vpid/audit')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Visbo Project Audit (Read)';
+		req.auditDescription = 'Project Audit (Read)';
 		req.auditSysAdmin = sysAdmin;
 
-		logger4js.info('Get Visbo Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.info('Get Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
@@ -1004,13 +1011,13 @@ router.route('/:vpid/audit')
 		.lean()
 		.exec(function (err, listVPAudit) {
 			if (err) {
-				errorHandler(err, res, `DB: GET VP Audit find ${query}`, 'Error getting VisboProject Audit');
+				errorHandler(err, res, `DB: GET VP Audit find ${query}`, 'Error getting Project Audit');
 				return;
 			}
 			logger4js.debug('Found VP Audit Logs %d', listVPAudit.length);
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Visbo Project Audit',
+				message: 'Returned Project Audit',
 				count: listVPAudit.length,
 				audit: listVPAudit
 			});
@@ -1022,16 +1029,16 @@ router.route('/:vpid/audit')
 	/**
 		* @api {get} /vp/:vpid/group Get Groups
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Permission
-		* @apiName GetVisboProjectGroup
+		* @apiGroup VISBO Project Permission
+		* @apiName GetVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets all groups of the specified Visbo Project
+		* @apiDescription Gets all groups of the specified Project
 		*
-		* @apiPermission Authenticated and Permission: View Visbo Project.
+		* @apiPermission Authenticated and Permission: View Project.
 		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-		* @apiError {number} 403 No Permission to View Visbo Project, or Visbo Project does not exists
+		* @apiError {number} 403 No Permission to View Project, or Project does not exists
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group
 		*   url: http://localhost:3484/vp/:vpid/group?userlist=true
@@ -1039,7 +1046,7 @@ router.route('/:vpid/audit')
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Returned Visbo Project Groups',
+		*   'message':'Returned Project Groups',
 		*   'count': 1,
 		*   'groups':[{
 		*     '_id':'vpgroup5c754feaa',
@@ -1062,24 +1069,24 @@ router.route('/:vpid/audit')
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 
-			req.auditDescription = 'Visbo Project Group (Read)';
+			req.auditDescription = 'Project Group (Read)';
 			req.auditSysAdmin = sysAdmin;
 			req.auditTTLMode = 1;
 
-			logger4js.info('Get Visbo Project Group for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
+			logger4js.info('Get Project Group for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
 
 			var query = {};
 			query.vpids = req.oneVP._id;
 			query.groupType = {$in: ['VC', 'VP']};
 			// VC Groups without global Permission are excluded, but deliver VP Groups without permission
 			query['permission.vp'] = { $exists: true };		// any permission set for VP Groups
-			logger4js.trace('Get Visbo Project Group Query %O', query);
+			logger4js.trace('Get Project Group Query %O', query);
 			var queryVCGroup = VisboGroup.find(query);
 			queryVCGroup.select('-vpids');
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting VisboProject Groups');
+					errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
 				}
 				logger4js.info('Found %d Groups for VP', listVPGroup.length);
@@ -1099,7 +1106,7 @@ router.route('/:vpid/audit')
 					}
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Groups',
+						message: 'Returned Project Groups',
 						count: listVPGroup.length,
 						groups: listVPGroup,
 						users: listVPUsers,
@@ -1108,7 +1115,7 @@ router.route('/:vpid/audit')
 				} else {
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned Visbo Project Groups',
+						message: 'Returned Project Groups',
 						count: listVPGroup.length,
 						groups: listVPGroup,
 						perm: req.listVPPerm.getPerm(req.params.vpid)
@@ -1120,17 +1127,17 @@ router.route('/:vpid/audit')
 	/**
 		* @api {post} /vp/:vpid/group Create a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Permission
-		* @apiName PostVisboProjectGroup
+		* @apiGroup VISBO Project Permission
+		* @apiName PostVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Post creates a new group inside the Visbo Project
+		* @apiDescription Post creates a new group inside the Project
 		*
-		* @apiPermission Authenticated and System Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiPermission Authenticated and System Permission: View Project, Manage Project Permission.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-		* @apiError {number} 400 missing name of Visbo Project Group during Creation
+		* @apiError {number} 400 missing name of Project Group during Creation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-		* @apiError {number} 403 No Permission to Create a Visbo Project Group
-		* @apiError {number} 409 Visbo Project Group with same name exists already
+		* @apiError {number} 403 No Permission to Create a Project Group
+		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/groups
 		*  {
@@ -1142,7 +1149,7 @@ router.route('/:vpid/audit')
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Returned Visbo Project Group',
+		*   'message':'Returned Project Group',
 		*   'groups':[{
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group',
@@ -1153,7 +1160,7 @@ router.route('/:vpid/audit')
 		* }
 		*/
 
-	// Create a Visbo Project Group
+	// Create a Project Group
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
@@ -1162,10 +1169,10 @@ router.route('/:vpid/audit')
 
 			var vgName = (req.body.name || '').trim();
 			if (!validateName(vgName, false)) {
-				logger4js.info('POST Visbo Project Group contains illegal strings body %O', req.body);
+				logger4js.info('POST Project Group contains illegal strings body %O', req.body);
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Visbo Project Group Body contains invalid strings'
+					message: 'Project Group Body contains invalid strings'
 				});
 			}
 
@@ -1175,16 +1182,19 @@ router.route('/:vpid/audit')
 			if ( req.body.permission ) {
 				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 			}
+			if (newPerm.vp & constPermVP.View) {
+				newPerm.vp = newPerm.vp & constPermVP.constPermVPFull;
+			}
 
-			req.auditDescription = 'Visbo Project Group (Create)';
+			req.auditDescription = 'Project Group (Create)';
 
-			logger4js.info('Post a new Visbo Project Group with name %s executed by user %s ', req.body.name, userId);
-			logger4js.debug('Post a new Visbo Project Group Req Body: %O Name %s Perm %O', req.body, vgName, req.listVPPerm.getPerm(req.params.vpid));
+			logger4js.info('Post a new Project Group with name %s executed by user %s ', req.body.name, userId);
+			logger4js.debug('Post a new Project Group Req Body: %O Name %s Perm %O', req.body, vgName, req.listVPPerm.getPerm(req.params.vpid));
 
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to change Permission of Visbo Project',
+					message: 'No Permission to change Permission of Project',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
@@ -1202,13 +1212,13 @@ router.route('/:vpid/audit')
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, oneGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP Groups find ${query}`, 'Error getting VisboProject Groups');
+					errorHandler(err, res, `DB: POST VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
 				}
 				if (oneGroup) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Visbo Project Group already exists',
+						message: 'Project Group already exists',
 						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				}
@@ -1225,7 +1235,7 @@ router.route('/:vpid/audit')
 				logger4js.debug('Post Group %s to VP %s now: %O', req.body.name, req.params.vpid, vgGroup);
 				vgGroup.save(function(err, oneGroup) {
 					if (err) {
-						errorHandler(err, res, 'DB: POST VP Groups save', 'Error updating VisboProject Groups');
+						errorHandler(err, res, 'DB: POST VP Groups save', 'Error updating Project Groups');
 						return;
 					}
 					req.oneGroup = oneGroup;
@@ -1239,7 +1249,7 @@ router.route('/:vpid/audit')
 					resultGroup.users = oneGroup.users;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Inserted Visbo Project Group',
+						message: 'Inserted Project Group',
 						groups: [ resultGroup ],
 						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
@@ -1253,60 +1263,60 @@ router.route('/:vpid/audit')
 	/**
 		* @api {delete} /vp/:vpid/group/:groupid Delete a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Permission
-		* @apiName DeleteVisboProjectGroup
+		* @apiGroup VISBO Project Permission
+		* @apiName DeleteVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Deletes the specified group in the Visbo Project
+		* @apiDescription Deletes the specified group in the Project
 		*
-		* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-		* @apiError {number} 400 delete of internal Visbo Project Group or a Visbo Center Group inside the Visbo Project not allowed.
+		* @apiError {number} 400 delete of internal Project Group or a VISBO Center Group inside the Project not allowed.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-		* @apiError {number} 403 No Permission to Delete a Visbo Project Group
+		* @apiError {number} 403 No Permission to Delete a Project Group
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group/:groupid
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Visbo Project Group deleted'
+		*   'message':'Project Group deleted'
 		* }
 		*/
 
-	// Delete Visbo Project Group
+	// Delete Project Group
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			req.auditDescription = 'Visbo Project Group (Delete)';
+			req.auditDescription = 'Project Group (Delete)';
 			req.auditInfo = req.oneGroup.name;
-			logger4js.info('DELETE Visbo Project Group for userid %s email %s and vc %s group %s ', userId, useremail, req.params.vpid, req.params.groupid);
+			logger4js.info('DELETE Project Group for userid %s email %s and vc %s group %s ', userId, useremail, req.params.vpid, req.params.groupid);
 
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to delete Visbo Project Group',
+					message: 'No Permission to delete Project Group',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
-			logger4js.debug('Delete Visbo Project Group after permission check %s', req.params.vpid);
+			logger4js.debug('Delete Project Group after permission check %s', req.params.vpid);
 
 			// Do not allow to delete internal or VC Group
 			if (req.oneGroup.internal || req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Visbo Project Group not deletable',
+					message: 'Project Group not deletable',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 			}
 			req.oneGroup.remove(function(err) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE VP Group', 'Error deleting Visbo Project Group');
+					errorHandler(err, res, 'DB: DELETE VP Group', 'Error deleting Project Group');
 					return;
 				}
 				return res.status(200).send({
 					state: 'success',
-					message: 'Deleted Visbo Project Group',
+					message: 'Deleted Project Group',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			});
@@ -1315,17 +1325,17 @@ router.route('/:vpid/audit')
 	/**
 		* @api {put} /vp/:vpid/group/:groupid Update a Group
 		* @apiVersion 1.0.0
-		* @apiGroup Visbo Project Permission
-		* @apiName PutVisboProjectGroup
+		* @apiGroup VISBO Project Permission
+		* @apiName PutVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Put updates a group inside the Visbo Project
+		* @apiDescription Put updates a group inside the Project
 		*
-		* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+		* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-		* @apiError {number} 400 Not allowed to change a Visbo Center Group inside the Visbo Project.
+		* @apiError {number} 400 Not allowed to change a VISBO Center Group inside the Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-		* @apiError {number} 403 No Permission to Create a Visbo Project Group
-		* @apiError {number} 409 Visbo Project Group with same name exists already
+		* @apiError {number} 403 No Permission to Create a Project Group
+		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
 		*   url: http://localhost:3484/vp/:vpid/group/:groupid
 		*  {
@@ -1337,7 +1347,7 @@ router.route('/:vpid/audit')
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Returned Visbo Project Group',
+		*   'message':'Returned Project Group',
 		*   'groups':[{
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group Renamed',
@@ -1353,7 +1363,7 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			req.auditDescription = 'Visbo Project Group (Update)';
+			req.auditDescription = 'Project Group (Update)';
 
 			var vgName = (req.body.name || '').trim();
 			var newPerm = {};
@@ -1365,44 +1375,44 @@ router.route('/:vpid/audit')
 				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
 			}
 
-			logger4js.info('PUT Visbo Project Group for userid %s email %s and vc %s group %s perm %O', userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));
+			logger4js.info('PUT Project Group for userid %s email %s and vc %s group %s perm %O', userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));
 			if (!validateName(vgName, true)) {
-				logger4js.info('PUT Visbo Project Group contains illegal strings body %O', req.body);
+				logger4js.info('PUT Project Group contains illegal strings body %O', req.body);
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Visbo Project Group Body contains invalid strings'
+					message: 'Project Group Body contains invalid strings'
 				});
 			}
 
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to change Visbo Project Group',
+					message: 'No Permission to change Project Group',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 			if (req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'not a Visbo Project Group',
+					message: 'not a Project Group',
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			}
 
-			logger4js.debug('Update Visbo Project Group after permission check vpid %s groupName %s', req.params.vpid, req.oneGroup.name);
+			logger4js.debug('Update Project Group after permission check vpid %s groupName %s', req.params.vpid, req.oneGroup.name);
 			// check unique group name
 			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP', name: req.body.name};
 			var queryVCGroup = VisboGroup.find(query);
 			queryVCGroup.lean();
 			queryVCGroup.exec(function (err, listVPGroup) {
 				if (err) {
-					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, 'Error getting VisboProject Groups');
+					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
 				}
 				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Visbo Project Group already exists',
+						message: 'Project Group already exists',
 						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
 				}
@@ -1412,7 +1422,7 @@ router.route('/:vpid/audit')
 				req.oneGroup.internal = req.oneGroup.internal == true; // to guarantee that it is set
 				req.oneGroup.save(function(err, oneGroup) {
 					if (err) {
-						errorHandler(err, res, 'DB: PUT VP Group', 'Error updating Visbo Project Group');
+						errorHandler(err, res, 'DB: PUT VP Group', 'Error updating Project Group');
 						return;
 					}
 					var resultGroup = {};
@@ -1425,7 +1435,7 @@ router.route('/:vpid/audit')
 					resultGroup.users = oneGroup.users;
 					return res.status(200).send({
 						state: 'success',
-						message: 'Updated Visbo Project Group',
+						message: 'Updated Project Group',
 						groups: [ resultGroup ],
 						perm: req.listVPPerm.getPerm(req.params.vpid)
 					});
@@ -1438,17 +1448,17 @@ router.route('/:vpid/audit')
 		/**
 			* @api {post} /vp/:vpid/group/:groupid/user Add User to Group
 			* @apiVersion 1.0.0
-			* @apiGroup Visbo Project Permission
-			* @apiName AddUserToVisboProjectGroup
+			* @apiGroup VISBO Project Permission
+			* @apiName AddUserToVISBOProjectGroup
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Adds the specified user from body to the group
 			*
-			* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+			* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
 			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-			* @apiError {number} 400 missing user name to add to the Visbo Project Group or the Group is a Visbo Center Group
+			* @apiError {number} 400 missing user name to add to the Project Group or the Group is a VISBO Center Group
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-			* @apiError {number} 403 No Permission to Add a User to Visbo Project Group
-			* @apiError {number} 409 user is already member of the Visbo Project Group
+			* @apiError {number} 403 No Permission to Add a User to Project Group
+			* @apiError {number} 409 user is already member of the Project Group
 			* @apiExample Example usage:
 			*  url: http://localhost:3484/vp/:vpid/group/:groupid/user
 			*  {
@@ -1459,7 +1469,7 @@ router.route('/:vpid/audit')
 			* HTTP/1.1 200 OK
 			* {
 			*   'state':'success',
-			*   'message':'User was added to Visbo Project Group',
+			*   'message':'User was added to Project Group',
 			*   'groups':[{
 			*     '_id':'vpgroup5c754feaa',
 			*     'name':'My first Group Renamed',
@@ -1471,14 +1481,14 @@ router.route('/:vpid/audit')
 			* }
 			*/
 
-		// Add User to Visbo Project Group
+		// Add User to Project Group
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.info('Post a new Visbo Project User with name %s to group %s executed by user %s with perm %s ', req.body.email, req.oneGroup.name, userId, req.listVPPerm.getPerm(req.params.vpid));
-			req.auditDescription = 'Visbo Project User (Add)';
+			logger4js.info('Post a new Project User with name %s to group %s executed by user %s with perm %s ', req.body.email, req.oneGroup.name, userId, req.listVPPerm.getPerm(req.params.vpid));
+			req.auditDescription = 'Project User (Add)';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 			if (!req.body.email || !validate.validateEmail(req.body.email, false)) {
@@ -1493,13 +1503,13 @@ router.route('/:vpid/audit')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Project or no Permission'
+					message: 'No valid Project or no Permission'
 				});
 			}
 			if (req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'not a Visbo Project Group'
+					message: 'not a Project Group'
 				});
 			}
 			logger4js.debug('Post User to VP %s Permission is ok', req.params.vpid);
@@ -1527,7 +1537,7 @@ router.route('/:vpid/audit')
 			//queryUsers.select('email');
 			queryUsers.exec(function (err, user) {
 				if (err) {
-					errorHandler(err, res, `DB: POST VP User to Group Find one ${query}`, 'Error adding User to VisboProject Group');
+					errorHandler(err, res, `DB: POST VP User to Group Find one ${query}`, 'Error adding User to Project Group');
 					return;
 				}
 				if (!user) {
@@ -1536,7 +1546,7 @@ router.route('/:vpid/audit')
 					logger4js.debug('Create new User %s for VP as %s', vgUser.email, vgUser.groupName);
 					user.save(function(err, user) {
 						if (err) {
-							errorHandler(err, res, 'DB: POST VP User to Group Add', 'Error adding User to VisboProject Group');
+							errorHandler(err, res, 'DB: POST VP User to Group Add', 'Error adding User to Project Group');
 							return;
 						}
 						// user exists now, now the group can be updated
@@ -1545,7 +1555,7 @@ router.route('/:vpid/audit')
 						req.oneGroup.users.push(vgUser);
 						req.oneGroup.save(function(err, vgGroup) {
 							if (err) {
-								errorHandler(err, res, 'DB: POST VP User to Group update', 'Error adding User to VisboProject Group');
+								errorHandler(err, res, 'DB: POST VP User to Group update', 'Error adding User to Project Group');
 								return;
 							}
 							req.oneGroup = vgGroup;
@@ -1564,7 +1574,7 @@ router.route('/:vpid/audit')
 									// do not send invitation mail if no message is specified
 									return res.status(200).send({
 										state: 'success',
-										message: 'Successfully added User to Visbo Group',
+										message: 'Successfully added User to Group',
 										groups: [ vgGroup ]
 									});
 							} else {
@@ -1588,7 +1598,7 @@ router.route('/:vpid/audit')
 									mail.VisboSendMail(message);
 									return res.status(200).send({
 										state: 'success',
-										message: 'Successfully added User to Visbo Project',
+										message: 'Successfully added User to Project',
 										groups: [ vgGroup ]
 									});
 								});
@@ -1600,7 +1610,7 @@ router.route('/:vpid/audit')
 					req.oneGroup.users.push(vgUser);
 					req.oneGroup.save(function(err, vgGroup) {
 						if (err) {
-							errorHandler(err, res, 'DB: POST VP User to Group Add', 'Error adding User to VisboProject Group');
+							errorHandler(err, res, 'DB: POST VP User to Group Add', 'Error adding User to Project Group');
 							return;
 						}
 						req.oneGroup = vgGroup;
@@ -1627,7 +1637,7 @@ router.route('/:vpid/audit')
 								// do not send invitation mail if no message is specified
 								return res.status(200).send({
 									state: 'success',
-									message: 'Successfully added User to Visbo Group',
+									message: 'Successfully added User to Group',
 									groups: [ vgGroup ]
 								});
 						} else {
@@ -1650,7 +1660,7 @@ router.route('/:vpid/audit')
 								mail.VisboSendMail(message);
 								return res.status(200).send({
 									state: 'success',
-									message: 'Successfully added User to Visbo Project',
+									message: 'Successfully added User to Project',
 									groups: [ vgGroup ]
 								});
 							});
@@ -1663,19 +1673,19 @@ router.route('/:vpid/audit')
 		router.route('/:vpid/group/:groupid/user/:userid')
 
 		/**
-			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from VP Group
+			* @api {delete} /vp/:vpid/group/:groupid/user/:userid Delete a User from Group
 			* @apiVersion 1.0.0
-			* @apiGroup Visbo Project Permission
-			* @apiName DeleteVisboProjectUser
+			* @apiGroup VISBO Project Permission
+			* @apiName DeleteVISBOProjectUser
 			* @apiHeader {String} access-key User authentication token.
-			* @apiDescription Deletes the specified user in the Visbo Project Group
+			* @apiDescription Deletes the specified user in the Project Group
 			*
-			* @apiPermission Authenticated and Permission: View Visbo Project, Manage Visbo Project Permission.
+			* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
 			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-			* @apiError {number} 400 the group is a Visbo Center Group
+			* @apiError {number} 400 the group is a VISBO Center Group
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-			* @apiError {number} 403 No Permission to Create a Visbo Project Group
-			* @apiError {number} 409 user is not member of the Visbo Project Group
+			* @apiError {number} 403 No Permission to Create a Project Group
+			* @apiError {number} 409 user is not member of the Project Group
 			*
 			* @apiExample Example usage:
 			*   url: http://localhost:3484/vp/:vpid/group/:groupid/user/:userid
@@ -1683,18 +1693,18 @@ router.route('/:vpid/audit')
 			* HTTP/1.1 200 OK
 			* {
 			*   'state':'success',
-			*   'message':'Visbo Project User deleted from Group'
+			*   'message':'Project User deleted from Group'
 			* }
 			*/
 
-	// Delete Visbo Project User
+	// Delete Project User
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			logger4js.info('DELETE Visbo Project User by userid %s email %s for user %s Group %s ', userId, useremail, req.params.userid, req.oneGroup._id);
+			logger4js.info('DELETE Project User by userid %s email %s for user %s Group %s ', userId, useremail, req.params.userid, req.oneGroup._id);
 
-			req.auditDescription = 'Visbo Project User (Delete)';
+			req.auditDescription = 'Project User (Delete)';
 
 			var delUser = req.oneGroup.users.find(findUserById, req.params.userid);
 			if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
@@ -1702,18 +1712,18 @@ router.route('/:vpid/audit')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Project or no Permission'
+					message: 'No valid Project or no Permission'
 				});
 			}
 			if (req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'not a Visbo Project Group'
+					message: 'not a Project Group'
 				});
 			}
 			var newUserList = req.oneGroup.users.filter(users => (!(users.userId == req.params.userid )));
-			logger4js.debug('DELETE Visbo Group User List Length new %d old %d', newUserList.length, req.oneGroup.users.length);
-			logger4js.trace('DELETE Visbo Project Filtered User List %O ', newUserList);
+			logger4js.debug('DELETE Group User List Length new %d old %d', newUserList.length, req.oneGroup.users.length);
+			logger4js.trace('DELETE Project Filtered User List %O ', newUserList);
 			if (newUserList.length == req.oneGroup.users.length) {
 				return res.status(409).send({
 					state: 'failure',
@@ -1721,17 +1731,17 @@ router.route('/:vpid/audit')
 					groups: [req.oneGroup]
 				});
 			}
-			logger4js.debug('Delete Visbo Project User after permission check %s', req.params.userid);
+			logger4js.debug('Delete Project User after permission check %s', req.params.userid);
 			req.oneGroup.users = newUserList;
 			req.oneGroup.save(function(err, vg) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE VP User from Group', 'Error delete User from VisboProject Group');
+					errorHandler(err, res, 'DB: DELETE VP User from Group', 'Error delete User from Project Group');
 					return;
 				}
 				req.oneGroup = vg;
 				return res.status(200).send({
 					state: 'success',
-					message: 'Successfully removed User from Visbo Project',
+					message: 'Successfully removed User from Project',
 					groups: [req.oneGroup]
 				});
 			});
@@ -1741,19 +1751,19 @@ router.route('/:vpid/lock')
 /**
 	* @api {post} /vp/:vpid/lock Create Lock
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Properties
+	* @apiGroup VISBO Project Properties
 	* @apiName CreateLock
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates or renews a lock for a user to a specific project and variant
 	* In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock.
-	* A User who can not Modify the Visbo Project can not lock the Visbo Project only a Variant of a Project, if the user has CreateVariant Permission.
+	* A User who can not Modify the Project can not lock the Project only a Variant of a Project, if the user has CreateVariant Permission.
   *
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project, Create Variant.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project, Create Variant.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 no valid lock date or a variant that does not exist
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Lock the Visbo Project
-	* @apiError {number} 409 Visbo Project already locked by another user.
+	* @apiError {number} 403 No Permission to Lock the Project
+	* @apiError {number} 409 Project already locked by another user.
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/lock
@@ -1765,7 +1775,7 @@ router.route('/:vpid/lock')
 	*     HTTP/1.1 200 OK
 	* {
 	*  'state':'success',
-	*  'message':'Successfully locked VisboProject',
+	*  'message':'Successfully locked Project',
 	*  'lock':[{
 	*    '_id': 'id5c754feaa',
 	*    'variantName': '',
@@ -1780,9 +1790,9 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project Lock (Create)';
+		req.auditDescription = 'Project Lock (Create)';
 
-		logger4js.info('POST Lock Visbo Project for userid %s email %s and vp %s ', userId, useremail, req.params.vpid);
+		logger4js.info('POST Lock Project for userid %s email %s and vp %s ', userId, useremail, req.params.vpid);
 		var variantName = req.body.variantName || '';
 		var expiredAt = (req.body.expiresAt  && Date.parse(req.body.expiresAt)) ? new Date(req.body.expiresAt) : undefined;
 		var dateNow = new Date();
@@ -1792,21 +1802,21 @@ router.route('/:vpid/lock')
 			// set the lock date to 1 hour later
 			expiredAt.setHours(expiredAt.getHours() + 1);
 		}
-		logger4js.info('POST Lock Visbo Project %s Check variant %s does exists  ', req.params.vpid, variantName);
+		logger4js.info('POST Lock Project %s Check variant %s does exists  ', req.params.vpid, variantName);
 
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
 				|| (req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant))) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to lock Visbo Project',
+				message: 'No Permission to lock Project',
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
-		if (variantName != '' && variant.findVariant(req.oneVP, variantName) < 0) {
-				logger4js.warn('POST Lock Visbo Project %s variant %s does not exists  ', req.params.vpid, variantName);
+		if (variantName != '' && req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
+				logger4js.warn('POST Lock Project %s variant %s does not exists  ', req.params.vpid, variantName);
 				return res.status(400).send({
 				state: 'failure',
-				message: 'Visbo Project Variant does not exist',
+				message: 'Project Variant does not exist',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -1815,7 +1825,7 @@ router.route('/:vpid/lock')
 		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
 			return res.status(409).send({
 				state: 'failure',
-				message: 'Visbo Project already locked',
+				message: 'Project already locked',
 				lock: req.oneVP.lock,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -1846,13 +1856,13 @@ router.route('/:vpid/lock')
 		}
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				errorHandler(err, res, 'DB: POST VP Lock', 'Error updating Visbo Project Locks');
+				errorHandler(err, res, 'DB: POST VP Lock', 'Error updating Project Locks');
 				return;
 			}
 			newLock = oneVP.lock.filter(lock => (lock.email == newLock.email && lock.expiresAt == newLock.expiresAt && lock.variantName == newLock.variantName && lock.createdAt == newLock.createdAt ))[0];
 			return res.status(200).send({
 				state: 'success',
-				message: 'Updated Visbo Project Locks',
+				message: 'Updated Project Locks',
 				lock: [newLock],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -1862,18 +1872,18 @@ router.route('/:vpid/lock')
 /**
 	* @api {delete} /vp/:vpid/lock Delete Lock
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Properties
+	* @apiGroup VISBO Project Properties
 	* @apiName DeleteLock
 	* @apiDescription Deletes a lock for a specific project and a specific variantName
-	* the user needs to have read access to the Visbo Project and either owns the lock or has Modify Permission in the Visbo Project
+	* the user needs to have read access to the Project and either owns the lock or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
 	* @apiParam {String} variantName The Variant Name of the Project for the Lock
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Lock the Visbo Project
-	* @apiError {number} 409 No Lock exists for the specified Visbo Project and Variant.
+	* @apiError {number} 403 No Permission to Lock the Project
+	* @apiError {number} 409 No Lock exists for the specified Project and Variant.
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aada025/lock
@@ -1882,7 +1892,7 @@ router.route('/:vpid/lock')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Visbo Project Lock'
+	*   'message':'Deleted Project Lock'
 	* }
 	*/
 // Delete Lock
@@ -1890,11 +1900,11 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project Lock (Delete)';
+		req.auditDescription = 'Project Lock (Delete)';
 
 		var variantName = '';
 		variantName = req.query.variantName || '';
-		logger4js.info('DELETE Visbo Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantName);
+		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantName);
 
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
@@ -1923,12 +1933,12 @@ router.route('/:vpid/lock')
 
 		req.oneVP.save(function(err) {
 			if (err) {
-				errorHandler(err, res, 'DB: DELETE VP Lock', 'Error deleting Visbo Project Locks');
+				errorHandler(err, res, 'DB: DELETE VP Lock', 'Error deleting Project Locks');
 				return;
 			}
 			return res.status(200).send({
 				state: 'success',
-				message: 'Deleted Visbo Project Locks',
+				message: 'Deleted Project Locks',
 				lock: req.oneVP.lock,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -1939,13 +1949,13 @@ router.route('/:vpid/variant')
 /**
 	* @api {post} /vp/:vpid/variant Create a Variant
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Properties
-	* @apiName CreateVisboProjectVariant
-	* @apiDescription Post creates a new Variant for the Visbo Project
+	* @apiGroup VISBO Project Properties
+	* @apiName CreateVISBOProjectVariant
+	* @apiDescription Post creates a new Variant for the Project
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project or Create Variant.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project or Create Variant.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Create a Variant for the Visbo Project
+	* @apiError {number} 403 No Permission to Create a Variant for the Project
 	* @apiError {number} 409 Variant already exists.
 	*
 	* @apiHeader {String} access-key User authentication token.
@@ -1958,7 +1968,7 @@ router.route('/:vpid/variant')
 	*     HTTP/1.1 200 OK
 	* {
 	*  'state':'success',
-	*  'message':'Successfully created Variant for Visbo Project',
+	*  'message':'Successfully created Variant for Project',
 	*  'variant':[{
 	*    '_id': 'id5c754feaa',
 	*    'variantName': 'V1',
@@ -1973,18 +1983,18 @@ router.route('/:vpid/variant')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Project Variant (Create)';
+		req.auditDescription = 'Project Variant (Create)';
 
-		logger4js.info('POST Visbo Project Variant for userid %s email %s and vp %s Variant %O Perm %O', userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.info('POST Project Variant for userid %s email %s and vp %s Variant %O Perm %O', userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
 
 		var variantList = req.oneVP.variant;
 		var variantName = (req.body.variantName || '').trim();
 
 		if (!validateName(variantName, false)) {
-			logger4js.info('POST Visbo Project Variant contains illegal strings body %O', req.body);
+			logger4js.info('POST Project Variant contains illegal strings body %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Visbo Project Variant Body contains invalid strings'
+				message: 'Project Variant Body contains invalid strings'
 			});
 		}
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
@@ -1997,12 +2007,7 @@ router.route('/:vpid/variant')
 		}
 		logger4js.trace('Variant %s current list %O', variantName, variantList);
 		var variantDuplicate = false;
-		for (var i = 0; i < variantList.length; i++) {
-			if (variantList[i].variantName == variantName ) {
-				variantDuplicate = true;
-				break;
-			}
-		}
+		variantDuplicate = variantList.findIndex(variant => variant.variantName == variantName) >= 0;
 		logger4js.debug('Variant Duplicate %s Variant Name %s', variantDuplicate, variantName);
 		if (variantDuplicate || variantName == '') {
 			return res.status(409).send({
@@ -2023,13 +2028,13 @@ router.route('/:vpid/variant')
 		logger4js.trace('Variant List new %O ', variantList);
 		req.oneVP.save(function(err, oneVP) {
 			if (err) {
-				errorHandler(err, res, 'DB: POST VP Variant', 'Error creating Visbo Project Variant');
+				errorHandler(err, res, 'DB: POST VP Variant', 'Error creating Project Variant');
 				return;
 			}
 			newVariant = oneVP.variant.filter(variant => (variant.email == newVariant.email && variant.createdAt == newVariant.createdAt && variant.variantName == newVariant.variantName ))[0];
 			return res.status(200).send({
 				state: 'success',
-				message: 'Created Visbo Project Variant',
+				message: 'Created Project Variant',
 				variant: [newVariant],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2041,15 +2046,15 @@ router.route('/:vpid/variant/:vid')
 /**
 	* @api {delete} /vp/:vpid/variant/:vid Delete a Variant
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Properties
-	* @apiName DeleteVisboProjectVariant
+	* @apiGroup VISBO Project Properties
+	* @apiName DeleteVISBOProjectVariant
 	* @apiDescription Deletes a specific Variant for a project and also the project Versions
-	* the user needs to have read access to the Visbo Project and either owns the Variant or has Modify Permission in the Visbo Project
+	* the user needs to have read access to the Project and either owns the Variant or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Project.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Lock the Visbo Project
+	* @apiError {number} 403 No Permission to Lock the Project
 	* @apiError {number} 409 Variant does not exists or still contains Versions
 	* @apiError {number} 423 Variant is locked by another user
 	*
@@ -2059,7 +2064,7 @@ router.route('/:vpid/variant/:vid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Visbo Project Variant',
+	*   'message':'Deleted Project Variant',
 	*   'vp': [vpList]
 	* }
 	*/
@@ -2070,12 +2075,12 @@ router.route('/:vpid/variant/:vid')
 		var variantId = req.params.vid;
 		var lockResult;
 
-		req.auditDescription = 'Visbo Project Variant (Delete)';
+		req.auditDescription = 'Project Variant (Delete)';
 		req.auditInfo = req.body.variantId;
 
-		logger4js.info('DELETE Visbo Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
+		logger4js.info('DELETE Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
 
-		var variantIndex = variant.findVariantId(req.oneVP, variantId);
+		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString())
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2098,7 +2103,7 @@ router.route('/:vpid/variant/:vid')
 		if (lockResult.locked) {
 			return res.status(423).send({
 				state: 'failure',
-				message: 'Visbo Project locked',
+				message: 'Project locked',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2106,7 +2111,7 @@ router.route('/:vpid/variant/:vid')
 		if (req.oneVP.variant[variantIndex].vpvCount > 0) {
 			return res.status(409).send({
 				state: 'failure',
-				message: 'Visbo Project Variant still has Versions',
+				message: 'Project Variant still has Versions',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2115,18 +2120,18 @@ router.route('/:vpid/variant/:vid')
 		if (lockResult.lockindex >= 0) {
 			req.oneVP.lock.splice(lockResult.lockindex, 1);
 		}
-		logger4js.trace('DELETE Visbo Project Variant List after %O', req.oneVP.variant);
+		logger4js.trace('DELETE Project Variant List after %O', req.oneVP.variant);
 
 		// MS TODO Destroy the Deleted Variant Versions of the Project
 
 		req.oneVP.save(function(err) {
 			if (err) {
-				errorHandler(err, res, 'DB: DELETE VP Variant', 'Error deleting Visbo Project Variant');
+				errorHandler(err, res, 'DB: DELETE VP Variant', 'Error deleting Project Variant');
 				return;
 			}
 			return res.status(200).send({
 				state: 'success',
-				message: 'Deleted Visbo Project Variant',
+				message: 'Deleted Project Variant',
 				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2137,15 +2142,15 @@ router.route('/:vpid/portfolio')
 /**
 	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Portfolio
+	* @apiGroup VISBO Project Portfolio
 	* @apiName GetPortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp/:vpid/portfolio returns all Portfolio List Versions in the specified Visbo Project
+	* @apiDescription GET /vp/:vpid/portfolio returns all Portfolio List Versions in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project.
+	* @apiPermission Authenticated and Permission: View Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View the Visbo Project
+	* @apiError {number} 403 No Permission to View the Project
 	*
 	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, varianName.
 	* to query only the main version of a project, use variantName= in the query string.
@@ -2162,7 +2167,7 @@ router.route('/:vpid/portfolio')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Visbo Portfolios',
+	*   'message':'Returned Portfolios',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -2174,7 +2179,7 @@ router.route('/:vpid/portfolio')
 	*   '_id': '5b19306f53eb4b516619a5ab',
 	*   'allItems': [{
 	*     'vpid': '5b1532e8586c150506ab9633',
-	*     'name': 'VisboProject Name',
+	*     'name': 'Project Name',
 	*     'variantName': '',
 	*     'Start': '2018-04-01T12:00:00.000Z',
 	*     'show': true,
@@ -2193,7 +2198,7 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Visbo Portfolio List (Read)';
+		req.auditDescription = 'Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
@@ -2228,7 +2233,7 @@ router.route('/:vpid/portfolio')
 		queryVPF.lean();
 		queryVPF.exec(function (err, listVPF) {
 			if (err) {
-				errorHandler(err, res, 'DB: GET VPF', 'Error getting Visbo Project Portfolio');
+				errorHandler(err, res, 'DB: GET VPF', 'Error getting Project Portfolio');
 				return;
 			}
 			logger4js.debug('Found %d Portfolios', listVPF.length);
@@ -2250,7 +2255,7 @@ router.route('/:vpid/portfolio')
 				req.auditInfo = listVPFfiltered.length;
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Visbo Portfolios',
+					message: 'Returned Portfolios',
 					count: listVPFfiltered.length,
 					vpf: listVPFfiltered,
 					perm: req.listVPPerm.getPerm(req.params.vpid)
@@ -2258,7 +2263,7 @@ router.route('/:vpid/portfolio')
 			} else {
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Visbo Portfolios',
+					message: 'Returned Portfolios',
 					count: listVPF.length,
 					vpf: listVPF,
 					perm: req.listVPPerm.getPerm(req.params.vpid).vp
@@ -2270,13 +2275,13 @@ router.route('/:vpid/portfolio')
 /**
 	* @api {post} /vp/:vpid/portfolio Create a Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Portfolio
+	* @apiGroup VISBO Project Portfolio
 	* @apiName CreatePortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Post creates a new Definition of a Portfolio for the Visbo Project
+	* @apiDescription Post creates a new Definition of a Portfolio for the Project
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project, Modify Visbo Project.
-	* @apiError {number} 400 no Project Items specified for Portfolio or Visbo Project is not a Portfolio.
+	* @apiPermission Authenticated and Permission: View Project, Modify Project.
+	* @apiError {number} 400 no Project Items specified for Portfolio or Project is not a Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Visb Project (Portfolio) or Modify the Project (Portfolio) or Variant
 	* @apiError {number} 409 Variant does not exist
@@ -2286,7 +2291,7 @@ router.route('/:vpid/portfolio')
 	*  {
 	*    'variantName': 'name of the portfolio variant',
 	*    'allItems': [{
-	*      'vpid' : 'VisboProject ID',
+	*      'vpid' : 'vp5aada025',
 	*      'variantName' : 'name of the Variant of the Project',
 	*      'Start' : '2018-04-01T12:00:00.000Z',
 	*      'show' : 'true',
@@ -2301,16 +2306,16 @@ router.route('/:vpid/portfolio')
 	*     HTTP/1.1 200 OK
 	*  {
 	*    'state':'success',
-	*    'message':'Successfully Created Visbo Portfolio',
+	*    'message':'Successfully Created Portfolio',
 	*    'vpf':[{
 	*      '_id':'vpf541c754feaa',
 	*      'updatedAt':'2018-03-16T12:39:54.042Z',
 	*      'createdAt':'2018-03-12T09:54:56.411Z',
-	*      'vpid' : 'VisboProject ID',
-	*      'name' : 'VisboProject Name',
+	*      'vpid' : 'vp5aada025',
+	*      'name' : 'Project Name',
 	*      'allItems': [{
-	*        'vpid' : 'VisboProject ID',
-	*        'name' : 'VisboProject Name',
+	*        'vpid' : 'vp5aada0251',
+	*        'name' : 'Project Name',
 	*        'variantName' : 'name of the Variant of the Project',
 	*        'Start' : '2018-04-01T12:00:00.000Z',
 	*        'show' : 'true',
@@ -2328,14 +2333,17 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Visbo Portfolio List (Create)';
+		req.auditDescription = 'Portfolio List (Create)';
 
-		logger4js.info('POST Visbo Portfolio for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.info('POST Portfolio for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
 		logger4js.debug('Variant %s Portfolio %O', variantName || 'None', req.body);
 
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
-		var variantIndex = variantName == '' ? 0 : variant.findVariant(req.oneVP, variantName);
+		var variantIndex = 0;
+		if (variantName) {
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+		}
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2346,14 +2354,14 @@ router.route('/:vpid/portfolio')
 		if (!req.body.allItems || req.body.allItems.length == 0) {
 			return res.status(400).send({
 				state: 'failure',
-				message: 'No Project Items in Portfolio',
+				message: 'No valid Project Items in Portfolio',
 				vp: [req.oneVP]
 			});
 		}
 		if (req.oneVP.vpType != constVPTypes.portfolio) {
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Visbo Project is not a Portfolio Project',
+				message: 'Project is not a Portfolio Project',
 				vp: [req.oneVP]
 			});
 		}
@@ -2419,7 +2427,7 @@ router.route('/:vpid/portfolio')
 				req.oneVPF = onePortfolio;
 				return res.status(200).send({
 					state: 'success',
-					message: 'Created Visbo Portfolio Version',
+					message: 'Created Portfolio Version',
 					vpf: [onePortfolio],
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
@@ -2431,15 +2439,15 @@ router.route('/:vpid/portfolio/:vpfid')
 /**
 	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Portfolio
-	* @apiName GetVisboPortfolio
+	* @apiGroup VISBO Project Portfolio
+	* @apiName GetVISBOPortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Visbo Project
+	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project.
+	* @apiPermission Authenticated and Permission: View Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View the Visbo Project
+	* @apiError {number} 403 No Permission to View the Project
 	*
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
@@ -2447,7 +2455,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Visbo Portfolios',
+	*   'message':'Returned Portfolios',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -2459,7 +2467,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   '_id': 'vpf116619a5ab',
 	*   'allItems': [{
 	*     'vpid': 'vp150506ab9633',
-	*     'name': 'VisboProject Name',
+	*     'name': 'Project Name',
 	*     'variantName': '',
 	*     'Start': '2018-04-01T12:00:00.000Z',
 	*     'show': true,
@@ -2475,7 +2483,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		// no need to check authentication, already done centrally
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Visbo Portfolio List (Read)';
+		req.auditDescription = 'Portfolio List (Read)';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
@@ -2496,7 +2504,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Visbo Portfolios',
+				message: 'Returned Portfolios',
 				vpf: listVPF,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2506,15 +2514,15 @@ router.route('/:vpid/portfolio/:vpfid')
 /**
 	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo Project Portfolio
-	* @apiName DeleteVisboPortfolio
+	* @apiGroup VISBO Project Portfolio
+	* @apiName DeleteVISBOPortfolio
 	* @apiDescription Deletes a specific Portfolio List Version
-	* the user needs to have Delete Visbo Project Permission to the Visbo Project
+	* the user needs to have Delete Project Permission to the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and Permission: View Visbo Project, Delete Visbo Project.
+	* @apiPermission Authenticated and Permission: View Project, Delete Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View the Visbo Project or no Delete Permission to delete the Version
+	* @apiError {number} 403 No Permission to View the Project or no Delete Permission to delete the Version
 	* @apiError {number} 423 Portfolio locked by another user
 	*
 	* @apiExample Example usage:
@@ -2523,7 +2531,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Visbo Portfolio Version',
+	*   'message':'Deleted Portfolio Version',
 	*   'vp': [vpList]
 	* }
 	*/
@@ -2532,9 +2540,9 @@ router.route('/:vpid/portfolio/:vpfid')
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
 
-		req.auditDescription = 'Visbo Portfolio List (Delete)';
+		req.auditDescription = 'Portfolio List (Delete)';
 
-		logger4js.debug('DELETE Visbo Portfolio in Project %s', req.oneVP.name);
+		logger4js.debug('DELETE Portfolio in Project %s', req.oneVP.name);
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
@@ -2549,20 +2557,20 @@ router.route('/:vpid/portfolio/:vpfid')
 		var queryVPF = VisboPortfolio.findOne(query);
 		queryVPF.exec(function (err, oneVPF) {
 			if (err) {
-				errorHandler(err, res, 'DB: DELETE VPF find', 'Error getting Visbo Portfolio');
+				errorHandler(err, res, 'DB: DELETE VPF find', 'Error getting Portfolio');
 				return;
 			}
 			if (!oneVPF) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Portfolio or no Permission'
+					message: 'No Portfolio or no Permission'
 				});
 			}
 			var variantIndex;
 			var variantName = oneVPF.variantName;
 			if (variantName != '') {
 				// check that the Variant exists
-				variantIndex = variant.findVariant(req.oneVP, variantName);
+				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
 				if (variantIndex < 0) {
 					logger4js.warn('VP PortfolioList Delete Variant does not exist %s %s', req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
@@ -2573,7 +2581,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			if (lockResult.locked) {
 				return res.status(423).send({
 					state: 'failure',
-					message: 'Visbo Portfolio Project locked',
+					message: 'Portfolio Project locked',
 					vp: [req.oneVP],
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
@@ -2596,16 +2604,194 @@ router.route('/:vpid/portfolio/:vpfid')
 			oneVPF.deletedAt = new Date();
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE VPF', 'Error deleting Visbo Portfolio');
+					errorHandler(err, res, 'DB: DELETE VPF', 'Error deleting Portfolio');
 					return;
 				}
 				req.oneVPF = oneVPF;
 				return res.status(200).send({
 					state: 'success',
-					message: 'Deleted Visbo Portfolio'
+					message: 'Deleted Portfolio'
 				});
 			});
 		});
 	});
+
+	router.route('/:vpid/restrict')
+
+	/**
+		* @api {post} /vp/:vpid/restrict Create a Restriction
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Permission
+		* @apiName PostVISBOProjectRestrict
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new group inside the Project
+		*
+		* @apiPermission Authenticated and System Permission: View Project, Manage Project Permission.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 missing name or group of Project Restriction during Creation
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a Project Restriction
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/:vpid/restrict
+		*  {
+		*     'name': 'Restriction Name',
+		*     'group': 'vpgroup5c754feaa',
+		*     'element': 'ElementName'
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned Project Restriction',
+		*   'restrict':[{
+		*     '_id':'vprestrict5c754feaa',
+		*     'name': 'Restriction Name',
+		*     'group': 'vpgroup5c754feaa',
+		*     'element': 'ElementName'
+		*   }]
+		* }
+		*/
+
+	// Create a Project Restriction
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			var groupType = 'VP';
+
+			var restrictName = (req.body.name || '').trim();
+			var groupId = req.body.group;
+			var element = (req.body.element || '').trim();
+
+			req.auditDescription = 'Project Restriction (Create)';
+
+			logger4js.info('Post a new Project Restriction with name %s executed by user %s ', restrictName, userId);
+			logger4js.debug('Post a new Project Restriction Req Body: %O Perm %O', req.body, req.listVPPerm.getPerm(req.params.vpid));
+
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to change Permission of Project',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+			if (!validateName(restrictName, false)
+			|| !validate.validateObjectId(groupId, false)
+			|| !validateName(element, false)) {
+				logger4js.info('POST Project Restrict bad format %O', req.body);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No valid Restrict Definition'
+				});
+			}
+			if (req.listVPGroup.findIndex(item => item._id.toString() === groupId.toString() && item.groupType == 'VP') < 0) {
+				logger4js.info('POST Project Restrict unknown VP Group ID', groupId);
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No permission for Group'
+				});
+			}
+			// MS TODO: implement validUntil functionality
+
+			var restrictList = req.oneVP.restrict || [];
+
+			logger4js.trace('Restrict %s current list %O', restrictName, restrictList);
+			var restrictDuplicate = false;
+			restrictDuplicate = restrictList.find(item => item.name == restrictName &&  item.group == groupId && item.element == element) >= 0;
+			logger4js.debug('Restrict Duplicate %s Restrict Name %s', restrictDuplicate, restrictName);
+			var newRestrict = new Restrict();
+			// fill in the required fields
+			newRestrict.name = restrictName;
+			newRestrict.groupid = groupId;
+			newRestrict.element = element;
+			newRestrict.createdAt = new Date();
+			logger4js.debug('Post Restrict to VP %s now: %O', req.params.vpid, newRestrict);
+			restrictList.push(newRestrict);
+			req.oneVP.restrict = restrictList;
+			req.oneVP.save(function(err, oneVP) {
+				if (err) {
+					errorHandler(err, res, 'DB: POST VP Restriction', 'Error creating Project Restriction');
+					return;
+				}
+				newRestrict = oneVP.restrict.filter(restrict => (restrict.name == newRestrict.name && restrict.groupid == newRestrict.groupid && restrict.element == newRestrict.element ))[0];
+				return res.status(200).send({
+					state: 'success',
+					message: 'Created Project Restriction',
+					restrict: [newRestrict],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			});
+
+		});
+
+	router.route('/:vpid/restrict/:rid')
+	/**
+		* @api {delete} /vp/:vpid/restrict/:rid Delete a Restriction
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Permission
+		* @apiName DeleteVISBOProjectRestriction
+		* @apiDescription Deletes a specific Restriction for a group
+		* the user needs to have read access to the Project and Modify Permission in the Project
+		* @apiHeader {String} access-key User authentication token.
+		*
+		* @apiPermission Authenticated and Permission: View Project, Modify Project.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to delete Restriction in the Project
+		* @apiError {number} 409 Restriction does not exists
+		*
+		* @apiExample Example usage:
+		*   url: http://localhost:3484/vp/vp5aada025/restrict/restrict5aada
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Deleted Project Restriction',
+		* }
+		*/
+	// Delete Project Restriction
+		.delete(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var restrictId = req.params.rid;
+
+			req.auditDescription = 'Project Restrict (Delete)';
+			req.auditInfo = restrictId;
+
+			logger4js.info('DELETE Project Restriction for userid %s email %s and vp %s restrict :%s:', userId, useremail, req.params.vpid, req.params.rid);
+
+			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString())
+			if (restrictIndex < 0) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Restriction does not exists',
+					vp: [req.oneVP]
+				});
+			}
+			var restrictName = req.oneVP.restrict[restrictIndex].name;
+			req.auditInfo = restrictName;
+
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to delete Restriction',
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+			req.oneVP.restrict.splice(restrictIndex, 1);
+
+			req.oneVP.save(function(err) {
+				if (err) {
+					errorHandler(err, res, 'DB: DELETE VP Restriction', 'Error deleting Project Restriction');
+					return;
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted Project Restriction',
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			});
+		});
 
 module.exports = router;

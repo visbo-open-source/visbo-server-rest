@@ -20,7 +20,7 @@ router.route('/')
 /**
 	* @api {get} /status Get status of ReST Server
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo System
+	* @apiGroup VISBO System
 	* @apiName GetReSTStatus
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/status
@@ -111,7 +111,7 @@ router.route('/pwpolicy')
 /**
 	* @api {get} /status/pwpolicy Get Password Policy of ReST Server
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo System
+	* @apiGroup VISBO System
 	* @apiName GetPWPolicy
 	* @apiExample Example usage:
 	*   url: http://localhost:3484/status/pwpolicy

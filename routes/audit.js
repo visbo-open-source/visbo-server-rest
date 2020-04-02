@@ -29,7 +29,7 @@ router.route('/')
 	/**
 	* @api {get} /audit Get Audit Trail
 	* @apiVersion 1.0.0
-	* @apiGroup Visbo System
+	* @apiGroup VISBO System
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
@@ -63,7 +63,7 @@ router.route('/')
 .get(function(req, res) {
 	var userId = req.decoded._id;
 	var useremail = req.decoded.email;
-	req.auditDescription = 'Visbo Audit';
+	req.auditDescription = 'VISBO Audit';
 	req.auditSysAdmin = true;
 
 	logger4js.info('Get Audit Trail for userid %s email %s ', userId, useremail);
