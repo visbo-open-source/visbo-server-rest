@@ -240,16 +240,19 @@ function calcDeadlines(vpv, pfv, getAll) {
 		logger4js.trace('Add Project Deadline %s', JSON.stringify(listDeadlines[element]));
 		var name = getNamePart(listDeadlines[element].nameID || '§UNDEFINED', 1);
 		var changeDays = Math.round((listDeadlines[element].endDateVPV - listDeadlines[element].endDatePFV) / 1000 / 3600 / 24);
+	
 		allDeadlineValuesIndexed[j] = {
 			'name': name || getNamePart(listDeadlines[element].phasePFV, 1),
+			'fullPathPFV': listDeadlines[element].fullPathPFV ? listDeadlines[element].fullPathPFV.join(" / ") : undefined,
 			'phasePFV': getNamePart(listDeadlines[element].phasePFV, 1),
+			'fullPathVPV': listDeadlines[element].fullPathVPV ? listDeadlines[element].fullPathVPV.join(" / ") : undefined,
 			'phaseVPV': getNamePart(listDeadlines[element].phaseVPV, 1),
 			'type': listDeadlines[element].type || undefined,
 			'startDatePFV': listDeadlines[element].startDatePFV || undefined,
 			'startDateVPV': listDeadlines[element].startDateVPV || undefined,
 			'endDatePFV': listDeadlines[element].endDatePFV || undefined,
 			'endDateVPV': listDeadlines[element].endDateVPV || undefined,
-			'changeDays': isNaN(changeDays) ? undefined : changeDays,
+			'changeDays': isNaN(changeDays) ? undefined : changeDays, 
 			'percentDone': listDeadlines[element].percentDone || 0
 		};
 		j++;
@@ -282,7 +285,9 @@ function calcDeliverables(vpv, pfv, getAll) {
 		var changeDays = Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24);
 		allDeliveryValuesIndexed[j] = {
 			'name': name,
+			'fullPathPFV':  listDeliveries[element].fullPathPFV ? listDeliveries[element].fullPathPFV.join(" / ") : undefined,
 			'phasePFV': getNamePart(listDeliveries[element].phasePFV, 1),
+			'fullPathVPV':listDeliveries[element].fullPathVPV ? listDeliveries[element].fullPathVPV.join(" / ") : undefined,
 			'phaseVPV': getNamePart(listDeliveries[element].phaseVPV, 1),
 			'description': listDeliveries[element].description || undefined,
 			'datePFV': listDeliveries[element].datePFV || undefined,
@@ -338,6 +343,7 @@ function VisboDeliverable() {
 		if (newDeliverable.nameID) this.allDeliverables[id].nameID =  newDeliverable.nameID;
 		if (newDeliverable.phase) this.allDeliverables[id].phasePFV =  newDeliverable.phase;
 		if (newDeliverable.description) this.allDeliverables[id].description =  newDeliverable.description;
+		if (newDeliverable.fullPathPFV) this.allDeliverables[id].fullPathPFV = newDeliverable.fullPathPFV;
 		if (newDeliverable.datePFV) this.allDeliverables[id].datePFV =  newDeliverable.datePFV;
 	};
 	this.updateDeliverable = function(id, updateDeliverable, insertAll) {
@@ -354,6 +360,7 @@ function VisboDeliverable() {
 		if (!this.allDeliverables[id].nameID) this.allDeliverables[id].nameID =  updateDeliverable.nameID;
 		if (updateDeliverable.phase) this.allDeliverables[id].phaseVPV =  updateDeliverable.phase;
 		if (updateDeliverable.description) this.allDeliverables[id].description =  updateDeliverable.description;
+		if (updateDeliverable.fullPathVPV) this.allDeliverables[id].fullPathVPV = updateDeliverable.fullPathVPV;
 		if (updateDeliverable.dateVPV) this.allDeliverables[id].dateVPV =  updateDeliverable.dateVPV;
 		if (updateDeliverable.percentDone) this.allDeliverables[id].percentDone =  updateDeliverable.percentDone;
 	};
@@ -382,6 +389,7 @@ function VisboDeadlines() {
 			this.length += 1;
 		}
 		if (newDeadline.nameID) this.allDeadlines[id].nameID =  newDeadline.nameID;
+		if (newDeadline.fullPathPFV) this.allDeadlines[id].fullPathPFV	= newDeadline.fullPathPFV;
 		if (newDeadline.phasePFV) this.allDeadlines[id].phasePFV =  newDeadline.phasePFV;
 		if (newDeadline.name) this.allDeadlines[id].name =  newDeadline.name;
 		if (newDeadline.type) this.allDeadlines[id].type =  newDeadline.type;
@@ -400,6 +408,7 @@ function VisboDeadlines() {
 			}
 		}
 		if (!this.allDeadlines[id].nameID) this.allDeadlines[id].nameID =  updateDeadline.nameID;
+		if (updateDeadline.fullPathVPV) this.allDeadlines[id].fullPathVPV	= updateDeadline.fullPathVPV;
 		if (updateDeadline.name) this.allDeadlines[id].name =  updateDeadline.name;
 		if (updateDeadline.type) this.allDeadlines[id].type =  updateDeadline.type;
 		if (updateDeadline.phaseVPV) this.allDeadlines[id].phaseVPV =  updateDeadline.phaseVPV;
@@ -542,22 +551,25 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 			// skip empty phase
 			continue;
 		}
+		var nameBC = getBreadCrumb(phase.name, hrchy);
 		var endDate = getPhEndDate(vpv, phase);
 
 		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
 
 		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
 			var id = phase.deliverables[j];
+			
 			logger4js.trace("Phase Delivery: Action %s Delivery %s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, phase.deliverables[j], endDate && endDate.toISOString());
 			if (addAll) {
-				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], datePFV: endDate});
+				allDeliverables.addDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], fullPathPFV: nameBC, datePFV: endDate});
 			} else {
-				allDeliverables.updateDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], dateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0}, insertAll);
+				allDeliverables.updateDeliverable(id, {nameID: phase.name, description: phase.deliverables[j], fullPathVPV: nameBC, dateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0}, insertAll);
 			}
 		}
 
 		for (var k = 0; phase && phase.AllResults && k < phase.AllResults.length; k++){
 			var milestone = phase.AllResults[k];
+			var nameBC = getBreadCrumb(milestone.name,hrchy);
 			endDate = getMsDate(hrchy, vpv, milestone.name);
 
 			logger4js.trace("Calculate Milestone %s Deliverables %s with endDate %s", i, phase.AllResults.length, endDate && endDate.toISOString());
@@ -566,9 +578,9 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 				id = milestone.deliverables[m];
 				logger4js.trace("Phase Delivery: Action %s Delivery %s/%s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, milestone.name, milestone.deliverables[m], endDate && endDate.toISOString());
 				if (addAll) {
-					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate});
+					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], fullPathPFV: nameBC, datePFV: endDate});
 				} else {
-					allDeliverables.updateDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
+					allDeliverables.updateDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathVPV: nameBC ,dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 				}
 			}
 		}
@@ -627,7 +639,7 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 			if (isMS) {
 				var name = currentNodeID;
 				// ur: test
-				var nameBC = getBreadCrumb(currentNodeID, hrchy).join(" / ");
+				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
 				var endDate = getMsDate(hrchy, vpv, currentNodeID);
 				var phaseName = hryElement.hryNode && hryElement.hryNode.parentNodeKey;
@@ -635,9 +647,9 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 				// check if the phase is valid/visible
 				if (phaseName && endDate) {
 					if (addAll) {
-						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Milestone', name: name, phasePFV: phaseName, endDatePFV: endDate});
+						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, fullPathPFV: nameBC, type: 'Milestone', name: name, phasePFV: phaseName, endDatePFV: endDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, type: 'Milestone', name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
+						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, fullPathVPV: nameBC, type: 'Milestone', name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 					}
 				}
 			} else {
@@ -647,13 +659,13 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 				var startDate = getPhStartDate(vpv, phase);
 				var name = currentNodeID;
 				// ur: test
-				var nameBC = getBreadCrumb(currentNodeID, hrchy).join(" / ");
+				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 
 				if (name  && endDate) {
 					if (addAll) {
-						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate});
+						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, fullPathPFV: nameBC, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, type: 'Phase', name: name, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0}, insertAll);
+						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, fullPathVPV: nameBC, type: 'Phase', name: name, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0}, insertAll);
 					}
 				}
 			}
