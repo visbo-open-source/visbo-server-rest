@@ -603,7 +603,7 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 			if (isMS) {
 				var name = currentNodeID;
 				// ur: test
-				var nameBC = getBreadCrumb(currentNodeID, hrchy);
+				var nameBC = getBreadCrumb(currentNodeID, hrchy).join(" / ");
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
 				var endDate = getMsDate(hrchy, vpv, currentNodeID);
 				var phaseName = hryElement.hryNode && hryElement.hryNode.parentNodeKey;
@@ -620,7 +620,7 @@ function getDeadlines(vpv, hrchy, allDeadlines) {
 				var startDate = getPhStartDate(vpv, phase);
 				var name = currentNodeID;
 				// ur: test
-				var nameBC = getBreadCrumb(currentNodeID, hrchy);
+				var nameBC = getBreadCrumb(currentNodeID, hrchy).join(" / ");
 
 				// ur: 20200215: get rid of root node "0" in trash
 				if (name  && endDate) {
@@ -664,12 +664,9 @@ return result;
 }
 
 function getBreadCrumb(elemID, hrchy) {
-	var breadCrumb = undefined;
-	var tmpBC = "";
-	var trennZ = "/";
+	var breadCrumb = [];
 	var rootKey = "0";
-	var rootphaseID = "0§.§"
-	var tmpEbene = 1;
+	var rootphaseID = "0§.§";
 	var parentID = "";
 	var curElemID = elemID;
 	var rootReached = false;
@@ -680,46 +677,30 @@ function getBreadCrumb(elemID, hrchy) {
 
 	if (!hrchy || !hrchy[elemID] || !elemID || !hrchy[elemID].hryNode) {
 		// not a full blown vpv, return empty list
-		breadCrumb = tmpBC;
 		return breadCrumb;
-	}
-	// prepare hierarchy of vpv for direct access
-	// var hrchy_vpv = convertHierarchy(vpv);
-	
+	}	
 	if (curElemID != rootKey) {
+		breadCrumb.push(hrchy[elemID].hryNode.elemName);
 		while (curElemID && !rootReached && ok) {
 			if (hrchy[curElemID]) {
-				
 				parentID = hrchy[curElemID].hryNode.parentNodeKey;
 				if (parentID === "") {rootReached = true};
 				if (parentID === rootphaseID) {parentID = rootKey};
-				if (hrchy[parentID]) {
-					if (tmpEbene !=1) {
-						tmpBC = hrchy[parentID].hryNode.elemName + trennZ + tmpBC;
-					}
-					else { 
-						tmpBC = hrchy[parentID].hryNode.elemName;
-					}
+				if (hrchy[parentID]) {					
+					breadCrumb.push(hrchy[parentID].hryNode.elemName);							
 					curElemID = parentID;
 				}
 			}
 			else { 
 				ok = false;
-				if (tmpEbene !=1) {
-					ok = false;
-					tmpBC = "?" + tmpBC;
-				}
-				else {
-					tmpBC = "?";
-				}
-			}
-			tmpEbene++;
+				breadCrumb.push("?");				
 			}
 		}
-		else {
-			tmpBC = "";
-		}
-	breadCrumb = tmpBC;
+	}
+	else {
+		breadCrumb.push("");
+	}
+	breadCrumb.reverse();
 	return breadCrumb;
 }
 
