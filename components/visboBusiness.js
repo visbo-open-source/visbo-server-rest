@@ -568,7 +568,7 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 				if (addAll) {
 					allDeliverables.addDeliverable(id, {phase: phase.name, nameID: milestone.name, description: milestone.deliverables[m], datePFV: endDate});
 				} else {
-					allDeliverables.updateDeliverable(id, {nameID: phase.name, phase: phase.name, description: milestone.deliverables[m], dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
+					allDeliverables.updateDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 				}
 			}
 		}

@@ -158,8 +158,8 @@ router.route('/')
 		var vpidList = [];
 		if (req.query.vpid) {
 			vpidList.push(req.query.vpid);
+			var perm = req.listVPPerm.getPerm(req.query.vpid);
 			if (req.query.deleted) {
-				var perm = req.listVPPerm.getPerm(req.query.vpid);
 				logger4js.info('Get Deleted Project Versions vpid %s listVPPerm %O', req.query.vpid, perm);
 				if (!(perm.vp & constPermVP.Delete)) {
 					return res.status(403).send({
@@ -170,6 +170,10 @@ router.route('/')
 				} else {
 					queryvpv.deletedAt = {$exists: true};
 				}
+			}
+			if (!(perm.vp & constPermVP.View)) {
+				// only restricted View Permission, restrict the Result to main variant only
+				req.query.variantName = '';
 			}
 		} else {
 			var requiredPerm = constPermVP.View;
@@ -1064,18 +1068,15 @@ router.route('/:vpvid')
 		* @apiDescription Get returns the calculation for a specific Project Version the user has access permission to the Project
 		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		*
-		* @apiParam {String='Costs','Deliveries','Deadlines', 'KeyMetrics'} type Specifies the type of calculation for the VPV
-		* Costs: delivers the monthly costs (default)
-		* Deliveries: delivers the list of Deliveries with Phase, Name, endDates and %Done
-		* Deadlines: delivers the list of Milesones & Phases with PhaseName, Name, endDates, %Done
-		* @apiPermission Permission: Authenticated, View Project.
+		* @apiParam {String=''} type Specifies the type of calculation for the VPV
+		* @apiPermission Permission: Authenticated, View Project, ViewAudit.
 		* @apiError {number} 400 Bad Values in paramter in URL
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Costs
-	 	* @apiSuccessExample {json} Cost-Response:
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=
+	 	* @apiSuccessExample {json} Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   'state':'success',
@@ -1084,57 +1085,9 @@ router.route('/:vpvid')
 	 	*     '_id':'vpv5c754feaa',
 		*     'timestamp': '2019-03-19T11:04:12.094Z',
 		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
-		* 		'cost': [{
-		* 		   'currentDate':  '2018-03-01T00:00:00.000Z',
-		* 		   'baseLineCost': 125,
-		* 		   'currentCost': 115
-		*     }]
+		*     ...
 	 	*   }]
 	 	* }
-		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Costs
-	 	* @apiSuccessExample {json} Delivery-Response:
-	 	* HTTP/1.1 200 OK
-	 	* {
-	 	*   'state':'success',
-	 	*   'message':'Returned Project Versions',
-	 	*   'vpv': [{
-	 	*     '_id':'vpv5c754feaa',
-		*     'timestamp': '2019-03-19T11:04:12.094Z',
-		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
-		* 		'deliveries': [{
-		* 		   'name':  Name,
-		* 		   'phasePFV':  'Name of Phase in PFV',
-		* 		   'phaseVPV':  'Name of Phase in VPV',
-		* 		   'description':  'Long Description of the delivery',
-		* 		   'datePFV': '2019-05-01T00:00:00.000Z',
-		* 		   'dateVPV': '2019-05-02T00:00:00.000Z',
-		* 		   'changeDays': 1,
-		* 		   'percentDone': 1,
-		*     }]
-	 	*   }]
-	 	* }
-		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Deadlines
-		* @apiSuccessExample {json} Deadline-Response:
-	 	* HTTP/1.1 200 OK
-	 	* {
-	 	*   'state':'success',
-	 	*   'message':'Returned Project Versions',
-	 	*   'vpv': [{
-	 	*     '_id':'vpv5c754feaa',
-		*     'timestamp': '2019-03-19T11:04:12.094Z',
-		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
-		* 		'deadlines': [{
-		* 		   'name':  Name,
-		* 		   'phasePFV':  'Name of Phase in PFV',
-		* 		   'type':  'Phase or Milestone',
-		* 		   'datePFV': '2019-05-01T00:00:00.000Z',
-		* 		   'dateVPV': '2019-05-02T00:00:00.000Z',
-		* 		   'changeDays': 1,
-		* 		   'percentDone': 1,
-		*     }]
-	 	*   }]
-	 	* }
-		*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=Deliveries
 		*/
 	// Get keyMetrics calculation for a specific Project Version
 		.get(function(req, res) {
@@ -1157,71 +1110,166 @@ router.route('/:vpvid')
 			}
 
 			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
-			var getAll = req.query.all == true;
-			if (req.query.type == 'Deliveries') {
-				calcVPV = visboBusiness.calcDeliverables(req.oneVPV, req.visboPFV, getAll);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Project Version',
-					count: calcVPV.length,
-					vpv: [ {
-						_id: req.oneVPV._id,
-						timestamp: req.oneVPV.timestamp,
-						actualDataUntil: req.oneVPV.actualDataUntil,
-						vpid: req.oneVPV.vpid,
-						name: req.oneVPV.name,
-						deliveries: calcVPV
-					} ],
-					perm: perm
-				});
-			} else if (req.query.type == 'Deadlines') {
-				calcVPV = visboBusiness.calcDeadlines(req.oneVPV, req.visboPFV, getAll);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Project Version',
-					count: calcVPV.length,
-					vpv: [ {
-						_id: req.oneVPV._id,
-						timestamp: req.oneVPV.timestamp,
-						actualDataUntil: req.oneVPV.actualDataUntil,
-						vpid: req.oneVPV.vpid,
-						name: req.oneVPV.name,
-						deadlines: calcVPV
-					} ],
-					perm: perm
-				});
-			} else if (req.query.type == 'Costs') {
-				calcVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Project Version',
-					count: calcVPV.length,
-					vpv: [ {
-						_id: req.oneVPV._id,
-						timestamp: req.oneVPV.timestamp,
-						actualDataUntil: req.oneVPV.actualDataUntil,
-						vpid: req.oneVPV.vpid,
-						name: req.oneVPV.name,
-						cost: calcVPV
-					} ],
-					perm: perm
-				});
-			} else if (req.query.type == 'KeyMetrics') {
-				calcVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned Project Version',
-					vpv: [ {
-						_id: req.oneVPV._id,
-						timestamp: req.oneVPV.timestamp,
-						actualDataUntil: req.oneVPV.actualDataUntil,
-						vpid: req.oneVPV.vpid,
-						name: req.oneVPV.name,
-						keyMetrics: calcVPV
-					} ],
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Project Version',
+				vpv: [ {
+					_id: req.oneVPV._id,
+					timestamp: req.oneVPV.timestamp,
+					actualDataUntil: req.oneVPV.actualDataUntil,
+					vpid: req.oneVPV.vpid,
+					name: req.oneVPV.name
+				} ],
+				perm: perm
+			});
+
+		});
+
+	router.route('/:vpvid/keyMetrics')
+
+	/**
+	 	* @api {get} /vpv/:vpvid/keyMetrics Get KeyMetrics for specific Version
+		* @apiVersion 1.0.0
+	 	* @apiGroup VISBO Project Version
+	 	* @apiName GetVISBOProjectVersionKeyMetrics
+	 	* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
+		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* With Permission Restricted View, the deliveries were filtered to the restricted View
+		*
+		* @apiPermission Permission: Authenticated, View Project, View Audit.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Project Version
+		*
+	 	* @apiExample Example usage:
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/keyMetrics
+	 	* @apiSuccessExample {json} Delivery-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Returned Project Versions',
+	 	*   'vpv': [{
+	 	*     '_id':'vpv5c754feaa',
+		*     'timestamp': '2019-03-19T11:04:12.094Z',
+		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+		* 		'keyMetrics': {
+		* 		   'costBaseLastActual':  220,
+		* 		   'costBaseLastTotal':  440,
+		* 		   'costCurrentTotal':  440,
+		* 		   'costCurrentActual':  220,
+		* 		   ...
+		*     }
+	 	*   }]
+	 	* }
+		*/
+	// Get KeyMetrics calculated for a specific Project Version
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+			var costVPV;
+
+			req.auditDescription = 'Project Version KeyMetrics (Read)';
+			req.auditSysAdmin = sysAdmin;
+
+			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to get Project Version KeyMetrics',
 					perm: perm
 				});
 			}
+			logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
+
+			keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Project Version',
+				count: keyMetricsVPV.length,
+				vpv: [ {
+					_id: req.oneVPV._id,
+					timestamp: req.oneVPV.timestamp,
+					actualDataUntil: req.oneVPV.actualDataUntil,
+					vpid: req.oneVPV.vpid,
+					name: req.oneVPV.name,
+					keyMetrics: keyMetricsVPV
+				} ],
+				perm: perm
+			});
+		});
+
+
+	router.route('/:vpvid/cost')
+
+	/**
+	 	* @api {get} /vpv/:vpvid/cost Get Costs for specific Version
+		* @apiVersion 1.0.0
+	 	* @apiGroup VISBO Project Version
+	 	* @apiName GetVISBOProjectVersionCost
+	 	* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
+		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* With Permission Restricted View, the deliveries were filtered to the restricted View
+		*
+		* @apiPermission Permission: Authenticated, View Project, View Audit.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Project Version
+		*
+	 	* @apiExample Example usage:
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/cost
+	 	* @apiSuccessExample {json} Delivery-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Returned Project Versions',
+	 	*   'vpv': [{
+	 	*     '_id':'vpv5c754feaa',
+		*     'timestamp': '2019-03-19T11:04:12.094Z',
+		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+		* 		'cost': [{
+		* 		   'currentDate':  '2018-03-01T00:00:00.000Z',
+		* 		   'baseLineCost': 125,
+		* 		   'currentCost': 115
+		*     }]
+	 	*   }]
+	 	* }
+		*/
+	// Get Cost for a specific Project Version
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var sysAdmin = req.query.sysadmin ? true : false;
+			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+			var costVPV;
+
+			req.auditDescription = 'Project Version Cost (Read)';
+			req.auditSysAdmin = sysAdmin;
+
+			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to get Project Version Cost',
+					perm: perm
+				});
+			}
+			logger4js.info('Get Project Version Cost for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
+
+			costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Project Version',
+				count: costVPV.length,
+				vpv: [ {
+					_id: req.oneVPV._id,
+					timestamp: req.oneVPV.timestamp,
+					actualDataUntil: req.oneVPV.actualDataUntil,
+					vpid: req.oneVPV.vpid,
+					name: req.oneVPV.name,
+					cost: costVPV
+				} ],
+				perm: perm
+			});
 		});
 
 	router.route('/:vpvid/delivery')
@@ -1237,14 +1285,13 @@ router.route('/:vpvid')
 		* With Permission Restricted View, the deliveries were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
-		* if nothing specified only vpv items were delivered without a reference to pfv
-		* @apiParam {String} all If true, it delivers all deliveries from vpv otherwise only deliveries referenced in pfv
+		* if nothing specified all vpv items were delivered without a reference to pfv
 		* @apiPermission Permission: Authenticated, View Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/delivery?all=true
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/delivery?ref=pfv
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1280,7 +1327,6 @@ router.route('/:vpvid')
 
 			req.auditDescription = 'Project Version Deliveries (Read)';
 			req.auditSysAdmin = sysAdmin;
-			req.auditTTLMode = 1;
 
 			if ((perm.vp & constPermVP.View) == 0) {
 				var restriction = [];
@@ -1326,13 +1372,13 @@ router.route('/:vpvid')
 		* With Permission Restricted View, the deadlines were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
-		* if nothing specified only vpv items were delivered without a reference to pfv
+		* if nothing specified all vpv items were delivered without a reference to pfv
 		* @apiPermission Permission: Authenticated, View Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/deadline?all=true
+	 	*   url: http://localhost:3484/vpv/vpv5aada025/deadline?ref=pfv
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1367,7 +1413,6 @@ router.route('/:vpvid')
 
 			req.auditDescription = 'Project Version Deadlines (Read)';
 			req.auditSysAdmin = sysAdmin;
-			req.auditTTLMode = 1;
 
 			if ((perm.vp & constPermVP.View) == 0) {
 				var restriction = [];

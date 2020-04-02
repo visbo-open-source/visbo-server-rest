@@ -188,7 +188,7 @@ function getVPV(req, res, next, vpvid) {
 		if (!oneVPV) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No valid Project or no Permission'
+				message: 'No valid Project Version or no Permission'
 			});
 		}
 		req.oneVPV = oneVPV;
@@ -207,7 +207,14 @@ function getVPV(req, res, next, vpvid) {
 			if (!oneVP) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No valid Project or no Permission'
+					message: 'No valid Project Version or no Permission'
+				});
+			}
+			if ((req.listVPPerm.getPerm(oneVPV.vpid).vp & constPermVP.View) == 0 && oneVPV.variantName != "") {
+				// View Restricted but variantName not ""
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No valid Project Version or no Permission'
 				});
 			}
 			req.oneVP = oneVP;
@@ -215,9 +222,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 &&
-				((urlComponent[2] == 'calc' && req.query.type != 'Deliveries')
-				|| (urlComponent[2] == 'copy')) ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -402,6 +407,10 @@ function getCurrentVPVpfv(req, res, next) {
 			state: 'failure',
 			message: 'Timestamp not recognised'
 		});
+	}
+	if ((req.listVPPerm.getPerm(req.oneVP._id).vp & constPermVP.View) == 0) {
+		// only restricted View
+		return next();
 	}
 	logger4js.debug('GET VPF for VPV for VPID %s TimeStamp %s', req.oneVPV.vpid, timestamp);
 
