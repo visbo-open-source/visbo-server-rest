@@ -1323,12 +1323,13 @@ router.route('/:vpvid')
 			var restrictedView = (perm.vp & constPermVP.View) == 0;
 			var calcVPV;
 			var getAll = req.query.ref != 'pfv';
-			var pfv = req.query.ref ? req.visboPFV : undefined;
+			var pfv = req.query.ref != 'vpv' ? req.visboPFV : undefined;
 
 			req.auditDescription = 'Project Version Deliveries (Read)';
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & constPermVP.View) == 0) {
+				getAll = true // get all from vpv
 				var restriction = [];
 				if (req.oneVP) {
 					req.oneVP.restrict.forEach(function(item, index) {
@@ -1409,12 +1410,13 @@ router.route('/:vpvid')
 			var restrictedView = (perm.vp & constPermVP.View) == 0;
 			var calcVPV;
 			var getAll = req.query.ref != 'pfv';
-			var pfv = req.query.ref ? req.visboPFV : undefined;
+			var pfv = req.query.ref != 'vpv' ? req.visboPFV : undefined;
 
 			req.auditDescription = 'Project Version Deadlines (Read)';
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & constPermVP.View) == 0) {
+				getAll = true // get all from vpv
 				var restriction = [];
 				if (req.oneVP) {
 					req.oneVP.restrict.forEach(function(item, index) {
