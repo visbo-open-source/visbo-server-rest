@@ -243,9 +243,9 @@ function calcDeadlines(vpv, pfv, getAll) {
 	
 		allDeadlineValuesIndexed[j] = {
 			'name': name || getNamePart(listDeadlines[element].phasePFV, 1),
-			'fullPathPFV': listDeadlines[element].fullPathPFV ? listDeadlines[element].fullPathPFV.join(" / ") : undefined,
+			'fullPathPFV': listDeadlines[element].fullPathPFV || undefined,
 			'phasePFV': getNamePart(listDeadlines[element].phasePFV, 1),
-			'fullPathVPV': listDeadlines[element].fullPathVPV ? listDeadlines[element].fullPathVPV.join(" / ") : undefined,
+			'fullPathVPV': listDeadlines[element].fullPathVPV || undefined,
 			'phaseVPV': getNamePart(listDeadlines[element].phaseVPV, 1),
 			'type': listDeadlines[element].type || undefined,
 			'startDatePFV': listDeadlines[element].startDatePFV || undefined,
@@ -285,9 +285,9 @@ function calcDeliverables(vpv, pfv, getAll) {
 		var changeDays = Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24);
 		allDeliveryValuesIndexed[j] = {
 			'name': name,
-			'fullPathPFV':  listDeliveries[element].fullPathPFV ? listDeliveries[element].fullPathPFV.join(" / ") : undefined,
+			'fullPathPFV':  listDeliveries[element].fullPathPFV  || undefined,
 			'phasePFV': getNamePart(listDeliveries[element].phasePFV, 1),
-			'fullPathVPV':listDeliveries[element].fullPathVPV ? listDeliveries[element].fullPathVPV.join(" / ") : undefined,
+			'fullPathVPV':listDeliveries[element].fullPathVPV || undefined,
 			'phaseVPV': getNamePart(listDeliveries[element].phaseVPV, 1),
 			'description': listDeliveries[element].description || undefined,
 			'datePFV': listDeliveries[element].datePFV || undefined,
@@ -736,7 +736,7 @@ function getBreadCrumb(elemID, hrchy) {
 		}
 	}
 	else {
-		breadCrumb.push("");
+		breadCrumb.push(".");
 	}
 	breadCrumb.reverse();
 	return breadCrumb;
