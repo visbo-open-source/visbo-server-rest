@@ -1328,9 +1328,10 @@ router.route('/:vpvid')
 			req.auditDescription = 'Project Version Deliveries (Read)';
 			req.auditSysAdmin = sysAdmin;
 
+			var restriction
 			if ((perm.vp & constPermVP.View) == 0) {
 				getAll = true // get all from vpv
-				var restriction = [];
+				restriction = [];
 				if (req.oneVP) {
 					req.oneVP.restrict.forEach(function(item, index) {
 						if (req.listVPPerm.checkGroupMemberShip(item.groupid)) {
@@ -1338,12 +1339,10 @@ router.route('/:vpvid')
 						}
 					})
 				}
-				visboBusiness.cleanupRestrictedVersion(req.oneVPV, restriction);
-				visboBusiness.cleanupRestrictedVersion(pfv, restriction);
 			}
 			logger4js.info('Get Project Version Deliveries for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			deliveryVPV = visboBusiness.calcDeliverables(req.oneVPV, pfv, getAll);
+			deliveryVPV = visboBusiness.calcDeliverables(req.oneVPV, pfv, getAll, restriction);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
@@ -1415,9 +1414,10 @@ router.route('/:vpvid')
 			req.auditDescription = 'Project Version Deadlines (Read)';
 			req.auditSysAdmin = sysAdmin;
 
+			var restriction;
 			if ((perm.vp & constPermVP.View) == 0) {
 				getAll = true // get all from vpv
-				var restriction = [];
+				restriction = [];
 				if (req.oneVP) {
 					req.oneVP.restrict.forEach(function(item, index) {
 						if (req.listVPPerm.checkGroupMemberShip(item.groupid)) {
@@ -1425,12 +1425,11 @@ router.route('/:vpvid')
 						}
 					})
 				}
-				visboBusiness.cleanupRestrictedVersion(req.oneVPV, restriction);
-				visboBusiness.cleanupRestrictedVersion(pfv, restriction);
+				pfv = undefined;
 			}
 			logger4js.info('Get Project Version Deadlines for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			deadlineVPV = visboBusiness.calcDeadlines(req.oneVPV, pfv, getAll);
+			deadlineVPV = visboBusiness.calcDeadlines(req.oneVPV, pfv, getAll, restriction);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
