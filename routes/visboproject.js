@@ -347,7 +347,8 @@ router.route('/')
 		logger4js.trace('Get Project for user %s with query parameters %O', userId, query);
 
 		var queryVP = VisboProject.find(query);
-		queryVP.select('-restrict -lock -variant');
+		queryVP.select('-restrict');
+		// queryVP.select('-restrict -lock -variant');
 		queryVP.lean();
 		queryVP.exec(function (err, listVP) {
 			if (err) {
@@ -356,6 +357,7 @@ router.route('/')
 			}
 			logger4js.trace('Found Projects\n%O', listVP);
 			logger4js.debug('Found %d Projects', listVP.length);
+			// MS TODO: do we need to cleanup /restrict the results if the user has only restricted permission?
 			req.auditInfo = listVP.length;
 			return res.status(200).send({
 				state: 'success',
