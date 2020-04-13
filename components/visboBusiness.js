@@ -573,7 +573,7 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 
 		for (var k = 0; phase && phase.AllResults && k < phase.AllResults.length; k++){
 			var milestone = phase.AllResults[k];
-			var nameBC = getBreadCrumb(milestone.name,hrchy);
+			var nameBC = getBreadCrumb(milestone.name, hrchy);
 			endDate = getMsDate(hrchy, vpv, milestone.name);
 
 			logger4js.trace("Calculate Milestone %s Deliverables %s with endDate %s", i, phase.AllResults.length, endDate && endDate.toISOString());
@@ -641,8 +641,7 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 		if (currentNodeID) {
 			var isMS = elemIdIsMilestone(currentNodeID);
 			if (isMS) {
-				var name = currentNodeID;
-				// ur: test
+				var name = currentNodeID;				
 				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
 				var endDate = getMsDate(hrchy, vpv, currentNodeID);
@@ -662,7 +661,6 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 				var endDate = getPhEndDate(vpv, phase);
 				var startDate = getPhStartDate(vpv, phase);
 				var name = currentNodeID;
-				// ur: test
 				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 
 				if (name  && endDate) {
