@@ -716,7 +716,7 @@ function getBreadCrumb(elemID, hrchy) {
 
 	while (elemID && hrchy[elemID] && hrchy[elemID].hryNode) {
 		breadCrumb.push(hrchy[elemID].hryNode.elemName || '');
-		elemID = hrchy[elemID] && hrchy[elemID].hryNode && hrchy[elemID].hryNode.parentNodeKey;
+		elemID = hrchy[elemID].hryNode.parentNodeKey;
 		if (elemID == rootphaseID) {
 			elemID = rootKey;
 		}
