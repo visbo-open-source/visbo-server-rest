@@ -447,8 +447,13 @@ function elemIdIsMilestone(elemId) {
 
 
 function getPhaseByID(hrchy, vpv, elemId){
-	var phase = undefined;
-
+	var phase = undefined;	
+	var rootKey = "0";
+	var rootphaseID = "0§.§";
+	
+	if (elemId === rootphaseID){
+		elemId = rootKey;
+	}
 	if (hrchy && hrchy[elemId] && hrchy[elemId].hryNode) {
 		var phIndex = hrchy[elemId].hryNode.indexOfElem;
 		if (vpv.AllPhases && phIndex > 0 && phIndex <= vpv.AllPhases.length) {
