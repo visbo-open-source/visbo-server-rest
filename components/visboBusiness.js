@@ -450,7 +450,7 @@ function getPhaseByID(hrchy, vpv, elemId){
 	var phase = undefined;	
 	var rootKey = "0";
 	var rootphaseID = "0§.§";
-	
+
 	if (elemId === rootphaseID){
 		elemId = rootKey;
 	}
@@ -719,7 +719,9 @@ function getBreadCrumb(elemID, hrchy) {
 
 	while (elemID && hrchy[elemID] && hrchy[elemID].hryNode) {
 		breadCrumb.push(hrchy[elemID].hryNode.elemName || '');
-		elemID = hrchy[elemID] && hrchy[elemID].hryNode && hrchy[elemID].hryNode.parentNodeKey;
+		// ur: 20200414: not necesssary
+		// elemID = hrchy[elemID] && hrchy[elemID].hryNode && hrchy[elemID].hryNode.parentNodeKey;		
+		elemID = hrchy[elemID].hryNode.parentNodeKey;
 		if (elemID == rootphaseID) {
 			elemID = rootKey;
 		}
