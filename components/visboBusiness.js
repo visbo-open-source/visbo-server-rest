@@ -662,7 +662,6 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 				var endDate = getPhEndDate(vpv, phase);
 				var startDate = getPhStartDate(vpv, phase);
 				var name = currentNodeID;
-				// ur: test
 				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 
 				if (name  && endDate) {

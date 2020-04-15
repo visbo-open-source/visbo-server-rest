@@ -1322,8 +1322,13 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 			var restrictedView = (perm.vp & constPermVP.View) == 0;
 			var calcVPV;
+
 			var getAll = req.query.ref != 'pfv';
 			var pfv = req.query.ref != 'vpv' ? req.visboPFV : undefined;
+			if (!req.visboPFV) {
+				// no PFV found, return all vpv
+				getAll = true;
+			}
 
 			req.auditDescription = 'Project Version Deliveries (Read)';
 			req.auditSysAdmin = sysAdmin;
@@ -1410,6 +1415,10 @@ router.route('/:vpvid')
 			var calcVPV;
 			var getAll = req.query.ref != 'pfv';
 			var pfv = req.query.ref != 'vpv' ? req.visboPFV : undefined;
+			if (!req.visboPFV) {
+				// no PFV found, return all vpv
+				getAll = true;
+			}
 
 			req.auditDescription = 'Project Version Deadlines (Read)';
 			req.auditSysAdmin = sysAdmin;

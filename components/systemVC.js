@@ -31,7 +31,7 @@ var createSystemVC = function (body) {
 		logger4js.warn('No Body or no users System VISBO Center %s', body);
 		return undefined;
 	}
-	redisClient = visboRedis.VisboRedisInit();
+	// redisClient = visboRedis.VisboRedisInit();
 	var nameSystemVC = 'Visbo-System';
 	// check that VC name is unique
 	var query = {system: true};
@@ -43,7 +43,7 @@ var createSystemVC = function (body) {
 		if (vc) {
 			logger4js.debug('System VISBO Center already exists');
 			vcSystem = vc;
-			redisClient.set('vcSystem', vcSystem._id.toString());
+			// redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
 			initSystemSettings(vcSystem._id.toString());
 			return vc;
