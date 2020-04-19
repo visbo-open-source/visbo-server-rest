@@ -283,7 +283,7 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 	for (element = 0; element < listDeliveries.length; element++) {
 		logger4js.trace('Add Project Delivery %s', JSON.stringify(listDeliveries[element]));
 		var name = getNamePart(listDeliveries[element].nameID || '§UNDEFINED', 1);
-		var changeDays = Math.round((listDeliveries[element].dateVPV - listDeliveries[element].datePFV) / 1000 / 3600 / 24);
+		var changeDays = Math.round((listDeliveries[element].endDateVPV - listDeliveries[element].endDatePFV) / 1000 / 3600 / 24);
 		if (!restriction || restriction.findIndex(restrict => restrict.element == listDeliveries[element].nameID) >= 0) {
 			allDeliveryValuesIndexed[j] = {
 				'name': name,
@@ -292,8 +292,8 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 				'fullPathVPV':listDeliveries[element].fullPathVPV || undefined,
 				'phaseVPV': getNamePart(listDeliveries[element].phaseVPV, 1),
 				'description': listDeliveries[element].description || undefined,
-				'datePFV': listDeliveries[element].datePFV || undefined,
-				'dateVPV': listDeliveries[element].dateVPV || undefined,
+				'endDatePFV': listDeliveries[element].endDatePFV || undefined,
+				'endDateVPV': listDeliveries[element].endDateVPV || undefined,
 				'changeDays': isNaN(changeDays) ? undefined : changeDays,
 				'percentDone': listDeliveries[element].percentDone || 0
 			};
@@ -348,7 +348,7 @@ function VisboDeliverable() {
 		if (newDeliverable.phase) this.allDeliverables[id].phasePFV =  newDeliverable.phase;
 		if (newDeliverable.description) this.allDeliverables[id].description =  newDeliverable.description;
 		if (newDeliverable.fullPathPFV) this.allDeliverables[id].fullPathPFV = newDeliverable.fullPathPFV;
-		if (newDeliverable.datePFV) this.allDeliverables[id].datePFV =  newDeliverable.datePFV;
+		if (newDeliverable.endDatePFV) this.allDeliverables[id].endDatePFV =  newDeliverable.endDatePFV;
 	};
 	this.updateDeliverable = function(id, updateDeliverable, insertAll) {
 		if (updateDeliverable == undefined) return;
@@ -365,7 +365,7 @@ function VisboDeliverable() {
 		if (updateDeliverable.phase) this.allDeliverables[id].phaseVPV =  updateDeliverable.phase;
 		if (updateDeliverable.description) this.allDeliverables[id].description =  updateDeliverable.description;
 		if (updateDeliverable.fullPathVPV) this.allDeliverables[id].fullPathVPV = updateDeliverable.fullPathVPV;
-		if (updateDeliverable.dateVPV) this.allDeliverables[id].dateVPV =  updateDeliverable.dateVPV;
+		if (updateDeliverable.endDateVPV) this.allDeliverables[id].endDateVPV =  updateDeliverable.endDateVPV;
 		if (updateDeliverable.percentDone) this.allDeliverables[id].percentDone =  updateDeliverable.percentDone;
 	};
 	this.getDelivery = function(id) {
@@ -565,9 +565,9 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 
 			logger4js.trace("Phase Delivery: Action %s Delivery %s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, phase.deliverables[j], endDate && endDate.toISOString());
 			if (addAll) {
-				allDeliverables.addDeliverable(id, {nameID: phase.name, phase: phase.name, description: phase.deliverables[j], fullPathPFV: nameBC, datePFV: endDate});
+				allDeliverables.addDeliverable(id, {nameID: phase.name, phase: phase.name, description: phase.deliverables[j], fullPathPFV: nameBC, endDatePFV: endDate});
 			} else {
-				allDeliverables.updateDeliverable(id, {nameID: phase.name, phase: phase.name, description: phase.deliverables[j], fullPathVPV: nameBC, dateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0}, insertAll);
+				allDeliverables.updateDeliverable(id, {nameID: phase.name, phase: phase.name, description: phase.deliverables[j], fullPathVPV: nameBC, endDateVPV: endDate, percentDone:  (phase && phase.percentDone) || 0}, insertAll);
 			}
 		}
 
@@ -582,9 +582,9 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 				id = milestone.deliverables[m];
 				logger4js.trace("Phase Delivery: Action %s Delivery %s/%s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, milestone.name, milestone.deliverables[m], endDate && endDate.toISOString());
 				if (addAll) {
-					allDeliverables.addDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathPFV: nameBC, datePFV: endDate});
+					allDeliverables.addDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathPFV: nameBC, endDatePFV: endDate});
 				} else {
-					allDeliverables.updateDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathVPV: nameBC ,dateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
+					allDeliverables.updateDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathVPV: nameBC ,endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
 				}
 			}
 		}
@@ -604,15 +604,15 @@ function getDeliverableCompletionMetric(allDeliverables, refDate){
 	for (var element = 0; element < listDeliveries.length; element++) {
 		result.deliverableCompletionBaseLastTotal += 1;
 		// Item was found in VPV, add it to total
-		if (listDeliveries[element].dateVPV) {
+		if (listDeliveries[element].endDateVPV) {
 			result.deliverableCompletionCurrentTotal += 1;
 		}
 		// Item was planned before refDate in baseline
-		if (listDeliveries[element].datePFV && listDeliveries[element].datePFV.getTime() < refDate.getTime()) {
+		if (listDeliveries[element].endDatePFV && listDeliveries[element].endDatePFV.getTime() < refDate.getTime()) {
 			result.deliverableCompletionBaseLastActual += 1;
 		}
 		// Item was due in VPV, add it to actual weighted with percentDone
-		if (listDeliveries[element].dateVPV && listDeliveries[element].dateVPV.getTime() < refDate.getTime()) {
+		if (listDeliveries[element].endDateVPV && listDeliveries[element].endDateVPV.getTime() < refDate.getTime()) {
 			result.deliverableCompletionCurrentActual += 1 * (listDeliveries[element].percentDone || 0);
 		}
 	}

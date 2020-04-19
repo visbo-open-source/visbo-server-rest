@@ -14,6 +14,11 @@ var handler = function(err, res, logMesage, restMessage) {
 		error = err.message;
 		logger4js.mark('Mongo Cast Error: %s ReST error %s err %O', logMesage, restMessage, error);
 		httpcode = 400;
+	} else if (err.name == 'MongoTimeoutError') {
+		error = err.name;
+		logger4js.mark('Mongo Timeout Error: %s ReST error %s err %s', logMesage, restMessage, error);
+		httpcode = 500;
+		throw 'Lost Mongo connection, please restart';
 	} else if (err.code == 11000){
 		// Unique Key Error
 		error = err.errmsg;
