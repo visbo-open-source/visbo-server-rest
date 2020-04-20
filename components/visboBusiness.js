@@ -68,7 +68,7 @@ function getAllPersonalKosten(vpv, organisation) {
 					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
 					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
-					// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
+					// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 					if (role &&  role.Bedarf) {
 						var dimension = role.Bedarf.length;
 						for (var k = phasenStart; k < phasenStart + dimension; k++) {
@@ -118,12 +118,12 @@ function getAllOtherCost(vpv, organisation) {
 			for (i = 0; vpv && vpv.AllPhases && i < vpv.AllPhases.length; i++) {
 				var phase = vpv.AllPhases[i];
 				var phasenStart = phase.relStart - 1;
-				// logger4js.trace("Calculate Phase %s Costs %s", i, phase.AllCosts.length);
+				// logger4js.trace('Calculate Phase %s Costs %s', i, phase.AllCosts.length);
 				for (var j = 0; phase && phase.AllCosts && j < phase.AllCosts.length; j++) {
 					var cost = phase.AllCosts[j];
 					//var costTyp = cost.KostenTyp;
 					//var tagessatz = allCosts[cost.KostenTyp].budget;
-					// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
+					// logger4js.trace('Calculate Bedarf of Cost %O', cost.Bedarf);
 					if (cost.Bedarf) {
 						var dimension = cost.Bedarf.length;
 						for (var k = phasenStart; k < phasenStart + dimension; k++) {
@@ -138,7 +138,7 @@ function getAllOtherCost(vpv, organisation) {
 		othercostValues[0] = 0;
 	}
 	//var endCalc = new Date();
-	//logger4js.warn("Calculate all other Cost duration %s ", endCalc.getTime() - startCalc.getTime());
+	//logger4js.warn('Calculate all other Cost duration %s ', endCalc.getTime() - startCalc.getTime());
 	return othercostValues;
 
 }
@@ -211,7 +211,7 @@ function getNamePart(str, part) {
 		var compName = str.split('§');
 		if (compName.length > part) {
 			result = compName[part];
-		} else { // gilt für die rootphase - hier ist der Name "."
+		} else { // gilt für die rootphase - hier ist der Name '.'
 			if (compName[compName.length - 1] == '0') {
 				result = '.';
 			}
@@ -448,8 +448,8 @@ function elemIdIsMilestone(elemId) {
 
 function getPhaseByID(hrchy, vpv, elemId){
 	var phase = undefined;
-	var rootKey = "0";
-	var rootphaseID = "0§.§";
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
 
 	if (elemId === rootphaseID){
 		elemId = rootKey;
@@ -525,7 +525,7 @@ function getPhStartDate(vpv, phase){
 	var phStartDate = new Date();
 
 	if (phase){
-		logger4js.trace("find the startDate of the Phase %s  ", phase.name);
+		logger4js.trace('find the startDate of the Phase %s  ', phase.name);
 		phStartDate = addDays(vpv.startDate, phase.startOffsetinDays);
 	}
 
@@ -563,12 +563,12 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 		var nameBC = getBreadCrumb(phase.name, hrchy);
 		var endDate = getPhEndDate(vpv, phase);
 
-		// logger4js.trace("Calculate Phase %s Deliverables %s", i, phase.deliverables.length);
+		// logger4js.trace('Calculate Phase %s Deliverables %s', i, phase.deliverables.length);
 
 		for (var j = 0; phase.deliverables && j < phase.deliverables.length; j++) {
 			var id = phase.deliverables[j];
 
-			logger4js.trace("Phase Delivery: Action %s Delivery %s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, phase.deliverables[j], endDate && endDate.toISOString());
+			logger4js.trace('Phase Delivery: Action %s Delivery %s/%s endDate %s', addAll ? 'Add' : 'Update', phase.name, phase.deliverables[j], endDate && endDate.toISOString());
 			if (addAll) {
 				allDeliverables.addDeliverable(id, {nameID: phase.name, phase: phase.name, description: phase.deliverables[j], fullPathPFV: nameBC, endDatePFV: endDate});
 			} else {
@@ -578,14 +578,14 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 
 		for (var k = 0; phase && phase.AllResults && k < phase.AllResults.length; k++){
 			var milestone = phase.AllResults[k];
-			var nameBC = getBreadCrumb(milestone.name, hrchy);
+			nameBC = getBreadCrumb(milestone.name, hrchy);
 			endDate = getMsDate(hrchy, vpv, milestone.name);
 
-			logger4js.trace("Calculate Milestone %s Deliverables %s with endDate %s", i, phase.AllResults.length, endDate && endDate.toISOString());
+			logger4js.trace('Calculate Milestone %s Deliverables %s with endDate %s', i, phase.AllResults.length, endDate && endDate.toISOString());
 
 			for (var m = 0; milestone && milestone.deliverables && m < milestone.deliverables.length; m++){
 				id = milestone.deliverables[m];
-				logger4js.trace("Phase Delivery: Action %s Delivery %s/%s/%s endDate %s", addAll ? 'Add' : 'Update', phase.name, milestone.name, milestone.deliverables[m], endDate && endDate.toISOString());
+				logger4js.trace('Phase Delivery: Action %s Delivery %s/%s/%s endDate %s', addAll ? 'Add' : 'Update', phase.name, milestone.name, milestone.deliverables[m], endDate && endDate.toISOString());
 				if (addAll) {
 					allDeliverables.addDeliverable(id, {nameID: milestone.name, phase: phase.name, description: milestone.deliverables[m], fullPathPFV: nameBC, endDatePFV: endDate});
 				} else {
@@ -645,13 +645,14 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 		var currentNodeID = hryElement.hryNodeKey;
 		if (currentNodeID) {
 			var isMS = elemIdIsMilestone(currentNodeID);
+			var name = currentNodeID;
+			var nameBC = getBreadCrumb(currentNodeID, hrchy);
+			var phase = getPhaseByID(hrchy, vpv, currentNodeID);
+			var startDate, endDate;
 			if (isMS) {
-				var name = currentNodeID;
-				var nameBC = getBreadCrumb(currentNodeID, hrchy);
 				var milestone = getMilestoneByID(hrchy, vpv, currentNodeID);
-				var endDate = getMsDate(hrchy, vpv, currentNodeID);
 				var phaseName = hryElement.hryNode && hryElement.hryNode.parentNodeKey;
-				var phase = getPhaseByID(hrchy, vpv, phaseName);
+				endDate = getMsDate(hrchy, vpv, currentNodeID);
 				// check if the phase is valid/visible
 				if (phaseName && endDate) {
 					if (addAll) {
@@ -662,11 +663,8 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 				}
 			} else {
 				// currentNode is a phase
-				var phase = getPhaseByID(hrchy, vpv, currentNodeID);
-				var endDate = getPhEndDate(vpv, phase);
-				var startDate = getPhStartDate(vpv, phase);
-				var name = currentNodeID;
-				var nameBC = getBreadCrumb(currentNodeID, hrchy);
+				endDate = getPhEndDate(vpv, phase);
+				startDate = getPhStartDate(vpv, phase);
 
 				if (name  && endDate) {
 					if (addAll) {
@@ -710,10 +708,8 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 
 function getBreadCrumb(elemID, hrchy) {
 	var breadCrumb = [];
-	var rootKey = "0";
-	var rootphaseID = "0§.§";
-	var curElemID = elemID;
-
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
 
 	logger4js.trace('Calculate the path of planelement %s  ', elemID );
 
@@ -811,7 +807,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-var cleanupRestrictedVersion = function(vpv, restriction) {
+function cleanupRestrictedVersion(vpv, restriction) {
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
@@ -874,24 +870,24 @@ var cleanupRestrictedVersion = function(vpv, restriction) {
 		} else {
 			vpv.AllPhases = [];
 		}
-		for (var i = 0; i < allPhases.length; i++) {
-			if (allPhases[i]) {
-				allPhases[i].AllRoles = undefined;
-				allPhases[i].AllCosts = undefined;
-				allPhases[i].AllBewertungen = undefined;
-				allPhases[i].responsible = undefined;
-				allPhases[i].earliestStart = undefined;
-				allPhases[i].latestStart = undefined;
-				allPhases[i].minDauer = undefined;
-				allPhases[i].maxDauer = undefined;
-				allPhases[i].relStart = undefined;
-				allPhases[i].relEnde = undefined;
-				if (allPhases[i].AllResults) {
-					var allResults = allPhases[i].AllResults;
-					for (var j = 0; j < allResults.length; j++) {
-						if (allResults[j]) {
-							allResults[j].bewertungen = undefined;
-							allResults[j].verantwortlich = undefined;
+		for (var k = 0; k < allPhases.length; k++) {
+			if (allPhases[k]) {
+				allPhases[k].AllRoles = undefined;
+				allPhases[k].AllCosts = undefined;
+				allPhases[k].AllBewertungen = undefined;
+				allPhases[k].responsible = undefined;
+				allPhases[k].earliestStart = undefined;
+				allPhases[k].latestStart = undefined;
+				allPhases[k].minDauer = undefined;
+				allPhases[k].maxDauer = undefined;
+				allPhases[k].relStart = undefined;
+				allPhases[k].relEnde = undefined;
+				if (allPhases[k].AllResults) {
+					var allResults = allPhases[k].AllResults;
+					for (var l = 0; j < allResults.length; l++) {
+						if (allResults[l]) {
+							allResults[l].bewertungen = undefined;
+							allResults[l].verantwortlich = undefined;
 						}
 					}
 				}

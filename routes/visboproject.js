@@ -29,7 +29,7 @@ var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
 
 var mail = require('./../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 
@@ -2082,7 +2082,7 @@ router.route('/:vpid/variant/:vid')
 
 		logger4js.info('DELETE Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
 
-		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString())
+		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString());
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2344,7 +2344,7 @@ router.route('/:vpid/portfolio')
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
 		var variantIndex = 0;
 		if (variantName) {
-			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
 		}
 		if (variantIndex < 0) {
 			return res.status(409).send({
@@ -2572,7 +2572,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var variantName = oneVPF.variantName;
 			if (variantName != '') {
 				// check that the Variant exists
-				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
 				if (variantIndex < 0) {
 					logger4js.warn('VP PortfolioList Delete Variant does not exist %s %s', req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
@@ -2659,7 +2659,6 @@ router.route('/:vpid/portfolio/:vpfid')
 			// User is authenticated already
 			var userId = req.decoded._id;
 			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
-			var groupType = 'VP';
 
 			var restrictName = (req.body.name || '').trim();
 			var groupId = req.body.group;
@@ -2761,7 +2760,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			logger4js.info('DELETE Project Restriction for userid %s email %s and vp %s restrict :%s:', userId, useremail, req.params.vpid, req.params.rid);
 
-			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString())
+			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString());
 			if (restrictIndex < 0) {
 				return res.status(409).send({
 					state: 'failure',

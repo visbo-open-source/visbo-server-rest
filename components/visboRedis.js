@@ -5,7 +5,6 @@ var logger4js = log4js.getLogger(logModule);
 var redis = require('redis');
 var bluebird = require('bluebird');
 bluebird.promisifyAll(redis);
-var delay = require('delay');
 
 var initialised = false;
 var redisClient;
@@ -53,7 +52,4 @@ function VisboRedisInit(host, port) {
 	return redisClient;
 }
 
-module.exports =
-	{
-		VisboRedisInit: VisboRedisInit
-	};
+module.exports = { VisboRedisInit: VisboRedisInit };

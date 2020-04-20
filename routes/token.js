@@ -14,7 +14,7 @@ var moment = require('moment');
 moment.locale('de');
 
 var useragent = require('useragent');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var fs = require('fs');
 
 var logModule = 'USER';

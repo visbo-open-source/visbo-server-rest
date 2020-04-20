@@ -89,7 +89,7 @@ var evaluateLanguage = function(req) {
 	if (!lang) { lang = 'en'; }
 	logger4js.trace('evaluate Language: %s', lang);
 	return lang;
-}
+};
 
 module.exports = {
 	validateName: validateName,

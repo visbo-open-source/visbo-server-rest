@@ -132,11 +132,6 @@ function initLog() {
   }
 }
 
-function redisConnectCallback() {
-  logger4js.trace('Start connecting DB');
-  dbConnect(process.env.NODE_VISBODB)
-}
-
 function dbConnect(dbconnection) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
