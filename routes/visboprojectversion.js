@@ -177,7 +177,7 @@ router.route('/')
 			}
 		} else {
 			var requiredPerm = constPermVP.View;
-			if (req.query.keyMetrics) requiredPerm += constPermVP.ViewAudit;
+			// if (req.query.keyMetrics) requiredPerm += constPermVP.ViewAudit;
 			vpidList = req.listVPPerm.getVPIDs(requiredPerm);
 		}
 
@@ -319,8 +319,14 @@ router.route('/')
 				req.listVPV = listVPV;
 				for (var i = 0; i < listVPV.length; i++) {
 					perm = req.listVPPerm.getPerm(sysAdmin ? 0 : listVPV[i].vpid);
-					if ((perm.vp & constPermVP.ViewAudit) == 0) {
-						listVPV[i].keyMetrics = undefined;
+					if ((perm.vp & constPermVP.ViewAudit) == 0
+					&& listVPV[i].keyMetrics) {
+						// cleanup Cost Information
+						// listVPV[i].keyMetrics = undefined;
+						listVPV[i].keyMetrics.costCurrentActual = undefined;
+						listVPV[i].keyMetrics.costCurrentTotal = undefined;
+						listVPV[i].keyMetrics.costBaseLastActual = undefined;
+						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
 					}
 					if ((perm.vp & constPermVP.View) === 0) {
 						// only restricted View
