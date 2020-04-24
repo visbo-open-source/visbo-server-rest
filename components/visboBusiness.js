@@ -161,6 +161,8 @@ function calcCosts(vpv, pfv, organisation) {
 		var personalCost = getAllPersonalKosten(vpv, organisation);
 		var allOtherCost = getAllOtherCost(vpv, organisation);
 
+		var monthlyNeeds = getRessourcenBedarfe(2,vpv,true, true, organisation);
+
 		for (var i = 0 ; i < dauer; i++){
 			const currentDateISO = currentDate.toISOString();
 			allCostValues[currentDateISO] = { 'currentCost': personalCost[i] + allOtherCost[i] };
@@ -661,6 +663,8 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 					}
 				}
 			} else {
+
+
 				// currentNode is a phase
 				var phase = getPhaseByID(hrchy, vpv, currentNodeID);
 				var endDate = getPhEndDate(vpv, phase);
@@ -810,6 +814,288 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 	return keyMetrics;
 }
+// // Roles for the Project combine INfo from baseline and vpv
+// function VisboRoles() {
+// 	this.length = 0;
+// 	this.listOfRoles = {};
+	
+// 	this.addRole = function(id, phaseNameID, teamID, newRole) {
+// 		  if (newRole== undefined) return;
+// 		  if (id == undefined) return;
+
+// 		  if (this.listOfRoles[id] == undefined) {
+// 			if (insertAll) {
+// 				this.listOfRoles[id] = {};
+// 				this.length += 1;
+// 			} else {
+// 				return;
+// 			}
+// 		}
+// 		if (!this.listOfRoles[id].UID) this.listOfRoles[id].UID =  newRole.UID;		
+// 		if (newRole.teamID) this.listOfRoles[id].teamID =  teamID;
+// 		if (newRole.phaseIDs) {
+// 			this.listOfRoles[id].phaseIDs.push(phaseNameID)
+// 		} else {
+
+// 		}
+		
+// 	  };
+// 	  this.updateDeliverable = function(id, updateDeliverable, insertAll) {
+// 		if (updateDeliverable == undefined) return;
+// 		if (id == undefined) return;
+// 		if (this.allDeliverables[id] == undefined) {
+// 			if (insertAll) {
+// 				this.allDeliverables[id] = {};
+// 				this.length += 1;
+// 			} else {
+// 				return;
+// 			}
+// 		}
+// 		if (!this.allDeliverables[id].nameID) this.allDeliverables[id].nameID =  updateDeliverable.nameID;
+// 		if (updateDeliverable.phase) this.allDeliverables[id].phaseVPV =  updateDeliverable.phase;
+// 		if (updateDeliverable.description) this.allDeliverables[id].description =  updateDeliverable.description;
+// 		if (updateDeliverable.fullPathVPV) this.allDeliverables[id].fullPathVPV = updateDeliverable.fullPathVPV;
+// 		if (updateDeliverable.endDateVPV) this.allDeliverables[id].endDateVPV =  updateDeliverable.endDateVPV;
+// 		if (updateDeliverable.percentDone) this.allDeliverables[id].percentDone =  updateDeliverable.percentDone;
+// 	};
+
+// 	  this.getDelivery = function(id) {
+// 		  var result = this.allDeliverables[id] || {};
+// 		  return result;
+// 	  };
+// 	  this.getAllDeliveries = function() {
+// 		  var idList = [];
+// 		  for (var id in this.allDeliverables) {
+// 			  idList.push(this.allDeliverables[id]);
+// 		  }
+// 		  return idList;
+// 	  };
+//   }
+
+function getRessourcenBedarfe(roleID, vpv, subRoles, euro, organisation) {
+	var monthlyNeeds = [];
+	
+	logger4js.trace('Calculate all RessourceBedarfe of %s  ', vpv && vpv._id && roleID);
+
+	if (vpv && roleID && organisation){
+
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
+		var dauer = endIndex - startIndex + 1;
+
+		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
+			return monthlyNeeds;
+		}
+
+		// prepare organisation for direct access to uid
+		var allRoles = [];
+		var allTeams = [];
+		var allRoleNames = [];
+
+		for (var i = 0; organisation && organisation.value && organisation.value.allRoles && i < organisation.value.allRoles.length; i++) {
+			allRoles[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];
+			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
+			if (organisation.value.allRoles[i].isTeam)	allTeams[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];;
+		}	
+
+		// find all summary roles
+		roleID = "";
+		var sumRoles = getSummaryRoles(allRoles, roleID);	
+		roleID = 2;
+		var sumRoles2 = getSummaryRoles(allRoles, roleID);	
+
+		// find all roles connected with roleID
+		roleID = 2;
+		var concernRoles = getConcerningRoles(allRoles, roleID);
+
+		// build rclists
+		var rclists = buildRClists(vpv);
+
+		// find parentRole of roleID
+		roleID = 23;
+		var parent = getParentOfRole(roleID, allRoles);
+		roleID = 14;
+		var parent = getParentOfRole(roleID, allRoles);
+		roleID = 47;
+		var parent = getParentOfRole(roleID, allRoles);
+
+		var topLevelNodes = buildTopNodes(allRoles);
+	}
+}
+
+
+
+function buildRClists(vpv) {
+	var rclists = {};
+	
+	if (vpv){
+		// prepare rclists of this vpv 
+		for (var i = 0; i < vpv.AllPhases.length; i++) {
+			var phase = vpv.AllPhases[i];	
+			
+			if (!phase || !phase.name) {
+				// skip empty phase
+				continue;
+			}
+			for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
+				var role = phase.AllRoles[j];
+
+				// rclists.addRP
+				if (!rclists[role.RollenTyp]){	
+					var phasesPerTeam = [];	
+					var newRole = {};			
+					phasesPerTeam.push(phase.name);
+					newRole[role.teamID] = phasesPerTeam;
+					rclists[role.RollenTyp]=newRole;
+				} else {
+					var newRole = rclists[role.RollenTyp];
+					if (newRole[role.teamID]){
+						var phasesPerTeam = newRole[role.teamID];
+						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						if (!(indexPhase >= 0)) {
+							phasesPerTeam.push(phase.name);
+							newRole[role.teamID] = phasesPerTeam;
+							rclists[role.RollenTyp] = newRole;							
+						}					
+					} else {
+						var phasesPerTeam = [];
+						phasesPerTeam.push(phase.name);
+						newRole[role.teamID] = phasesPerTeam;
+						rclists[role.RollenTyp]=newRole;
+					}
+
+				}
+			}
+		}
+	}
+	return rclists;
+}
+
+
+function getConcerningRoles(allRoles, roleID) {
+	var concerningRoles = [];
+
+	// find all roles corresponding to this one roleID - result in concerningRoles
+	if (roleID || roleID != ""){	
+
+		var actRole = allRoles[roleID];
+		concerningRoles[roleID] = actRole;
+
+		var subRoles = actRole.subRoleIDs;		
+		if (subRoles.length > 0 ){				
+			subRoles.forEach(findConcerningRoles);
+		}			
+
+		function findConcerningRoles(value,index,array) {
+			//value is the Id of one subrole
+			var i = 0;
+			var hroleID = value.key;
+			var hrole = allRoles[hroleID];
+			concerningRoles[hroleID] = hrole;
+			if (hrole.subRoleIDs.length > 0){
+				var shroles = hrole.subRoleIDs;
+				shroles.forEach(findConcerningRoles);
+			}			
+		}
+	}
+	return concerningRoles;
+}
+
+
+// find summary Roles
+function getSummaryRoles(allRoles, roleID) {
+	var summaryRoles = [];
+	// all summary roles
+	if (!roleID && allRoles) {
+		var i = 0;
+		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
+			var hrole = allRoles[i];
+			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
+		}
+		return summaryRoles;
+	} 
+
+	// only summary roles that are children of the role roleID
+	if (roleID && allRoles){
+		var role = allRoles[roleID];			
+
+		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
+
+			var subRoles = role.subRoleIDs;	
+			if (subRoles.length > 0 ){	
+				summaryRoles[role.uid] = role;			
+				subRoles.forEach(findSummaryRoles);
+			}	
+			function findSummaryRoles(value,index,array) {
+				//value is the Id of one subrole							
+				var hroleID = value.key;
+				var hrole = allRoles[hroleID];							
+				if (hrole.subRoleIDs.length > 0){
+					summaryRoles[hroleID] = hrole;
+					var shroles = hrole.subRoleIDs;
+					shroles.forEach(findSummaryRoles);
+				}			
+			}					
+		}
+		return summaryRoles;
+	}		
+}
+
+function getParentOfRole (roleID, allRoles) {
+	var parentRole = undefined;
+	if (allRoles[roleID]) {
+		// find all summaryRoles
+		var sumRoles = getSummaryRoles(allRoles, "");    
+		var notFound = true;
+		for (k=0; sumRoles && k < sumRoles.length;k++){
+			var hrole = sumRoles[k];			
+			for(i=0; notFound && hrole && i< hrole.subRoleIDs.length; i++ ){
+				var roleuid = hrole.subRoleIDs[i].key;
+				if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
+					parentRole = hrole;
+				}
+			}
+		}
+	}
+	return parentRole;
+}
+
+function buildTopNodes(allRoles) {
+	var topLevelNodes = [];
+	var i = 1;
+
+	while (i <= allRoles.length){
+		var currentRole = allRoles[i];
+		if (currentRole) {
+			var parent = getParentOfRole(currentRole.uid, allRoles);
+			if (!parent && !topLevelNodes[currentRole.uid]) topLevelNodes[currentRole.uid] = currentRole;
+		}
+		i++;
+	}
+	return topLevelNodes;
+}
+
+
+/* 
+
+		// Bedarfe von roleID berechnen
+		if  ( dauer > 0 ){
+
+			// calculate for all roles the needs
+			if (!roleID || roleID === "") monthlyNeeds = getAllPersonalKosten(vpv,organisation);
+
+			// calculate only for the role roleID
+		
+		}	
+	}
+	
+	rclists.uid = roleID;
+	rclists.teamID = undefined;
+	rclists.phaseIDs = [];
+
+	return monthlyNeeds;
+}
+ */
 
 var cleanupRestrictedVersion = function(vpv, restriction) {
 	if (!vpv) return;
@@ -900,6 +1186,8 @@ var cleanupRestrictedVersion = function(vpv, restriction) {
 	}
 }
 
+
+
 module.exports = {
 	getAllPersonalKosten: getAllPersonalKosten,
 	getAllOtherCost: getAllOtherCost,
@@ -907,5 +1195,6 @@ module.exports = {
 	calcCosts: calcCosts,
 	calcDeliverables: calcDeliverables,
 	calcDeadlines: calcDeadlines,
-	cleanupRestrictedVersion: cleanupRestrictedVersion
+	cleanupRestrictedVersion: cleanupRestrictedVersion,
+	getRessourcenBedarfe: getRessourcenBedarfe
 };
