@@ -873,19 +873,24 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 //   }
 
 function getRessourcenBedarfe(roleID, vpv, subRoles, euro, organisation) {
-	var monthlyNeeds = [];
+	var costValues = [];
 	
 	logger4js.trace('Calculate all RessourceBedarfe of %s  ', vpv && vpv._id && roleID);
 
 	if (vpv && roleID && organisation){
 
+		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
+
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
+		var faktor = 1;
 
 		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
 			return monthlyNeeds;
 		}
+		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
+		var hrchy = convertHierarchy(vpv);
 
 		// prepare organisation for direct access to uid
 		var allRoles = [];
@@ -897,6 +902,67 @@ function getRessourcenBedarfe(roleID, vpv, subRoles, euro, organisation) {
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
 			if (organisation.value.allRoles[i].isTeam)	allTeams[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];;
 		}	
+
+		for (i=0 ; i < dauer; i++){
+			costValues[i] = 0;
+		}
+		
+		// build rclists
+		var rclists = buildRClists(vpv);
+
+		// roles, which are concerned/connected with roleID in the given organisation
+		var concerningRoles = getConcerningRoles(allRoles, roleID);
+
+		// build an intersection ?!?!?!
+		var intersectArray = [];
+		var intersectElem = new Object;
+		
+		for (i = 0; concerningRoles && i< concerningRoles.length; i++) {
+			var actRoleID = concerningRoles[i] && concerningRoles[i].uid;
+			if (rclists && rclists[actRoleID]) {
+				intersectElem = {};
+				intersectElem.role = actRoleID;
+				intersectElem.phases = rclists[actRoleID][-1];
+				intersectArray.push(intersectElem);
+			} 
+		}
+
+	
+		if (dauer > 0) {
+			
+			for (i = 0; intersectArray && i< intersectArray.length; i++) {
+				
+				var phasesWithActRole = intersectArray[i].phases;
+				var actRoleID = intersectArray[i].role;
+
+				for ( j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
+					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
+					var phasenStart = phase.relStart - 1;
+				
+					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);					
+					for (k = 0; phase && phase.AllRoles && k < phase.AllRoles.length ; k++) {
+						if (phase.AllRoles[k].RollenTyp == actRoleID) {
+							var role = phase.AllRoles[k];												
+							var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0
+							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
+							if (role &&  role.Bedarf) {
+								var dimension = role.Bedarf.length;
+								for (l = phasenStart; l < phasenStart + dimension; l++) {
+									// if costValue[i] is not set yet use 0
+									costValues[l] = (costValues[l] || 0) + role.Bedarf[l - phasenStart] * tagessatz * faktor / 1000;
+									// costValues[l] = (costValues[l] || 0) + role.Bedarf[l - phasenStart];
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			costValues[0] = 0;
+		}
+
+		var monthlyNeeds = costValues;
+
 
 		// find all summary roles
 		roleID = "";
@@ -919,7 +985,11 @@ function getRessourcenBedarfe(roleID, vpv, subRoles, euro, organisation) {
 		roleID = 47;
 		var parent = getParentOfRole(roleID, allRoles);
 
+		// find the topLevelNodes
 		var topLevelNodes = buildTopNodes(allRoles);
+
+		// find the teams, which are virtualChilds of a role in the organisation
+		var virtualChilds = getTeamOfSummaryRole(allTeams, allRoles)
 	}
 }
 
@@ -975,7 +1045,7 @@ function buildRClists(vpv) {
 function getConcerningRoles(allRoles, roleID) {
 	var concerningRoles = [];
 
-	// find all roles corresponding to this one roleID - result in concerningRoles
+	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	if (roleID || roleID != ""){	
 
 		var actRole = allRoles[roleID];
@@ -1048,13 +1118,17 @@ function getParentOfRole (roleID, allRoles) {
 		var sumRoles = getSummaryRoles(allRoles, "");    
 		var notFound = true;
 		for (k=0; sumRoles && k < sumRoles.length;k++){
-			var hrole = sumRoles[k];			
-			for(i=0; notFound && hrole && i< hrole.subRoleIDs.length; i++ ){
-				var roleuid = hrole.subRoleIDs[i].key;
-				if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
-					parentRole = hrole;
+			// check only roles, which are not isTeam or isTeamParent
+			var hrole = sumRoles[k];		
+			if (hrole && !hrole.isTeam && !hrole.isTeamParent)	{
+				for(i=0; notFound && hrole && i< hrole.subRoleIDs.length; i++ ){
+					var roleuid = hrole.subRoleIDs[i].key;
+					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
+						parentRole = hrole;
+					}
 				}
 			}
+		
 		}
 	}
 	return parentRole;
@@ -1074,6 +1148,46 @@ function buildTopNodes(allRoles) {
 	}
 	return topLevelNodes;
 }
+
+function getTeamOfSummaryRole(allTeams, allRoles){
+	var virtuals = undefined;
+
+	for (j=0; allTeams && j < allTeams.length; j++) {
+		var oneTeam = allTeams[j];
+		if (oneTeam) {
+			var isVirtual = true;
+			var k = 0;			
+			var vglID = undefined;				
+			while (k < oneTeam.subRoleIDs.length){
+				var currentRole = oneTeam.subRoleIDs[k];
+				if (currentRole) {							
+					var parent = getParentOfRole(currentRole.key, allRoles);	
+					// parent is role
+					// look, if the other team-members includes to this parent as well		
+					if (parent && !parent.isTeam) {
+						if (k == 0)  {
+							vglID = parent.uid;	
+						} else {
+							if (vglID != parent.uid) {		
+								isVirtual = false;
+								break;								
+							}
+						}
+						k++;
+					} else {
+						isVirtual = false;
+						break;
+					}
+				}
+			}
+			virtuals = [];
+			virtuals[oneTeam.uid] = isVirtual;
+		}
+		j++;		
+	}
+	return virtuals;
+}
+
 
 
 /* 
