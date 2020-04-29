@@ -131,16 +131,18 @@ router.route('/')
 
 		req.auditDescription = 'VISBO Project Versions (Read)';
 		req.auditSysAdmin = sysAdmin;
-		if (!req.query.longList) req.auditTTLMode = 1;
 		var checkDeleted = req.query.deleted == true;
 
 		logger4js.info('Get Project Versions for user %s with query params %O ', userId, req.query);
 		var queryvpv = {};
 		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
-		var longList = false;		// show only specific columns instead of all
-		var keyMetrics = false;
+		var longList = req.query.longList != undefined;		// show only specific columns instead of all
+		var keyMetrics = req.query.keyMetrics != undefined;
 		var nowDate = new Date();
+		var reducedPerm = false;
+		var variantName = req.query.variantName;
+		if (variantName) variantName = variantName.trim();
 
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
@@ -173,11 +175,13 @@ router.route('/')
 			}
 			if (!(perm.vp & constPermVP.View)) {
 				// only restricted View Permission, restrict the Result to main variant only
-				req.query.variantName = '';
+				variantName = '';
+				longList = false;
+				keyMetrics = false;
+				reducedPerm = true;
 			}
 		} else {
 			var requiredPerm = constPermVP.View;
-			// if (req.query.keyMetrics) requiredPerm += constPermVP.ViewAudit;
 			vpidList = req.listVPPerm.getVPIDs(requiredPerm);
 		}
 
@@ -195,20 +199,17 @@ router.route('/')
 				queryvpv.timestamp =  req.query.refNext ? {$gt: nowDate} : {$lt: nowDate};
 				latestOnly = true;
 			}
-			if (req.query.variantName != undefined){
-				logger4js.debug('Variant Query String :%s:', req.query.variantName);
-				queryvpv.variantName = {$in: req.query.variantName.split(',')};
+			if (variantName != undefined){
+				logger4js.debug('Variant Query String :%s:', variantName);
+				queryvpv.variantName = {$in: variantName.split(',')};
 			}
-			if (req.query.longList != undefined){
-				logger4js.debug('longList Query String :%s:', req.query.longList);
-				longList = true;
-			}
-			if (req.query.keyMetrics != undefined){
+			if (keyMetrics){
 				logger4js.debug('keyMetrics Query String :%s:', req.query.keyMetrics);
-				keyMetrics = true;
 				longList = false;
 			}
 		}
+		if (longList) req.auditTTLMode = 1;
+
 		logger4js.info('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 
 		if (req.listPortfolioVP) {
@@ -305,7 +306,11 @@ router.route('/')
 				queryVPV.select('_id vpid name timestamp keyMetrics status startDate ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp startDate endDate status ampelStatus variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				if (reducedPerm) {
+					queryVPV.select('_id vpid name timestamp variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				} else {
+					queryVPV.select('_id vpid name timestamp startDate endDate status ampelStatus variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				}
 			} else {
 				req.auditTTLMode = 0;	// Real Download of VISBO Project Versions
 			}
@@ -327,18 +332,6 @@ router.route('/')
 						listVPV[i].keyMetrics.costCurrentTotal = undefined;
 						listVPV[i].keyMetrics.costBaseLastActual = undefined;
 						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
-					}
-					if ((perm.vp & constPermVP.View) === 0) {
-						// only restricted View
-						var restriction = [];
-						if (req.oneVP) {
-							req.oneVP.restrict.forEach(function(item) {
-								if (req.listVPPerm.checkGroupMemberShip(item.groupid)) {
-									restriction.push(item);
-								}
-							});
-						}
-						visboBusiness.cleanupRestrictedVersion(listVPV[i], restriction);
 					}
 				}
 
@@ -660,8 +653,13 @@ router.route('/:vpvid')
 		logger4js.info('Get Project Version for userid %s email %s and vpv %s :%O ', userId, useremail, req.params.vpvid);
 
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
-		if ((perm.vp & constPermVP.ViewAudit) == 0) {
-			req.oneVPV.keyMetrics = undefined;
+		if ((perm.vp & constPermVP.ViewAudit) == 0
+		&& req.oneVPV.keyMetrics) {
+			// cleanup Cost Information
+			req.oneVPV.keyMetrics.costCurrentActual = undefined;
+			req.oneVPV.keyMetrics.costCurrentTotal = undefined;
+			req.oneVPV.keyMetrics.costBaseLastActual = undefined;
+			req.oneVPV.keyMetrics.costBaseLastTotal = undefined;
 		}
 		if ((perm.vp & constPermVP.View) === 0) {
 			// only restricted View
@@ -671,7 +669,7 @@ router.route('/:vpvid')
 					restriction.push(item);
 				}
 			});
-			visboBusiness.cleanupRestrictedVersion(req.oneVPV, restriction);
+			visboBusiness.cleanupRestrictedVersion(req.oneVPV);
 		}
 
 		return res.status(200).send({

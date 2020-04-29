@@ -50,8 +50,8 @@ var visboAudit = require('./components/visboAudit');
 var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
-  autoReconnect: true,
-  reconnectInterval: 3000,
+  // autoReconnect: true,
+  // reconnectInterval: 3000,
   useNewUrlParser: true,
   useUnifiedTopology: true
 };

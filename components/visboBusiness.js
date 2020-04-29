@@ -219,6 +219,19 @@ function getNamePart(str, part) {
 		return result;
 }
 
+function checkRestricted(restrict, delivery) {
+	var pathRestricted, pathActual;
+	pathRestricted = restrict.elementPath.join('/');
+	if (restrict.inclChildren) {
+		var len = restrict.elementPath.length;
+		pathActual = delivery.fullPathVPV.slice(0, len).join('/');
+	} else {
+		pathActual = delivery.fullPathVPV.join('/');
+	}
+
+	return pathRestricted == pathActual;
+}
+
 function calcDeadlines(vpv, pfv, getAll, restriction) {
 	var allDeadlineValuesIndexed = [];
 	var startCalc = new Date();
@@ -240,8 +253,9 @@ function calcDeadlines(vpv, pfv, getAll, restriction) {
 		logger4js.trace('Add Project Deadline %s', JSON.stringify(listDeadlines[element]));
 		var name = getNamePart(listDeadlines[element].nameID || '§UNDEFINED', 1);
 		var changeDays = Math.round((listDeadlines[element].endDateVPV - listDeadlines[element].endDatePFV) / 1000 / 3600 / 24);
-		if (!restriction || restriction.findIndex(restrict => restrict.element == listDeadlines[element].nameID) >= 0) {
+		if (!restriction || restriction.findIndex(restrict => checkRestricted(restrict, listDeadlines[element])) >= 0) {
 			allDeadlineValuesIndexed[j] = {
+				'nameID': listDeadlines[element].nameID,
 				'name': name || getNamePart(listDeadlines[element].phasePFV, 1),
 				'fullPathPFV': listDeadlines[element].fullPathPFV || undefined,
 				'phasePFV': getNamePart(listDeadlines[element].phasePFV, 1),
@@ -284,8 +298,9 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 		logger4js.trace('Add Project Delivery %s', JSON.stringify(listDeliveries[element]));
 		var name = getNamePart(listDeliveries[element].nameID || '§UNDEFINED', 1);
 		var changeDays = Math.round((listDeliveries[element].endDateVPV - listDeliveries[element].endDatePFV) / 1000 / 3600 / 24);
-		if (!restriction || restriction.findIndex(restrict => restrict.element == listDeliveries[element].nameID) >= 0) {
+		if (!restriction || restriction.findIndex(restrict => checkRestricted(restrict, listDeliveries[element])) >= 0) {
 			allDeliveryValuesIndexed[j] = {
+				'nameID': listDeliveries[element].nameID,
 				'name': name,
 				'fullPathPFV':  listDeliveries[element].fullPathPFV  || undefined,
 				'phasePFV': getNamePart(listDeliveries[element].phasePFV, 1),
@@ -807,7 +822,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function cleanupRestrictedVersion(vpv, restriction) {
+function cleanupRestrictedVersion(vpv) {
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
@@ -826,74 +841,11 @@ function cleanupRestrictedVersion(vpv, restriction) {
 	vpv.ampelErlaeuterung = undefined;
 	vpv.volumen = undefined;
 	vpv.complexity = undefined;
-	if (vpv.AllPhases) {
-		var allPhases = vpv.AllPhases;
-		if (restriction) {
-			for (var i = 0; i < allPhases.length; i++) {
-				var findIndex = restriction.findIndex(restrict => restrict.element == allPhases[i].name);
-				if (findIndex < 0) {
-					// phase not selected, check if a milestone inside the phase is part of restriction
-					var found = false;
-					allResults = allPhases[i].AllResults;
-					for (var j = 0; j < allResults.length; j++) {
-						var findResultsIndex = restriction.findIndex(restrict => restrict.element == allResults[j].name);
-						if (findResultsIndex < 0) {
-							allResults[j] = {empty: true};
-						} else {
-							found = true;
-						}
-					}
-					if (!found) {
-						// phase does not match and also no Milestone so skip the item
-						allPhases[i] = {empty: true};
-					} else {
-						// reduce phase to insensitive information
-						allPhases[i].deliverables = undefined;
-						allPhases[i].AllRoles = undefined;
-						allPhases[i].AllCosts = undefined;
-						allPhases[i].AllBewertungen = undefined;
-						allPhases[i].responsible = undefined;
-						allPhases[i].ampelStatus = undefined;
-						allPhases[i].ampelErlaeuterung = undefined;
-						allPhases[i].earliestStart = undefined;
-						allPhases[i].latestStart = undefined;
-						allPhases[i].minDauer = undefined;
-						allPhases[i].maxDauer = undefined;
-						// allPhases[i].relStart = undefined;
-						// allPhases[i].relEnde = undefined;
-						// allPhases[i].startOffsetinDays = undefined;
-						// allPhases[i].dauerInDays = undefined;
-					}
-				}
-			}
-			logger4js.debug('AllPhases filtered vpid %s vpvid %s AllPhases(%s)', vpv.vpid, vpv._id, allPhases.length);
-		} else {
-			vpv.AllPhases = [];
-		}
-		for (var k = 0; k < allPhases.length; k++) {
-			if (allPhases[k]) {
-				allPhases[k].AllRoles = undefined;
-				allPhases[k].AllCosts = undefined;
-				allPhases[k].AllBewertungen = undefined;
-				allPhases[k].responsible = undefined;
-				allPhases[k].earliestStart = undefined;
-				allPhases[k].latestStart = undefined;
-				allPhases[k].minDauer = undefined;
-				allPhases[k].maxDauer = undefined;
-				allPhases[k].relStart = undefined;
-				allPhases[k].relEnde = undefined;
-				if (allPhases[k].AllResults) {
-					var allResults = allPhases[k].AllResults;
-					for (var l = 0; j < allResults.length; l++) {
-						if (allResults[l]) {
-							allResults[l].bewertungen = undefined;
-							allResults[l].verantwortlich = undefined;
-						}
-					}
-				}
-			}
-		}
-	}
+	vpv.AllPhases = undefined;
+	vpv.hierarchy = undefined;
+	vpv.keyMetrics = undefined;
+	vpv.status = undefined;
+
 }
 
 module.exports = {
