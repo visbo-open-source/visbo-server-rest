@@ -267,7 +267,10 @@ function calcDeadlines(vpv, pfv, getAll, restriction) {
 				'endDatePFV': listDeadlines[element].endDatePFV || undefined,
 				'endDateVPV': listDeadlines[element].endDateVPV || undefined,
 				'changeDays': isNaN(changeDays) ? undefined : changeDays,
-				'percentDone': listDeadlines[element].percentDone || 0
+				'percentDone': listDeadlines[element].percentDone || 0,
+				'trafficlight': listDeadlines[element].trafficlight || 0,
+				'trafficlightDesc': listDeadlines[element].trafficlightDesc,
+				'responsible': listDeadlines[element].responsible
 			};
 			j++;
 		}
@@ -311,6 +314,9 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 				'endDateVPV': listDeliveries[element].endDateVPV || undefined,
 				'changeDays': isNaN(changeDays) ? undefined : changeDays,
 				'percentDone': listDeliveries[element].percentDone || 0
+				// 'trafficlight': listDeliveries[element].trafficlight || 0,
+				// 'trafficlightDesc': listDeliveries[element].trafficlightDesc,
+				// 'responsible': listDeliveries[element].responsible
 			};
 			j++;
 		}
@@ -365,8 +371,8 @@ function VisboDeliverable() {
 		if (newDeliverable.fullPathPFV) this.allDeliverables[id].fullPathPFV = newDeliverable.fullPathPFV;
 		if (newDeliverable.endDatePFV) this.allDeliverables[id].endDatePFV =  newDeliverable.endDatePFV;
 	};
-	this.updateDeliverable = function(id, updateDeliverable, insertAll) {
-		if (updateDeliverable == undefined) return;
+	this.updateDeliverable = function(id, deliverable, insertAll) {
+		if (deliverable == undefined) return;
 		if (id == undefined) return;
 		if (this.allDeliverables[id] == undefined) {
 			if (insertAll) {
@@ -376,12 +382,14 @@ function VisboDeliverable() {
 				return;
 			}
 		}
-		if (!this.allDeliverables[id].nameID) this.allDeliverables[id].nameID =  updateDeliverable.nameID;
-		if (updateDeliverable.phase) this.allDeliverables[id].phaseVPV =  updateDeliverable.phase;
-		if (updateDeliverable.description) this.allDeliverables[id].description =  updateDeliverable.description;
-		if (updateDeliverable.fullPathVPV) this.allDeliverables[id].fullPathVPV = updateDeliverable.fullPathVPV;
-		if (updateDeliverable.endDateVPV) this.allDeliverables[id].endDateVPV =  updateDeliverable.endDateVPV;
-		if (updateDeliverable.percentDone) this.allDeliverables[id].percentDone =  updateDeliverable.percentDone;
+		if (!this.allDeliverables[id].nameID) this.allDeliverables[id].nameID =  deliverable.nameID;
+		if (deliverable.phase) this.allDeliverables[id].phaseVPV =  deliverable.phase;
+		if (deliverable.description) this.allDeliverables[id].description =  deliverable.description;
+		if (deliverable.fullPathVPV) this.allDeliverables[id].fullPathVPV = deliverable.fullPathVPV;
+		if (deliverable.endDateVPV) this.allDeliverables[id].endDateVPV =  deliverable.endDateVPV;
+		if (deliverable.percentDone) this.allDeliverables[id].percentDone =  deliverable.percentDone;
+		if (deliverable.trafficlight >= 0) this.allDeadlines[id].trafficlight = deliverable.trafficlight;
+		if (deliverable.trafficlightDesc) this.allDeadlines[id].trafficlightDesc = deliverable.trafficlightDesc;
 	};
 	this.getDelivery = function(id) {
 		var result = this.allDeliverables[id] || {};
@@ -400,23 +408,23 @@ function VisboDeliverable() {
 function VisboDeadlines() {
   this.length = 0;
   this.allDeadlines = {};
-  this.addDeadline = function(id, newDeadline) {
-		if (newDeadline == undefined) return;
+  this.addDeadline = function(id,  deadline) {
+		if ( deadline == undefined) return;
 		if (id == undefined) return;
 		if (this.allDeadlines[id] == undefined) {
 			this.allDeadlines[id] = {};
 			this.length += 1;
 		}
-		if (newDeadline.nameID) this.allDeadlines[id].nameID =  newDeadline.nameID;
-		if (newDeadline.fullPathPFV) this.allDeadlines[id].fullPathPFV	= newDeadline.fullPathPFV;
-		if (newDeadline.phasePFV) this.allDeadlines[id].phasePFV =  newDeadline.phasePFV;
-		if (newDeadline.name) this.allDeadlines[id].name =  newDeadline.name;
-		if (newDeadline.type) this.allDeadlines[id].type =  newDeadline.type;
-		if (newDeadline.endDatePFV) this.allDeadlines[id].endDatePFV =  newDeadline.endDatePFV;
-		if (newDeadline.startDatePFV) this.allDeadlines[id].startDatePFV =  newDeadline.startDatePFV;
+		if ( deadline.nameID) this.allDeadlines[id].nameID = deadline.nameID;
+		if ( deadline.fullPathPFV) this.allDeadlines[id].fullPathPFV = deadline.fullPathPFV;
+		if ( deadline.phasePFV) this.allDeadlines[id].phasePFV = deadline.phasePFV;
+		if ( deadline.name) this.allDeadlines[id].name = deadline.name;
+		if ( deadline.type) this.allDeadlines[id].type = deadline.type;
+		if ( deadline.endDatePFV) this.allDeadlines[id].endDatePFV = deadline.endDatePFV;
+		if ( deadline.startDatePFV) this.allDeadlines[id].startDatePFV = deadline.startDatePFV;
 	};
-	this.updateDeadline = function(id, updateDeadline, insertAll) {
-		if (updateDeadline == undefined) return;
+	this.updateDeadline = function(id, deadline, insertAll) {
+		if (deadline == undefined) return;
 		if (id == undefined) return;
 		if (this.allDeadlines[id] == undefined) {
 			if (insertAll) {
@@ -426,14 +434,17 @@ function VisboDeadlines() {
 				return;
 			}
 		}
-		if (!this.allDeadlines[id].nameID) this.allDeadlines[id].nameID =  updateDeadline.nameID;
-		if (updateDeadline.fullPathVPV) this.allDeadlines[id].fullPathVPV	= updateDeadline.fullPathVPV;
-		if (updateDeadline.name) this.allDeadlines[id].name =  updateDeadline.name;
-		if (updateDeadline.type) this.allDeadlines[id].type =  updateDeadline.type;
-		if (updateDeadline.phaseVPV) this.allDeadlines[id].phaseVPV =  updateDeadline.phaseVPV;
-		if (updateDeadline.endDateVPV) this.allDeadlines[id].endDateVPV =  updateDeadline.endDateVPV;
-		if (updateDeadline.startDateVPV) this.allDeadlines[id].startDateVPV =  updateDeadline.startDateVPV;
-		if (updateDeadline.percentDone) this.allDeadlines[id].percentDone =  updateDeadline.percentDone;
+		if (!this.allDeadlines[id].nameID) this.allDeadlines[id].nameID = deadline.nameID;
+		if ( deadline.fullPathVPV) this.allDeadlines[id].fullPathVPV	= deadline.fullPathVPV;
+		if ( deadline.name) this.allDeadlines[id].name = deadline.name;
+		if ( deadline.type) this.allDeadlines[id].type = deadline.type;
+		if ( deadline.phaseVPV) this.allDeadlines[id].phaseVPV = deadline.phaseVPV;
+		if ( deadline.endDateVPV) this.allDeadlines[id].endDateVPV = deadline.endDateVPV;
+		if ( deadline.startDateVPV) this.allDeadlines[id].startDateVPV = deadline.startDateVPV;
+		if ( deadline.percentDone) this.allDeadlines[id].percentDone = deadline.percentDone;
+		if ( deadline.trafficlight >= 0) this.allDeadlines[id].trafficlight = deadline.trafficlight;
+		if ( deadline.trafficlightDesc) this.allDeadlines[id].trafficlightDesc = deadline.trafficlightDesc;
+		if ( deadline.responsible) this.allDeadlines[id].responsible = deadline.responsible;
 	};
 	this.getDeadline = function(id) {
 		var result = this.allDeadlines[id] || {};
@@ -673,7 +684,13 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 					if (addAll) {
 						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, fullPathPFV: nameBC, type: 'Milestone', name: name, phasePFV: phaseName, endDatePFV: endDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, fullPathVPV: nameBC, type: 'Milestone', name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0}, insertAll);
+						allDeadlines.updateDeadline(currentNodeID,
+							{
+								nameID: currentNodeID, fullPathVPV: nameBC, type: 'Milestone',
+								name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0
+							},
+							insertAll
+						);
 					}
 				}
 			} else {
@@ -685,7 +702,15 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 					if (addAll) {
 						allDeadlines.addDeadline(currentNodeID, {nameID: currentNodeID, fullPathPFV: nameBC, type: 'Phase', name: name, phasePFV: name, endDatePFV: endDate, startDatePFV: startDate});
 					} else {
-						allDeadlines.updateDeadline(currentNodeID, {nameID: currentNodeID, fullPathVPV: nameBC, type: 'Phase', name: name, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0}, insertAll);
+						allDeadlines.updateDeadline(currentNodeID,
+							{
+								nameID: currentNodeID, fullPathVPV: nameBC, type: 'Phase',
+								name: name, endDateVPV: endDate, startDateVPV: startDate, percentDone: (phase && phase.percentDone) || 0,
+								trafficlight: (phase && phase.ampelStatus) , trafficlightDesc: (phase && phase.ampelErlaeuterung),
+								responsible: (phase && phase.responsible)
+							},
+							insertAll
+						);
 					}
 				}
 			}

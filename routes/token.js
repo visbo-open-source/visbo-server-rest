@@ -200,20 +200,19 @@ router.route('/user/login')
 				});
 			} else {
 				// Login Successful
-				var currenDate = new Date();
 				var message = 'Successfully logged in.';
 				if (!auth.isAllowedPassword(req.body.password)) {
 					logger4js.info('Login Password: current password does not match password rules');
 					if (!user.status) user.status = {};
 					if (!user.status.expiresAt) {
-						user.status.expiresAt = currenDate;
-						user.status.expiresAt.setDate(currenDate.getDate() + 1); // allow 1 day to change
+						user.status.expiresAt = currentDate;
+						user.status.expiresAt.setDate(currentDate.getDate() + 1); // allow 1 day to change
 					}
 					// show expiration in Hours / Minutes
-					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/3600);
-					var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currenDate.getTime())/1000/60%60)).substr(-2, 2);
+					var expiresHour = Math.trunc((user.status.expiresAt.getTime() - currentDate.getTime())/1000/3600);
+					var expiresMin = '00'.concat(Math.trunc((user.status.expiresAt.getTime() - currentDate.getTime())/1000/60%60)).substr(-2, 2);
 					message = message.concat(` YOUR password expires in ${expiresHour}:${expiresMin} h`);
-					if (currenDate.getTime() > user.status.expiresAt.getTime()) {
+					if (currentDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info('Login Password expired at: %s', user.status.expiresAt.toISOString());
 						sendMail.passwordExpired(req, res, user);
 						return res.status(401).send({
@@ -256,6 +255,7 @@ router.route('/user/login')
 
 						if (!user.status) user.status = {};
 						if (!user.status.loginRetries) user.status.loginRetries = 0;
+						var lastLoginAt = user.status.lastLoginAt || currentDate;
 						user.status.lastLoginAt = currentDate;
 						user.status.loginRetries = 0;
 						user.status.lockedUntil = undefined;
@@ -300,6 +300,7 @@ router.route('/user/login')
 								});
 							}
 							user.password = undefined;
+							user.status.lastLoginAt = lastLoginAt;
 							return res.status(200).send({
 								state: 'success',
 								message: message,
