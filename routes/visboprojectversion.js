@@ -36,6 +36,24 @@ router.param('vpvid', verifyVpv.getVPV);
 // register the get VPF middleware for trdz calls for a specific VPV, like /calc, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 
+
+// check if keyMetrics from Client is valid
+function checkValidKeyMetrics(km) {
+	var countKM = 0;
+	if (km) {
+		if (km.costCurrentTotal > 0 && km.costBaseLastTotal > 0) {
+			countKM += 1;
+		}
+		if (km.timeCompletionCurrentTotal > 0 && km.timeCompletionBaseLastTotal > 0) {
+			countKM += 1;
+		}
+		if (km.deliverableCompletionCurrentTotal > 0 && km.deliverableCompletionBaseLastTotal > 0) {
+			countKM += 1;
+		}
+	}
+	return countKM > 0;
+}
+
 // updates the VPV Count in the VP after create/delete/undelete VISBO Project
 var updateVPVCount = function(vpid, variantName, increment){
 	var updateQuery = {_id: vpid};
@@ -552,16 +570,10 @@ router.route('/')
 				newVPV.complexity = req.body.complexity;
 				newVPV.description = req.body.description;
 				newVPV.businessUnit = req.body.businessUnit;
-				// MS TODO: Remove use of keyMetrics from body after keyMetrics calc works
-				newVPV.keyMetrics = req.body.keyMetrics;
-				if (newVPV.variantName == 'pfv') {
-					newVPV.keyMetrics = undefined;
-					req.visboPFV = newVPV;	// use current version as PFV
-				}
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 				if (!obj || Object.keys(obj).length < 1) {
 					// no valid key Metrics delivered
-					if (req.body.keyMetrics && newVPV.variantName != 'pfv') {
+					if (req.body.keyMetrics && newVPV.variantName != 'pfv' && checkValidKeyMetrics(req.body.keyMetrics)) {
 						newVPV.keyMetrics = req.body.keyMetrics;
 					}
 				} else {
