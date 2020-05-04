@@ -327,7 +327,8 @@ function getVCOrganisation(vcid, req, res, next) {
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
 	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
-	queryVCSetting.select('-value.allRoles.kapazitaet');
+	// ur: 29.04.20: temporät hinzugenommen wegen KApazität für Auslastungscharts
+	// queryVCSetting.select('-value.allRoles.kapazitaet');
 	queryVCSetting.sort('type name userId -timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
