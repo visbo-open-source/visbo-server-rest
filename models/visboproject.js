@@ -4,7 +4,12 @@ var Schema = mongoose.Schema;
 var restrictSchema = new Schema({
 	name: { type: String, maxlength: 256, required: true },
 	groupid: { type: Schema.Types.ObjectId, ref: 'VisboGroup', required: true },
-	element: { type: String, reuqired: true },
+	user: {
+		userId: {type: Schema.Types.ObjectId, ref: 'User'},
+		email: {type: String, required: false}
+	},
+	elementPath: [{ type: String, reuqired: true }],
+	inclChildren: {type: Boolean, required: false},
 	validUntil: { type: Date, reuqired: false },
 	createdAt: { type: Date, reuqired: true }
 });

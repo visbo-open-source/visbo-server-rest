@@ -18,9 +18,7 @@ var VisboPermission = Const.VisboPermission;
 
 // Calculate the oneVP if a vpid is specified
 function getOneVP(req, res, next) {
-	var userId = req.decoded._id;
 	var baseUrl = req.url.split('?')[0];
-	var startCalc = new Date();
 
 	// get the VP that is specified in the URL
 	logger4js.debug('Generate oneVP for user %s for url %s', req.decoded.email, req.url);
@@ -210,7 +208,7 @@ function getVPV(req, res, next, vpvid) {
 					message: 'No valid Project Version or no Permission'
 				});
 			}
-			if ((req.listVPPerm.getPerm(oneVPV.vpid).vp & constPermVP.View) == 0 && oneVPV.variantName != "") {
+			if ((req.listVPPerm.getPerm(oneVPV.vpid).vp & constPermVP.View) == 0 && oneVPV.variantName != '') {
 				// View Restricted but variantName not ""
 				return res.status(403).send({
 					state: 'failure',

@@ -19,6 +19,19 @@ var validateName = function(name, allowEmpty) {
 	return true;
 };
 
+var validatePath = function(path, allowEmpty) {
+	if (!allowEmpty && !path && !(path.length > 0)) {
+		logger4js.trace('Check Path: Path is empty!', path);
+		return false;
+	}
+	for (var i = 0; i < path.length; i++) {
+		if (!validateName(path[i], allowEmpty)) {
+			return false;
+		}
+	}
+	return true;
+};
+
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty) {
 	if (!allowEmpty && !dateString) {
@@ -89,10 +102,11 @@ var evaluateLanguage = function(req) {
 	if (!lang) { lang = 'en'; }
 	logger4js.trace('evaluate Language: %s', lang);
 	return lang;
-}
+};
 
 module.exports = {
 	validateName: validateName,
+	validatePath: validatePath,
 	validateObjectId: validateObjectId,
 	validateEmail: validateEmail,
 	validateDate: validateDate,

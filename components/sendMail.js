@@ -11,7 +11,7 @@ var useragent = require('useragent');
 var validate = require('./../components/validate');
 
 var mail = require('./../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 
 
