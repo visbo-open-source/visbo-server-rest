@@ -1144,6 +1144,7 @@ router.route('/:vpvid')
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
 					name: req.oneVPV.name,
+					roleID: roleID,
 					costCapa: costCapa
 				} ],
 				perm: perm
