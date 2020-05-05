@@ -1111,6 +1111,7 @@ router.route('/:vpvid')
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+			var roleID = req.query.roleID;
 
 			req.auditDescription = 'Project Version Calc (Read)';
 			req.auditSysAdmin = sysAdmin;
@@ -1123,21 +1124,30 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			}
-
-			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
+			if (roleID == undefined ) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No RoleID given to Calculate Capacities',
+					perm: perm
+				});
+			}
+			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
+		
+			var costCapa = visboBusiness.calcCapacities(req.oneVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
+				count: costCapa.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
 					timestamp: req.oneVPV.timestamp,
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
-					name: req.oneVPV.name
+					name: req.oneVPV.name,
+					costCapa: costCapa
 				} ],
 				perm: perm
 			});
-
 		});
 
 	router.route('/:vpvid/keyMetrics')
@@ -1196,7 +1206,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var keyMetricsVPV = visboBusiness.calcKeyMetrics([req.oneVPV], req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
