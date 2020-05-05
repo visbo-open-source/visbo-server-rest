@@ -868,10 +868,11 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-<<<<<<< HEAD
 
 function getRessourcenBedarfe(roleID, vpv, subRoles, euro, organisation) {
 	var costValues = [];
+
+	
 	var internCapaValues = [];
 	var externCapaValues = [];
 
@@ -1241,11 +1242,8 @@ function getTeamOfSummaryRole(allTeams, allRoles){
 }
 
 
-
-var cleanupRestrictedVersion = function(vpv, restriction) {
-=======
 function cleanupRestrictedVersion(vpv) {
->>>>>>> development
+
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
