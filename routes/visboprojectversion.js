@@ -1133,7 +1133,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 		
-			var costCapa = visboBusiness.calcCapacities(req.oneVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var costCapa = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',

@@ -869,29 +869,42 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpv, roleID, organisation) {
+function calcCapacities(vpvs, roleID, organisation) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
 
 	var startCalc = new Date();
-	if ( vpv && organisation && roleID) {
+	if ( vpvs && organisation && roleID) {
 
-		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s ', roleID, vpv.startDate, vpv.startDate.toISOString());
-		var currentDate = new Date(vpv.startDate);
-		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s currentDate %s', roleID, vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
+		// get startIndex and endIndex and dauer of several vpv
+		var dateMinValue = -8640000000000000;
+		var dateMaxValue = 8640000000000000;
+		var startIndex = Infinity;
+		var endIndex = 0;
+		var startDate = new Date(dateMaxValue);
+		var endDate = new Date(dateMinValue);
+		var dauer =0;
+		
+		for (vpv in vpvs) {
+			startIndex = Math.min(startIndex, getColumnOfDate(vpv.startDate));
+			startDate = Math.min(startDate, vpv.startDate)
+			endIndex = Math.max(endIndex, getColumnOfDate(vpv.endDate));
+			endDate = Math.max(endDate, vpv.endDate)
+			dauer = endIndex - startIndex + 1;
+		}
+		
+		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s ', roleID, startDate, startDate.toISOString());
+		var currentDate = new Date(startDate);
+		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s currentDate %s', roleID, startDate, startDate.toISOString(), currentDate.toISOString());
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
-		var startIndex = getColumnOfDate(vpv.startDate);
-		var endIndex = getColumnOfDate(vpv.endDate);
-		var dauer = endIndex - startIndex + 1;
 
-		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
-			return monthlyNeeds;
-		}
-		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
-		var hrchy = convertHierarchy(vpv);
+
+		// if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
+		// 	return monthlyNeeds;
+		// }
 
 		// prepare organisation for direct access to uid
 		var allRoles = [];
@@ -908,28 +921,41 @@ function calcCapacities(vpv, roleID, organisation) {
 			return allCalcCapaValuesIndexed;
 		} 
 
+		
+
 		// roles, which are concerned/connected with roleID in the given organisation
 		var concerningRoles = getConcerningRoles(allRoles, roleID);
 
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
+
+/* 
 		
+		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
+		var hrchy = convertHierarchy(vpv);
+ */
 
-		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
-		var costValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		for (vpv in vpvs) {
 
+			var vpvStartIndex = getColumnOfDate(vpv.startDate);
+			var vpvEndIndex = getColumnOfDate(vpv.endDate);
+			var vpvDauer = vpvEndIndex - vpvStartIndex + 1;
 
-		for (var i = 0 ; i < dauer; i++){
-			const currentDateISO = currentDate.toISOString();
-			allCalcCapaValues[currentDateISO] = { 	'actualCost_PT': costValues[i].actCost_PT ,
-													'currentCost_PT': costValues[i].currentCost_PT ,
-													'internCapa_PT': capaValues[i].internCapa_PT ,
-													'externCapa_PT': capaValues[i].externCapa_PT ,
-													'actualCost': costValues[i].actCost ,
-													'currentCost': costValues[i].currentCost ,
-													'internCapa': capaValues[i].internCapa ,
-													'externCapa': capaValues[i].externCapa 
-												};
-			currentDate.setMonth(currentDate.getMonth() + 1);
+			logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
+			var costValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		
+			for (var i = 0 ; i < dauer; i++){
+				const currentDateISO = currentDate.toISOString();
+				allCalcCapaValues[currentDateISO] = { 	'actualCost_PT': costValues[i + vpvStartIndex].actCost_PT ,
+														'currentCost_PT': costValues[i + vpvStartIndex].currentCost_PT ,
+														'internCapa_PT': capaValues[i].internCapa_PT ,
+														'externCapa_PT': capaValues[i].externCapa_PT ,
+														'actualCost': costValues[i+ vpvStartIndex].actCost ,
+														'currentCost': costValues[i + vpvStartIndex].currentCost ,
+														'internCapa': capaValues[i].internCapa ,
+														'externCapa': capaValues[i].externCapa 
+													};
+				currentDate.setMonth(currentDate.getMonth() + 1);
+			}
 		}
 	}
 	
@@ -987,9 +1013,9 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
 			return costValues;
 		}
+
 		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
-
 
 
 		// build role/cost - lists with teams
