@@ -29,7 +29,7 @@ var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
 
 var mail = require('./../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 
@@ -358,6 +358,13 @@ router.route('/')
 			logger4js.trace('Found Projects\n%O', listVP);
 			logger4js.debug('Found %d Projects', listVP.length);
 			// MS TODO: do we need to cleanup /restrict the results if the user has only restricted permission?
+			for (var i = 0; i < listVP.length; i++) {
+				var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : listVP[i]._id);
+				if ((perm.vp & constPermVP.View) == 0) {		//reduced View permission
+					listVP[i].variant = [];
+					listVP[i].lock = [];
+				}
+			}
 			req.auditInfo = listVP.length;
 			return res.status(200).send({
 				state: 'success',
@@ -2082,7 +2089,7 @@ router.route('/:vpid/variant/:vid')
 
 		logger4js.info('DELETE Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
 
-		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString())
+		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString());
 		if (variantIndex < 0) {
 			return res.status(409).send({
 				state: 'failure',
@@ -2344,7 +2351,7 @@ router.route('/:vpid/portfolio')
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
 		var variantIndex = 0;
 		if (variantName) {
-			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
 		}
 		if (variantIndex < 0) {
 			return res.status(409).send({
@@ -2572,7 +2579,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var variantName = oneVPF.variantName;
 			if (variantName != '') {
 				// check that the Variant exists
-				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName)
+				variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
 				if (variantIndex < 0) {
 					logger4js.warn('VP PortfolioList Delete Variant does not exist %s %s', req.params.vpvid, variantName);
 					// Allow Deleting of a version where Variant does not exists for Admins
@@ -2658,12 +2665,13 @@ router.route('/:vpid/portfolio/:vpfid')
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
 			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
-			var groupType = 'VP';
 
 			var restrictName = (req.body.name || '').trim();
-			var groupId = req.body.group;
-			var element = (req.body.element || '').trim();
+			var groupid = req.body.groupid;
+			var elementPath = req.body.elementPath;
+			var inclChildren = req.body.inclChildren == true;
 
 			req.auditDescription = 'Project Restriction (Create)';
 
@@ -2678,16 +2686,16 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			}
 			if (!validateName(restrictName, false)
-			|| !validate.validateObjectId(groupId, false)
-			|| !validateName(element, false)) {
+			|| !validate.validateObjectId(groupid, false)
+			|| !validate.validatePath(elementPath, false)) {
 				logger4js.info('POST Project Restrict bad format %O', req.body);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid Restrict Definition'
 				});
 			}
-			if (req.listVPGroup.findIndex(item => item._id.toString() === groupId.toString() && item.groupType == 'VP') < 0) {
-				logger4js.info('POST Project Restrict unknown VP Group ID', groupId);
+			if (req.listVPGroup.findIndex(item => item._id.toString() === groupid.toString() && item.groupType == 'VP') < 0) {
+				logger4js.info('POST Project Restrict unknown VP Group ID', groupid);
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No permission for Group'
@@ -2699,13 +2707,16 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			logger4js.trace('Restrict %s current list %O', restrictName, restrictList);
 			var restrictDuplicate = false;
-			restrictDuplicate = restrictList.find(item => item.name == restrictName &&  item.group == groupId && item.element == element) >= 0;
+			restrictDuplicate = restrictList.find(item => item.name == restrictName &&  item.groupid == groupid && item.elementPath.join('/') == elementPath.join('/')) >= 0;
 			logger4js.debug('Restrict Duplicate %s Restrict Name %s', restrictDuplicate, restrictName);
 			var newRestrict = new Restrict();
 			// fill in the required fields
+			newRestrict.user.userId = userId;
+			newRestrict.user.email = useremail;
 			newRestrict.name = restrictName;
-			newRestrict.groupid = groupId;
-			newRestrict.element = element;
+			newRestrict.groupid = groupid;
+			newRestrict.elementPath = elementPath;
+			newRestrict.inclChildren = inclChildren;
 			newRestrict.createdAt = new Date();
 			logger4js.debug('Post Restrict to VP %s now: %O', req.params.vpid, newRestrict);
 			restrictList.push(newRestrict);
@@ -2761,7 +2772,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			logger4js.info('DELETE Project Restriction for userid %s email %s and vp %s restrict :%s:', userId, useremail, req.params.vpid, req.params.rid);
 
-			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString())
+			var restrictIndex = req.oneVP.restrict.findIndex(restrict => restrict._id.toString() === restrictId.toString());
 			if (restrictIndex < 0) {
 				return res.status(409).send({
 					state: 'failure',

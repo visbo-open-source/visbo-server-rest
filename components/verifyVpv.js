@@ -18,9 +18,7 @@ var VisboPermission = Const.VisboPermission;
 
 // Calculate the oneVP if a vpid is specified
 function getOneVP(req, res, next) {
-	var userId = req.decoded._id;
 	var baseUrl = req.url.split('?')[0];
-	var startCalc = new Date();
 
 	// get the VP that is specified in the URL
 	logger4js.debug('Generate oneVP for user %s for url %s', req.decoded.email, req.url);
@@ -210,7 +208,7 @@ function getVPV(req, res, next, vpvid) {
 					message: 'No valid Project Version or no Permission'
 				});
 			}
-			if ((req.listVPPerm.getPerm(oneVPV.vpid).vp & constPermVP.View) == 0 && oneVPV.variantName != "") {
+			if ((req.listVPPerm.getPerm(oneVPV.vpid).vp & constPermVP.View) == 0 && oneVPV.variantName != '') {
 				// View Restricted but variantName not ""
 				return res.status(403).send({
 					state: 'failure',
@@ -222,7 +220,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'calc') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -327,7 +325,8 @@ function getVCOrganisation(vcid, req, res, next) {
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
 	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
-	queryVCSetting.select('-value.allRoles.kapazitaet');
+	// ur: 29.04.20: temporät hinzugenommen wegen KApazität für Auslastungscharts
+	// queryVCSetting.select('-value.allRoles.kapazitaet');
 	queryVCSetting.sort('type name userId -timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {

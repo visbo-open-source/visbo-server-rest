@@ -11,7 +11,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var mail = require('../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 var useragent = require('useragent');
 var validate = require('./../components/validate');

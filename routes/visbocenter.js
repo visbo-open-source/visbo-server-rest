@@ -31,7 +31,7 @@ var constPermVC = Const.constPermVC;
 var constPermSystem = Const.constPermSystem;
 
 var mail = require('../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 
@@ -1099,7 +1099,7 @@ router.route('/:vcid/group')
 					// set global group setting, handle vpids
 					logger4js.debug('Set Global Flag %s', vgGlobal);
 					vcGroup.vpids = [];
-					listVP.forEach(function(item) { vcGroup.vpids.push(item._id) });
+					listVP.forEach(function(item) { vcGroup.vpids.push(item._id); });
 					logger4js.debug('Updated Projects/n', vcGroup.vpids);
 				} else {
 						vcGroup.permission.vp = undefined;

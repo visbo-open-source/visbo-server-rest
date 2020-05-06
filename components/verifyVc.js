@@ -155,7 +155,7 @@ function getSystemGroups(req, res, next) {
 			});
 		}
 		var listVCPerm = new VisboPermission();
-		listVG.forEach(function(item) { listVCPerm.addPerm(0, item.permission); })
+		listVG.forEach(function(item) { listVCPerm.addPerm(0, item.permission); });
 		req.listVCPerm = listVCPerm;
 		return next();
 	});
