@@ -1239,6 +1239,16 @@ function getConcerningRoles(allRoles, roleID) {
 
 
 	}
+
+	// eliminate duplicates of the pair roleID|teamID
+	var concerningRolesIndexed = [];
+	
+	for (var dup = 0; dup < concerningRoles.length; dup++) {
+		var crElement = concerningRoles[dup];
+		var key = crElement.actRole.uid + '|' + crElement.teamID;		
+		concerningRolesIndexed[key] = crElement;
+	}
+
 	return concerningRoles;
 }
 
