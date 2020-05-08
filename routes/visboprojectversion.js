@@ -1105,7 +1105,7 @@ router.route('/:vpvid')
 	 	*   }]
 	 	* }
 		*/
-	// Get keyMetrics calculation for a specific Project Version
+	// Get Capacity calculation for a specific Project Version
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
@@ -1113,7 +1113,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 			var roleID = req.query.roleID;
 
-			req.auditDescription = 'Project Version Calc (Read)';
+			req.auditDescription = 'Project Version CalcCapacity (Read)';
 			req.auditSysAdmin = sysAdmin;
 			req.auditTTLMode = 1;
 

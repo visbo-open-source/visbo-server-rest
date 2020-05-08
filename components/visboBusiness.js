@@ -950,11 +950,11 @@ function calcCapacities(vpvs, roleID, organisation) {
 				var relativStart = startIndex - vpvStartIndex;
 				allCalcCapaValues[currentDateISO] = { 
 					'actualCost_PT': costValues[i + relativStart].actCost_PT || 0,
-					'currentCost_PT': costValues[i + relativStart].currentCost_PT || 0 ,
+					'plannedCost_PT': costValues[i + relativStart].plannedCost_PT || 0 ,
 					'internCapa_PT': capaValues[i].internCapa_PT ,
 					'externCapa_PT': capaValues[i].externCapa_PT ,
 					'actualCost': costValues[i+ relativStart].actCost  || 0,
-					'currentCost': costValues[i + relativStart].currentCost  || 0,
+					'plannedCost': costValues[i + relativStart].plannedCost  || 0,
 					'internCapa': capaValues[i].internCapa  || 0,
 					'externCapa': capaValues[i].externCapa  || 0
 				};
@@ -967,14 +967,14 @@ function calcCapacities(vpvs, roleID, organisation) {
 	for (element in allCalcCapaValues) {
 		allCalcCapaValuesIndexed[j] = {
 			'currentDate': element,
-			'roleID' : roleID,
-			'roleName' : allRoles[roleID].name,
+			// 'roleID' : roleID,
+			// 'roleName' : allRoles[roleID].name,
 			'actualCost_PT': allCalcCapaValues[element].actualCost_PT || 0,
-			'currentCost_PT': allCalcCapaValues[element].currentCost_PT || 0,
+			'plannedCost_PT': allCalcCapaValues[element].plannedCost_PT || 0,
 			'internCapa_PT': allCalcCapaValues[element].internCapa_PT || 0,
 			'externCapa_PT' : allCalcCapaValues[element].externCapa_PT || 0,			
 			'actualCost': allCalcCapaValues[element].aktualCost || 0,
-			'currentCost': allCalcCapaValues[element].currentCost || 0,
+			'plannedCost': allCalcCapaValues[element].plannedCost || 0,
 			'internCapa': allCalcCapaValues[element].internCapa || 0,
 			'externCapa' :allCalcCapaValues[element].externCapa || 0
 		};
@@ -1009,8 +1009,8 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 			costElem = {};
 			costElem.actCost_PT = 0;
 			costElem.actCost = 0;
-			costElem.currentCost_PT = 0;
-			costElem.currentCost = 0;
+			costElem.plannedCost_PT = 0;
+			costElem.plannedCost = 0;
 			costValues[i] = costElem;
 		}
 		
@@ -1088,8 +1088,8 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 										costValues[l].actCost = (costValues[l].actCost || 0) + role.Bedarf[l - phasenStart] * tagessatz  / 1000;								
 										costValues[l].actCost_PT = (costValues[l].actCost_PT || 0) + role.Bedarf[l - phasenStart] ;			
 									} else {
-										costValues[l].currentCost = (costValues[l].currentCost || 0) + role.Bedarf[l - phasenStart] * tagessatz  / 1000;								
-										costValues[l].currentCost_PT = (costValues[l].currentCost_PT || 0) + role.Bedarf[l - phasenStart] ;		
+										costValues[l].plannedCost = (costValues[l].plannedCost || 0) + role.Bedarf[l - phasenStart] * tagessatz  / 1000;								
+										costValues[l].plannedCost_PT = (costValues[l].plannedCost_PT || 0) + role.Bedarf[l - phasenStart] ;		
 									}					
 								}
 							}
