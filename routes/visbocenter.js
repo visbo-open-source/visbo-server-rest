@@ -10,6 +10,8 @@ var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
+var verifyVp = require('./../components/verifyVp');
+var verifyVpv = require('./../components/verifyVpv');
 var systemVC = require('./../components/systemVC');
 var getSystemVC = systemVC.getSystemVC;
 var getSystemUrl = systemVC.getSystemUrl;
@@ -50,6 +52,10 @@ router.param('vcid', verifyVc.getVC);
 router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
+// get details for capacity calculation
+router.use('/:vcid/capacity', verifyVp.getAllGroups);
+router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
 
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
@@ -129,8 +135,8 @@ router.route('/')
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
 	* @apiError {number} 401 user not authenticated, the <code>token</code> is no longer valid
 	* @apiExample Example usage:
-	* url: http://localhost:3484/vc
-	* url: http://localhost:3484/vc?systemvc=true&deleted=true
+	* url: https://my.visbo.net/api/vc
+	* url: https://my.visbo.net/api/vc?systemvc=true&deleted=true
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -217,7 +223,7 @@ router.route('/')
 	 * @apiError {number} 403 No Permission to Create VISBO Center
 	 * @apiError {number} 409 VISBO Center with same name exists already
 	 * @apiExample Example usage:
-	 * url: http://localhost:3484/vc
+	 * url: https://my.visbo.net/api/vc
 	 * {
 	 *  'name':'My first VISBO Center',
 	 *  'description': 'VISBO Center Description'
@@ -335,7 +341,7 @@ router.route('/:vcid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View VISBO Center
  	* @apiExample Example usage:
- 	* url: http://localhost:3484/vc/vc5aada025
+ 	* url: https://my.visbo.net/api/vc/vc5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -401,13 +407,13 @@ router.route('/:vcid')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 no Data provided in Body for updating the Visbp Center
+	* @apiError {number} 400 no Data provided in Body for updating the VISBO Center
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify VISBO Center
 	* @apiError {number} 409 VISBO Center with same name exists already or VISBO Center was updatd in between
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
-	* url: http://localhost:3484/vc/vc5aada025
+	* url: https://my.visbo.net/api/vc/vc5aada025
 	* {
 	*  'name':'My first VISBO Center Renamed',
 	*  'description': 'Changed Description'
@@ -530,7 +536,7 @@ router.route('/:vcid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify VISBO Center or VISBO Center does not exists
 	* @apiExample Example usage:
-	* url: http://localhost:3484/vc/vc5aada025
+	* url: https://my.visbo.net/api/vc/vc5aada025
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -721,7 +727,7 @@ router.route('/:vcid/audit')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View VISBO Center Audit or VISBO Center does not exists
  	* @apiExample Example usage:
- 	* url: http://localhost:3484/vc/vc5aada025/audit
+ 	* url: https://my.visbo.net/api/vc/vc5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -869,8 +875,8 @@ router.route('/:vcid/group')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vc/:vcid/group
-	*   url: http://localhost:3484/vc/:vcid/group?userlist=true
+	*   url: https://my.visbo.net/api/vc/:vcid/group
+	*   url: https://my.visbo.net/api/vc/:vcid/group?userlist=true
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -992,7 +998,7 @@ router.route('/:vcid/group')
 	* @apiError {number} 403 No Permission to Create a VISBO Center Group
 	* @apiError {number} 409 VISBO Center Group with same name exists already
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vc/:vcid/groups
+	*   url: https://my.visbo.net/api/vc/:vcid/groups
 	*  {
 	*     'name':'Group Name',
 	*     'global': true,
@@ -1145,7 +1151,7 @@ router.route('/:vcid/group/:groupid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete a VISBO Center Group
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vc/:vcid/group/:groupid
+	*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -1211,7 +1217,7 @@ router.route('/:vcid/group/:groupid')
 	* @apiError {number} 403 No Permission to Create a VISBO Center Group
 	* @apiError {number} 409 VISBO Center Group with same name exists already
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vc/:vcid/group/:groupid
+	*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
 	*  {
   *    'name':'My first Group Renamed',
 	*    'global': true,
@@ -1389,7 +1395,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 403 No Permission to add a user to a VISBO Center Group
 		* @apiError {number} 409 user is already member of the VISBO Center Group
 		* @apiExample Example usage:
-		*  url: http://localhost:3484/vc/:vcid/group/:groupid/user
+		*  url: https://my.visbo.net/api/vc/:vcid/group/:groupid/user
 		*  {
 	  *    'email':'new.user@visbo.de',
 		*    'message': 'Invitation message'
@@ -1626,7 +1632,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 403 No Permission to Delete a user from VISBO Center Group
 		* @apiError {number} 409 user is not member of the VISBO Center Group
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/group/:groupid/user/:userid
+		*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid/user/:userid
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1700,6 +1706,126 @@ router.route('/:vcid/group/:groupid')
 		});
 	});
 
+	router.route('/:vcid/organisation')
+
+	/**
+		* @api {get} /vc/:vcid/organisation Get information about the organisation, the user can see
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName GetVISBOCenterOrganisation
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
+		*
+		* With additional query paramteters the amount of results can be restricted. Available Restirctions are: refDate, refNext, longList returns the organisation including Capacities
+		*
+		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
+		* @apiParam {Boolean} longList Deliver also information like Capacities
+		*
+		* @apiPermission Authenticated and Permission: View VISBO Center. For longList it requires also one of the following Permissions: ViewAudit, Modify, Change Permission
+		* Depending of custom roles the organisation could be filtered in addition to a specific branch inside the organisation.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/organisation
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Organisation',
+		*   'vcorganisation':[{
+		*     '_id':'vcsetting5c754feaa',
+		*     'vcid': 'vc5c754feaa',
+		*     'name': 'organisation',
+		*     'type': 'Type of Setting',
+		*     'timestamp': '2018-12-01',
+		*     'value': {'any name': 'any value'}
+		*   }]
+		* }
+		*/
+
+	// get VC Organisation
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var latestOnly = false; 	// as default show all settings
+			var longList = req.query.longList == true;
+
+			req.auditDescription = 'VISBO Center Organisation (Read)';
+			req.auditTTLMode = 1;
+
+			logger4js.info('Get VISBO Center Organisation for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+
+			var query = {};
+			if (req.query.refDate && Date.parse(req.query.refDate)){
+				var refDate = new Date(req.query.refDate);
+				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
+				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
+				latestOnly = true;
+			}
+			query.vcid = req.oneVC._id;
+			query.type = 'organisation';
+
+			logger4js.info('Find VC Organisation with query %O', query);
+			var queryVCSetting = VCSetting.find(query);
+			// queryVCSetting.select('_id vcid name');
+			if (req.query.refNext) {
+				queryVCSetting.sort('type name userId +timestamp');
+			} else {
+				queryVCSetting.sort('type name userId -timestamp');
+			}
+			if (!longList || (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.Modify + constPermVC.ViewAudit + constPermVC.ManagePerm)) == 0) {
+				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatzExtern	-value.allRoles.externeKapazitaet	');
+			}
+			queryVCSetting.lean();
+			queryVCSetting.exec(function (err, listVCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				for (let i = 0; i < listVCSetting.length; i++){
+					// Remove Password Information
+					if (listVCSetting[i].type == 'SysConfig' && listVCSetting[i].name == 'SMTP'
+					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
+						listVCSetting[i].value.auth.pass = '';
+						break;
+					}
+				}
+				if (listVCSetting.length > 1 && latestOnly){
+					var listVCSettingfiltered = [];
+					listVCSettingfiltered.push(listVCSetting[0]);
+					for (let i = 1; i < listVCSetting.length; i++){
+						//compare current item with previous and ignore if it is the same type, name, userId
+						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
+						if (listVCSetting[i].type != listVCSetting[i-1].type
+						|| listVCSetting[i].name != listVCSetting[i-1].name
+						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
+							listVCSettingfiltered.push(listVCSetting[i]);
+							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
+						}
+					}
+					logger4js.debug('Found %d Project Versions after Filtering', listVCSettingfiltered.length);
+
+					req.auditInfo = listVCSettingfiltered.length;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned VISBO Center Settings',
+						count: listVCSettingfiltered.length,
+						vcorganisation: listVCSettingfiltered
+					});
+				} else {
+					req.auditInfo = listVCSetting.length;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned VISBO Center Settings',
+						count: listVCSetting.length,
+						vcorganisation: listVCSetting
+					});
+				}
+			});
+		})
+
 	router.route('/:vcid/setting')
 
 	/**
@@ -1723,7 +1849,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/setting
+		*   url: https://my.visbo.net/api/vc/:vcid/setting
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1834,7 +1960,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a VISBO Center Setting
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/setting
+		*   url: https://my.visbo.net/api/vc/:vcid/setting
 		*  {
 	  *    'name':'My first Setting',
 		*    'type': 'Type of Setting',
@@ -1937,7 +2063,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 409 VISBO Center Setting does not exists
 		*
 	  * @apiExample Example usage:
-	  *   url: http://localhost:3484/vc/:vcid/setting/:settingid
+	  *   url: https://my.visbo.net/api/vc/:vcid/setting/:settingid
 	  * @apiSuccessExample {json} Success-Response:
 	  * HTTP/1.1 200 OK
 	  * {
@@ -2018,7 +2144,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiError {number} 409 VISBO Center Setting does not exists or was updated in between.
 		*
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vc/:vcid/setting/:settingid
+		*   url: https://my.visbo.net/api/vc/:vcid/setting/:settingid
 		*  {
 	  *    'name':'My first Setting Renamed',
 		*    'type': 'Type of Setting',
@@ -2196,5 +2322,64 @@ router.route('/:vcid/group/:groupid')
 			}
 		});
 	});
+
+	router.route('/:vcid/capacity')
+
+	/**
+		* @api {get} /vc/:vcid/capacity Get Capacity Calculation
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName GetVISBOCenterCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the capacity numbers for the specified VISBO Center
+		*
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and organisationID
+		*
+		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
+		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
+		* @apiParam {String} organisationID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		*
+		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for all the projects of the VC, Projects without View Permission will be excluded
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/capacity
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Settings',
+		*   'vc':[{
+		*     '_id':'vc5c754feaa',
+		*     'name':'VISBO Center Name',
+		*     'capacity': [{
+						'month': 2020-05-01T00:00:00.000Z,
+						....
+					}]
+		*   }]
+		* }
+		*/
+
+	// get VC Capacity
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var latestOnly = false; 	// as default show all settings
+			var isSysAdmin = req.query.sysadmin ? true : false;
+
+			req.auditDescription = 'VISBO Center Capacity (Read)';
+
+			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+
+			req.auditInfo = '';
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Center Settings',
+				// count: listVCSetting.length,
+				vc: req.oneVC
+			});
+		})
 
 module.exports = router;

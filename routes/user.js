@@ -49,7 +49,7 @@ router.route('/profile')
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/user/profile
+	*   url: https://my.visbo.net/api/user/profile
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -106,7 +106,7 @@ router.route('/profile')
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/user/profile
+	*   url: https://my.visbo.net/api/user/profile
 	*   body:
 	*   {
 	*     'profile': {
@@ -210,7 +210,7 @@ router.route('/passwordchange')
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*  url: http://localhost:3484/user/passwordchange
+	*  url: https://my.visbo.net/api/user/passwordchange
 	*  body:
 	*  {
 	*    'password': 'new password',
@@ -324,7 +324,7 @@ router.route('/logout')
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*  url: http://localhost:3484/user/logout
+	*  url: https://my.visbo.net/api/user/logout
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {

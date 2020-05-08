@@ -67,7 +67,7 @@ router.route('/user/login')
 	* @apiError {number} 400 User or password missing
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/token/user/login
+	*   url: https://my.visbo.net/api/token/user/login
 	*   body:
 	*   {
 	*     'email': 'example@example.com',
@@ -328,7 +328,7 @@ router.route('/user/pwforgotten')
 	* @apiError {number} 400 email missing
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*  url: http://localhost:3484/token/user/forgottenpw
+	*  url: https://my.visbo.net/api/token/user/forgottenpw
 	*  body: {
 	*   'email': 'example@example.com',
 	* }
@@ -482,7 +482,7 @@ router.route('/user/pwreset')
 	* @apiError {number} 409 user not found or user already changed
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
-	*  url: http://localhost:3484/token/user/pwreset
+	*  url: https://my.visbo.net/api/token/user/pwreset
 	*  body: {
 	*   'token': 'FhwMsAKhKABXNEXG4GTW_zXUKXcc56mhTYkj7ZyB9M0',
 	*   'password': 'newPassword'
@@ -574,7 +574,7 @@ router.route('/user/signup')
 	* If called with an e-mail, the system returns an error if a user with this e-mail already exists and is registered.
 	* The hash is optional and if delivered correct, the system does not ask for e-mail confirmation.
   * @apiExample Example usage:
-  *   url: http://localhost:3484/token/user/signup
+  *   url: https://my.visbo.net/api/token/user/signup
   *   body:
   *   {
   *     'email': 'example@example.com',
@@ -797,7 +797,7 @@ router.route('/user/signup')
 		* @apiError {number} 401 hash no longer valid for user
 		* @apiError {number} 500 Internal Server Error
 	  * @apiExample Example usage:
-	  *   url: http://localhost:3484/token/user/confirm
+	  *   url: https://my.visbo.net/api/token/user/confirm
 	  *   body:
 	  *   {
 	  *     '_id': 'userId5c754feaa',

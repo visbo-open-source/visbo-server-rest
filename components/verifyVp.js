@@ -18,6 +18,12 @@ var VisboPermission = Const.VisboPermission;
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var vcid = undefined;
+	if (req.oneVCID) {
+		vcid = req.oneVCID;
+	}
+	if (!vcid && req.oneVC) {
+		vcid = req.oneVC._id;
+	}
 	if (!vcid && req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
 	}

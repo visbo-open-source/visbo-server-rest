@@ -23,7 +23,7 @@ router.route('/')
 	* @apiGroup VISBO System
 	* @apiName GetReSTStatus
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/status
+	*   url: https://my.visbo.net/api/status
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -114,7 +114,7 @@ router.route('/pwpolicy')
 	* @apiGroup VISBO System
 	* @apiName GetPWPolicy
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/status/pwpolicy
+	*   url: https://my.visbo.net/api/status/pwpolicy
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
