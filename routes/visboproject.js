@@ -283,8 +283,8 @@ router.route('/')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=0
+	*   url: https://my.visbo.net/api/vp
+	*   url: https://my.visbo.net/api/vp?vcid=vc5aaf992&vpType=0
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -395,7 +395,7 @@ router.route('/')
 	* @apiError {number} 409 Project with same name exists already
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp
+	*   url: https://my.visbo.net/api/vp
 	* {
 	*  'name':'My first Project',
 	*  'description':'Project Description',
@@ -563,7 +563,7 @@ router.route('/:vpid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project
  	* @apiExample Example usage:
- 	*   url: http://localhost:3484/vp/5aada025
+ 	*   url: https://my.visbo.net/api/vp/5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -641,7 +641,7 @@ router.route('/:vpid')
 	* @apiError {number} 423 Project is locked by another user
 	* @apiError {number} 409 Project with same name exists already or Project was updatd in between
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5cf3da025
+	*   url: https://my.visbo.net/api/vp/vp5cf3da025
 	* {
 	*  'name':'My first Project Renamed',
 	*  'description': 'New Description for VP',
@@ -791,7 +791,7 @@ router.route('/:vpid')
 	* @apiError {number} 403 No Permission to Delete Project
 	* @apiError {number} 423 Project is locked by another user
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025
+	*   url: https://my.visbo.net/api/vp/vp5aada025
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -920,7 +920,7 @@ router.route('/:vpid/audit')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
- 	* url: http://localhost:3484/vp/vp5aada025/audit
+ 	* url: https://my.visbo.net/api/vp/vp5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -1049,8 +1049,8 @@ router.route('/:vpid/audit')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project, or Project does not exists
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group
-		*   url: http://localhost:3484/vp/:vpid/group?userlist=true
+		*   url: https://my.visbo.net/api/vp/:vpid/group
+		*   url: https://my.visbo.net/api/vp/:vpid/group?userlist=true
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1148,7 +1148,7 @@ router.route('/:vpid/audit')
 		* @apiError {number} 403 No Permission to Create a Project Group
 		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/groups
+		*   url: https://my.visbo.net/api/vp/:vpid/groups
 		*  {
 		*     'name':'Group Name',
 		*     'global': true,
@@ -1283,7 +1283,7 @@ router.route('/:vpid/audit')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Project Group
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1346,7 +1346,7 @@ router.route('/:vpid/audit')
 		* @apiError {number} 403 No Permission to Create a Project Group
 		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid
 		*  {
 	  *    'name':'My first Group Renamed',
 		*    'global': true,
@@ -1469,7 +1469,7 @@ router.route('/:vpid/audit')
 			* @apiError {number} 403 No Permission to Add a User to Project Group
 			* @apiError {number} 409 user is already member of the Project Group
 			* @apiExample Example usage:
-			*  url: http://localhost:3484/vp/:vpid/group/:groupid/user
+			*  url: https://my.visbo.net/api/vp/:vpid/group/:groupid/user
 			*  {
 		  *    'email':'new.user@visbo.de',
 			*    'message': 'Invitation message'
@@ -1697,7 +1697,7 @@ router.route('/:vpid/audit')
 			* @apiError {number} 409 user is not member of the Project Group
 			*
 			* @apiExample Example usage:
-			*   url: http://localhost:3484/vp/:vpid/group/:groupid/user/:userid
+			*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid/user/:userid
 			* @apiSuccessExample {json} Success-Response:
 			* HTTP/1.1 200 OK
 			* {
@@ -1775,7 +1775,7 @@ router.route('/:vpid/lock')
 	* @apiError {number} 409 Project already locked by another user.
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/lock
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
 	* {
 	*  'variantName': 'V1',
 	*  'expiresAt': '2018-04-26T12:04:12.094Z'
@@ -1895,8 +1895,8 @@ router.route('/:vpid/lock')
 	* @apiError {number} 409 No Lock exists for the specified Project and Variant.
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/lock
-	*   url: http://localhost:3484/vp/vp5aada025/lock?variantName=Variant1
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantName=Variant1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -1969,7 +1969,7 @@ router.route('/:vpid/variant')
 	*
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/variant
+	*   url: https://my.visbo.net/api/vp/vp5aada025/variant
 	* {
 	*  'variantName': 'some name',
 	* }
@@ -2068,7 +2068,7 @@ router.route('/:vpid/variant/:vid')
 	* @apiError {number} 423 Variant is locked by another user
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/variant/variant5aada
+	*   url: https://my.visbo.net/api/vp/vp5aada025/variant/variant5aada
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2170,8 +2170,8 @@ router.route('/:vpid/portfolio')
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2296,7 +2296,7 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 409 Variant does not exist
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/portfolio
+	*   url: https://my.visbo.net/api/vp/vp5aada025/portfolio
 	*  {
 	*    'variantName': 'name of the portfolio variant',
 	*    'allItems': [{
@@ -2459,7 +2459,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiError {number} 403 No Permission to View the Project
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio/vpf5aaf992
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2535,7 +2535,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiError {number} 423 Portfolio locked by another user
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/portfolio/vpf5aada
+	*   url: https://my.visbo.net/api/vp/vp5aada025/portfolio/vpf5aada
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2641,7 +2641,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a Project Restriction
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/restrict
+		*   url: https://my.visbo.net/api/vp/:vpid/restrict
 		*  {
 		*     'name': 'Restriction Name',
 		*     'group': 'vpgroup5c754feaa',
@@ -2753,7 +2753,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiError {number} 409 Restriction does not exists
 		*
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/vp5aada025/restrict/restrict5aada
+		*   url: https://my.visbo.net/api/vp/vp5aada025/restrict/restrict5aada
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

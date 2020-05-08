@@ -121,9 +121,9 @@ router.route('/')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv
-	*   url: http://localhost:3484/vpv?vcid=vc5c754feaa&refDate=2018-01-01
-	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
+	*   url: https://my.visbo.net/api/vpv
+	*   url: https://my.visbo.net/api/vpv?vcid=vc5c754feaa&refDate=2018-01-01
+	*   url: https://my.visbo.net/api/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -382,7 +382,7 @@ router.route('/')
 	* @apiError {number} 423 Project (Portfolio) is locked by another user
 	*
   * @apiExample Example usage:
-	*   url: http://localhost:3484/vpv
+	*   url: https://my.visbo.net/api/vpv
 	* {
 	*  'vpid': 'vp5c754feaa'
 	*  'allOthers': 'all properties of visbo project version'
@@ -616,7 +616,7 @@ router.route('/:vpvid')
 	* @apiError {number} 403 No Permission to View Project Version
 	*
  	* @apiExample Example usage:
- 	*   url: http://localhost:3484/vpv/vpv5aada025
+ 	*   url: https://my.visbo.net/api/vpv/vpv5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -705,7 +705,7 @@ router.route('/:vpvid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv/vpv5cf3da025?deleted=1
+	*   url: https://my.visbo.net/api/vpv/vpv5cf3da025?deleted=1
 	* {
 	* }
 	* @apiSuccessExample {json} Success-Response:
@@ -807,7 +807,7 @@ router.route('/:vpvid')
 	*
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv/vpv5c754feaa
+	*   url: https://my.visbo.net/api/vpv/vpv5c754feaa
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -920,7 +920,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to Create Project Version
 		*
 	  * @apiExample Example usage:
-		*   url: http://localhost:3484/vpv/vpv5c754feaa/copy
+		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z'
 		* }
@@ -1091,7 +1091,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/calc?type=
 	 	* @apiSuccessExample {json} Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1132,7 +1132,7 @@ router.route('/:vpvid')
 				});
 			}
 			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
-		
+
 			var costCapa = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
@@ -1168,7 +1168,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/keyMetrics
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/keyMetrics
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1242,7 +1242,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/cost
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/cost
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1315,7 +1315,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/delivery?ref=pfv
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/delivery?ref=pfv
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1390,7 +1390,7 @@ router.route('/:vpvid')
 	router.route('/:vpvid/deadline')
 
 	/**
-	 	* @api {get} /vpv/:vpvid/deadline Get Deliveries for specific Version
+	 	* @api {get} /vpv/:vpvid/deadline Get Deadlines for specific Version
 		* @apiVersion 1.0.0
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionDeadline
@@ -1406,8 +1406,8 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/deadline?ref=pfv
-	 	* @apiSuccessExample {json} Delivery-Response:
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/deadline?ref=pfv
+	 	* @apiSuccessExample {json} Deadline-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   'state':'success',
