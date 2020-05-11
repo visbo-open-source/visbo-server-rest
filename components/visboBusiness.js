@@ -888,11 +888,13 @@ function calcCapacities(vpvs, roleID, organisation) {
 
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
 			var vpv = vpvs[i];
-			startIndex = Math.min(startIndex, getColumnOfDate(vpv.startDate));
-			startDate = Math.min(startDate, vpv.startDate);
-			endIndex = Math.max(endIndex, getColumnOfDate(vpv.endDate));
-			endDate = Math.max(endDate, vpv.endDate);
-			dauer = endIndex - startIndex + 1;
+			if (vpv) {
+				startIndex = Math.min(startIndex, getColumnOfDate(vpv.startDate));
+				startDate = Math.min(startDate, vpv.startDate);
+				endIndex = Math.max(endIndex, getColumnOfDate(vpv.endDate));
+				endDate = Math.max(endDate, vpv.endDate);
+				dauer = endIndex - startIndex + 1;
+			}
 		}
 		
 		//logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s ', roleID, startDate, startDate.toISOString());
@@ -929,11 +931,22 @@ function calcCapacities(vpvs, roleID, organisation) {
 
 		logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
-
-/* 		
+		/* 		
 		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
- */
+		 */
+
+		var costValues = [];
+		var costElem = {};
+
+		for (var i=0 ; i < dauer; i++){
+			costElem = {};
+			costElem.actCost_PT = 0;
+			costElem.actCost = 0;
+			costElem.plannedCost_PT = 0;
+			costElem.plannedCost = 0;
+			costValues[i] = costElem;
+		}
 		
 		for ( i = 0; vpvs && i < vpvs.length; i++) {
 			vpv = vpvs[i];
@@ -943,30 +956,39 @@ function calcCapacities(vpvs, roleID, organisation) {
 			var vpvDauer = vpvEndIndex - vpvStartIndex + 1;
 
 			logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
-			var costValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
-		
-			for (i = 0 ; i < dauer; i++){
-				const currentDateISO = currentDate.toISOString();
-				var relativStart = startIndex - vpvStartIndex;
-				allCalcCapaValues[currentDateISO] = { 
-					'actualCost_PT': costValues[i + relativStart].actCost_PT || 0,
-					'plannedCost_PT': costValues[i + relativStart].plannedCost_PT || 0 ,
-					'internCapa_PT': capaValues[i].internCapa_PT ,
-					'externCapa_PT': capaValues[i].externCapa_PT ,
-					'actualCost': costValues[i+ relativStart].actCost  || 0,
-					'plannedCost': costValues[i + relativStart].plannedCost  || 0,
-					'internCapa': capaValues[i].internCapa  || 0,
-					'externCapa': capaValues[i].externCapa  || 0
-				};
-				currentDate.setMonth(currentDate.getMonth() + 1);
+			var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+			
+
+			var relativStart = vpvStartIndex - startIndex;
+			for (var ci=0 ; ci< vpvDauer; ci++) {				
+				costValues[ci + relativStart].actCost_PT += oneVPVcostValues[ci].actCost_PT || 0;
+				costValues[ci + relativStart].plannedCost_PT += oneVPVcostValues[ci].plannedCost_PT || 0;
+				costValues[ci + relativStart].actCost += oneVPVcostValues[ci].actCost || 0;
+				costValues[ci + relativStart].plannedCost += oneVPVcostValues[ci].plannedCost || 0;
 			}
+			
 		}
+}
+
+	for (i = 0 ; i < dauer; i++){
+		const currentDateISO = currentDate.toISOString();
+		allCalcCapaValues[currentDateISO] = { 
+			'actualCost_PT': costValues[i].actCost_PT || 0,
+			'plannedCost_PT': costValues[i].plannedCost_PT || 0 ,
+			'internCapa_PT': capaValues[i].internCapa_PT ,
+			'externCapa_PT': capaValues[i].externCapa_PT ,
+			'actualCost': costValues[i].actCost  || 0,
+			'plannedCost': costValues[i].plannedCost  || 0,
+			'internCapa': capaValues[i].internCapa  || 0,
+			'externCapa': capaValues[i].externCapa  || 0
+		};
+		currentDate.setMonth(currentDate.getMonth() + 1);
 	}
 	
 	var j = 0, element;
 	for (element in allCalcCapaValues) {
 		allCalcCapaValuesIndexed[j] = {
-			'currentDate': element,
+			'month': element,
 			// 'roleID' : roleID,
 			// 'roleName' : allRoles[roleID].name,
 			'actualCost_PT': allCalcCapaValues[element].actualCost_PT || 0,

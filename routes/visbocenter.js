@@ -12,6 +12,7 @@ var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
 var verifyVp = require('./../components/verifyVp');
 var verifyVpv = require('./../components/verifyVpv');
+var visboBusiness = require('./../components/visboBusiness');
 var systemVC = require('./../components/systemVC');
 var getSystemVC = systemVC.getSystemVC;
 var getSystemUrl = systemVC.getSystemUrl;
@@ -1824,7 +1825,7 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 			});
-		})
+		});
 
 	router.route('/:vcid/setting')
 
@@ -2368,9 +2369,11 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
 			var isSysAdmin = req.query.sysadmin ? true : false;
+			var organisationID = req.query.organisationID;
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
+			var costCapa = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2378,8 +2381,17 @@ router.route('/:vcid/group/:groupid')
 				state: 'success',
 				message: 'Returned VISBO Center Settings',
 				// count: listVCSetting.length,
-				vc: req.oneVC
+				vc: [ {
+					_id: req.oneVC._id,
+					name: req.oneVC.name,
+					description: req.oneVC.description,
+					organiationID: organisationID,
+					vpCount: req.oneVC.vpCount,
+					createdAt: req.oneVC.createdAt,
+					updatedAt: req.oneVC.updatedAt,					
+					capacity: costCapa
+				} ]
 			});
-		})
+		});
 
 module.exports = router;
