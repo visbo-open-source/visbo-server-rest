@@ -29,7 +29,7 @@ function getAllGroups(req, res, next) {
 		logger4js.warn('VC Bad Query Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid Visbo Center'
+			message: 'No valid VISBO Center'
 		});
 	}
 	// get the VP Groups the user is member of
@@ -51,7 +51,7 @@ function getAllGroups(req, res, next) {
 	queryVG.select('name permission vcid vpids groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, 'DB: VP Group all Find', 'Error getting Visbo Groups ');
+			errorHandler(err, res, 'DB: VP Group all Find', 'Error getting Groups ');
 			return;
 		}
 		logger4js.debug('Found VGs %d', listVG.length);
@@ -82,7 +82,7 @@ function getAllGroups(req, res, next) {
 				// no View permission for VP
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No valid VISBO Center or no Permission'
 				});
 			}
 		} else if (vcid) {
@@ -90,7 +90,7 @@ function getAllGroups(req, res, next) {
 				// no View permission for VP
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Visbo Center or no Permission'
+					message: 'No valid VISBO Center or no Permission'
 				});
 			}
 		}
@@ -106,7 +106,7 @@ function checkVpfid(req, res, next, vpfid) {
 		logger4js.warn('VC Groups Bad Parameter vpid %s', vpfid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid Visbo Project Portfolio'
+			message: 'No valid Project Portfolio'
 		});
 	}
 	logger4js.debug('VP Portfolio vpid: %s vpfid: ', req.oneVP._id, vpfid);
@@ -118,17 +118,17 @@ function checkVpfid(req, res, next, vpfid) {
 	// queryVP.select('name users updatedAt createdAt');
 	queryVPF.exec(function (err, oneVPF) {
 		if (err) {
-			errorHandler(err, res, 'DB: VP Get VPF List', 'Error getting Visbo Project Portfolio List');
+			errorHandler(err, res, 'DB: VP Get VPF List', 'Error getting Project Portfolio List');
 			return;
 		}
 		if (!oneVPF) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project Portfolio or no Permission'
+				message: 'No valid Project Portfolio or no Permission'
 			});
 		}
 		req.oneVPF = oneVPF;
-		logger4js.debug('Found Visbo Project Portfolio %s ', vpfid);
+		logger4js.debug('Found Project Portfolio %s ', vpfid);
 		return next();
 	});
 }
@@ -138,6 +138,7 @@ function getVP(req, res, next, vpid) {
 	var userId = req.decoded._id;
 	var sysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
+	var checkView = req.method == 'GET' ? (constPermVP.View + constPermVP.ViewRestricted) : constPermVP.View;
 
 	// get the VP with Perm Check View
 	logger4js.debug('Generate VP Groups for vpid %s userId %s for url %s sysAdmin %s', vpid, userId, req.url, sysAdmin);
@@ -145,18 +146,18 @@ function getVP(req, res, next, vpid) {
 		logger4js.warn('getVP Bad Parameter vpid %s', vpid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid Visbo Project'
+			message: 'No valid Project'
 		});
 	}
 
-	req.auditDescription = 'Visbo Project';
+	req.auditDescription = 'Project';
 	req.auditSysAdmin = sysAdmin;
 
-	if ((req.listVPPerm.getPerm(sysAdmin ? 0 : vpid).vp & constPermVP.View) == 0) {
+	if ((req.listVPPerm.getPerm(sysAdmin ? 0 : vpid).vp & checkView) == 0) {
 		// do not accept requests without a group assignement especially to System Group
 		return res.status(403).send({
 			state: 'failure',
-			message: 'No Visbo Project or no Permission'
+			message: 'No valid Project or no Permission'
 		});
 	}
 
@@ -166,23 +167,23 @@ function getVP(req, res, next, vpid) {
 	// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
 	query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 
-	logger4js.trace('Get Visbo Project Query %O', query);
+	logger4js.trace('Get Project Query %O', query);
 	var queryVP = VisboProject.findOne(query);
 	// queryVP.select('name users updatedAt createdAt');
 	queryVP.exec(function (err, oneVP) {
 		if (err) {
-			errorHandler(err, res, 'DB: VP Group Get VP', 'Error getting Visbo Project');
+			errorHandler(err, res, 'DB: VP Group Get VP', 'Error getting Project');
 			return;
 		}
 		if (!oneVP) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Project or no Permission'
+				message: 'No valid Project or no Permission'
 			});
 		}
 		req.oneVP = oneVP;
 
-		logger4js.debug('Found Visbo Project %s Access Permission %O', vpid, req.listVPPerm.getPerm(vpid));
+		logger4js.debug('Found Project %s Access Permission %O', vpid, req.listVPPerm.getPerm(vpid));
 		return next();
 	});
 }

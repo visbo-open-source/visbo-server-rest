@@ -36,7 +36,7 @@ function getAllGroups(req, res, next) {
 		logger4js.warn('VC Get all Groups Bad Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid VISBO Center'
 		});
 	}
 
@@ -59,7 +59,7 @@ function getAllGroups(req, res, next) {
 	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, 'DB: VC Groups get all', 'Error getting Visbo Centers');
+			errorHandler(err, res, 'DB: VC Groups get all', 'Error getting VISBO Centers');
 			return;
 		}
 		logger4js.trace('Found VGs %d', listVG.length);
@@ -82,7 +82,7 @@ function getVC(req, res, next, vcid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
-	req.auditDescription = 'Visbo Center (Read)';
+	req.auditDescription = 'VISBO Center (Read)';
 	req.auditSysAdmin = isSysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
@@ -92,7 +92,7 @@ function getVC(req, res, next, vcid) {
 		logger4js.warn('VC Groups Bad Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No valid VisboCenter'
+			message: 'No valid VISBO Center'
 		});
 	}
 	if ((isSysAdmin && (req.listVCPerm.getPerm(0).system & constPermSystem.View) == 0)
@@ -100,7 +100,7 @@ function getVC(req, res, next, vcid) {
 		// do not accept requests without a group assignement
 		return res.status(403).send({
 			state: 'failure',
-			message: 'No Visbo Center or no Permission'
+			message: 'No valid VISBO Center or no Permission'
 		});
 	}
 
@@ -111,18 +111,18 @@ function getVC(req, res, next, vcid) {
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {
-			errorHandler(err, res, 'DB: VC Groups get specific VC', 'Error getting Visbo Center');
+			errorHandler(err, res, 'DB: VC Groups get specific VC', 'Error getting VISBO Center');
 			return;
 		}
 		if (!oneVC) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Visbo Center or no Permission'
+				message: 'No valid VISBO Center or no Permission'
 			});
 		}
 		req.oneVC = oneVC;
 
-		logger4js.debug('Found VisboCenter %s Access Permission %O', vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
+		logger4js.debug('Found VISBO Center %s Access Permission %O', vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
 		return next();
 	});
 }
@@ -143,7 +143,7 @@ function getSystemGroups(req, res, next) {
 	queryVG.select('name permission vcid groupType');
 	queryVG.exec(function (err, listVG) {
 		if (err) {
-			errorHandler(err, res, 'DB: System Groups get all', 'Error getting Visbo Centers');
+			errorHandler(err, res, 'DB: System Groups get all', 'Error getting VISBO Centers');
 			return;
 		}
 		logger4js.trace('Found VGs %d', listVG.length);
@@ -155,10 +155,7 @@ function getSystemGroups(req, res, next) {
 			});
 		}
 		var listVCPerm = new VisboPermission();
-		for (var i=0; i < listVG.length; i++) {
-			var permGroup = listVG[i];
-			listVCPerm.addPerm(0, permGroup.permission);
-		}
+		listVG.forEach(function(item) { listVCPerm.addPerm(0, item.permission); });
 		req.listVCPerm = listVCPerm;
 		return next();
 	});

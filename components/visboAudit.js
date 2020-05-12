@@ -145,7 +145,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 	} else {
 		auditEntry.actionDescription = auditEntry.action;
 	}
-	logger4js.trace('VisboAudit Description %s url add %s %s %O', auditEntry.url, addJSON, urlComponent.length, urlComponent);
+	logger4js.trace('VISBOAudit Description %s url add %s %s %O', auditEntry.url, addJSON, urlComponent.length, urlComponent);
 	if (req.auditInfo) {
 		auditEntry.actionInfo = req.auditInfo;
 	}
@@ -212,18 +212,18 @@ function saveAuditEntry(tokens, req, res, factor) {
 	auditEntry.result.size = Math.round(Number(tokens.res(req, res, 'content-length')||0)/factor);
 	auditEntry.save(function(err) {
 		if (err) {
-			logger4js.error('Save VisboAudit failed to save %O', err);
+			logger4js.error('Save Audit failed to save %O', err);
 		}
 	});
 
-	logger4js.trace('saveVisboAudit %s %s', auditEntry.url, auditEntry.result.status);
+	logger4js.trace('saveAudit %s %s', auditEntry.url, auditEntry.result.status);
 }
 
 function visboAudit(tokens, req, res) {
 	if (req.auditIgnore) return;
 	if (tokens.method(req, res) == 'GET' && req.listVPV) {
 		if (req.query.longList != undefined) {
-			// generate multiple audit entries per VisboProjectVersion
+			// generate multiple audit entries per Project Version
 			// and save it to the project Audit
 			req.auditInfo = undefined;
 			logger4js.debug('saveVisboAudit Multiple Audits for VPVs %s', req.listVPV.length);

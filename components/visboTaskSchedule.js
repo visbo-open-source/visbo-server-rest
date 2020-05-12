@@ -78,22 +78,22 @@ function createTaskAudit(task, duration) {
   // auditEntry.result.size = taskSpecific.result;
   auditEntry.save(function(err) {
     if (err) {
-      logger4js.error('Save VisboAudit failed to save %O', err);
+      logger4js.error('Save Audit failed to save %O', err);
     }
   });
 }
 
 function checkNextRun() {
-	logger4js.trace('Visbo Task Schedule, check what to start');
+	logger4js.trace('VISBO Task Schedule, check what to start');
 	// get all Tasks
   var redisClient = visboRedis.VisboRedisInit();
   redisClient.get('vcSystem', function(err, vcSystemIdRedis) {
     if (err) {
-      logger4js.warn('Visbo Redis System returned %O ', err);
+      logger4js.warn('VISBO Redis System returned %O ', err);
       return;
     }
     vcSystemId = vcSystemIdRedis;
-    logger4js.trace('Visbo Task Schedule Found Redis System VC %s ', vcSystemId);
+    logger4js.trace('VISBO Task Schedule Found Redis System VC %s ', vcSystemId);
     var query = {};
 		query.vcid = vcSystemId;
 		query.type = 'Task';
@@ -218,7 +218,7 @@ function taskTest(task, finishedTask) {
 }
 
 function visboTaskScheduleInit() {
-	logger4js.trace('Visbo Task Schedule Init! ');
+	logger4js.trace('VISBO Task Schedule Init! ');
 	setInterval(checkNextRun, 5000);
 }
 

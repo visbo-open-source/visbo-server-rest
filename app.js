@@ -17,7 +17,6 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger('OTHER');
 var logger4jsRest = log4js.getLogger('REST');
 
-var visboRedis = require('./components/visboRedis');
 var visboTaskSchedule = require('./components/visboTaskSchedule');
 var visboTaskScheduleInit = visboTaskSchedule.visboTaskScheduleInit;
 //initialize mongoose schemas
@@ -51,8 +50,8 @@ var visboAudit = require('./components/visboAudit');
 var mongoose = require('mongoose');
 var dbOptions = {
   keepAlive: 200,
-  autoReconnect: true,
-  reconnectInterval: 3000,
+  // autoReconnect: true,
+  // reconnectInterval: 3000,
   useNewUrlParser: true,
   useUnifiedTopology: true
 };
@@ -89,10 +88,53 @@ function delayString(seconds) {
   return str;
 }
 
+var initLogStatus = false;
+function initLog() {
+  if (!initLogStatus) {
+    // configure log4js
+    var fsLogPath = process.env.LOGPATH || (__dirname + '/logging');
+    var stats;
+    try {
+      stats = fs.statSync(fsLogPath);
+    } catch (err) {
+      console.log('LogPath %s does not exists or user has no permission: %O', fsLogPath, err);
+      throw err;
+    }
+    if ( !stats.isDirectory()) {
+      console.log('LogPath %s exists but is no directory');
+    } else {
+      // now check for the Folder Hostname if not exists try to create
+      var hostname = os.hostname();
+      hostname = hostname.split('.')[0];
+      // console.log('Hostname %s', hostname );
+      fsLogPath = path.join(fsLogPath, hostname);
+      try {
+        stats = fs.statSync(fsLogPath);
+      } catch (err) {
+        try {
+          fs.mkdirSync(fsLogPath, { recursive: false });
+        } catch (err) {
+          console.log('Host Folder could not be created %s', fsLogPath);
+          throw err;
+        }
+      }
+      if ( !stats.isDirectory()) {
+        console.log('LogPath %s exists but is no directory');
+      }
+      // now all is in place fsLogPath exists for this server
+    }
+    logger4js = log4js.getLogger('OTHER');
+    logging.initLog4js(fsLogPath);
+    // initialise with default debug
+    var settingDebugInit = {'VC': 'info', 'VP': 'info', 'VPV': 'info', 'USER':'info', 'OTHER': 'info', 'ALL': 'debug'};
+    logging.setLogLevelConfig(settingDebugInit);
+    initLogStatus = true;
+  }
+}
+
 function dbConnect(dbconnection) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
-    // exit();
   } else {
     var position = dbconnection.indexOf(':') + 1;
     position = dbconnection.indexOf(':', position) + 1;
@@ -105,7 +147,7 @@ function dbConnect(dbconnection) {
       dbconnection,
       dbOptions
     ).then(function() {
-      logger4js.mark('Server is fully functional DB Connected');
+      logger4js.warn('Server is fully functional DB Connected');
       // mongoose.set('debug', function (coll, method, query, doc, options) {
       //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
       // });
@@ -160,49 +202,7 @@ var app = express();
 // // app.set('port', port);
 // app.listen(port)
 
-// configure log4js
-var fsLogPath = process.env.LOGPATH || (__dirname + '/logging');
-var stats;
-try {
-  stats = fs.statSync(fsLogPath);
-} catch (err) {
-  console.log('LogPath %s does not exists or user has no permission: %O', fsLogPath, err);
-  throw err;
-}
-if ( !stats.isDirectory()) {
-  console.log('LogPath %s exists but is no directory');
-} else {
-  // console.log('Basic LogPath exists, Check for the App Server Folder')
-  //
-  // find out the IP addresses of the server
-  // var networkInterfaces = os.networkInterfaces( );
-  // console.log( networkInterfaces );
-
-  // now checck for the Folder Hostname is not exists try to create
-  var hostname = os.hostname();
-  hostname = hostname.split('.')[0];
-  console.log('Hostname %s', hostname );
-  fsLogPath = path.join(fsLogPath, hostname);
-  try {
-    stats = fs.statSync(fsLogPath);
-  } catch (err) {
-    try {
-      fs.mkdirSync(fsLogPath, { recursive: false });
-    } catch (err) {
-      console.log('Host Folder could not be created %s', fsLogPath);
-      throw err;
-    }
-  }
-  if ( !stats.isDirectory()) {
-    console.log('LogPath %s exists but is no directory');
-  }
-  // now all is in place fsLogPath exists for this server
-}
-
-logging.initLog4js(fsLogPath);
-// initialise with default debug
-var settingDebugInit = {'VC': 'info', 'VP': 'info', 'VPV': 'info', 'USER':'info', 'OTHER': 'info', 'ALL': 'debug'};
-logging.setLogLevelConfig(settingDebugInit);
+initLog();
 logger4js.warn('Starting in Environment %s', process.env.NODE_ENV);
 logger4js.warn('Starting Version %s', process.env.VERSION_REST);
 logger4js.warn('Starting with %s CPUs', require('os').cpus().length);
@@ -244,8 +244,6 @@ app.use(logger(function (tokens, req, res) {
   }
   return webLog;
 }));
-
-visboRedis.VisboRedisInit();
 
 // set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
