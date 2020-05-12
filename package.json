@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "lint": "eslint --ignore-path .gitignore .; echo check emailTemplates; ejslint emailTemplates"
+    "lint": "eslint --ignore-path .gitignore .",
+    "maillint": "ejslint emailTemplates"
   },
   "dependencies": {
     "assert": "^2.0.0",
