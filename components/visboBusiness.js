@@ -869,7 +869,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, from , to, roleID, organisation) {
+function calcCapacities(vpvs, roleID, organisation) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -884,28 +884,19 @@ function calcCapacities(vpvs, from , to, roleID, organisation) {
 
 	var startCalc = new Date();
 	if ( vpvs && organisation && roleID) {	
-		if (from && to) {
-			startDate = new Date(from);
-			endDate = new Date(to);
-			startIndex = getColumnOfDate(startDate);
-			endIndex = getColumnofDate(endDate);
-			dauer = endIndex - StartIndex + 1;
-		} else {
-			// get startIndex and endIndex and dauer of several vpv	
-			for (var i = 0; vpvs && i < vpvs.length; i++) {
-				var vpv = vpvs[i];
-				if (vpv) {
-					startIndex = Math.min(startIndex, getColumnOfDate(vpv.startDate));
-					startDate = Math.min(startDate, vpv.startDate);
-					endIndex = Math.max(endIndex, getColumnOfDate(vpv.endDate));
-					endDate = Math.max(endDate, vpv.endDate);
-					dauer = endIndex - startIndex + 1;
-				}
+		
+		// get startIndex and endIndex and dauer of several vpv	
+		for (var i = 0; vpvs && i < vpvs.length; i++) {
+			var vpv = vpvs[i];
+			if (vpv) {
+				startIndex = Math.min(startIndex, getColumnOfDate(vpv.startDate));
+				startDate = Math.min(startDate, vpv.startDate);
+				endIndex = Math.max(endIndex, getColumnOfDate(vpv.endDate));
+				endDate = Math.max(endDate, vpv.endDate);
+				dauer = endIndex - startIndex + 1;
 			}
-		}	
-
-		
-		
+		}
+	
 		//logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s ', roleID, startDate, startDate.toISOString());
 		var currentDate = new Date(startDate);
 		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, startDate, currentDate.toISOString());
