@@ -17,18 +17,25 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of and has VP Permission
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+
+	var vpid = undefined;
 	var vcid = undefined;
-	if (req.oneVCID) {
-		vcid = req.oneVCID;
-	}
-	if (!vcid && req.oneVC) {
-		vcid = req.oneVC._id;
-	}
-	if (!vcid && req.method == 'GET' && req.query.vcid) {
-		vcid = req.query.vcid;
-	}
-	if (!vcid && req.method == 'POST' && req.body.vcid) {
-		vcid = req.body.vcid;
+	if (urlComponent.length == 6 && urlComponent[3] == 'portfolio' && urlComponent[5] == 'capacity' ) {
+		// we need all groups from VC to check if the user can access  the VPs
+		// if we would know the VC already it could be set here
+		vpid = undefined;
+	} else if (urlComponent.length > 1) {
+		vpid = urlComponent[1];
+	} else {
+		// URL /vp
+		if (!vcid && req.method == 'GET' && req.query.vcid) {
+			vcid = req.query.vcid;
+		}
+		if (!vcid && req.method == 'POST' && req.body.vcid) {
+			vcid = req.body.vcid;
+		}
 	}
 
 	if (!validate.validateObjectId(vcid, true)) {
@@ -50,6 +57,9 @@ function getAllGroups(req, res, next) {
 	} else {
 		if (vcid) query.vcid = vcid;
 		query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
+	}
+	if (vpid) {
+		query.vpids = vpid;
 	}
 
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
@@ -102,6 +112,10 @@ function getAllGroups(req, res, next) {
 		}
 		return next();
 	});
+}
+
+function getVCGroups(req, res, next) {
+	return next();
 }
 
 function checkVpfid(req, res, next, vpfid) {
@@ -196,6 +210,7 @@ function getVP(req, res, next, vpid) {
 
 module.exports = {
 	getAllGroups: getAllGroups,
+	getVCGroups: getVCGroups,
 	getVP: getVP,
 	checkVpfid: checkVpfid
 };

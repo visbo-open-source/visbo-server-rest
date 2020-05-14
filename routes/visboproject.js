@@ -10,6 +10,8 @@ var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
+var verifyVpv = require('./../components/verifyVpv');
+var visboBusiness = require('./../components/visboBusiness');
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var User = mongoose.model('User');
@@ -254,6 +256,11 @@ router.param('vpfid', verifyVp.checkVpfid);
 router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
+// get details for capacity calculation
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVp.getVCGroups);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
 
 /////////////////
 // VISBO Project API
@@ -2266,6 +2273,8 @@ router.route('/:vpid/portfolio')
 					state: 'success',
 					message: 'Returned Portfolios',
 					count: listVPFfiltered.length,
+					vpid: req.oneVP._id,
+					name: req.oneVP.name,
 					vpf: listVPFfiltered,
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
@@ -2274,6 +2283,8 @@ router.route('/:vpid/portfolio')
 					state: 'success',
 					message: 'Returned Portfolios',
 					count: listVPF.length,
+					vpid: req.oneVP._id,
+					name: req.oneVP.name,
 					vpf: listVPF,
 					perm: req.listVPPerm.getPerm(req.params.vpid).vp
 				});
@@ -2513,7 +2524,9 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Portfolios',
+				message: 'Returned Portfolio',
+				vpid: req.oneVP._id,
+				name: req.oneVP.name,
 				vpf: listVPF,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2624,6 +2637,76 @@ router.route('/:vpid/portfolio/:vpfid')
 			});
 		});
 	});
+
+	router.route('/:vpid/portfolio/:vpfid/capacity')
+
+	/**
+		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity Calculation
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Properties
+		* @apiName GetVISBOProjectCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version
+		*
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and organisationID
+		*
+		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
+		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
+		* @apiParam {String} organisationID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		*
+		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for the Portfolio and all the projects of the Portfolio, Projects without View Permission will be excluded
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vp/:vcid/portfolio/:vpfid/capacity
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Portfolio Capacity',
+		*   'vp':[{
+		*     '_id':'vp5c754feaa',
+		*     'name':'VISBO Portfolio Name',
+		*     'capacity': [{
+						'month': 2020-05-01T00:00:00.000Z,
+						....
+					}]
+		*   }]
+		* }
+		*/
+
+	// get VPF Capacity
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var latestOnly = false; 	// as default show all settings
+			var isSysAdmin = req.query.sysadmin ? true : false;
+			var roleID = req.query.roleID;
+
+			req.auditDescription = 'VISBO Project Capacity (Read)';
+
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+
+			req.auditInfo = '';
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Portfolio Capacity',
+				// count: listVCSetting.length,
+				vp: [ {
+					_id: req.oneVP._id,
+					name: req.oneVP.name,
+					description: req.oneVP.description,
+					roleID: roleID,
+					createdAt: req.oneVP.createdAt,
+					updatedAt: req.oneVP.updatedAt,
+					capacity: capacity
+				} ]
+			});
+		});
+
 
 	router.route('/:vpid/restrict')
 
