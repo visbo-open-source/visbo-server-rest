@@ -19,6 +19,8 @@ var VisboPermission = Const.VisboPermission;
 // Generate the Groups where the user is member of System / VC depending on the case
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var vcid = undefined;
 
@@ -26,11 +28,12 @@ function getAllGroups(req, res, next) {
 	// handle sysadmin and systemvc case
 	logger4js.trace('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
 
-	if (!vcid && req.method == 'GET' && req.query.vcid) {
+	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
-	}
-	if (!vcid && req.method == 'POST' && req.body.vcid) {
+	} else if (req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
+	} else if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'capacity') {
+		vcid = urlComponent[1];
 	}
 	if (!validate.validateObjectId(vcid, true)) {
 		logger4js.warn('VC Get all Groups Bad Parameter vcid %s', vcid);
