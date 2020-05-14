@@ -869,11 +869,12 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleID, organisation) {
+function calcCapacities(vpvs, roleName, organisation) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
 
+	var roleID = '';
 	var dateMinValue = -8640000000000000;
 	var dateMaxValue = 8640000000000000;
 	var startIndex = Infinity;
@@ -883,7 +884,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 	var dauer =0;
 
 	var startCalc = new Date();
-	if ( vpvs && organisation && roleID) {	
+	if ( vpvs && organisation && roleName) {	
 		
 		// get startIndex and endIndex and dauer of several vpv	
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -920,6 +921,10 @@ function calcCapacities(vpvs, roleID, organisation) {
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
 			if (organisation.value.allRoles[i].isTeam)	allTeams.push(organisation.value.allRoles[i]);
 		}	
+		//
+		logger4js.debug('find the roleID for the given roleName %s', roleName);
+		
+		if (allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
 
 		if (!allRoles[roleID]) {
 			return allCalcCapaValuesIndexed;
