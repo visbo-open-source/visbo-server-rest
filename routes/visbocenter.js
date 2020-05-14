@@ -1710,7 +1710,7 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/organisation')
 
 	/**
-		* @api {get} /vc/:vcid/organisation Get information about the organisation, the user can see
+		* @api {get} /vc/:vcid/organisation Get Organisation
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterOrganisation
@@ -2327,7 +2327,7 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/capacity')
 
 	/**
-		* @api {get} /vc/:vcid/capacity Get Capacity Calculation
+		* @api {get} /vc/:vcid/capacity Get Capacity
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterCapacity
@@ -2351,7 +2351,7 @@ router.route('/:vcid/group/:groupid')
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Returned VISBO Center Settings',
+		*   'message':'Returned VISBO Center Capacity',
 		*   'vc':[{
 		*     '_id':'vc5c754feaa',
 		*     'name':'VISBO Center Name',
@@ -2369,11 +2369,11 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
 			var isSysAdmin = req.query.sysadmin ? true : false;
-			var organisationID = req.query.organisationID;
-			
+			var roleID = req.query.roleID;
+
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
-			var costCapa = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2385,11 +2385,11 @@ router.route('/:vcid/group/:groupid')
 					_id: req.oneVC._id,
 					name: req.oneVC.name,
 					description: req.oneVC.description,
-					organiationID: organisationID,
+					roleID: roleID,
 					vpCount: req.oneVC.vpCount,
 					createdAt: req.oneVC.createdAt,
-					updatedAt: req.oneVC.updatedAt,					
-					capacity: costCapa
+					updatedAt: req.oneVC.updatedAt,
+					capacity: capacity
 				} ]
 			});
 		});

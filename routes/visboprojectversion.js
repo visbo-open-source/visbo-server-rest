@@ -369,7 +369,7 @@ router.route('/')
 	* @apiGroup VISBO Project Version
 	* @apiName CreateVISBOProjectVersions
 	* @apiDescription Post creates a new VISBO Project Version.
-	* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
+	* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the Version.
 	* VISBO Project Version Properties like _id, name and timestamp are overwritten by the system
 	* @apiHeader {String} access-key User authentication token.
 	*
@@ -910,7 +910,7 @@ router.route('/:vpvid')
 		* @apiGroup VISBO Project Version
 		* @apiName VISBOProjectVersionCopy
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
-		* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
+		* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
 		* @apiHeader {String} access-key User authentication token.
 		*
@@ -1160,8 +1160,8 @@ router.route('/:vpvid')
 	 	* @apiName GetVISBOProjectVersionKeyMetrics
 	 	* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
-		* With Permission Restricted View, the deliveries were filtered to the restricted View
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* Without Audit Permission the Cost Part of keyMetrics will not be delivered
 		*
 		* @apiPermission Permission: Authenticated, View Project, View Audit.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1233,7 +1233,7 @@ router.route('/:vpvid')
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionCost
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
+		* @apiDescription Get returns the costs for a specific Project Version the user has access permission to the Project
 		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deliveries were filtered to the restricted View
 		*
@@ -1304,8 +1304,8 @@ router.route('/:vpvid')
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionDelivery
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* @apiDescription Get returns the deliveries for a specific Project Version the user has view permission to the Project
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deliveries were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
@@ -1395,8 +1395,8 @@ router.route('/:vpvid')
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionDeadline
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deadlines for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* @apiDescription Get returns the deadlines for a specific Project Version where the user has View permission to the Project
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deadlines were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.

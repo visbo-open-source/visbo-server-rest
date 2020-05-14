@@ -22,7 +22,7 @@ function getOneVP(req, res, next) {
 
 	// get the VP that is specified in the URL
 	logger4js.debug('Generate oneVP for user %s for url %s', req.decoded.email, req.url);
-	if (!validate.validateObjectId(req.query.vpid, true) || baseUrl != '/') {
+	if (!validate.validateObjectId(req.query.vpid, false) || baseUrl != '/') {
 		return next();
 	}
 
@@ -232,69 +232,75 @@ function getVPV(req, res, next, vpvid) {
 // Generate the Groups where the user is member of and has VP Permission
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
-	var baseUrl = req.url.split('?')[0];
-	if (baseUrl == '/' && req.method == 'GET' && req.query.vpfid) {
-		// get the VP List of a VPF
-		logger4js.debug('Generate Project List of Portfolio for user %s for url %s', req.decoded.email, req.url);
-		if (!validate.validateObjectId(req.query.vpfid, false)) {
-			logger4js.warn('VC Bad Query Parameter vpfid %s ', req.query.vpfid);
-			return res.status(400).send({
-				state: 'failure',
-				message: 'No valid Parameter for Portfolio Version'
-			});
-		}
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	var vpfid = undefined;
 
-		var query = {};
-		query._id = req.query.vpfid;
-
-		logger4js.debug('Query VPF %s', JSON.stringify(query));
-		// get the Project List from VPF
-		var queryVPF = VisboPortfolio.findOne(query);
-		queryVPF.select('_id vpid variantName allItems');
-		queryVPF.exec(function (err, oneVPF) {
-			if (err) {
-				errorHandler(err, res, 'DB: listVPF find', 'Error getting Project Versions ');
-				return;
-			}
-			if (!oneVPF) {
-				// do not accept requests without an existing VPF ID
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No valid Portfolio Project'
-				});
-			}
-			if (!oneVPF.allItems) {
-				return res.status(400).send({
-					state: 'failure',
-					message: 'No valid Portfolio'
-				});
-			}
-			logger4js.debug('Found VPF with Projects %d', oneVPF.allItems.length);
-			// check if VP of Portfolio list is in the list of projects, to verify that the user has permission to View the Portfolio
-			if ((req.listVPPerm.getPerm(oneVPF.vpid).vp & constPermVP.View) == 0) {
-				logger4js.info('No Access to Portfolio VPID', oneVPF.vpid);
-				// do not accept requests without access to VPF ID
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No valid Portfolio Project'
-				});
-			}
-			// Add the Projects to a list, and filter on these projects later
-			var listVP = [], listVPVariant = [];
-			for (var i=0; i < oneVPF.allItems.length; i++) {
-				listVP.push(oneVPF.allItems[i].vpid);
-				listVPVariant.push({vpid: oneVPF.allItems[i].vpid, variantName: oneVPF.allItems[i].variantName});
-			}
-			req.listPortfolioVP = listVP;
-			req.listPortfolioVPVariant = listVPVariant;
-			var endCalc = new Date();
-			logger4js.debug('Calculate verifyVPV getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
-			return next();
-		});
-	} else {
-		// not the baseUrl '/' do nothing
+	if (baseUrl == '/vpv' && req.method == 'GET' && req.query.vpfid) {
+		vpfid = req.query.vpfid;
+	} else if (req.method == 'GET' && urlComponent.length == 6 && urlComponent[1] == 'vp' && urlComponent[5] == 'capacity') {
+		vpfid = urlComponent[4];
+	}
+	if (!vpfid) {
 		return next();
 	}
+	// get the VP List of a VPF
+	logger4js.debug('Generate Project List of Portfolio for user %s for url %s', req.decoded.email, req.url);
+	if (!validate.validateObjectId(vpfid, false)) {
+		logger4js.warn('VC Bad Query Parameter vpfid %s ', vpfid);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Parameter for Portfolio Version'
+		});
+	}
+
+	var query = {};
+	query._id = vpfid;
+
+	logger4js.debug('Query VPF %s', JSON.stringify(query));
+	// get the Project List from VPF
+	var queryVPF = VisboPortfolio.findOne(query);
+	queryVPF.select('_id vpid variantName allItems');
+	queryVPF.exec(function (err, oneVPF) {
+		if (err) {
+			errorHandler(err, res, 'DB: listVPF find', 'Error getting Project Versions ');
+			return;
+		}
+		if (!oneVPF) {
+			// do not accept requests without an existing VPF ID
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Portfolio Project'
+			});
+		}
+		if (!oneVPF.allItems) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid Portfolio'
+			});
+		}
+		logger4js.debug('Found VPF with Projects %d', oneVPF.allItems.length);
+		// check if VP of Portfolio list is in the list of projects, to verify that the user has permission to View the Portfolio
+		if ((req.listVPPerm.getPerm(oneVPF.vpid).vp & constPermVP.View) == 0) {
+			logger4js.info('No Access to Portfolio VPID', oneVPF.vpid);
+			// do not accept requests without access to VPF ID
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Portfolio Project'
+			});
+		}
+		// Add the Projects to a list, and filter on these projects later
+		var listVP = [], listVPVariant = [];
+		for (var i=0; i < oneVPF.allItems.length; i++) {
+			listVP.push(oneVPF.allItems[i].vpid.toString());
+			listVPVariant.push({vpid: oneVPF.allItems[i].vpid.toString(), variantName: oneVPF.allItems[i].variantName});
+		}
+		req.listPortfolioVP = listVP;
+		req.listPortfolioVPVariant = listVPVariant;
+		var endCalc = new Date();
+		logger4js.debug('Calculate verifyVPV getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
+		return next();
+	});
 }
 
 // Get the organisations for keyMetrics calculation
@@ -306,8 +312,12 @@ function getVCOrgs(req, res, next) {
 
 	let skip = true;
 	if (req.method == 'POST' && baseUrl == '/') skip = false;
-	if (req.method == 'GET' && urlComponent.findIndex(comp => comp == 'capacity') >= 0 && req.oneVC) {
-		req.oneVCID = req.oneVC._id;
+	if (req.method == 'GET' && urlComponent.findIndex(comp => comp == 'capacity') >= 0) {
+		if ( req.oneVC ) {
+			req.oneVCID = req.oneVC._id;
+		} else if (req.oneVP) {
+			req.oneVCID = req.oneVP.vcid;
+		}
 		skip = false;
 	}
 	if (skip) {
@@ -447,6 +457,109 @@ function getCurrentVPVpfv(req, res, next) {
 	});
 }
 
+// Get vpvs of the Portfolio Version related to refDate for capacity calculation
+function getVPFVPVs(req, res, next) {
+	var userId = req.decoded._id;
+
+	logger4js.info('Get Project Versions of VPF for user %s with query params %O ', userId, req.query);
+	var queryvpv = {};
+	var queryvpvids = {};
+	var longList = true;		// need full vpv for capacity calculation
+	var nowDate = new Date();
+
+	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
+		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'Bad Content in Query Parameters'
+		});
+	}
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
+	// collect the VPIDs where the user has View permission to
+	var vpidList = [];
+	var requiredPerm = constPermVP.View;
+	vpidList = req.listVPPerm.getVPIDs(requiredPerm);
+
+	if (req.query.refDate){
+		var refDate = new Date(req.query.refDate);
+		queryvpv.timestamp =  {$lt: refDate};
+	} else if (!req.query.refDate) {
+		queryvpv.timestamp = {$lt: nowDate};
+	}
+	queryvpv.vpid = {$in: vpidList};
+
+	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
+	var timeMongoStart = new Date();
+	var queryVPV = VisboProjectVersion.find(queryvpv);
+	queryVPV.sort('vpid variantName -timestamp');
+	queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, listVPV) {
+		if (err) {
+			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			return;
+		}
+		var timeMongoEnd = new Date();
+		logger4js.debug('Found %d Project Versions in %s ms ', listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
+		// if latestonly, reduce the list and deliver only the latest version of each project and variant
+		var vpvidsList = [];
+		if (req.listPortfolioVPVariant) {
+			// filter versions not part of portfolio
+			logger4js.debug('Splice short Versions not belonging to Portfolio List %d \n%O', req.listPortfolioVPVariant.length, req.listPortfolioVPVariant);
+			var filterVPV = [];
+			for (let i = 0; i < listVPV.length; i++){
+				//check if vpid & variant are member of portfolio
+				logger4js.debug('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
+				var itemSearch = {vpid: listVPV[i].vpid, variantName: listVPV[i].variantName};
+				if (req.listPortfolioVPVariant.find(findVPVariantList, itemSearch)) {
+					logger4js.debug('found: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
+					filterVPV.push(listVPV[i]);
+				}
+			}
+			listVPV = filterVPV;
+		}
+
+		// MS TODO: Check if the element 0 should be pushed might be it does not belong to the list because of variantName
+		if (listVPV.length > 0) {
+			vpvidsList.push(listVPV[0]._id);
+		}
+		for (let i = 1; i < listVPV.length; i++){
+			//compare current item with previous and ignore if it is the same vpid & variantname
+			logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+				|| listVPV[i].variantName != listVPV[i-1].variantName
+			) {
+				vpvidsList.push(listVPV[i]._id);
+				logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			}
+		}
+		logger4js.debug('Found %d Project Version IDs', vpvidsList.length);
+
+		queryvpvids._id = {$in: vpvidsList};
+		var queryVPV = VisboProjectVersion.find(queryvpvids);
+		req.auditTTLMode = 1;	// Capacity Calculation of VISBO Project Versions
+
+		queryVPV.lean();
+		queryVPV.exec(function (err, listVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				return;
+			}
+			req.auditInfo = listVPV.length;
+			req.listVPV = listVPV;
+			logger4js.debug('Found %d Project Version for VC Calculation ', vpvidsList.length);
+			return next();
+		});
+	});
+}
+
+// find a project in an array of a structured projects (name, id)
+var findVPVariantList = function(arrayItem) {
+		// console.log('compare %s %s result %s', JSON.stringify(arrayItem), JSON.stringify(this), arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName);
+		return arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName;
+};
+
 // Get vpvs of the VC related to refDate for capacity calculation
 function getVCVPVs(req, res, next) {
 	var userId = req.decoded._id;
@@ -454,11 +567,9 @@ function getVCVPVs(req, res, next) {
 	logger4js.info('Get Project Versions of VC for user %s with query params %O ', userId, req.query);
 	var queryvpv = {};
 	var queryvpvids = {};
-	var latestOnly = true; 	// only one version per project
 	var longList = true;		// need full vpv for capacity calculation
 	var nowDate = new Date();
-	var variantName = req.query.variantName || '';
-	if (variantName) variantName = variantName.trim();
+	var variantName = '';
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
 		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
@@ -498,38 +609,17 @@ function getVCVPVs(req, res, next) {
 		logger4js.debug('Found %d Project Versions in %s ms ', listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
 		// if latestonly, reduce the list and deliver only the latest version of each project and variant
 		var vpvidsList = [];
-		if (!latestOnly) {
-			listVPV.forEach(function(item) { vpvidsList.push(item._id); });
-		} else {
-			if (req.listPortfolioVPVariant) {
-				// filter versions not part of portfolio
-				logger4js.debug('Splice short Versions not belonging to Portfolio List %d \n%O', req.listPortfolioVPVariant.length, req.listPortfolioVPVariant);
-				var filterVPV = [];
-				for (let i = 0; i < listVPV.length; i++){
-					//check if vpid & variant are member of portfolio
-					logger4js.debug('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
-					var itemSearch = {vpid: listVPV[i].vpid, variantName: listVPV[i].variantName};
-					if (req.listPortfolioVPVariant.find(findVPVariantList, itemSearch)) {
-						logger4js.debug('found: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
-						filterVPV.push(listVPV[i]);
-					}
-				}
-				listVPV = filterVPV;
-			}
-
-			// MS TODO: Check if the element 0 should be pushed might be it does not belong to the list because of variantName
-			if (listVPV.length > 0) {
-				vpvidsList.push(listVPV[0]._id);
-			}
-			for (let i = 1; i < listVPV.length; i++){
-				//compare current item with previous and ignore if it is the same vpid & variantname
-				logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
-				if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
-					|| listVPV[i].variantName != listVPV[i-1].variantName
-				) {
-					vpvidsList.push(listVPV[i]._id);
-					logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
-				}
+		if (listVPV.length > 0) {
+			vpvidsList.push(listVPV[0]._id);
+		}
+		for (let i = 1; i < listVPV.length; i++){
+			//compare current item with previous and ignore if it is the same vpid & variantname
+			logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+				|| listVPV[i].variantName != listVPV[i-1].variantName
+			) {
+				vpvidsList.push(listVPV[i]._id);
+				logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
 			}
 		}
 		logger4js.debug('Found %d Project Version IDs', vpvidsList.length);
@@ -559,6 +649,7 @@ module.exports = {
 	getVCOrgs: getVCOrgs,
 	getVPVpfv: getVPVpfv,
 	getCurrentVPVpfv: getCurrentVPVpfv,
+	getVPFVPVs: getVPFVPVs,
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs
 };

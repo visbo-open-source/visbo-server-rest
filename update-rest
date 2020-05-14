@@ -5,6 +5,7 @@ if [ $# -gt 0 -a "$1" = "force" ]
 then
   continueOnEmptyPull=1
 fi
+git checkout -- package-lock.json
 echo "01: Checking Local Status of Branch"
 git status
 if [ $? -ne 0 ]
