@@ -2370,7 +2370,7 @@ router.route('/:vcid/group/:groupid')
 			var latestOnly = false; 	// as default show all settings
 			var isSysAdmin = req.query.sysadmin ? true : false;
 			var organisationID = req.query.organisationID;
-
+			
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
 			var costCapa = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
