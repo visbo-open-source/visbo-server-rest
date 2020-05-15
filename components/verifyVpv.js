@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants');
 var constPermVP = Const.constPermVP;
+var constPermVC = Const.constPermVC;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
@@ -329,6 +330,12 @@ function getVCOrgs(req, res, next) {
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No VISBO Center or Organization'
+		});
+	}
+	if ((req.listVCPerm.getPerm(req.oneVCID).vc & (constPermVC.ViewAudit + constPermVC.Modify + constPermVC.ManagePerm)) == 0) {
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to get organisaion'
 		});
 	}
 	getVCOrganisation(req.oneVCID, req, res, next);

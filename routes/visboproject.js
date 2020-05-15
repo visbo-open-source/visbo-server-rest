@@ -1196,10 +1196,11 @@ router.route('/:vpid/audit')
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & Const.constPermVPAll;
 			}
 			if (newPerm.vp & constPermVP.View) {
-				newPerm.vp = newPerm.vp & constPermVP.constPermVPFull;
+				// remove View Restricted if View is set
+				newPerm.vp = newPerm.vp & Const.constPermVPFull;
 			}
 
 			req.auditDescription = 'Project Group (Create)';
