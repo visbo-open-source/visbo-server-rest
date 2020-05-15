@@ -162,24 +162,7 @@ function calcCosts(vpv, pfv, organisation) {
 
 		var personalCost = getAllPersonalKosten(vpv, organisation);
 		var allOtherCost = getAllOtherCost('', vpv, organisation);
-/* 
-		var licenseCost = getAllOtherCost(1, vpv, organisation);
-		var travelCost = getAllOtherCost(2, vpv, organisation);
-		var persCost = getAllOtherCost(3, vpv, organisation);
 
-		var monthlyNeeds1002euro = getRessourcenBedarfe(1002,vpv,true, true, organisation);
-		var monthlyNeeds1002PT = getRessourcenBedarfe(1002,vpv,true, false, organisation);
-		var monthlyNeeds3euro = getRessourcenBedarfe(3,vpv,true, true, organisation);
-		var monthlyNeeds3PT = getRessourcenBedarfe(3,vpv,true, false, organisation);
-		var monthlyNeeds5euro = getRessourcenBedarfe(5,vpv,true, true, organisation);
-		var monthlyNeeds5PT = getRessourcenBedarfe(5,vpv,true, false, organisation);
-		var monthlyNeeds2euro = getRessourcenBedarfe(2,vpv,true, true, organisation);
-		var monthlyNeeds2PT = getRessourcenBedarfe(2,vpv,true, false, organisation);
-		var monthlyNeeds6euro = getRessourcenBedarfe(6,vpv,true, true, organisation);
-		var monthlyNeeds6PT = getRessourcenBedarfe(6,vpv,true, false, organisation);
-		var monthlyNeeds16euro = getRessourcenBedarfe(16,vpv,true, true, organisation);
-		var monthlyNeeds16PT = getRessourcenBedarfe(16,vpv,true, false, organisation);
- */
 		for (var i = 0 ; i < dauer; i++){
 			const currentDateISO = currentDate.toISOString();
 			allCostValues[currentDateISO] = { 'currentCost': personalCost[i] + allOtherCost[i] };
@@ -884,7 +867,7 @@ function calcCapacities(vpvs, roleName, organisation) {
 	var dauer =0;
 
 	var startCalc = new Date();
-	if ( vpvs && organisation && roleName) {	
+	if ( vpvs && organisation) {	
 		
 		// get startIndex and endIndex and dauer of several vpv	
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -921,10 +904,12 @@ function calcCapacities(vpvs, roleName, organisation) {
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
 			if (organisation.value.allRoles[i].isTeam)	allTeams.push(organisation.value.allRoles[i]);
 		}	
-		//
+		
+		if (!roleName || roleName === '' && allRoles.length > 0)  roleName = organisation.value.allRoles[0].name;
+
 		logger4js.debug('find the roleID for the given roleName %s', roleName);
 		
-		if (allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
+		if (roleName && allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
 
 		if (!allRoles[roleID]) {
 			return allCalcCapaValuesIndexed;
