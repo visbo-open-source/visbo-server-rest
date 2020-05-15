@@ -929,7 +929,7 @@ function calcCapacities(vpvs, roleName, organisation) {
 		var costValues = [];
 		var costElem = {};
 
-		for (var i=0 ; i < dauer; i++){
+		for ( i = 0 ; i < dauer; i++){
 			costElem = {};
 			costElem.actCost_PT = 0;
 			costElem.actCost = 0;
