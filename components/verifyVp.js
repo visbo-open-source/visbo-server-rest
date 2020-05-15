@@ -27,7 +27,7 @@ function getAllGroups(req, res, next) {
 		// if we would know the VC already it could be set here
 		vpid = undefined;
 	} else if (urlComponent.length > 2 && urlComponent[1] == 'vp' ) {
-		vpid = urlComponent[1];
+		vpid = urlComponent[2];
 	}
 	if (req.oneVC) {
 		// in case of vc/:vcid/capacity we need the VP Groups of the VC
