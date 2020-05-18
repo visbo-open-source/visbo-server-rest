@@ -307,7 +307,7 @@ function getPortfolioVPs(req, res, next) {
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.baseUrl.split('?')[0];
-	var urlComponent = baseUrl.split('/')
+	var urlComponent = baseUrl.split('/');
 	// fetch the organization in case of POST VPV to calculate keyMetrics
 	// or in case of capacity calculation
 
