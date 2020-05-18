@@ -257,7 +257,7 @@ router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
-router.use('/:vpid/portfolio/:vpfid/capacity', verifyVp.getVCGroups);
+router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);

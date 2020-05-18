@@ -1735,7 +1735,7 @@ router.route('/:vcid/group/:groupid')
 		* {
 		*   'state':'success',
 		*   'message':'Returned VISBO Center Organisation',
-		*   'vcorganisation':[{
+		*   'vcsetting':[{
 		*     '_id':'vcsetting5c754feaa',
 		*     'vcid': 'vc5c754feaa',
 		*     'name': 'organisation',
@@ -1813,7 +1813,7 @@ router.route('/:vcid/group/:groupid')
 						state: 'success',
 						message: 'Returned VISBO Center Settings',
 						count: listVCSettingfiltered.length,
-						vcorganisation: listVCSettingfiltered
+						vcsetting: listVCSettingfiltered
 					});
 				} else {
 					req.auditInfo = listVCSetting.length;
@@ -1821,7 +1821,7 @@ router.route('/:vcid/group/:groupid')
 						state: 'success',
 						message: 'Returned VISBO Center Settings',
 						count: listVCSetting.length,
-						vcorganisation: listVCSetting
+						vcsetting: listVCSetting
 					});
 				}
 			});

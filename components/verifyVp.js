@@ -22,11 +22,7 @@ function getAllGroups(req, res, next) {
 
 	var vpid = undefined;
 	var vcid = undefined;
-	if (urlComponent.length == 6 && urlComponent[1] == 'vp' && urlComponent[3] == 'portfolio' && urlComponent[5] == 'capacity' ) {
-		// we need all groups from VC to check if the user can access  the VPs
-		// if we would know the VC already it could be set here
-		vpid = undefined;
-	} else if (urlComponent.length > 2 && urlComponent[1] == 'vp' ) {
+	if (urlComponent.length > 2 && urlComponent[1] == 'vp' ) {
 		vpid = urlComponent[2];
 	}
 	if (req.oneVC) {
@@ -116,8 +112,45 @@ function getAllGroups(req, res, next) {
 	});
 }
 
-function getVCGroups(req, res, next) {
-	return next();
+function getVPGroupsOfVC(req, res, next) {
+	var userId = req.decoded._id;
+	// get permission groups for Portfolio to include also all VPs of the VC,
+	// if the user has already VP Permission through VC we were done, otherwise we have to get all VP groups for the VC
+	if (!req.oneVP || (req.listVCPerm.getPerm(req.oneVP.vcid).vp & constPermVP.View)) {
+		return next();
+	}
+	// MS TODO: fetch the VC/VP groups
+	var query = {'users.userId': userId};	// search for VP groups where user is member
+	query.vcid = req.oneVP.vcid;
+	query.groupType = {$in: ['VC', 'VP']};
+	logger4js.debug('Query VGs %s', JSON.stringify(query));
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vcid vpids groupType');
+	queryVG.exec(function (err, listVG) {
+		if (err) {
+			errorHandler(err, res, 'DB: VP Group all Find', 'Error getting Groups ');
+			return;
+		}
+		logger4js.debug('Found VGs %d', listVG.length);
+		// Convert the result to request
+		var listVPPerm = new VisboPermission();
+		var listVCPerm = new VisboPermission();
+		for (var i=0; i < listVG.length; i++) {
+			var permGroup = listVG[i];
+			if (permGroup.groupType == 'VC') {
+				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
+			}
+			if (permGroup.vpids) {
+				// Check all VPIDs in Group
+				for (var j=0; j < permGroup.vpids.length; j++) {
+          listVPPerm.addPerm(permGroup.vpids[j], permGroup.permission);
+				}
+			}
+		}
+		req.listVPPerm = listVPPerm;
+		req.listVCPerm = listVCPerm;
+		return next();
+	});
 }
 
 function checkVpfid(req, res, next, vpfid) {
@@ -212,7 +245,7 @@ function getVP(req, res, next, vpid) {
 
 module.exports = {
 	getAllGroups: getAllGroups,
-	getVCGroups: getVCGroups,
+	getVPGroupsOfVC: getVPGroupsOfVC,
 	getVP: getVP,
 	checkVpfid: checkVpfid
 };
