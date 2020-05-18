@@ -471,7 +471,6 @@ function getVPFVPVs(req, res, next) {
 	logger4js.info('Get Project Versions of VPF for user %s with query params %O ', userId, req.query);
 	var queryvpv = {};
 	var queryvpvids = {};
-	var longList = true;		// need full vpv for capacity calculation
 	var nowDate = new Date();
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
@@ -574,7 +573,6 @@ function getVCVPVs(req, res, next) {
 	logger4js.info('Get Project Versions of VC for user %s with query params %O ', userId, req.query);
 	var queryvpv = {};
 	var queryvpvids = {};
-	var longList = true;		// need full vpv for capacity calculation
 	var nowDate = new Date();
 	var variantName = '';
 

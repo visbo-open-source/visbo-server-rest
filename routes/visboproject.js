@@ -2682,8 +2682,6 @@ router.route('/:vpid/portfolio/:vpfid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var latestOnly = false; 	// as default show all settings
-			var isSysAdmin = req.query.sysadmin ? true : false;
 			var roleID = req.query.roleID;
 
 			req.auditDescription = 'VISBO Project Capacity (Read)';
