@@ -162,24 +162,7 @@ function calcCosts(vpv, pfv, organisation) {
 
 		var personalCost = getAllPersonalKosten(vpv, organisation);
 		var allOtherCost = getAllOtherCost('', vpv, organisation);
-/* 
-		var licenseCost = getAllOtherCost(1, vpv, organisation);
-		var travelCost = getAllOtherCost(2, vpv, organisation);
-		var persCost = getAllOtherCost(3, vpv, organisation);
 
-		var monthlyNeeds1002euro = getRessourcenBedarfe(1002,vpv,true, true, organisation);
-		var monthlyNeeds1002PT = getRessourcenBedarfe(1002,vpv,true, false, organisation);
-		var monthlyNeeds3euro = getRessourcenBedarfe(3,vpv,true, true, organisation);
-		var monthlyNeeds3PT = getRessourcenBedarfe(3,vpv,true, false, organisation);
-		var monthlyNeeds5euro = getRessourcenBedarfe(5,vpv,true, true, organisation);
-		var monthlyNeeds5PT = getRessourcenBedarfe(5,vpv,true, false, organisation);
-		var monthlyNeeds2euro = getRessourcenBedarfe(2,vpv,true, true, organisation);
-		var monthlyNeeds2PT = getRessourcenBedarfe(2,vpv,true, false, organisation);
-		var monthlyNeeds6euro = getRessourcenBedarfe(6,vpv,true, true, organisation);
-		var monthlyNeeds6PT = getRessourcenBedarfe(6,vpv,true, false, organisation);
-		var monthlyNeeds16euro = getRessourcenBedarfe(16,vpv,true, true, organisation);
-		var monthlyNeeds16PT = getRessourcenBedarfe(16,vpv,true, false, organisation);
- */
 		for (var i = 0 ; i < dauer; i++){
 			const currentDateISO = currentDate.toISOString();
 			allCostValues[currentDateISO] = { 'currentCost': personalCost[i] + allOtherCost[i] };
@@ -869,23 +852,24 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleID, organisation) {
+function calcCapacities(vpvs, roleName, organisation) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
 
+	var roleID = '';
+	var dateMinValue = -8640000000000000;
+	var dateMaxValue = 8640000000000000;
+	var startIndex = Infinity;
+	var endIndex = 0;
+	var startDate = new Date(dateMaxValue);
+	var endDate = new Date(dateMinValue);
+	var dauer =0;
+
 	var startCalc = new Date();
-	if ( vpvs && organisation && roleID) {
-
-		// get startIndex and endIndex and dauer of several vpv
-		var dateMinValue = -8640000000000000;
-		var dateMaxValue = 8640000000000000;
-		var startIndex = Infinity;
-		var endIndex = 0;
-		var startDate = new Date(dateMaxValue);
-		var endDate = new Date(dateMinValue);
-		var dauer =0;
-
+	if ( vpvs && organisation) {	
+		
+		// get startIndex and endIndex and dauer of several vpv	
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
 			var vpv = vpvs[i];
 			if (vpv) {
@@ -896,7 +880,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 				dauer = endIndex - startIndex + 1;
 			}
 		}
-		
+	
 		//logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO %s ', roleID, startDate, startDate.toISOString());
 		var currentDate = new Date(startDate);
 		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, startDate, currentDate.toISOString());
@@ -918,8 +902,14 @@ function calcCapacities(vpvs, roleID, organisation) {
 		for ( i = 0; organisation && organisation.value && organisation.value.allRoles && i < organisation.value.allRoles.length; i++) {
 			allRoles[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
-			if (organisation.value.allRoles[i].isTeam)	allTeams[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];
+			if (organisation.value.allRoles[i].isTeam)	allTeams.push(organisation.value.allRoles[i]);
 		}	
+		
+		if (!roleName || roleName === '' && allRoles.length > 0)  roleName = organisation.value.allRoles[0].name;
+
+		logger4js.debug('find the roleID for the given roleName %s', roleName);
+		
+		if (roleName && allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
 
 		if (!allRoles[roleID]) {
 			return allCalcCapaValuesIndexed;
@@ -927,7 +917,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 
 		// getting roles, which are concerned/connected with roleID in the given organisation
 		logger4js.debug('getting roles, which are concerned/connected with roleID in the given organisation %s',  roleID);
-		var concerningRoles = getConcerningRoles(allRoles, roleID);
+		var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
 		logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
@@ -939,7 +929,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 		var costValues = [];
 		var costElem = {};
 
-		for (var i=0 ; i < dauer; i++){
+		for ( i = 0 ; i < dauer; i++){
 			costElem = {};
 			costElem.actCost_PT = 0;
 			costElem.actCost = 0;
@@ -995,7 +985,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 			'plannedCost_PT': allCalcCapaValues[element].plannedCost_PT || 0,
 			'internCapa_PT': allCalcCapaValues[element].internCapa_PT || 0,
 			'externCapa_PT' : allCalcCapaValues[element].externCapa_PT || 0,			
-			'actualCost': allCalcCapaValues[element].aktualCost || 0,
+			'actualCost': allCalcCapaValues[element].actualCost || 0,
 			'plannedCost': allCalcCapaValues[element].plannedCost || 0,
 			'internCapa': allCalcCapaValues[element].internCapa || 0,
 			'externCapa' :allCalcCapaValues[element].externCapa || 0
@@ -1004,7 +994,7 @@ function calcCapacities(vpvs, roleID, organisation) {
 	}
 
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.info('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCalcCapaValuesIndexed;
 }
 
@@ -1141,7 +1131,7 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 
 
 	// Calculate the Capacities of this Role
-	for (var cR = 0; cR < concerningRoles.length; cR++){
+	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
 
 		var actRoleID = concerningRoles[cR].actRole.uid;	
 		var faktor = concerningRoles[cR].faktor;
@@ -1211,7 +1201,7 @@ function buildRClists(vpv) {
 }
 
 
-function getConcerningRoles(allRoles, roleID) {
+function getConcerningRoles(allRoles, allTeams, roleID) {
 	var concerningRoles = [];
 	var crElem = {};
 
@@ -1253,14 +1243,14 @@ function getConcerningRoles(allRoles, roleID) {
 		crElem.faktor = 1;
 		concerningRoles.push(crElem);
 
-		var subRoles = actRole.subRoleIDs;	
-
-		if (subRoles.length > 0 ){				
-			subRoles.forEach(findConcerningRoles);
+		if (actRole) {
+			var subRoles = actRole.subRoleIDs;	
+			if (subRoles.length > 0 ){				
+				subRoles.forEach(findConcerningRoles);
+			}
 		}
-
-
 	}
+	
 
 	// eliminate duplicates of the pair roleID|teamID
 	var concerningRolesIndexed = [];
@@ -1270,7 +1260,29 @@ function getConcerningRoles(allRoles, roleID) {
 		var key = crElement.actRole.uid + '|' + crElement.teamID;		
 		concerningRolesIndexed[key] = crElement;
 	}
+	var isConcerningTeam = true;
 
+	for (var t=0; t < allTeams.length; t++) {
+		var team = allTeams[t];
+		var teamkey = team.uid + '|' + '-1';
+		if (team &&  team.subRoleIDs.length > 0 && !concerningRolesIndexed[teamkey]) {
+			for (var sr = 0; sr < team.subRoleIDs.length; sr++){
+				key = team.subRoleIDs[sr].key + '|' + '-1';
+				if (!concerningRolesIndexed[key]) {
+					isConcerningTeam = false;
+					break;
+				}
+			}			
+		}
+		if (isConcerningTeam) {
+			crElem = {};
+			crElem.actRole = team;
+			crElem.teamID = -1;
+			crElem.faktor = 1;
+			concerningRolesIndexed[teamkey] = crElem;
+			concerningRoles.push(crElem);
+		}		
+	}
 	return concerningRoles;
 }
 
