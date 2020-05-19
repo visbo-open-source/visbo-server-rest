@@ -1089,7 +1089,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
 					var phasenStart = phase.relStart - 1;
 
-					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
+					logger4js.debug('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					for (var k = 0; phase && phase.AllRoles && k < phase.AllRoles.length ; k++) {
 						if (phase.AllRoles[k].RollenTyp == actRoleID) {
 							var role = phase.AllRoles[k];
@@ -1116,6 +1116,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 			// costValues[0] = 0;
 		}
 	}
+	logger4js.debug('Finished getRessourcenBedarf Project Version %s',  vpv._id);
 	return costValues;
 }
 
