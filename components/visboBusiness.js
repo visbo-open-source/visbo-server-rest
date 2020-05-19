@@ -1089,10 +1089,13 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 				logger4js.debug('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
 				for (var j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
+					if (!phase) {
+						continue;
+					}
 					var phasenStart = phase.relStart - 1;
 
 					logger4js.debug('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
-					for (var k = 0; phase && phase.AllRoles && k < phase.AllRoles.length ; k++) {
+					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
 						if (phase.AllRoles[k].RollenTyp == actRoleID) {
 							var role = phase.AllRoles[k];
 							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
