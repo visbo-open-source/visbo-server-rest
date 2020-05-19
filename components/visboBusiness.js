@@ -1079,12 +1079,14 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 			for (i = 0; intersectArray && i< intersectArray.length; i++) {
 
 				actRoleID = intersectArray[i].role;
+				logger4js.debug('Calculate Intersect %s Role %s', i, actRoleID);
 				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatzIntern : 0;
 				teamID = intersectArray[i].teamID;
 				var phasesWithActRole = intersectArray[i].phases;
 
 				// calculate the needs of this Role with faktor always 1.0
 
+				logger4js.debug('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
 				for (var j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
 					var phasenStart = phase.relStart - 1;
