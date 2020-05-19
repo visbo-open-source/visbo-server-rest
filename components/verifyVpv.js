@@ -516,7 +516,7 @@ function getVPFVPVs(req, res, next) {
 			var filterVPV = [];
 			for (let i = 0; i < listVPV.length; i++){
 				//check if vpid & variant are member of portfolio
-				logger4js.debug('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
+				logger4js.trace('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
 				var itemSearch = {vpid: listVPV[i].vpid, variantName: listVPV[i].variantName};
 				if (req.listPortfolioVPVariant.find(findVPVariantList, itemSearch)) {
 					logger4js.debug('found: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);

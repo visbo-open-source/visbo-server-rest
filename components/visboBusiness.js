@@ -46,7 +46,7 @@ function getAllPersonalKosten(vpv, organisation) {
 		allRoles[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];
 	}
 	var endCalc = new Date();
-	logger4js.debug('Calculate Personal Cost Convert Organisation %s ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Personal Cost Convert ', endCalc.getTime() - startCalc.getTime());
 
 	startCalc = new Date();
 	var startIndex = getColumnOfDate(vpv.startDate);
@@ -1008,7 +1008,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 	if (vpv && roleID && concerningRoles){
 
-		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s ', roleID, vpv._id, vpv.startDate, vpv.endDate);
+		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
@@ -1035,12 +1035,14 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 
 		// build role/cost - lists with teams
+		logger4js.debug('Build Role / Cost List for Project Version %s',  vpv._id);
 		var rclists = buildRClists(vpv);
 
 		// build an intersection ?!?!?!
 		var intersectArray = [];
 		var intersectElem = new Object;
 
+		logger4js.debug('Evaluate Teams for Project Version %s',  vpv._id);
 		for (i = 0; concerningRoles && i< concerningRoles.length; i++) {
 			var actRoleID = concerningRoles[i] && concerningRoles[i].actRole.uid;
 			var teamID = concerningRoles[i] && concerningRoles[i].teamID;
@@ -1071,6 +1073,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 		}
 
 
+		logger4js.debug('Combine Capacity Values for Project Version %s',  vpv._id);
 		if (dauer > 0) {
 
 			for (i = 0; intersectArray && i< intersectArray.length; i++) {
