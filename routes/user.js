@@ -11,7 +11,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var mail = require('../components/mail');
-var eMailTemplates = "/../emailTemplates/";
+var eMailTemplates = '/../emailTemplates/';
 var ejs = require('ejs');
 var useragent = require('useragent');
 var validate = require('./../components/validate');
@@ -316,10 +316,10 @@ router.route('/passwordchange')
 
 router.route('/logout')
 /**
-	* @api {post} /user/logout Logout and invalidate token
+	* @api {post} /user/logout User Logout
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup User Profile
+	* @apiGroup Authentication
 	* @apiName Logout
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error

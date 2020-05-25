@@ -25,7 +25,7 @@ router.route('/')
 	* @api {get} /syslog Get log file list
 	* @apiVersion 1.0.0
 	* @apiHeader {String} access-key User authentication token.
-	* @apiGroup Visbo System Log
+	* @apiGroup VISBO System Log
 	* @apiName GetSysLogs
 	* @apiPermission user must be authenticated and access to System View and ViewLog Permission
 	* @apiError {number} 401 Not Authenticated, no valid token
@@ -124,7 +124,7 @@ router.route('/')
 		* @api {get} /syslog/filename Get log file
 		* @apiVersion 1.0.0
 		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Visbo System Log
+		* @apiGroup VISBO System Log
 		* @apiName GetSysLogFile
 		* @apiPermission user must be authenticated and has System View and ViewLog Permission
 		* @apiError {number} 401 Not Authenticated, no valid token

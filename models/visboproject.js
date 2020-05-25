@@ -1,6 +1,19 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
+var restrictSchema = new Schema({
+	name: { type: String, maxlength: 256, required: true },
+	groupid: { type: Schema.Types.ObjectId, ref: 'VisboGroup', required: true },
+	user: {
+		userId: {type: Schema.Types.ObjectId, ref: 'User'},
+		email: {type: String, required: false}
+	},
+	elementPath: [{ type: String, reuqired: true }],
+	inclChildren: {type: Boolean, required: false},
+	validUntil: { type: Date, reuqired: false },
+	createdAt: { type: Date, reuqired: true }
+});
+
 var lockSchema = new Schema({
 	variantName: { type: String, maxlength: 256 },
 	email: { type: String, required: true, maxlength: 256 },
@@ -28,6 +41,7 @@ var visboProjectSchema = new mongoose.Schema({
 	vpvCount: { type: Number, required: true },
 	variant: [{type: variantSchema, required: false}],
 	lock: [{type: lockSchema, required: false}],
+	restrict: [{type: restrictSchema, required: false}],
 	deletedAt: {type: Date, required: false }
 });
 // Set Creation and modification date automatically
@@ -37,3 +51,4 @@ visboProjectSchema.set('timestamps', true);
 mongoose.model('VisboProject', visboProjectSchema);
 mongoose.model('Lock', lockSchema);
 mongoose.model('Variant', variantSchema);
+mongoose.model('Restrict', restrictSchema);
