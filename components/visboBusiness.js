@@ -921,6 +921,7 @@ function calcCapacities(vpvs, roleName, organisation) {
 
 		logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
+		
 		/*
 		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
@@ -1297,85 +1298,90 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 
 // find summary Roles
-// function getSummaryRoles(allRoles, roleID) {
-// 	var summaryRoles = [];
-//
-// 	function findSummaryRoles(value) {
-// 		//value is the Id of one subrole
-// 		var hroleID = value.key;
-// 		var hrole = allRoles[hroleID];
-// 		if (hrole.subRoleIDs.length > 0){
-// 			summaryRoles[hroleID] = hrole;
-// 			var shroles = hrole.subRoleIDs;
-// 			shroles.forEach(findSummaryRoles);
-// 		}
-// 	}
-//
-//
-// 	// all summary roles
-// 	if (!roleID && allRoles) {
-// 		var i = 0;
-// 		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
-// 			var hrole = allRoles[i];
-// 			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
-// 		}
-// 		return summaryRoles;
-// 	}
-//
-// 	// only summary roles that are children of the role roleID
-// 	if (roleID && allRoles){
-// 		var role = allRoles[roleID];
-//
-// 		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
-//
-// 			var subRoles = role.subRoleIDs;
-// 			if (subRoles.length > 0 ){
-// 				summaryRoles[role.uid] = role;
-// 				subRoles.forEach(findSummaryRoles);
-// 			}
-//
-// 		}
-// 		return summaryRoles;
-// 	}
-// }
+function getSummaryRoles(allRoles, roleID) {
+	var summaryRoles = [];
 
-// function getParentOfRole (roleID, allRoles) {
-// 	var parentRole = undefined;
-// 	if (allRoles[roleID]) {
-// 		// find all summaryRoles
-// 		var sumRoles = getSummaryRoles(allRoles, '');
-// 		var notFound = true;
-// 		for (var k=0; sumRoles && k < sumRoles.length;k++){
-// 			// check only roles, which are not isTeam or isTeamParent
-// 			var hrole = sumRoles[k];
-// 			if (hrole && !hrole.isTeam && !hrole.isTeamParent)	{
-// 				for( var i = 0; notFound && hrole && i< hrole.subRoleIDs.length; i++ ){
-// 					// ur: für Testzwecke: var roleuid = hrole.subRoleIDs[i].key;
-// 					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
-// 						parentRole = hrole;
-// 					}
-// 				}
-// 			}
-//
-// 		}
-// 	}
-// 	return parentRole;
-// }
+	function findSummaryRoles(value) {
+		//value is the Id of one subrole
+		var hroleID = value.key;
+		var hrole = allRoles[hroleID];
+		if (hrole.subRoleIDs.length > 0){
+			summaryRoles[hroleID] = hrole;
+			var shroles = hrole.subRoleIDs;
+			shroles.forEach(findSummaryRoles);
+		}
+	}
 
-// function buildTopNodes(allRoles) {
-// 	var topLevelNodes = [];
-// 	var i = 1;
-//
-// 	while (i <= allRoles.length){
-// 		var currentRole = allRoles[i];
-// 		if (currentRole) {
-// 			var parent = getParentOfRole(currentRole.uid, allRoles);
-// 			if (!parent && !topLevelNodes[currentRole.uid]) topLevelNodes[currentRole.uid] = currentRole;
-// 		}
-// 		i++;
-// 	}
-// 	return topLevelNodes;
-// }
+
+	// all summary roles
+	if (roleID === undefined && allRoles) {
+		var i = 0;
+		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
+			var hrole = allRoles[i];
+			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
+		}
+		return summaryRoles;
+	}
+
+	// only summary roles that are children of the role roleID
+	if (roleID && allRoles){
+		var role = allRoles[roleID];
+
+		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
+
+			var subRoles = role.subRoleIDs;
+			if (subRoles.length > 0 ){
+				summaryRoles[role.uid] = role;
+				subRoles.forEach(findSummaryRoles);
+			}
+
+		}
+		return summaryRoles;
+	}
+}
+
+function getParentOfRole (roleID, allRoles, sumRoles) {
+	var parentRole = undefined;
+	if (allRoles[roleID]) {
+		
+		var notFound = true;
+		for (var k=0; sumRoles && k < sumRoles.length;k++){
+			// check only roles, which are not isTeam or isTeamParent
+			var hrole = sumRoles[k];
+			if (hrole)	{
+				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){					
+					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
+						parentRole = hrole;
+						notFound = false;
+					}
+				}
+			}
+		}
+	}
+	return parentRole;
+}
+
+function buildTopNodes(allRoles) {
+	var topLevelNodes = [];
+	var topLevel = [];
+	var i = 1;
+
+	// find all summaryRoles
+	var sumRoles = getSummaryRoles(allRoles, '');
+
+	while (i <= allRoles.length){
+		var currentRole = allRoles[i];
+		if (currentRole) {
+			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
+			if (!parent && !topLevel[currentRole.uid]) {
+				topLevel[currentRole.uid] = currentRole;
+				topLevelNodes.push(currentRole);	
+			}			
+		}
+		i++;
+	}
+	return topLevelNodes;
+}
 
 // function getTeamOfSummaryRole(allTeams, allRoles){
 // 	var virtuals = undefined;
