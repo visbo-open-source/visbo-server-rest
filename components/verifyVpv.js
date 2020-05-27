@@ -334,6 +334,13 @@ function getVCOrgs(req, res, next) {
 			message: 'No VISBO Center or Organization'
 		});
 	}
+	// in case of get Capacity get the organisaion only if the user has enough permission
+	if (req.method == 'GET' && req.listVCPerm && (req.listVCPerm.getPerm(req.oneVCID).vc & (constPermVC.ViewAudit + constPermVC.Modify + constPermVC.ManagePerm)) == 0) {
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to get organisaion'
+		});
+	}
 	getVCOrganisation(req.oneVCID, req, res, next);
 }
 
