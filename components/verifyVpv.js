@@ -306,13 +306,15 @@ function getPortfolioVPs(req, res, next) {
 
 // Get the organisations for keyMetrics calculation
 function getVCOrgs(req, res, next) {
-	var baseUrl = req.baseUrl.split('?')[0];
+	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 	// fetch the organization in case of POST VPV to calculate keyMetrics
 	// or in case of capacity calculation
 
 	let skip = true;
-	if (req.method == 'POST' && baseUrl == '/') skip = false;
+	if (req.method == 'POST' && baseUrl == '/vpv') {
+		skip = false;
+	}
 	if (req.method == 'GET' && urlComponent.findIndex(comp => comp == 'capacity') >= 0) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
@@ -330,12 +332,6 @@ function getVCOrgs(req, res, next) {
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No VISBO Center or Organization'
-		});
-	}
-	if ((req.listVCPerm.getPerm(req.oneVCID).vc & (constPermVC.ViewAudit + constPermVC.Modify + constPermVC.ManagePerm)) == 0) {
-		return res.status(403).send({
-			state: 'failure',
-			message: 'No Permission to get organisaion'
 		});
 	}
 	getVCOrganisation(req.oneVCID, req, res, next);
