@@ -205,7 +205,6 @@ var app = express();
 initLog();
 logger4js.warn('Starting in Environment %s', process.env.NODE_ENV);
 logger4js.warn('Starting Version %s', process.env.VERSION_REST);
-logger4js.warn('Starting with %s CPUs', require('os').cpus().length);
 
 i18n.configure({
     locales:['en', 'de'],
@@ -214,6 +213,7 @@ i18n.configure({
 app.use(i18n.init);
 // logger4js.warn('Starting Localised %s', i18n.__('Hello'));
 
+logger4js.warn('Internationalisation done');
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
 
@@ -240,7 +240,7 @@ app.use(logger(function (tokens, req, res) {
   if (tokens.status(req, res) == 500) {
     var headers = JSON.parse(JSON.stringify(req.headers));
     headers['access-key'] = undefined;
-    logger4js.warn('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
+    logger4js.fatal('Server Error: Method %s URL %s Headers %s', tokens.method(req, res), req.url, JSON.stringify(headers).substring(0.200));
   }
   return webLog;
 }));
@@ -248,6 +248,7 @@ app.use(logger(function (tokens, req, res) {
 // set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
 
+logger4js.warn('Connecting Database');
 dbConnect(process.env.NODE_VISBODB);
 
 visboTaskScheduleInit();

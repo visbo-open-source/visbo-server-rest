@@ -290,24 +290,6 @@ router.route('/')
 			newVC.description = req.body.description;
 			newVC.vpCount = 0;
 
-			// Create new VC Group and add current user to the new Group
-			var newVG = new VisboGroup();
-			newVG.name = 'VISBO Center Admin';
-			newVG.groupType = 'VC';
-			newVG.internal = true;
-			newVG.global = true;
-			newVG.permission = {vc: Const.constPermVCAll };
-			newVG.vcid = newVC._id;
-			newVG.users = [];
-			newVG.users.push({email: useremail, userId: userId});
-
-			logger4js.trace('VC Post Create Admin Group for vc %s group %O ', newVC._id, newVG);
-			newVG.save(function(err) {
-				if (err) {
-					errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined);
-				}
-			});
-
 			logger4js.debug('Save VISBO Center %s %s', newVC.name, newVC._id);
 			newVC.save(function(err, vc) {
 				if (err) {
@@ -315,6 +297,24 @@ router.route('/')
 					return;
 				}
 				req.oneVC = vc;
+				// Create new VC Group and add current user to the new Group
+				var newVG = new VisboGroup();
+				newVG.name = 'VISBO Center Admin';
+				newVG.groupType = 'VC';
+				newVG.internal = true;
+				newVG.global = true;
+				newVG.permission = {vc: Const.constPermVCAll };
+				newVG.vcid = newVC._id;
+				newVG.users = [];
+				newVG.users.push({email: useremail, userId: userId});
+
+				logger4js.trace('VC Post Create Admin Group for vc %s group %O ', newVC._id, newVG);
+				newVG.save(function(err) {
+					if (err) {
+						errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined);
+					}
+				});
+
 				return res.status(200).send({
 					state: 'success',
 					message: 'Successfully created new VISBO Center',

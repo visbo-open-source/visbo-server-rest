@@ -6,10 +6,5 @@ apidoc/
 public/ui/
 .env
 logging/
-.env
-.env
-.env2
-env-dev
-env-prod
-VisboReST
 dump.rdb
+package-lock.json

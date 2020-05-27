@@ -80,6 +80,11 @@ router.route('/')
 					err = '';
 				}
 			}
+      if (req.query.crash != undefined) {
+				status = 'Get Status String native '.concat(req.query.objectid, ' has subid ', req.query.objectid.id);
+				logger4js.info(status);
+				err = '';
+			}
 
 			if (err) {
 				logger4js.info('Get Status: %O %s ', req.query, err.message);

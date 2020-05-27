@@ -99,15 +99,17 @@ function getAllGroups(req, res, next) {
 					message: 'No valid VISBO Center or no Permission'
 				});
 			}
-		} else if (vcid) {
-			if ((listVCPerm.getPerm(vcid).vp & constPermVP.View) == 0) {
-				// no View permission for VP
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No valid VISBO Center or no Permission'
-				});
-			}
 		}
+		// accept empty group list
+		// else if (vcid) {
+		// 	if ((listVCPerm.getPerm(vcid).vp & constPermVP.View) == 0) {
+		// 		// no View permission for VP
+		// 		return res.status(403).send({
+		// 			state: 'failure',
+		// 			message: 'No valid VISBO Center or no Permission'
+		// 		});
+		// 	}
+		// }
 		return next();
 	});
 }

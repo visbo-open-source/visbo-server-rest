@@ -603,6 +603,37 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2020-05-25T00:00:00"
+if (currentVersion < dateBlock) {
+  // remove VC Groups without VC Connection
+  var groups = db.visbogroups.aggregate([
+    {$project: {_id: 1, vcid:1, name:1, vpids:1, updatedAt:1}},
+    {$lookup: {
+         from: "visbocenters",
+         localField: "vcid",    // field in the groups collection
+         foreignField: "_id",  // field in the vc collection
+         as: "vc"
+      }
+    },
+    {$project: {_id: 1, vcid:1, updatedAt:1, "visbogroups.name":1, "vc._id":1, "vc.name":1}},
+    {$addFields: {vcname: '$vc.name'}},
+
+    {$match: {"vc.name": {$exists:false}}},
+    { $sort : {updatedAt: -1}}
+  ]).toArray();
+  if (groups.length > 0) {
+    print("Number of Groups to delete: " + groups.length)
+    var groupIDs = [];
+    for (var i=0; i < groups.length; i++) {
+      groupIDs.push(groups[i]._id);
+    }
+    db.visbogroups.deleteMany({_id: {$in: groupIDs}});
+  }
+
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
