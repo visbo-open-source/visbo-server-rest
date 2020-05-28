@@ -2682,11 +2682,11 @@ router.route('/:vpid/portfolio/:vpfid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var roleID = req.query.roleID;
+			var organisationID = req.query.organisationID;
 
 			req.auditDescription = 'VISBO Project Capacity (Read)';
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2698,7 +2698,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					_id: req.oneVP._id,
 					name: req.oneVP.name,
 					description: req.oneVP.description,
-					roleID: roleID,
+					organisationID: organisationID,
 					createdAt: req.oneVP.createdAt,
 					updatedAt: req.oneVP.updatedAt,
 					capacity: capacity
