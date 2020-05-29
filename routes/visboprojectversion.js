@@ -1207,7 +1207,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var keyMetricsVPV = visboBusiness.calcKeyMetrics([req.oneVPV], req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
