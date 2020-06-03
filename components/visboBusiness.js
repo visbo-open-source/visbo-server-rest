@@ -36,9 +36,12 @@ function getDateEndOfPreviousMonth(dd) {
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
 	var costValues = [];
+
 	logger4js.debug('Calculate Personal Cost of Project Version %s start %s end %s organisation TS %s', vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 
+	// prepare organisation: change the new modelling of kapazität into the old version for calculation
+	organisation = convertOrganisation(organisation);
 
 	// prepare organisation for direct access to uid
 	var allRoles = [];
@@ -95,6 +98,10 @@ function getAllOtherCost(costID, vpv, organisation) {
 
 	logger4js.debug('Calculate all other Cost of Project Version %s start %s end %s organisation TS %s', vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
+	
+	// prepare organisation: change the new modelling of kapazität into the old version for calculation
+	// organisation = convertOrganisation(organisation);
+
 	// prepare organisation for direct access to uid
 	var allCosts = [];
 	for (var i = 0; organisation && organisation.value && organisation.value.allRoles && i < organisation.value.allCosts.length; i++) {
@@ -150,6 +157,10 @@ function calcCosts(vpv, pfv, organisation) {
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	if ( vpv && organisation ) {
+			
+		// prepare organisation: change the new modelling of kapazität into the old version for calculation
+		organisation = convertOrganisation(organisation);
+
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
 		var currentDate = new Date(vpv.startDate);
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
@@ -797,6 +808,10 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 
 			if (organisation){
+							
+				// prepare organisation: change the new modelling of kapazität into the old version for calculation
+				organisation = convertOrganisation(organisation);
+
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
 				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
 				var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
@@ -867,7 +882,11 @@ function calcCapacities(vpvs, roleName, organisation) {
 	var dauer =0;
 
 	var startCalc = new Date();
+
 	if ( vpvs && organisation) {
+
+		// prepare organisation: change the new modelling of kapazität into the old version for calculation
+		organisation = convertOrganisation(organisation);
 
 		// get startIndex and endIndex and dauer of several vpv
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -1422,6 +1441,43 @@ function buildTopNodes(allRoles) {
 // }
 
 
+function convertOrganisation(organisation_new) {
+	
+	var organisation = undefined;
+	if ( !organisation_new ) {
+		return;
+	}	
+	var startCalc = new Date();
+	logger4js.debug('Change the new organisation in the old definition with an capacity array of 240 months');
+	organisation = organisation_new;	
+	var allRoles = [];	
+	for ( var i = 0; organisation_new && organisation_new.value && organisation_new.value.allRoles && i < organisation_new.value.allRoles.length; i++) {
+		var capa = [];
+		var capa_new = [];
+		var actrole = organisation_new.value.allRoles[i];
+		// initialise the new array with the default capacity except the first element.
+		capa_new[0] = 0;
+		for ( var j = 1; j < 240; j++) {
+			capa_new.push(actrole.defaultKapa);
+		}
+		// get the index of the startOfCal, because the array kapazität begins with this month since beginning of calendar
+		var sOC_date = new Date(actrole.startOfCal);
+		var indexOfstartOfCal = getColumnOfDate(sOC_date);
+		if (indexOfstartOfCal >= 0) {
+			// fill the array with the capacities != defaultKapa beginning with index 1 not 0
+			for ( var ic = 1 + indexOfstartOfCal; ic >= 0 && ic <= 240 && ic <= actrole.kapazitaet.length + indexOfstartOfCal-1; ic++) {
+				capa_new[ic] = actrole.kapazitaet[ic - indexOfstartOfCal];
+			}
+		}	
+		allRoles[i] = actrole;
+		allRoles[i].kapazitaet = capa_new;
+	}
+	organisation.value.allRoles = allRoles;
+	var endCalc = new Date();
+	logger4js.info('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	return organisation;	
+}
+
 function cleanupRestrictedVersion(vpv) {
 
 	if (!vpv) return;
@@ -1460,5 +1516,6 @@ module.exports = {
 	calcDeadlines: calcDeadlines,
 	calcCapacities: calcCapacities,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
+	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe
 };
