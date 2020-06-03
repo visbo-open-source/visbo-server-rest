@@ -56,6 +56,7 @@ router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
 router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
 
 function findUserById(currentUser) {

@@ -6,6 +6,7 @@ var constPermVC = Const.constPermVC;
 var systemVC = require('./../components/systemVC');
 
 var VisboCenter = mongoose.model('VisboCenter');
+var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
 
 var validate = require('./../components/validate');
@@ -130,6 +131,30 @@ function getVC(req, res, next, vcid) {
 	});
 }
 
+function getVCVP(req, res, next) {
+	var query = {};
+	if (!req.oneVC) {
+		return next();
+	}
+	query = {};
+	query.vcid = req.oneVC._id;
+	query.vpType = 0 // only projects no templates or portfolios
+	query.deletedAt =  {$exists: false};
+	var queryVP = VisboProject.find(query);
+	queryVP.select('_id, name');
+	queryVP.lean();
+	queryVP.exec(function (err, listVCVP) {
+		if (err) {
+			errorHandler(err, res, 'DB: Get VP of specific VC', 'Error getting VISBO Projects');
+			return;
+		}
+		req.listVCVP = listVCVP;
+
+		logger4js.debug('Found %d VISBO Center Projects', listVCVP.length);
+		return next();
+	});
+}
+
 // Generate the Groups where the user is member of System / VC depending on the case
 function getSystemGroups(req, res, next) {
 	var userId = req.decoded._id;
@@ -168,5 +193,6 @@ module.exports = {
 	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
 	getVC: getVC,
+	getVCVP: getVCVP,
 	getSystemGroups: getSystemGroups
 };
