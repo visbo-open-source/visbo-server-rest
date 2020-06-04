@@ -41,7 +41,8 @@ function getAllPersonalKosten(vpv, organisation) {
 	var startCalc = new Date();
 
 	// prepare organisation: change the new modelling of kapazität into the old version for calculation
-	organisation = convertOrganisation(organisation);
+	// will be done in the calling function
+	// organisation = convertOrganisation(organisation);
 
 	// prepare organisation for direct access to uid
 	var allRoles = [];
@@ -100,6 +101,7 @@ function getAllOtherCost(costID, vpv, organisation) {
 	var startCalc = new Date();
 	
 	// prepare organisation: change the new modelling of kapazität into the old version for calculation
+	// will be done in the calling function
 	// organisation = convertOrganisation(organisation);
 
 	// prepare organisation for direct access to uid
@@ -1508,8 +1510,8 @@ function cleanupRestrictedVersion(vpv) {
 
 
 module.exports = {
-	getAllPersonalKosten: getAllPersonalKosten,
-	getAllOtherCost: getAllOtherCost,
+	// getAllPersonalKosten: getAllPersonalKosten,
+	// getAllOtherCost: getAllOtherCost,
 	calcKeyMetrics: calcKeyMetrics,
 	calcCosts: calcCosts,
 	calcDeliverables: calcDeliverables,
