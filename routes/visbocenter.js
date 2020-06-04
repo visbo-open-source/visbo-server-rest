@@ -56,11 +56,34 @@ router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
 router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
 
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
 	return currentUser.userId.toString() == this.toString();
+}
+
+var privateSettings = ['organisation', 'customroles'];
+
+function squeezeSetting(item, email) {
+	if (privateSettings.findIndex(type => type == item.type) >= 0) {
+		// private setting
+		if (item.type == 'organisation') {
+			if (item.value && item.value.allRoles) {
+				var allRoles = item.value.allRoles;
+				for (var i=0; i<allRoles.length; i++) {
+					allRoles[i].kapazitaet = undefined;
+					allRoles[i].defaultKapa = undefined;
+					allRoles[i].tagessatzIntern = undefined;
+					allRoles[i].tagessatzExtern = undefined;
+					allRoles[i].externeKapazitaet = undefined;
+				}
+			}
+		} else if (item.type == 'customroles') {
+			item.value.customUserRoles = item.value.customUserRoles.filter(role => role.userName == email);
+		}
+	}
 }
 
 // Generates hash using bCrypt
@@ -1835,16 +1858,23 @@ router.route('/:vcid/group/:groupid')
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterSetting
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets all settings of the specified VISBO Center
+		* @apiDescription Gets all settings of the specified VISBO Center there the user has permission to.
+		* Depending on the setting private/public/personal different rules applies, how the result looks like.
+		* Private settings were content filtered, so that the user gets oon sensitive data, if he has not enough Permission
+		* Public settings were delivered as is.
+		* Personal settings were only delivered if it belongs to the acting user or if the user has Modify permission.
 		*
 		* With additional query paramteters the amount of settings can be restricted. Available Restirctions are: refDate, type, name, userId.
 		*
-		* @apiParam {Date} refDate only the latest setting with a timestamp before the reference date is delivered
+		* @apiParam {Date} refDate only the latest setting with a timestamp before the reference date is delivered per Setting Type/Name and UserID.
+		* if several settings per type & name and userID are available, the refDate filters the latest settings per group dependant on the timestamp compared to refDate.
+		* without extra setting the grouping is done per name, type and userID. With parameter groupBy the grouping is applied to type & userId.
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
 		* @apiParam {String} name Deliver only settings with the specified name
 		* @apiParam {String} type Deliver only settings of the the specified type
 		* @apiParam {String} userId Deliver only settings that has set the specified userId
+		* @apiParam {String} groupBy Groups the Settings regarding refDate by Type and userId and returns one per group
 		*
 		* @apiPermission Authenticated and Permission: View VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1873,7 +1903,9 @@ router.route('/:vcid/group/:groupid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
+			var groupBy = 'name';
 			var isSysAdmin = req.query.sysadmin ? true : false;
+			var sortColumns;
 
 			req.auditDescription = 'VISBO Center Setting (Read)';
 			req.auditSysAdmin = isSysAdmin;
@@ -1882,24 +1914,31 @@ router.route('/:vcid/group/:groupid')
 			logger4js.info('Get VISBO Center Setting for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			var query = {};
-			if (req.query.refDate && Date.parse(req.query.refDate)){
-				var refDate = new Date(req.query.refDate);
+			var refDate = new Date();
+			if (req.query.refDate != undefined) {
+				if (Date.parse(req.query.refDate)) refDate = new Date(req.query.refDate);
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
 				latestOnly = true;
 			}
+
 			query.vcid = req.oneVC._id;
 			if (req.query.name) query.name = req.query.name;
 			if (req.query.type) query.type = req.query.type;
-			if (req.query.userId && mongoose.Types.ObjectId.isValid(req.query.userId)) query.userId = req.query.userId;
+			if (req.query.userId && validate.validateObjectId(req.query.userId, true)) query.userId = req.query.userId;
+			if (req.query.groupBy == 'type') groupBy = 'type';
+
+			if (groupBy == 'type') sortColumns = 'type userId ';
+			else sortColumns = 'type name userId ';
+			if (latestOnly) {
+				if (req.query.refNext) sortColumns = sortColumns.concat(' +timestamp')
+				else sortColumns = sortColumns.concat(' -timestamp')
+			}
 
 			logger4js.info('Find VC Settings with query %O', query);
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
-			if (req.query.refNext)
-				queryVCSetting.sort('type name userId +timestamp');
-			else
-				queryVCSetting.sort('type name userId -timestamp');
+			queryVCSetting.sort(sortColumns);
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
 				if (err) {
@@ -1914,6 +1953,7 @@ router.route('/:vcid/group/:groupid')
 						break;
 					}
 				}
+				var listVCSettingfiltered = [];
 				if (listVCSetting.length > 1 && latestOnly){
 					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
@@ -1921,30 +1961,29 @@ router.route('/:vcid/group/:groupid')
 						//compare current item with previous and ignore if it is the same type, name, userId
 						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
 						if (listVCSetting[i].type != listVCSetting[i-1].type
-						|| listVCSetting[i].name != listVCSetting[i-1].name
-						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
+						|| (groupBy == 'name' && listVCSetting[i].name != listVCSetting[i-1].name)
+						|| (listVCSetting[i].userId || '').toString() != (listVCSetting[i-1].userId || '').toString()) {
 							listVCSettingfiltered.push(listVCSetting[i]);
 							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
 						}
 					}
-					logger4js.debug('Found %d Project Versions after Filtering', listVCSettingfiltered.length);
-
-					req.auditInfo = listVCSettingfiltered.length;
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Center Settings',
-						count: listVCSettingfiltered.length,
-						vcsetting: listVCSettingfiltered
-					});
+					logger4js.debug('Found %d Settings after Filtering', listVCSettingfiltered.length);
 				} else {
-					req.auditInfo = listVCSetting.length;
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Center Settings',
-						count: listVCSetting.length,
-						vcsetting: listVCSetting
-					});
+					listVCSettingfiltered = listVCSetting;
 				}
+				if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit + constPermVC.Modify))) {
+					// if user has no Modify/Audit permission the personal settings of other users were removed
+					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId)
+					// squeeze private settings, remove sensitive Information
+					listVCSettingfiltered.forEach(function (item) {squeezeSetting(item, useremail)});
+				}
+				req.auditInfo = listVCSettingfiltered.length;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Center Settings',
+					count: listVCSettingfiltered.length,
+					vcsetting: listVCSettingfiltered
+				});
 			});
 		})
 
@@ -1988,23 +2027,35 @@ router.route('/:vcid/group/:groupid')
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
+			var settingArea = 'public';
 
 			req.auditDescription = 'VISBO Center Setting (Create)';
 
 			logger4js.trace('Post a new VISBO Center Setting Req Body: %O Name %s', req.body, req.body.name);
 			logger4js.info('Post a new VISBO Center Setting with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
 
-			if (req.body.name) req.body.name = req.body.name.trim();
-			if (req.body.type) req.body.type = req.body.type.trim();
+			if (req.body.name) req.body.name = (req.body.name || '').trim();
+			if (req.body.type) req.body.type = (req.body.type || '').trim();
 			if (!validate.validateName(req.body.name, false) || !req.body.value || !validate.validateObjectId(req.body.userId, true)
-			|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, true)) {
+			|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, false)) {
 				logger4js.debug('Post a new VISBO Center Setting body or value not accepted %O', req.body);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No valid setting definition'
 				});
 			}
-			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.Modify))
+			if (privateSettings.findIndex(type => type == req.body.type) >= 0) {
+				settingArea = 'private';
+			} else if (req.body.userId == userId) {
+				settingArea = 'personal';
+			}
+			var reqPermVC = constPermVC.View;
+			if (settingArea == 'private') {
+				reqPermVC = constPermVC.ManagePerm;
+			} else if (settingArea == 'public') {
+				reqPermVC = constPermVC.Modify;
+			}
+			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
 			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
 				return res.status(403).send({
 					state: 'failure',
@@ -2077,20 +2128,12 @@ router.route('/:vcid/group/:groupid')
 		.delete(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
+			var settingArea = 'public';
 
 			req.auditDescription = 'VISBO Center Setting (Delete)';
 
 			logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
-			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.Modify))
-			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Permission to delete VISBO Center Setting',
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
-			logger4js.debug('Delete VISBO Center Setting after permission check %s', req.params.vcid);
 			var query = {};
 			query._id = req.params.settingid;
 			query.vcid = req.params.vcid;
@@ -2108,6 +2151,26 @@ router.route('/:vcid/group/:groupid')
 						error: err
 					});
 				}
+				if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
+					settingArea = 'private';
+				} else if (oneVCSetting.userId && oneVCSetting.userId.toString() == userId) {
+					settingArea = 'personal';
+				}
+				var reqPermVC = constPermVC.View;
+				if (settingArea == 'private') {
+					reqPermVC = constPermVC.ManagePerm;
+				} else if (settingArea == 'public') {
+					reqPermVC = constPermVC.Modify;
+				}
+				if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+				|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Permission to delete VISBO Center Setting',
+						perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+					});
+				}
+
 				req.oneVCSetting = oneVCSetting;
 				if (oneVCSetting._id.toString() != getSystemVC()._id.toString()
 				&& (oneVCSetting.type == 'SysValue' || oneVCSetting.type == 'SysConfig' && oneVCSetting.type == 'Task')) {
@@ -2137,7 +2200,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiGroup VISBO Center Properties
 		* @apiName PutVISBOCenterSetting
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Put updates a setting definition inside the VISBO Center
+		* @apiDescription Put updates a setting definition inside the VISBO Center, the type and userId could not be changed for security reasons, use delete and create instead.
 		*
 		* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2173,6 +2236,7 @@ router.route('/:vcid/group/:groupid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var settingChangeSMTP = false;
+		var settingArea = 'public';
 
 		req.auditDescription = 'VISBO Center Setting (Update)';
 		req.auditInfo = (req.body.name || '').trim();
@@ -2180,9 +2244,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info('PUT VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
 		if (req.body.name) req.body.name = req.body.name.trim();
-		if (req.body.type) req.body.type = req.body.type.trim();
-		if (!validate.validateName(req.body.name, true) || !validate.validateObjectId(req.body.userId, true)
-		|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, true)) {
+		if (!validate.validateName(req.body.name, true) || !validate.validateDate(req.body.timestamp, true)) {
 			logger4js.debug('PUT a new VISBO Center Setting body or value not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -2190,15 +2252,6 @@ router.route('/:vcid/group/:groupid')
 			});
 		}
 
-		if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.Modify))
-		|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Permission to Change VISBO Center Setting',
-				perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-			});
-		}
-		logger4js.debug('Update VISBO Center Setting after permission check %s', req.params.vcid);
 		var query = {};
 		query._id =  req.params.settingid;
 		query.vcid = req.params.vcid;
@@ -2217,6 +2270,27 @@ router.route('/:vcid/group/:groupid')
 				});
 			}
 			logger4js.info('Found the Setting for VC Updated');
+
+			if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
+				settingArea = 'private';
+			} else if (oneVCSetting.userId && oneVCSetting.userId.toString() == userId) {
+				settingArea = 'personal';
+			}
+			var reqPermVC = constPermVC.View;
+			if (settingArea == 'private') {
+				reqPermVC = constPermVC.ManagePerm;
+			} else if (settingArea == 'public') {
+				reqPermVC = constPermVC.Modify;
+			}
+
+			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to Change VISBO Center Setting',
+					perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+				});
+			}
 			if (req.body.updatedAt && Date.parse(req.body.updatedAt) && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
 				logger4js.info('VC Setting: Conflict with updatedAt %s %s', oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
 				return res.status(409).send({
@@ -2253,10 +2327,8 @@ router.route('/:vcid/group/:groupid')
 						}
 					}
 				} else {
-					// allow to change all
+					// allow to change all beside userId and type
 					if (req.body.name) oneVCSetting.name = req.body.name;
-					if (req.body.userId) oneVCSetting.userId = req.body.userId;
-					if (req.body.type) oneVCSetting.type = req.body.type;
 					if (req.body.value) oneVCSetting.value = req.body.value;
 					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
 					if (req.body.timestamp) oneVCSetting.timestamp = dateValue;

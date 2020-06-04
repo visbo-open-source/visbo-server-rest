@@ -54,7 +54,7 @@ function getAllGroups(req, res, next) {
 		// query['$or'] = [{groupType: 'VC'}, {deletedByParent: {$exists: checkDeleted}}]
 	} else {
 		if (vcid) query.vcid = vcid;
-		query.groupType = {$in: ['VC', 'VP']};				// search for VP Groups only
+		query.groupType = {$in: ['VC', 'VP']};
 	}
 	if (vpid) {
 		query.vpids = vpid;
@@ -245,9 +245,29 @@ function getVP(req, res, next, vpid) {
 	});
 }
 
+function squeezePortfolio(req, list) {
+	if (!req || !list || !(list.length > 0)) return;
+	var projectIDs = req.listVPPerm.getVPIDs(constPermVP.View + constPermVP.ViewRestricted);
+
+	for (var i=0; i< list.length; i++) {
+		// process every Portfolio Version in list
+		if (list[i].allItems) {
+			for (var j=0; j < list[i].allItems.length; j++) {
+				var vp = list[i].allItems[j];
+				if (projectIDs.findIndex(item => item == vp.vpid.toString()) < 0) {
+					// remove item, user does not have permission to the project
+					list[i].allItems.splice(j, 1);
+					j--;
+				}
+			}
+		}
+	}
+}
+
 module.exports = {
 	getAllGroups: getAllGroups,
 	getVPGroupsOfVC: getVPGroupsOfVC,
 	getVP: getVP,
-	checkVpfid: checkVpfid
+	checkVpfid: checkVpfid,
+	squeezePortfolio: squeezePortfolio
 };

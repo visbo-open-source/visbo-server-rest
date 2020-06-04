@@ -2270,6 +2270,7 @@ router.route('/:vpid/portfolio')
 				}
 				logger4js.debug('Found %d Portfolio Lists after Filtering', listVPFfiltered.length);
 				req.auditInfo = listVPFfiltered.length;
+				verifyVp.squeezePortfolio(listVPFfiltered);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Portfolios',
@@ -2280,6 +2281,7 @@ router.route('/:vpid/portfolio')
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			} else {
+				verifyVp.squeezePortfolio(req, listVPF);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Portfolios',
@@ -2523,6 +2525,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.debug('Found %d Portfolios', listVPF.length);
 			logger4js.trace('Found Portfolios/n', listVPF);
 
+			verifyVp.squeezePortfolio(req, listVPF);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Portfolio',

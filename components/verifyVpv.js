@@ -349,15 +349,15 @@ function getVCOrganisation(vcid, req, res, next) {
 	var startCalc = new Date();
 	var query = {};
 	query.vcid = vcid;
-	query.name = 'organisation';
 	query.type = 'organisation';
 
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
 	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
-	// ur: 29.04.20: temporät hinzugenommen wegen KApazität für Auslastungscharts
-	// queryVCSetting.select('-value.allRoles.kapazitaet');
-	queryVCSetting.sort('type name userId -timestamp');
+	if (req.method == 'POST') {
+		queryVCSetting.select('-value.allRoles.kapazitaet');
+	}
+	queryVCSetting.sort('-timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
@@ -578,6 +578,7 @@ function getVCVPVs(req, res, next) {
 	var queryvpvids = {};
 	var nowDate = new Date();
 	var variantName = '';
+	var vcvpids = [];
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
 		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
@@ -585,6 +586,9 @@ function getVCVPVs(req, res, next) {
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
 		});
+	}
+	if (req.listVCVP) {
+		req.listVCVP.forEach(function(item) { vcvpids.push(item._id); });
 	}
 	queryvpv.deletedAt = {$exists: false};
 	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
@@ -600,7 +604,12 @@ function getVCVPVs(req, res, next) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
 	queryvpv.variantName = variantName;
-	queryvpv.vpid = {$in: vpidList};
+	// queryvpv.vpid = {$in: vpidList};
+
+	var vpCondition = [];
+	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
+	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
+	queryvpv['$and'] = vpCondition;
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
