@@ -138,7 +138,7 @@ function getVCVP(req, res, next) {
 	}
 	query = {};
 	query.vcid = req.oneVC._id;
-	query.vpType = 0 // only projects no templates or portfolios
+	query.vpType = 0; // only projects no templates or portfolios
 	query.deletedAt =  {$exists: false};
 	var queryVP = VisboProject.find(query);
 	queryVP.select('_id, name');

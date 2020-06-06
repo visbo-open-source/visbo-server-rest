@@ -1931,8 +1931,8 @@ router.route('/:vcid/group/:groupid')
 			if (groupBy == 'type') sortColumns = 'type userId ';
 			else sortColumns = 'type name userId ';
 			if (latestOnly) {
-				if (req.query.refNext) sortColumns = sortColumns.concat(' +timestamp')
-				else sortColumns = sortColumns.concat(' -timestamp')
+				if (req.query.refNext) sortColumns = sortColumns.concat(' +timestamp');
+				else sortColumns = sortColumns.concat(' -timestamp');
 			}
 
 			logger4js.info('Find VC Settings with query %O', query);
@@ -1955,7 +1955,6 @@ router.route('/:vcid/group/:groupid')
 				}
 				var listVCSettingfiltered = [];
 				if (listVCSetting.length > 1 && latestOnly){
-					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
 					for (let i = 1; i < listVCSetting.length; i++){
 						//compare current item with previous and ignore if it is the same type, name, userId
@@ -1973,9 +1972,9 @@ router.route('/:vcid/group/:groupid')
 				}
 				if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit + constPermVC.Modify))) {
 					// if user has no Modify/Audit permission the personal settings of other users were removed
-					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId)
+					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
 					// squeeze private settings, remove sensitive Information
-					listVCSettingfiltered.forEach(function (item) {squeezeSetting(item, useremail)});
+					listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
 				}
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({
