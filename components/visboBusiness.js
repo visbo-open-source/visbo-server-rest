@@ -1467,7 +1467,7 @@ function convertOrganisation(organisation_new) {
 		var indexOfstartOfCal = getColumnOfDate(sOC_date);
 		if (indexOfstartOfCal >= 0) {
 			// fill the array with the capacities != defaultKapa beginning with index 1 not 0
-			for ( var ic = 1 + indexOfstartOfCal; ic >= 0 && ic <= 240 && ic <= actrole.kapazitaet.length + indexOfstartOfCal-1; ic++) {
+			for ( var ic = 1 + indexOfstartOfCal; ic >= 0 && ic <= 240 && actrole.kapazitaet && ic <= actrole.kapazitaet.length + indexOfstartOfCal-1; ic++) {
 				capa_new[ic] = actrole.kapazitaet[ic - indexOfstartOfCal];
 			}
 		}	

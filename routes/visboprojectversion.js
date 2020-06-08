@@ -1137,7 +1137,7 @@ router.route('/:vpvid')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
-				count: costCapa.length,
+				count: capacity.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
 					timestamp: req.oneVPV.timestamp,
