@@ -2438,7 +2438,7 @@ router.route('/:vcid/group/:groupid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var roleID = req.query.organisationID;
+			var organisationID = req.query.organisationID;
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
