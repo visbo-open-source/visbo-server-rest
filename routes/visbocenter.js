@@ -1955,7 +1955,6 @@ router.route('/:vcid/group/:groupid')
 				}
 				var listVCSettingfiltered = [];
 				if (listVCSetting.length > 1 && latestOnly){
-					listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
 					for (let i = 1; i < listVCSetting.length; i++){
 						//compare current item with previous and ignore if it is the same type, name, userId
@@ -1975,7 +1974,7 @@ router.route('/:vcid/group/:groupid')
 					// if user has no Modify/Audit permission the personal settings of other users were removed
 					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
 					// squeeze private settings, remove sensitive Information
-					listVCSettingfiltered.forEach(function (item) {squeezeSetting(item, useremail);});
+					listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
 				}
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({
@@ -2439,11 +2438,11 @@ router.route('/:vcid/group/:groupid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var organisationID = req.query.organisationID;
+			var roleID = req.query.roleID;
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2455,7 +2454,7 @@ router.route('/:vcid/group/:groupid')
 					_id: req.oneVC._id,
 					name: req.oneVC.name,
 					description: req.oneVC.description,
-					organisationID: organisationID,
+					roleID: roleID,
 					vpCount: req.oneVC.vpCount,
 					createdAt: req.oneVC.createdAt,
 					updatedAt: req.oneVC.updatedAt,
