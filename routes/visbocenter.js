@@ -2438,11 +2438,11 @@ router.route('/:vcid/group/:groupid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var roleID = req.query.roleID;
+			var roleID = req.query.organisationID;
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2454,7 +2454,7 @@ router.route('/:vcid/group/:groupid')
 					_id: req.oneVC._id,
 					name: req.oneVC.name,
 					description: req.oneVC.description,
-					roleID: roleID,
+					organisationID: organisationID,
 					vpCount: req.oneVC.vpCount,
 					createdAt: req.oneVC.createdAt,
 					updatedAt: req.oneVC.updatedAt,
