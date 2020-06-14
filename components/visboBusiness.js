@@ -1454,7 +1454,6 @@ function convertOrganisation(organisation_new) {
 	organisation = organisation_new;	
 	var allRoles = [];	
 	for ( var i = 0; organisation_new && organisation_new.value && organisation_new.value.allRoles && i < organisation_new.value.allRoles.length; i++) {
-		var capa = [];
 		var capa_new = [];
 		var actrole = organisation_new.value.allRoles[i];
 		// initialise the new array with the default capacity except the first element.

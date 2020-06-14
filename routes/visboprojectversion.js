@@ -1111,7 +1111,7 @@ router.route('/:vpvid')
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
-			var organisationID = req.query.organisationID;
+			var roleID = req.query.roleID;
 
 			req.auditDescription = 'Project Version CalcCapacity (Read)';
 			req.auditSysAdmin = sysAdmin;
@@ -1124,16 +1124,16 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			}
-			if (organisationID == undefined ) {
+			if (roleID == undefined ) {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'No organisationID given to Calculate Capacities',
+					message: 'No roleID given to Calculate Capacities',
 					perm: perm
 				});
 			}
-			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, organisationID);
+			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-			var capacity = visboBusiness.calcCapacities([req.oneVPV], organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
@@ -1144,7 +1144,7 @@ router.route('/:vpvid')
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
 					name: req.oneVPV.name,
-					organisationID: organisationID,
+					roleID: roleID,
 					capacity: capacity
 				} ],
 				perm: perm

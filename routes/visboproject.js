@@ -2652,13 +2652,14 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version
 		*
-		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and organisationID
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and roleID
+		
 		*
 		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} organisationID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
 		*
 		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for the Portfolio and all the projects of the Portfolio, Projects without View Permission will be excluded
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2685,11 +2686,11 @@ router.route('/:vpid/portfolio/:vpfid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var organisationID = req.query.organisationID;
+			var roleID = req.query.roleID;
 
 			req.auditDescription = 'VISBO Project Capacity (Read)';
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, organisationID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
@@ -2701,7 +2702,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					_id: req.oneVP._id,
 					name: req.oneVP.name,
 					description: req.oneVP.description,
-					organisationID: organisationID,
+					roleID: roleID,
 					createdAt: req.oneVP.createdAt,
 					updatedAt: req.oneVP.updatedAt,
 					capacity: capacity
