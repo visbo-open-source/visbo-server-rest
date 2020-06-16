@@ -1254,6 +1254,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 		if (actRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
 				var team = crElem.actRole.teamIDs[t];
+				if (actRole.uid != team.key) { continue }
 				crElem.teamID = team.key;
 				var teamValue = parseFloat(team.value.replace(',', '.'));
 				crElem.faktor = teamValue;
