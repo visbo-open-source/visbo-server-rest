@@ -2442,7 +2442,7 @@ router.route('/:vcid/group/:groupid')
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';

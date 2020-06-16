@@ -154,12 +154,16 @@ function getAllOtherCost(costID, vpv, organisation) {
 
 }
 
-function calcCosts(vpv, pfv, organisation) {
+function calcCosts(vpv, pfv, organisations) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
-	if ( vpv && organisation ) {
-			
+	if ( vpv && organisations && organisations.length > 0 ) {
+
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+		// choose the newest organisation
+		organisation = organisations[0];	
 		// prepare organisation: change the new modelling of kapazität into the old version for calculation
 		organisation = convertOrganisation(organisation);
 
@@ -795,7 +799,7 @@ function convertHierarchy(vpv) {
 	return indexedHrchy;
 }
 
-function calcKeyMetrics(vpv, pfv, organisation) {
+function calcKeyMetrics(vpv, pfv, organisations) {
 	var keyMetrics = {};
 	var startCalc = new Date();
 
@@ -803,14 +807,15 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 		// Calculate keyMetrics Values here
 		keyMetrics = vpv.keyMetrics || {};
-		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisations && organisations[0]._id, JSON.stringify(keyMetrics));
 
 		if (vpv.variantName != 'pfv'){
 
-
-
-			if (organisation){
-							
+			if (organisations){				
+				// sort the organisations descending
+				organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+				// choose the newest organisation
+				var organisation = organisations[0];			
 				// prepare organisation: change the new modelling of kapazität into the old version for calculation
 				organisation = convertOrganisation(organisation);
 
@@ -869,7 +874,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleName, organisation) {
+function calcCapacities(vpvs, roleName, organisations) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -885,8 +890,12 @@ function calcCapacities(vpvs, roleName, organisation) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisation) {
+	if ( vpvs && organisations) {
 
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+		// choose the newest organisation
+		var organisation = organisations[0];
 		// prepare organisation: change the new modelling of kapazität into the old version for calculation
 		organisation = convertOrganisation(organisation);
 
@@ -910,9 +919,9 @@ function calcCapacities(vpvs, roleName, organisation) {
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
 
-		// if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
-		// 	return monthlyNeeds;
-		// }
+		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
+			return monthlyNeeds;
+		}
 
 		// prepare organisation for direct access to uid
 		logger4js.debug('prepare organisation for direct access to uid');
@@ -1382,27 +1391,27 @@ function getParentOfRole (roleID, allRoles, sumRoles) {
 	return parentRole;
 }
 
-function buildTopNodes(allRoles) {
-	var topLevelNodes = [];
-	var topLevel = [];
-	var i = 1;
+// function buildTopNodes(allRoles) {
+// 	var topLevelNodes = [];
+// 	var topLevel = [];
+// 	var i = 1;
 
-	// find all summaryRoles
-	var sumRoles = getSummaryRoles(allRoles, '');
+// 	// find all summaryRoles
+// 	var sumRoles = getSummaryRoles(allRoles, '');
 
-	while (i <= allRoles.length){
-		var currentRole = allRoles[i];
-		if (currentRole) {
-			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
-			if (!parent && !topLevel[currentRole.uid]) {
-				topLevel[currentRole.uid] = currentRole;
-				topLevelNodes.push(currentRole);	
-			}			
-		}
-		i++;
-	}
-	return topLevelNodes;
-}
+// 	while (i <= allRoles.length){
+// 		var currentRole = allRoles[i];
+// 		if (currentRole) {
+// 			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
+// 			if (!parent && !topLevel[currentRole.uid]) {
+// 				topLevel[currentRole.uid] = currentRole;
+// 				topLevelNodes.push(currentRole);	
+// 			}			
+// 		}
+// 		i++;
+// 	}
+// 	return topLevelNodes;
+// }
 
 // function getTeamOfSummaryRole(allTeams, allRoles){
 // 	var virtuals = undefined;
