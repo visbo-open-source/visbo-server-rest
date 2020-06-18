@@ -1252,16 +1252,16 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 	var concerningRoles = [];
 	var crElem = {};
 
-	function findConcerningRoles(value) {
+	function findConcerningRoles(value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
 		crElem = {};
 		crElem.actRole = allRoles[hroleID];
 
-		if (actRole.isTeam){
+		if (parentRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
 				var team = crElem.actRole.teamIDs[t];
-				if (actRole.uid != team.key) { continue }
+				if (parentRole.uid != team.key) { continue }
 				crElem.teamID = team.key;
 				var teamValue = parseFloat(team.value.replace(',', '.'));
 				crElem.faktor = teamValue;
@@ -1272,18 +1272,18 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 			crElem.faktor = 1.0;
 			concerningRoles.push(crElem);
 
-			actRole = crElem.actRole;
-			if (actRole && actRole.subRoleIDs.length > 0){
-				var shroles =actRole.subRoleIDs;
-				shroles.forEach(findConcerningRoles);
+			var newParent = crElem.actRole
+			if (newParent && newParent.subRoleIDs.length > 0){
+				var shroles = newParent.subRoleIDs;
+				for (var sr = 0; shroles && sr < shroles.length; sr++) {
+					findConcerningRoles(shroles[sr], newParent);
+				}
 			}
 		}
-
 	}
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	if (roleID || roleID != ''){
-
 		var actRole = allRoles[roleID];
 		crElem = {};
 		crElem.actRole = allRoles[roleID];
@@ -1292,24 +1292,21 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 		concerningRoles.push(crElem);
 
 		if (actRole) {
-			var subRoles = actRole.subRoleIDs;
-			if (subRoles.length > 0 ){
-				subRoles.forEach(findConcerningRoles);
+			var subRoles = actRole.subRoleIDs;			
+			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
+				findConcerningRoles(subRoles[sr], actRole);
 			}
 		}
 	}
 
-
 	// eliminate duplicates of the pair roleID|teamID
 	var concerningRolesIndexed = [];
-
 	for (var dup = 0; dup < concerningRoles.length; dup++) {
 		var crElement = concerningRoles[dup];
 		var key = crElement.actRole.uid + '|' + crElement.teamID;
 		concerningRolesIndexed[key] = crElement;
 	}
 	var isConcerningTeam = true;
-
 	for (var t=0; t < allTeams.length; t++) {
 		var team = allTeams[t];
 		var teamkey = team.uid + '|' + '-1';
@@ -1350,7 +1347,6 @@ function getSummaryRoles(allRoles, roleID) {
 		}
 	}
 
-
 	// all summary roles
 	if (roleID === undefined && allRoles) {
 		var i = 0;
@@ -1364,9 +1360,7 @@ function getSummaryRoles(allRoles, roleID) {
 	// only summary roles that are children of the role roleID
 	if (roleID && allRoles){
 		var role = allRoles[roleID];
-
 		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
-
 			var subRoles = role.subRoleIDs;
 			if (subRoles.length > 0 ){
 				summaryRoles[role.uid] = role;
