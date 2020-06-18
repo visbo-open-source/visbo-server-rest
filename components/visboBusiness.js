@@ -874,7 +874,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleName, organisations) {
+function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -934,12 +934,19 @@ function calcCapacities(vpvs, roleName, organisations) {
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
 			if (organisation.value.allRoles[i].isTeam)	allTeams.push(organisation.value.allRoles[i]);
 		}
+		if ( roleIdentifier ) {
+			if (isNaN(parseInt(roleIdentifier) )) {
+				if (allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
+			} else {
+				roleID = parseInt(roleIdentifier);
+			}
+		}
 
-		if (!roleName || roleName === '' && allRoles.length > 0)  roleName = organisation.value.allRoles[0].name;
+		if (!roleIdentifier || roleIdentifier === '' && allRoles.length > 0)  roleIdentifier = organisation.value.allRoles[0].name;
 
-		logger4js.debug('find the roleID for the given roleName %s', roleName);
+		logger4js.debug('find the roleID for the given roleName %s', roleIdentifier);
 
-		if (roleName && allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
+		if (roleIdentifier && allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
 
 		if (!allRoles[roleID]) {
 			return allCalcCapaValuesIndexed;

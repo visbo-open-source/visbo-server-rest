@@ -224,7 +224,7 @@ var getSystemVCSetting = function (name) {
 
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');
-	var result = vcSetting.value && vcSetting.value.UIUrl;
+	var result = vcSetting ? vcSetting.value && vcSetting.value.UIUrl : false;
 	logger4js.debug('Get VISBO System Url: %s', result);
 
 	return result;
