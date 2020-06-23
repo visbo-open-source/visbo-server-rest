@@ -99,7 +99,7 @@ function getAllOtherCost(costID, vpv, organisation) {
 
 	logger4js.debug('Calculate all other Cost of Project Version %s start %s end %s organisation TS %s', vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
-	
+
 	// prepare organisation: change the new modelling of kapazität into the old version for calculation
 	// will be done in the calling function
 	// organisation = convertOrganisation(organisation);
@@ -163,7 +163,7 @@ function calcCosts(vpv, pfv, organisations) {
 		// sort the organisations descending
 		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
 		// choose the newest organisation
-		organisation = organisations[0];	
+		organisation = organisations[0];
 		// prepare organisation: change the new modelling of kapazität into the old version for calculation
 		organisation = convertOrganisation(organisation);
 
@@ -807,15 +807,15 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 
 		// Calculate keyMetrics Values here
 		keyMetrics = vpv.keyMetrics || {};
-		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisations && organisations[0]._id, JSON.stringify(keyMetrics));
+		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisations && organisations[0] && organisations[0]._id, JSON.stringify(keyMetrics));
 
 		if (vpv.variantName != 'pfv'){
 
-			if (organisations){				
+			if (organisations){
 				// sort the organisations descending
 				organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
 				// choose the newest organisation
-				var organisation = organisations[0];			
+				var organisation = organisations[0];
 				// prepare organisation: change the new modelling of kapazität into the old version for calculation
 				organisation = convertOrganisation(organisation);
 
@@ -920,7 +920,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 
 		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
-			return monthlyNeeds;
+			return undefined;
 		}
 
 		// prepare organisation for direct access to uid
@@ -958,7 +958,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 		logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
-		
+
 		/*
 		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
@@ -1292,7 +1292,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 		concerningRoles.push(crElem);
 
 		if (actRole) {
-			var subRoles = actRole.subRoleIDs;			
+			var subRoles = actRole.subRoleIDs;
 			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
 				findConcerningRoles(subRoles[sr], actRole);
 			}
@@ -1375,13 +1375,13 @@ function getSummaryRoles(allRoles, roleID) {
 function getParentOfRole (roleID, allRoles, sumRoles) {
 	var parentRole = undefined;
 	if (allRoles[roleID]) {
-		
+
 		var notFound = true;
 		for (var k=0; sumRoles && k < sumRoles.length;k++){
 			// check only roles, which are not isTeam or isTeamParent
 			var hrole = sumRoles[k];
 			if (hrole)	{
-				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){					
+				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){
 					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
 						parentRole = hrole;
 						notFound = false;
@@ -1407,8 +1407,8 @@ function getParentOfRole (roleID, allRoles, sumRoles) {
 // 			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
 // 			if (!parent && !topLevel[currentRole.uid]) {
 // 				topLevel[currentRole.uid] = currentRole;
-// 				topLevelNodes.push(currentRole);	
-// 			}			
+// 				topLevelNodes.push(currentRole);
+// 			}
 // 		}
 // 		i++;
 // 	}
@@ -1455,15 +1455,15 @@ function getParentOfRole (roleID, allRoles, sumRoles) {
 
 
 function convertOrganisation(organisation_new) {
-	
+
 	var organisation = undefined;
 	if ( !organisation_new ) {
 		return;
-	}	
+	}
 	var startCalc = new Date();
 	logger4js.debug('Change the new organisation in the old definition with an capacity array of 240 months');
-	organisation = organisation_new;	
-	var allRoles = [];	
+	organisation = organisation_new;
+	var allRoles = [];
 	for ( var i = 0; organisation_new && organisation_new.value && organisation_new.value.allRoles && i < organisation_new.value.allRoles.length; i++) {
 		var capa_new = [];
 		var actrole = organisation_new.value.allRoles[i];
@@ -1480,14 +1480,14 @@ function convertOrganisation(organisation_new) {
 			for ( var ic = 1 + indexOfstartOfCal; ic >= 0 && ic <= 240 && actrole.kapazitaet && ic <= actrole.kapazitaet.length + indexOfstartOfCal-1; ic++) {
 				capa_new[ic] = actrole.kapazitaet[ic - indexOfstartOfCal];
 			}
-		}	
+		}
 		allRoles[i] = actrole;
 		allRoles[i].kapazitaet = capa_new;
 	}
 	organisation.value.allRoles = allRoles;
 	var endCalc = new Date();
 	logger4js.info('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
-	return organisation;	
+	return organisation;
 }
 
 function cleanupRestrictedVersion(vpv) {
