@@ -353,7 +353,7 @@ function getVCOrganisation(vcid, req, res, next) {
 
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
-	// do not get the big capa array, to reduce load, it is not nnecessary to get in case of keyMetrics calculation
+	// do not get the big capa array, to reduce load, it is not necessary to get in case of keyMetrics calculation
 	if (req.method == 'POST') {
 		queryVCSetting.select('-value.allRoles.kapazitaet');
 	}

@@ -36,9 +36,13 @@ function getDateEndOfPreviousMonth(dd) {
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
 	var costValues = [];
+
 	logger4js.debug('Calculate Personal Cost of Project Version %s start %s end %s organisation TS %s', vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
 
+	// prepare organisation: change the new modelling of kapazität into the old version for calculation
+	// will be done in the calling function
+	// organisation = convertOrganisation(organisation);
 
 	// prepare organisation for direct access to uid
 	var allRoles = [];
@@ -95,6 +99,11 @@ function getAllOtherCost(costID, vpv, organisation) {
 
 	logger4js.debug('Calculate all other Cost of Project Version %s start %s end %s organisation TS %s', vpv._id, vpv.startDate, vpv.endDate, organisation.timestamp);
 	var startCalc = new Date();
+	
+	// prepare organisation: change the new modelling of kapazität into the old version for calculation
+	// will be done in the calling function
+	// organisation = convertOrganisation(organisation);
+
 	// prepare organisation for direct access to uid
 	var allCosts = [];
 	for (var i = 0; organisation && organisation.value && organisation.value.allRoles && i < organisation.value.allCosts.length; i++) {
@@ -145,11 +154,19 @@ function getAllOtherCost(costID, vpv, organisation) {
 
 }
 
-function calcCosts(vpv, pfv, organisation) {
+function calcCosts(vpv, pfv, organisations) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
-	if ( vpv && organisation ) {
+	if ( vpv && organisations && organisations.length > 0 ) {
+
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+		// choose the newest organisation
+		organisation = organisations[0];	
+		// prepare organisation: change the new modelling of kapazität into the old version for calculation
+		organisation = convertOrganisation(organisation);
+
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
 		var currentDate = new Date(vpv.startDate);
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
@@ -782,7 +799,7 @@ function convertHierarchy(vpv) {
 	return indexedHrchy;
 }
 
-function calcKeyMetrics(vpv, pfv, organisation) {
+function calcKeyMetrics(vpv, pfv, organisations) {
 	var keyMetrics = {};
 	var startCalc = new Date();
 
@@ -790,13 +807,18 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 		// Calculate keyMetrics Values here
 		keyMetrics = vpv.keyMetrics || {};
-		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisation && organisation._id, JSON.stringify(keyMetrics));
+		logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisations && organisations[0]._id, JSON.stringify(keyMetrics));
 
 		if (vpv.variantName != 'pfv'){
 
+			if (organisations){				
+				// sort the organisations descending
+				organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+				// choose the newest organisation
+				var organisation = organisations[0];			
+				// prepare organisation: change the new modelling of kapazität into the old version for calculation
+				organisation = convertOrganisation(organisation);
 
-
-			if (organisation){
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
 				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
 				var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
@@ -852,7 +874,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleName, organisation) {
+function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -867,7 +889,15 @@ function calcCapacities(vpvs, roleName, organisation) {
 	var dauer =0;
 
 	var startCalc = new Date();
-	if ( vpvs && organisation) {
+
+	if ( vpvs && organisations) {
+
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+		// choose the newest organisation
+		var organisation = organisations[0];
+		// prepare organisation: change the new modelling of kapazität into the old version for calculation
+		organisation = convertOrganisation(organisation);
 
 		// get startIndex and endIndex and dauer of several vpv
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -889,9 +919,9 @@ function calcCapacities(vpvs, roleName, organisation) {
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
 
-		// if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
-		// 	return monthlyNeeds;
-		// }
+		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
+			return monthlyNeeds;
+		}
 
 		// prepare organisation for direct access to uid
 		logger4js.debug('prepare organisation for direct access to uid');
@@ -904,12 +934,19 @@ function calcCapacities(vpvs, roleName, organisation) {
 			allRoleNames[organisation.value.allRoles[i].name] = organisation.value.allRoles[i];
 			if (organisation.value.allRoles[i].isTeam)	allTeams.push(organisation.value.allRoles[i]);
 		}
+		if ( roleIdentifier ) {
+			if (isNaN(parseInt(roleIdentifier) )) {
+				if (allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
+			} else {
+				roleID = parseInt(roleIdentifier);
+			}
+		}
 
-		if (!roleName || roleName === '' && allRoles.length > 0)  roleName = organisation.value.allRoles[0].name;
+		if (!roleIdentifier || roleIdentifier === '' && allRoles.length > 0)  roleIdentifier = organisation.value.allRoles[0].name;
 
-		logger4js.debug('find the roleID for the given roleName %s', roleName);
+		logger4js.debug('find the roleID for the given roleName %s', roleIdentifier);
 
-		if (roleName && allRoleNames && allRoleNames[roleName]) roleID = allRoleNames[roleName].uid || undefined;
+		if (roleIdentifier && allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
 
 		if (!allRoles[roleID]) {
 			return allCalcCapaValuesIndexed;
@@ -921,6 +958,7 @@ function calcCapacities(vpvs, roleName, organisation) {
 
 		logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 		var capaValues = getCapaValues(startIndex, dauer, concerningRoles, allRoles);
+		
 		/*
 		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
@@ -1214,15 +1252,16 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 	var concerningRoles = [];
 	var crElem = {};
 
-	function findConcerningRoles(value) {
+	function findConcerningRoles(value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
 		crElem = {};
 		crElem.actRole = allRoles[hroleID];
 
-		if (actRole.isTeam){
+		if (parentRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
 				var team = crElem.actRole.teamIDs[t];
+				if (parentRole.uid != team.key) { continue }
 				crElem.teamID = team.key;
 				var teamValue = parseFloat(team.value.replace(',', '.'));
 				crElem.faktor = teamValue;
@@ -1233,18 +1272,18 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 			crElem.faktor = 1.0;
 			concerningRoles.push(crElem);
 
-			actRole = crElem.actRole;
-			if (actRole && actRole.subRoleIDs.length > 0){
-				var shroles =actRole.subRoleIDs;
-				shroles.forEach(findConcerningRoles);
+			var newParent = crElem.actRole
+			if (newParent && newParent.subRoleIDs.length > 0){
+				var shroles = newParent.subRoleIDs;
+				for (var sr = 0; shroles && sr < shroles.length; sr++) {
+					findConcerningRoles(shroles[sr], newParent);
+				}
 			}
 		}
-
 	}
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	if (roleID || roleID != ''){
-
 		var actRole = allRoles[roleID];
 		crElem = {};
 		crElem.actRole = allRoles[roleID];
@@ -1253,24 +1292,21 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 		concerningRoles.push(crElem);
 
 		if (actRole) {
-			var subRoles = actRole.subRoleIDs;
-			if (subRoles.length > 0 ){
-				subRoles.forEach(findConcerningRoles);
+			var subRoles = actRole.subRoleIDs;			
+			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
+				findConcerningRoles(subRoles[sr], actRole);
 			}
 		}
 	}
 
-
 	// eliminate duplicates of the pair roleID|teamID
 	var concerningRolesIndexed = [];
-
 	for (var dup = 0; dup < concerningRoles.length; dup++) {
 		var crElement = concerningRoles[dup];
 		var key = crElement.actRole.uid + '|' + crElement.teamID;
 		concerningRolesIndexed[key] = crElement;
 	}
 	var isConcerningTeam = true;
-
 	for (var t=0; t < allTeams.length; t++) {
 		var team = allTeams[t];
 		var teamkey = team.uid + '|' + '-1';
@@ -1297,80 +1333,82 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 
 // find summary Roles
-// function getSummaryRoles(allRoles, roleID) {
-// 	var summaryRoles = [];
-//
-// 	function findSummaryRoles(value) {
-// 		//value is the Id of one subrole
-// 		var hroleID = value.key;
-// 		var hrole = allRoles[hroleID];
-// 		if (hrole.subRoleIDs.length > 0){
-// 			summaryRoles[hroleID] = hrole;
-// 			var shroles = hrole.subRoleIDs;
-// 			shroles.forEach(findSummaryRoles);
-// 		}
-// 	}
-//
-//
-// 	// all summary roles
-// 	if (!roleID && allRoles) {
-// 		var i = 0;
-// 		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
-// 			var hrole = allRoles[i];
-// 			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
-// 		}
-// 		return summaryRoles;
-// 	}
-//
-// 	// only summary roles that are children of the role roleID
-// 	if (roleID && allRoles){
-// 		var role = allRoles[roleID];
-//
-// 		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
-//
-// 			var subRoles = role.subRoleIDs;
-// 			if (subRoles.length > 0 ){
-// 				summaryRoles[role.uid] = role;
-// 				subRoles.forEach(findSummaryRoles);
-// 			}
-//
-// 		}
-// 		return summaryRoles;
-// 	}
-// }
+function getSummaryRoles(allRoles, roleID) {
+	var summaryRoles = [];
 
-// function getParentOfRole (roleID, allRoles) {
-// 	var parentRole = undefined;
-// 	if (allRoles[roleID]) {
-// 		// find all summaryRoles
-// 		var sumRoles = getSummaryRoles(allRoles, '');
-// 		var notFound = true;
-// 		for (var k=0; sumRoles && k < sumRoles.length;k++){
-// 			// check only roles, which are not isTeam or isTeamParent
-// 			var hrole = sumRoles[k];
-// 			if (hrole && !hrole.isTeam && !hrole.isTeamParent)	{
-// 				for( var i = 0; notFound && hrole && i< hrole.subRoleIDs.length; i++ ){
-// 					// ur: für Testzwecke: var roleuid = hrole.subRoleIDs[i].key;
-// 					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
-// 						parentRole = hrole;
-// 					}
-// 				}
-// 			}
-//
-// 		}
-// 	}
-// 	return parentRole;
-// }
+	function findSummaryRoles(value) {
+		//value is the Id of one subrole
+		var hroleID = value.key;
+		var hrole = allRoles[hroleID];
+		if (hrole.subRoleIDs.length > 0){
+			summaryRoles[hroleID] = hrole;
+			var shroles = hrole.subRoleIDs;
+			shroles.forEach(findSummaryRoles);
+		}
+	}
+
+	// all summary roles
+	if (roleID === undefined && allRoles) {
+		var i = 0;
+		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
+			var hrole = allRoles[i];
+			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
+		}
+		return summaryRoles;
+	}
+
+	// only summary roles that are children of the role roleID
+	if (roleID && allRoles){
+		var role = allRoles[roleID];
+		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
+			var subRoles = role.subRoleIDs;
+			if (subRoles.length > 0 ){
+				summaryRoles[role.uid] = role;
+				subRoles.forEach(findSummaryRoles);
+			}
+
+		}
+		return summaryRoles;
+	}
+}
+
+function getParentOfRole (roleID, allRoles, sumRoles) {
+	var parentRole = undefined;
+	if (allRoles[roleID]) {
+		
+		var notFound = true;
+		for (var k=0; sumRoles && k < sumRoles.length;k++){
+			// check only roles, which are not isTeam or isTeamParent
+			var hrole = sumRoles[k];
+			if (hrole)	{
+				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){					
+					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
+						parentRole = hrole;
+						notFound = false;
+					}
+				}
+			}
+		}
+	}
+	return parentRole;
+}
 
 // function buildTopNodes(allRoles) {
 // 	var topLevelNodes = [];
+// 	var topLevel = [];
 // 	var i = 1;
-//
+
+// 	// find all summaryRoles
+// 	var sumRoles = getSummaryRoles(allRoles, '');
+
 // 	while (i <= allRoles.length){
 // 		var currentRole = allRoles[i];
 // 		if (currentRole) {
-// 			var parent = getParentOfRole(currentRole.uid, allRoles);
-// 			if (!parent && !topLevelNodes[currentRole.uid]) topLevelNodes[currentRole.uid] = currentRole;
+// 			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
+// 			if (!parent && !topLevel[currentRole.uid]) {
+// 				topLevel[currentRole.uid] = currentRole;
+// 				topLevelNodes.push(currentRole);	
+// 			}			
 // 		}
 // 		i++;
 // 	}
@@ -1416,6 +1454,42 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 // }
 
 
+function convertOrganisation(organisation_new) {
+	
+	var organisation = undefined;
+	if ( !organisation_new ) {
+		return;
+	}	
+	var startCalc = new Date();
+	logger4js.debug('Change the new organisation in the old definition with an capacity array of 240 months');
+	organisation = organisation_new;	
+	var allRoles = [];	
+	for ( var i = 0; organisation_new && organisation_new.value && organisation_new.value.allRoles && i < organisation_new.value.allRoles.length; i++) {
+		var capa_new = [];
+		var actrole = organisation_new.value.allRoles[i];
+		// initialise the new array with the default capacity except the first element.
+		capa_new[0] = 0;
+		for ( var j = 1; j < 240; j++) {
+			capa_new.push(actrole.defaultKapa);
+		}
+		// get the index of the startOfCal, because the array kapazität begins with this month since beginning of calendar
+		var sOC_date = new Date(actrole.startOfCal);
+		var indexOfstartOfCal = getColumnOfDate(sOC_date);
+		if (indexOfstartOfCal >= 0) {
+			// fill the array with the capacities != defaultKapa beginning with index 1 not 0
+			for ( var ic = 1 + indexOfstartOfCal; ic >= 0 && ic <= 240 && actrole.kapazitaet && ic <= actrole.kapazitaet.length + indexOfstartOfCal-1; ic++) {
+				capa_new[ic] = actrole.kapazitaet[ic - indexOfstartOfCal];
+			}
+		}	
+		allRoles[i] = actrole;
+		allRoles[i].kapazitaet = capa_new;
+	}
+	organisation.value.allRoles = allRoles;
+	var endCalc = new Date();
+	logger4js.info('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	return organisation;	
+}
+
 function cleanupRestrictedVersion(vpv) {
 
 	if (!vpv) return;
@@ -1446,13 +1520,14 @@ function cleanupRestrictedVersion(vpv) {
 
 
 module.exports = {
-	getAllPersonalKosten: getAllPersonalKosten,
-	getAllOtherCost: getAllOtherCost,
+	// getAllPersonalKosten: getAllPersonalKosten,
+	// getAllOtherCost: getAllOtherCost,
 	calcKeyMetrics: calcKeyMetrics,
 	calcCosts: calcCosts,
 	calcDeliverables: calcDeliverables,
 	calcDeadlines: calcDeadlines,
 	calcCapacities: calcCapacities,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
+	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe
 };

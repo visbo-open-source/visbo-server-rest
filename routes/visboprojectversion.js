@@ -570,7 +570,7 @@ router.route('/')
 				newVPV.complexity = req.body.complexity;
 				newVPV.description = req.body.description;
 				newVPV.businessUnit = req.body.businessUnit;
-				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 				if (!obj || Object.keys(obj).length < 1) {
 					// no valid key Metrics delivered
 					if (req.body.keyMetrics && newVPV.variantName != 'pfv' && checkValidKeyMetrics(req.body.keyMetrics)) {
@@ -1022,7 +1022,7 @@ router.route('/:vpvid')
 			newVPV.description = req.oneVPV.description;
 			newVPV.businessUnit = req.oneVPV.businessUnit;
 			// MS TODO: ignore keyMetrics from body
-			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 			if (!newVPV.keyMetrics && req.body.keyMetrics) {
 				newVPV.keyMetrics = req.body.keyMetrics;
 			}
@@ -1127,17 +1127,17 @@ router.route('/:vpvid')
 			if (roleID == undefined ) {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'No RoleID given to Calculate Capacities',
+					message: 'No roleID given to Calculate Capacities',
 					perm: perm
 				});
 			}
 			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-			var costCapa = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var capacity = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
-				count: costCapa.length,
+				count: capacity.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
 					timestamp: req.oneVPV.timestamp,
@@ -1145,7 +1145,7 @@ router.route('/:vpvid')
 					vpid: req.oneVPV.vpid,
 					name: req.oneVPV.name,
 					roleID: roleID,
-					costCapa: costCapa
+					capacity: capacity
 				} ],
 				perm: perm
 			});
@@ -1207,7 +1207,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
@@ -1279,7 +1279,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version Cost for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
