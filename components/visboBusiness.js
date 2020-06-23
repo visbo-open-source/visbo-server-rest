@@ -920,9 +920,34 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 
 		if (!vpv || !vpv._id || dauer <= 0 || !vpv.AllPhases) {
-			return monthlyNeeds;
+			return allCalcCapaValues;
 		}
 
+		// newest orga at the end of the array
+		organisations.reverse();
+
+		// divide the complete time from startdate to enddate in parts of time, where in each part ther is only one organisation
+		var timeZones = [];
+		var intervallStart = startDate;
+		for ( var o = 0; organisations && organisations[o] && o < organisations.length; o++) {
+			var timeZoneElem = {}
+			if (intervallStart >= organisations[o].timestamp) {
+				timeZoneElem.startdate = organisations[o].timestamp;
+				timeZoneElem.startIndex = getColumnOfDate(organisations[o].timestamp);
+				if (organisations[o+1]) {
+					timeZoneElem.enddate = organisations[o+1].timestamp;
+					timeZoneElem.endIndex = getColumnOfDate(organisations[o+1].timestamp);
+				} else {
+					timeZoneElem.enddate = new Date(dateMaxValue);
+					timeZoneElem.endIndex = getColumnOfDate(dateMaxValue);
+				}				
+				timeZones.push(timeZoneElem);
+				intervallStart = timeZoneElem.enddate;
+			}		
+		  };
+
+
+		
 		// prepare organisation for direct access to uid
 		logger4js.debug('prepare organisation for direct access to uid');
 		var allRoles = [];
