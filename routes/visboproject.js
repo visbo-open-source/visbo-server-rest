@@ -1159,7 +1159,7 @@ router.route('/:vpid/audit')
 		*  {
 		*     'name':'Group Name',
 		*     'global': true,
-		*     'permission': {vc: 307 }
+		*     'permission': {vp: 307 }
 		*  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -1170,8 +1170,7 @@ router.route('/:vpid/audit')
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group',
 		*     'vpid': 'vc5c754feaa',
-		*     'global': true,
-		*     'permission': {vp: 307 },
+		*     'global': true
 		*   }]
 		* }
 		*/
@@ -1267,8 +1266,7 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Inserted Project Group',
-						groups: [ resultGroup ],
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1358,7 +1356,7 @@ router.route('/:vpid/audit')
 		*  {
 	  *    'name':'My first Group Renamed',
 		*    'global': true,
-		*    'permission': {vc: 3, vp: 1 }
+		*    'permission': {vp: 1 }
 	  *   }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -1369,8 +1367,7 @@ router.route('/:vpid/audit')
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group Renamed',
 		*     'vcid': 'vc5c754feaa',
-		*     'global': true,
-		*     'permission': {vc: 3 },
+		*     'global': true
 		*   }]
 		* }
 		*/
@@ -1453,8 +1450,7 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Project Group',
-						groups: [ resultGroup ],
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1492,8 +1488,7 @@ router.route('/:vpid/audit')
 			*     'name':'My first Group Renamed',
 			*     'vcid': 'vc5c754feaa',
 			*     'users': [{userId: 'userId5c754feaa', email: 'new.user@visbo.de'}]
-			*     'global': true,
-			*     'permission': {vc: 3 },
+			*     'global': true
 			*   }]
 			* }
 			*/
@@ -2653,7 +2648,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version
 		*
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and roleID
-		
+
 		*
 		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
 		* Date Format is in the form: 2018-10-30T10:00:00Z
