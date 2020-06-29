@@ -894,6 +894,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 		// sort the organisations descending
 		organisations.sort(function(a, b) { return b.timestamp - a.timestamp });
+		
 
 		// get startIndex and endIndex and dauer of the several vpvs
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -928,7 +929,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 		for ( var o = 0; organisations && organisations[o] && o < organisations.length; o++) {
 			var timeZoneElem = {}
-			if (intervallStart >= organisations[o].timestamp) {
+			if ( (organisations.length <= 1) || (intervallStart >= organisations[o].timestamp) ) {
 				// prepare organisation: change the new modelling of kapazität into the old version for calculation
 				var organisation_converted = convertOrganisation(organisations[o]);
 				timeZoneElem.orga = organisation_converted;				
