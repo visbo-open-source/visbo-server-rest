@@ -1069,13 +1069,14 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart > organisations[o+1].timestamp) ) { continue;}
 				if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
-					// prepare organisation: change the new modelling of kapazität into the old version for calculation
+					// prepare organisation: change the new modelling of capacities into the old version for calculation
 					organisation_converted = convertOrganisation(organisations[o]);
 					timeZoneElem.orga = organisation_converted;				
 					timeZoneElem.startdate = new Date(intervallStart);
 					timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);	
 					if (intervallEnd >= organisations[o+1].timestamp) {
 						timeZoneElem.enddate = organisations[o+1].timestamp;
+						timeZoneElem.enddate.setMonth(organisations[o+1].timestamp.getMonth() - 1);						
 						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 					}
 				} 
@@ -1086,9 +1087,10 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);	
 				timeZoneElem.enddate = new Date(intervallEnd);
 				timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
-			}	
-			
+			}
+
 			intervallStart = timeZoneElem.enddate;	
+			intervallStart.setMonth(intervallStart.getMonth() + 1);					
 			timeZones.push(timeZoneElem);							
 		}
 	}
