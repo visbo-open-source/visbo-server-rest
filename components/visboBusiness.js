@@ -160,13 +160,11 @@ function calcCosts(vpv, pfv, organisations) {
 	var startCalc = new Date();
 	if ( vpv && organisations && organisations.length > 0 ) {
 
-		// sort the organisations descending
+		/* // sort the organisations descending
 		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		// choose the newest organisation
-		var organisation = organisations[0];
-		// prepare organisation: change the new modelling of kapazität into the old version for calculation
-		organisation = convertOrganisation(organisation);
-
+		organisations.reverse(); */
+		var timeZones = splitInTimeZones(organisations, vpv.startDate, vpv.endDate);
+				
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
 		var currentDate = new Date(vpv.startDate);
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
@@ -177,16 +175,34 @@ function calcCosts(vpv, pfv, organisations) {
 		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
 
-		var personalCost = getAllPersonalKosten(vpv, organisation);
-		var allOtherCost = getAllOtherCost('', vpv, organisation);
+		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
+			var personalCost = getAllPersonalKosten(vpv, timeZones[tz].orga);
+			var allOtherCost = getAllOtherCost('', vpv, timeZones[tz].orga);
+			
+			var tzStartIndex = timeZones[tz].startIndex;
+			var tzStartDate = timeZones[tz].startdate;
+			var tzEndIndex = timeZones[tz].endIndex;	
+			var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
+			var tzStartDiff = tzStartIndex - startIndex;
 
-		for (var i = 0 ; i < dauer; i++){
-			const currentDateISO = currentDate.toISOString();
-			allCostValues[currentDateISO] = { 'currentCost': personalCost[i] + allOtherCost[i] };
-			currentDate.setMonth(currentDate.getMonth() + 1);
+			currentDate = new Date (tzStartDate);
+			currentDate.setMonth(currentDate.getMonth());	
+			// Teilabschnitte übernehmen
+			for (var i = 0 ; i < zoneDauer; i++){
+				const currentDateISO = currentDate.toISOString();
+				allCostValues[currentDateISO] = { 'currentCost': personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff] };
+				currentDate.setMonth(currentDate.getMonth() + 1);
+			}
 		}
 	}
-	if ( pfv && organisation ) {
+
+	if ( pfv && organisations && organisations.length > 0 ) {
+
+		/* // sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
+		organisations.reverse(); */
+		var timeZones = splitInTimeZones(organisations, pfv.startDate, pfv.endDate);
+
 		currentDate = new Date(pfv.startDate);
 		currentDate.setDate(1);
 		currentDate.setHours(0, 0, 0, 0);
@@ -195,18 +211,30 @@ function calcCosts(vpv, pfv, organisations) {
 		endIndex = getColumnOfDate(pfv.endDate);
 		dauer = endIndex - startIndex + 1;
 
-		personalCost = getAllPersonalKosten(pfv, organisation);
-		allOtherCost = getAllOtherCost('', pfv, organisation);
+		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
+			var personalCost = getAllPersonalKosten(pfv, timeZones[tz].orga);
+			var allOtherCost = getAllOtherCost('', pfv, timeZones[tz].orga);
+			
+			var tzStartIndex = timeZones[tz].startIndex;
+			var tzStartDate = timeZones[tz].startdate;
+			var tzEndIndex = timeZones[tz].endIndex;	
+			var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
+			var tzStartDiff = tzStartIndex - startIndex;
 
-		for (i = 0 ; i < dauer; i++) {
-			const currentDateISO = currentDate.toISOString();
-			if (!allCostValues[currentDateISO]) {
-				allCostValues[currentDateISO] = {};
+			currentDate = new Date (tzStartDate);
+			currentDate.setMonth(currentDate.getMonth());	
+			// take the calculated cost of this part of time
+			for (var i = 0 ; i < zoneDauer; i++){
+				const currentDateISO = currentDate.toISOString();
+				if (!allCostValues[currentDateISO]) {
+					allCostValues[currentDateISO] = {};
+				}
+				allCostValues[currentDateISO].baseLineCost = personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff];
+				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
-			allCostValues[currentDateISO].baseLineCost = personalCost[i] + allOtherCost[i];
-			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
+
 	var j = 0, element;
 	for (element in allCostValues) {
 		allCostValuesIndexed[j] = {
@@ -890,11 +918,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisations) {
-
-		// sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		
+	if ( vpvs && organisations) {		
 
 		// get startIndex and endIndex and dauer of the several vpvs
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -919,6 +943,13 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 			return undefined;
 		}
 
+		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
+		logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+		var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
+
+/* 
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
 		// newest orga at the end of the array
 		organisations.reverse();
 
@@ -948,7 +979,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 			}
 			intervallStart = timeZoneElem.enddate;	
 			timeZones.push(timeZoneElem);							
-		}
+		} */
 	
 		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
@@ -1005,6 +1036,64 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 	return allCalcCapaValuesIndexed;
 }
 
+
+function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
+	var timeZones = [];
+	var organisation_converted = {};
+
+	if (!organisations && !calcC_startDate && !calcC_endDate) {
+		return timeZones;
+	}
+	// sort the organisations descending
+	organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
+	// newest orga at the end of the array
+	organisations.reverse();
+
+	// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
+	var intervallStart = calcC_startDate;
+	var intervallEnd = calcC_endDate;
+
+	if (organisations.length === 1) {
+		var timeZoneElem = {};
+		organisation_converted = convertOrganisation(organisations[0]);
+		timeZoneElem.orga = organisation_converted;				
+		timeZoneElem.startdate = new Date(intervallStart);
+		timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
+		timeZoneElem.enddate = new Date (intervallEnd);
+		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
+		timeZones.push(timeZoneElem);
+	} else {
+		for ( var o = 0; organisations && organisations[o] && o < organisations.length; o++) {
+			var timeZoneElem = {};
+			if (organisations[o+1]) {
+				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart > organisations[o+1].timestamp) ) { continue;}
+				if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
+				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
+					// prepare organisation: change the new modelling of kapazität into the old version for calculation
+					organisation_converted = convertOrganisation(organisations[o]);
+					timeZoneElem.orga = organisation_converted;				
+					timeZoneElem.startdate = new Date(intervallStart);
+					timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);	
+					if (intervallEnd >= organisations[o+1].timestamp) {
+						timeZoneElem.enddate = organisations[o+1].timestamp;
+						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
+					}
+				} 
+			} else {
+				organisation_converted = convertOrganisation(organisations[o]);
+				timeZoneElem.orga = organisation_converted;				
+				timeZoneElem.startdate = new Date(intervallStart);
+				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);	
+				timeZoneElem.enddate = new Date(intervallEnd);
+				timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
+			}	
+			
+			intervallStart = timeZoneElem.enddate;	
+			timeZones.push(timeZoneElem);							
+		}
+	}
+	return timeZones;
+}
 
 function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
@@ -1194,7 +1283,6 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
 								for (var l = phasenStart; (l < phasenStart + dimension) && (l < dauer + startIndex); l++) {
-									i < dauer+startIndex;
 									// result in euro or in personal day
 									// if costValues[l] is not set yet use 0
 									if (l < actualDataIndex) {
@@ -1303,8 +1391,7 @@ function buildRClists(vpv) {
 }
 
 
-function 
-getConcerningRoles(allRoles, allTeams, roleID) {
+function getConcerningRoles(allRoles, allTeams, roleID) {
 	var concerningRoles = [];
 	var crElem = {};
 
