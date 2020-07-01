@@ -1088,7 +1088,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		for ( var o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
 			var timeZoneElem = {};
 			if (organisations[o+1]) {
-				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart > organisations[o+1].timestamp) ) { continue;}
+				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
 				if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
 					// prepare organisation: change the new modelling of capacities into the old version for calculation
