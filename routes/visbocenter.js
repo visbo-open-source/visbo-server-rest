@@ -2070,7 +2070,16 @@ router.route('/:vcid/group/:groupid')
 				vcSetting.type = req.body.type;
 			}
 			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
-			if (req.body.timestamp) vcSetting.timestamp = dateValue;
+			if (vcSetting.name == 'organisaion') {
+				// use validFrom if timestamp is not set and validFrom is set
+				// set timestamp to beginning of month
+				if (!req.body.timestamp && req.body.value && req.body.value.validFrom && Date.parse(req.body.value.validFrom)) {
+					dateValue = new Date(req.body.value.validFrom);
+				}
+				dateValue.setDate(1);
+				dateValue.setHours(0,0,0,0);
+			}
+			vcSetting.timestamp = dateValue;
 
 			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {
