@@ -634,6 +634,49 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2020-07-03T00:00:00"
+if (currentVersion < dateBlock) {
+  // Upgrade organisation setting to have a timestamp always either validFrom or createdAt
+  var vcSettings =
+          db.visbocenters.aggregate(
+            [
+              { $match: {system: {$exists: false}, deletedAt: {$exists: false}}},
+              { $project: {_id: 1, name:1}},
+              { $lookup: {
+                   from: "vcsettings",
+                   localField: "_id",    // field in the orders collection
+                   foreignField: "vcid",  // field in the items collection
+                   as: "vcsetting"
+                }
+              },
+              { $unwind: "$vcsetting" },
+              { $addFields: { settingType: "$vcsetting.type", settingTimestamp: "$vcsetting.timestamp", settingId: "$vcsetting._id" }},
+              { $match: {settingType: 'organisation', settingTimestamp: {$exists: false}}},
+              { $project: {_id: 1, name:1, settingType:1, settingTimestamp:1, settingId:1}}
+            ]
+          ).toArray()
+  if (vcSettings.length) {
+    print("Process VC Settings", vcSettings.length);
+    for (var i=0; i<vcSettings.length; i++) {
+      // print("Process VC Setting", vcSettings[i]._id, vcSettings[i].settingTimestamp);
+      if (!vcSettings[i].settingTimestamp) {
+        print("Set VC Setting Timestamp", vcSettings[i]._id, 'SettingID', vcSettings[i].settingId);
+        var vcSettingId = vcSettings[i].settingId;
+        var actSetting = db.vcsettings.findOne({_id: vcSettingId}, {_id:1, "value.validFrom": 1, createdAt: 1});
+        var validFrom = actSetting.value.validFrom || actSetting.createdAt;
+        print("ActSetting ID", vcSettingId, "New Timestamp", validFrom, "validFrom", actSetting.value.validFrom, "createdAt", actSetting.createdAt);
+        db.vcsettings.updateOne({_id: vcSettingId}, {$set: {timestamp: validFrom}});
+      }
+    }
+  }
+  print("Process VC Settings, set timestamp for orgnaisations done");
+
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
