@@ -367,10 +367,11 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 
 function getSummeKosten(vpv, timeZones, index){
 	// calculate the total cost until index-month
-	var costSum = 0;
+	var costSum = undefined;
 
-	if (vpv && timeZones && (index>=0)){
+	if (vpv && timeZones && timeZones.length > 0 && (index>=0)){
 		var allCostValues = {};
+		var allValues = [];
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
@@ -394,7 +395,7 @@ function getSummeKosten(vpv, timeZones, index){
 					allCostValues[currentDateISO] = {};
 				}
 				allCostValues[currentDateISO] = { 'thisCost': personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff] };
-				//personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff];
+				allValues[i] = personalCost[i + tzStartDiff] + allOtherCost[i + tzStartDiff];
 				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
 		}
@@ -405,12 +406,13 @@ function getSummeKosten(vpv, timeZones, index){
 		var j = 0, element;
 		var newPartValues = [];
 		for (element in allCostValues) {
-			newPartValues[j] = allCostValues[element].thisCost;
+			newPartValues[j] = parseFloat(allCostValues[element].thisCost, 10);
 			j++;
 		}
-		for ( i = 0 ; i <= index; i++){			
+		costSum = 0;
+		for ( i = 0 ; newPartValues && index < newPartValues.length && i <= index; i++){			
 			costSum += newPartValues[i];
-		}
+		}	
 	}
 
 	return costSum;
