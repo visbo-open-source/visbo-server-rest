@@ -816,6 +816,76 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 	return result;
 }
 
+
+function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
+	var result = {
+		timeDelayFinished: 0,
+		timeDelayUnFinished: 0
+	};
+	var finishedElements = [];
+	var unfinishedElements = [];
+
+	var listDeadlines = allDeadlines.getAllDeadlines();
+	var f = 0;
+	var uf = 0;
+	for (var element = 0; listDeadlines && listDeadlines[element] && 
+							listDeadlines[element].endDatePFV && 
+							listDeadlines[element].endDateVPV && 
+							element < listDeadlines.length; element++) {
+	
+		if (listDeadlines[element].percentDone === 1) {
+			// finished
+			if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
+				// before refdate
+				finishedElements[f]= 
+					diffDays(listDeadlines[element].endDatePFV,listDeadlines[element].endDateVPV);
+			} else {
+				// in future
+				finishedElements[f] = 
+					diffDays(listDeadlines[element].endDatePFV, refDate);
+			}
+			f++;
+			continue;
+		} 
+
+		// unfinished
+		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
+			// before refdate
+			unfinishedElements[uf]=  
+				diffDays(refDate, listDeadlines[element].endDatePFV);
+		} else {
+			// in future			
+			unfinishedElements[uf]=  
+				diffDays(listDeadlines[element].endDatePFV, listDeadlines[element].endDateVPV);
+		}
+		uf++;
+	}
+	// sum of finished
+	var wholeDelayFinished = 0;
+	for ( f = 0; f < finishedElements.length; f++) {
+		 wholeDelayFinished += finishedElements[f];
+	}
+	result.timeDelayFinished = wholeDelayFinished / finishedElements.length;
+
+	var wholeDelayUnFinished = 0;
+	for ( f = 0; f < unfinishedElements.length; f++) {
+		 wholeDelayUnFinished += unfinishedElements[f];
+	}
+	result.timeDelayUnFinished = wholeDelayUnFinished / unfinishedElements.length;
+
+	return result;
+}
+
+// determines the difference in days of two dates
+function diffDays(date1, date2) {
+	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
+	var firstDate = new Date(date1);
+	var secondDate = new Date(date2);
+	var differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+	return differenceInDays;
+}	
+
+
 function getBreadCrumb(elemID, hrchy) {
 	var breadCrumb = [];
 	var rootKey = '0';
@@ -860,13 +930,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 		if (vpv.variantName != 'pfv'){
 
 			if (organisations){
-				// sort the organisations descending
-				organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-				// choose the newest organisation
-				var organisation = organisations[0];
-				// prepare organisation: change the new modelling of kapazität into the old version for calculation
-				organisation = convertOrganisation(organisation);
-
+				
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
 				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
 				var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
@@ -901,6 +965,12 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.timeCompletionBaseLastActual = timeKeyMetric.timeCompletionBaseLastActual;
 				keyMetrics.timeCompletionCurrentTotal = timeKeyMetric.timeCompletionCurrentTotal;
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
+			}
+
+			if (allDeadlines && allDeadlines.length > 0){
+				var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
+				keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
+				keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;				
 			}
 
 			// look for the deliverables of pfv (take all)

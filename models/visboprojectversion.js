@@ -58,7 +58,7 @@ var clsPhase = new Schema({
 	AllCosts: [{ type: clsKostenart, required: true}],
 	AllResults: [{ type: clsResult, required: true }],
 	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
-	percentDone: { type: Number },		
+	percentDone: { type: Number },
 	invoice: { type: Schema.Types.Mixed },
 	penalty: { type: Schema.Types.Mixed },
 	// invoice: { value: { type: Number }, termsOfPayment: { type: Number } },

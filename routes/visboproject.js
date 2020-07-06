@@ -2660,7 +2660,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
 		* @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vp/:vcid/portfolio/:vpfid/capacity
+		*   url: https://my.visbo.net/api/vp/:vpid/portfolio/:vpfid/capacity
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
