@@ -850,10 +850,10 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
 			// PFV before refdate
 			var maxUnFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
-			unfinishedElements[uf] = diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV);
+			unfinishedElements[uf] = diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV);
 		} else {
 			// PFV in future			
-			unfinishedElements[uf] = diffDays(maxUnFinishedDate, listDeadlines[element].endDateVPV);
+			unfinishedElements[uf] = diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV);
 		}
 		uf++;
 	}
@@ -1007,7 +1007,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisations & organisations.length > 0) {		
+	if ( vpvs && organisations && organisations.length > 0) {		
 
 		// get startIndex and endIndex and dauer of the several vpvs
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
