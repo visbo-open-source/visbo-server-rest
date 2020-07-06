@@ -155,10 +155,7 @@ function calcCosts(vpv, pfv, organisations) {
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	if ( vpv && organisations && organisations.length > 0 ) {
-
-		/* // sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		organisations.reverse(); */
+	
 		var timeZones = splitInTimeZones(organisations, vpv.startDate, vpv.endDate);
 				
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
@@ -169,7 +166,6 @@ function calcCosts(vpv, pfv, organisations) {
 		logger4js.trace('Calculate Project Costs vpv currentDate %s ', currentDate.toISOString());
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
-		var dauer = endIndex - startIndex + 1;
 
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
 			var personalCost = getAllPersonalKosten(vpv, timeZones[tz].orga);
@@ -194,10 +190,8 @@ function calcCosts(vpv, pfv, organisations) {
 
 	if ( pfv && organisations && organisations.length > 0 ) {
 
-		/* // sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		organisations.reverse(); */
-		var timeZones = splitInTimeZones(organisations, pfv.startDate, pfv.endDate);
+		
+		timeZones = splitInTimeZones(organisations, pfv.startDate, pfv.endDate);
 
 		currentDate = new Date(pfv.startDate);
 		currentDate.setDate(1);
@@ -207,20 +201,20 @@ function calcCosts(vpv, pfv, organisations) {
 		endIndex = getColumnOfDate(pfv.endDate);
 		dauer = endIndex - startIndex + 1;
 
-		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
-			var personalCost = getAllPersonalKosten(pfv, timeZones[tz].orga);
-			var allOtherCost = getAllOtherCost('', pfv, timeZones[tz].orga);
+		for ( tz = 0; timeZones && tz < timeZones.length; tz++) {
+			personalCost = getAllPersonalKosten(pfv, timeZones[tz].orga);
+			allOtherCost = getAllOtherCost('', pfv, timeZones[tz].orga);
 			
-			var tzStartIndex = timeZones[tz].startIndex;
-			var tzStartDate = timeZones[tz].startdate;
-			var tzEndIndex = timeZones[tz].endIndex;	
-			var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
-			var tzStartDiff = tzStartIndex - startIndex;
+			tzStartIndex = timeZones[tz].startIndex;
+			tzStartDate = timeZones[tz].startdate;
+			tzEndIndex = timeZones[tz].endIndex;	
+			zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
+			tzStartDiff = tzStartIndex - startIndex;
 
 			currentDate = new Date (tzStartDate);
 			currentDate.setMonth(currentDate.getMonth());	
 			// take the calculated cost of this part of time
-			for (var i = 0 ; i < zoneDauer; i++){
+			for ( i = 0 ; i < zoneDauer; i++ ){
 				const currentDateISO = currentDate.toISOString();
 				if (!allCostValues[currentDateISO]) {
 					allCostValues[currentDateISO] = {};
@@ -391,7 +385,7 @@ function getSummeKosten(vpv, timeZones, index){
 			var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
 			var tzStartDiff = tzStartIndex - startIndex;
 
-			currentDate = new Date (tzStartDate);
+			var currentDate = new Date (tzStartDate);
 			currentDate.setMonth(currentDate.getMonth());	
 			// take the calculated cost of this part of time
 			for (var i = 0 ; i < zoneDauer; i++){
@@ -399,7 +393,7 @@ function getSummeKosten(vpv, timeZones, index){
 				if (!allCostValues[currentDateISO]) {
 					allCostValues[currentDateISO] = {};
 				}
-				allCostValues[currentDateISO] = { 'thisCost': personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff] }
+				allCostValues[currentDateISO] = { 'thisCost': personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff] };
 				//personalCost[i + tzStartDiff] + allOtherCost[i + 	tzStartDiff];
 				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
@@ -412,7 +406,7 @@ function getSummeKosten(vpv, timeZones, index){
 		var newPartValues = [];
 		for (element in allCostValues) {
 			newPartValues[j] = allCostValues[element].thisCost;
-			j++
+			j++;
 		}
 		for ( i = 0 ; i <= index; i++){			
 			costSum += newPartValues[i];
@@ -837,12 +831,11 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 			// finished
 			if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
 				// before refdate
-				finishedElements[f]= 
-					diffDays(listDeadlines[element].endDatePFV,listDeadlines[element].endDateVPV);
+				finishedElements[f] = diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV);
 			} else {
 				// in future
-				finishedElements[f] = 
-					diffDays(listDeadlines[element].endDatePFV, refDate);
+				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
+				finishedElements[f] = diffDays(minFinishedDate, listDeadlines[element].endDatePFV);
 			}
 			f++;
 			continue;
@@ -850,26 +843,25 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 
 		// unfinished
 		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
-			// before refdate
-			unfinishedElements[uf]=  
-				diffDays(refDate, listDeadlines[element].endDatePFV);
+			// PFV before refdate
+			var maxUnFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
+			unfinishedElements[uf] = diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV);
 		} else {
-			// in future			
-			unfinishedElements[uf]=  
-				diffDays(listDeadlines[element].endDatePFV, listDeadlines[element].endDateVPV);
+			// PFV in future			
+			unfinishedElements[uf] = diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV);
 		}
 		uf++;
 	}
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
-		 wholeDelayFinished += finishedElements[f];
+		wholeDelayFinished += finishedElements[f];
 	}
 	result.timeDelayFinished = wholeDelayFinished / finishedElements.length;
 
 	var wholeDelayUnFinished = 0;
 	for ( f = 0; f < unfinishedElements.length; f++) {
-		 wholeDelayUnFinished += unfinishedElements[f];
+		wholeDelayUnFinished += unfinishedElements[f];
 	}
 	result.timeDelayUnFinished = wholeDelayUnFinished / unfinishedElements.length;
 
@@ -929,7 +921,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 
 		if (vpv.variantName != 'pfv'){
 
-			if (organisations){
+			if (organisations && organisations.length > 0){
 				
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
 				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
@@ -1010,7 +1002,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisations) {		
+	if ( vpvs && organisations && organisations.length > 0) {		
 
 		// get startIndex and endIndex and dauer of the several vpvs
 		for (var i = 0; vpvs && i < vpvs.length; i++) {
@@ -1031,47 +1023,13 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
 
-		if (!vpvs || !organisations || vpvs.length <= 1 || calcC_dauer <= 0 ) {
+		if (!vpvs || !organisations || organisations.length <= 0 || vpvs.length <= 1 || calcC_dauer <= 0 ) {
 			return undefined;
 		}
 
 		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
 		logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 		var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
-
-/* 
-		// sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		// newest orga at the end of the array
-		organisations.reverse();
-
-		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
-		var timeZones = [];
-		var intervallStart = calcC_startDate;
-		var intervallEnd = calcC_endDate;
-
-		for ( var o = 0; organisations && organisations[o] && o < organisations.length; o++) {
-			var timeZoneElem = {};
-			if ( (organisations.length <= 1) || (intervallStart >= organisations[o].timestamp) ) {
-				// prepare organisation: change the new modelling of kapazität into the old version for calculation
-				var organisation_converted = convertOrganisation(organisations[o]);
-				timeZoneElem.orga = organisation_converted;				
-				timeZoneElem.startdate = new Date(intervallStart);
-				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
-
-				if (organisations[o+1]) {
-					if (intervallEnd >= organisations[o+1].timestamp) {
-						timeZoneElem.enddate = organisations[o+1].timestamp;
-						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
-					}
-				} else {
-					timeZoneElem.enddate = new Date(intervallEnd);
-					timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
-				}	
-			}
-			intervallStart = timeZoneElem.enddate;	
-			timeZones.push(timeZoneElem);							
-		} */
 	
 		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
@@ -1133,13 +1091,9 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 	var timeZones = [];
 	var organisation_converted = {};
 
-	if (!organisations && !calcC_startDate && !calcC_endDate) {
+	if (!organisations && organisations.length <= 0 && !calcC_startDate && !calcC_endDate) {
 		return timeZones;
 	}
-	// sort the organisations descending
-	organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-	// newest orga at the end of the array
-	organisations.reverse();
 
 	// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
 	var intervallStart = new Date(calcC_startDate);
@@ -1155,8 +1109,13 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 		timeZones.push(timeZoneElem);
 	} else {
+		// sort the organisations descending
+		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
+		// newest orga at the end of the array
+		organisations.reverse();
+
 		for ( var o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
-			var timeZoneElem = {};
+			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
 				if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
