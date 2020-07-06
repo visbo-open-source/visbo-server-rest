@@ -364,9 +364,11 @@ function getVCOrganisation(vcid, req, res, next) {
 			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 			return;
 		}
-		req.visboOrganisations = listVCSetting;
-		for (var i = 0; i < listVCSetting.length; i++) {
-			logger4js.debug('getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s', i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
+		if (listVCSetting.length > 0) {
+			req.visboOrganisations = listVCSetting;
+			for (var i = 0; i < listVCSetting.length; i++) {
+				logger4js.debug('getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s', i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
+			}
 		}
 		var endCalc = new Date();
 		logger4js.debug('Calculate verifyVPV getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
