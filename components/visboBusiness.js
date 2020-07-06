@@ -155,10 +155,7 @@ function calcCosts(vpv, pfv, organisations) {
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	if ( vpv && organisations && organisations.length > 0 ) {
-
-		/* // sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		organisations.reverse(); */
+	
 		var timeZones = splitInTimeZones(organisations, vpv.startDate, vpv.endDate);
 				
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
@@ -193,9 +190,7 @@ function calcCosts(vpv, pfv, organisations) {
 
 	if ( pfv && organisations && organisations.length > 0 ) {
 
-		/* // sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		organisations.reverse(); */
+		
 		timeZones = splitInTimeZones(organisations, pfv.startDate, pfv.endDate);
 
 		currentDate = new Date(pfv.startDate);
@@ -1035,40 +1030,6 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
 		logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 		var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
-
-/* 
-		// sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		// newest orga at the end of the array
-		organisations.reverse();
-
-		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
-		var timeZones = [];
-		var intervallStart = calcC_startDate;
-		var intervallEnd = calcC_endDate;
-
-		for ( var o = 0; organisations && organisations[o] && o < organisations.length; o++) {
-			var timeZoneElem = {};
-			if ( (organisations.length <= 1) || (intervallStart >= organisations[o].timestamp) ) {
-				// prepare organisation: change the new modelling of kapazität into the old version for calculation
-				var organisation_converted = convertOrganisation(organisations[o]);
-				timeZoneElem.orga = organisation_converted;				
-				timeZoneElem.startdate = new Date(intervallStart);
-				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
-
-				if (organisations[o+1]) {
-					if (intervallEnd >= organisations[o+1].timestamp) {
-						timeZoneElem.enddate = organisations[o+1].timestamp;
-						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
-					}
-				} else {
-					timeZoneElem.enddate = new Date(intervallEnd);
-					timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
-				}	
-			}
-			intervallStart = timeZoneElem.enddate;	
-			timeZones.push(timeZoneElem);							
-		} */
 	
 		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
