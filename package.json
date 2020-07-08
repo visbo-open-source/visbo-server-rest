@@ -18,24 +18,24 @@
     "debug": "^4.1.1",
     "delay": "^4.3.0",
     "dotenv": "^8.2.0",
-    "ejs": "^3.1.2",
+    "ejs": "^3.1.3",
     "express": "^4.17.1",
-    "i18n": "^0.9.0",
+    "i18n": "^0.9.1",
     "jsonwebtoken": "^8.5.1",
-    "log4js": "^6.2.1",
-    "moment": "^2.24.0",
-    "mongoose": "^5.9.14",
+    "log4js": "^6.3.0",
+    "moment": "^2.27.0",
+    "mongoose": "^5.9.22",
     "morgan": "^1.10.0",
-    "nodemailer": "^6.4.6",
-    "nodemon": "^2.0.3",
+    "nodemailer": "^6.4.10",
+    "nodemon": "^2.0.4",
     "path": "^0.12.7",
     "q": "^1.5.0",
     "redis": "^3.0.2",
-    "sanitize-html": "^1.23.0",
+    "sanitize-html": "^1.27.0",
     "serve-favicon": "^2.5.0",
     "useragent": "^2.3.0"
   },
   "devDependencies": {
-    "eslint": "^7.0.0"
+    "eslint": "^7.4.0"
   }
 }
