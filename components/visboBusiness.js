@@ -412,7 +412,6 @@ function getSummeKosten(vpv, timeZones, index){
 			costSum += newPartValues[i];
 		}
 	}
-
 	return costSum;
 }
 
@@ -831,11 +830,11 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 			// finished
 			if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
 				// before refdate
-				finishedElements[f] = diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV);
+				finishedElements[f] = (diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV) || 0);
 			} else {
 				// in future
 				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
-				finishedElements[f] = diffDays(minFinishedDate, listDeadlines[element].endDatePFV);
+				finishedElements[f] = (diffDays(minFinishedDate, listDeadlines[element].endDatePFV) || 0);
 			}
 			f++;
 			continue;
@@ -845,25 +844,25 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
 			// PFV before refdate
 			var maxUnFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
-			unfinishedElements[uf] = diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV);
+			unfinishedElements[uf] = (diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV) || 0);
 		} else {
-			// PFV in future
-			unfinishedElements[uf] = diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV);
+			// PFV in future			
+			unfinishedElements[uf] = (diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV) || 0);
 		}
 		uf++;
 	}
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
-		wholeDelayFinished += finishedElements[f];
+		wholeDelayFinished += 1 * (finishedElements[f] || 0);
 	}
-	result.timeDelayFinished = wholeDelayFinished / finishedElements.length;
+	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || 0);
 
 	var wholeDelayUnFinished = 0;
 	for ( f = 0; f < unfinishedElements.length; f++) {
-		wholeDelayUnFinished += unfinishedElements[f];
+		wholeDelayUnFinished += 1 * (unfinishedElements[f] || 0);
 	}
-	result.timeDelayUnFinished = wholeDelayUnFinished / unfinishedElements.length;
+	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || 0);
 
 	return result;
 }
