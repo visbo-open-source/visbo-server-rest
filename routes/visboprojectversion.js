@@ -148,6 +148,7 @@ router.route('/')
 		var sysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'VISBO Project Versions (Read)';
+		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
 
@@ -226,7 +227,6 @@ router.route('/')
 				longList = false;
 			}
 		}
-		if (longList) req.auditTTLMode = 1;
 
 		logger4js.info('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 
@@ -329,8 +329,6 @@ router.route('/')
 				} else {
 					queryVPV.select('_id vpid name timestamp startDate endDate status ampelStatus variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 				}
-			} else {
-				req.auditTTLMode = 0;	// Real Download of VISBO Project Versions
 			}
 			queryVPV.lean();
 			queryVPV.exec(function (err, listVPV) {
@@ -1196,6 +1194,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
 			req.auditDescription = 'Project Version KeyMetrics (Read)';
+			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
@@ -1268,6 +1267,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
 			req.auditDescription = 'Project Version Cost (Read)';
+			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {

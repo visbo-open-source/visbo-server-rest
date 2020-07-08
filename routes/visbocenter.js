@@ -1037,8 +1037,7 @@ router.route('/:vcid/group')
 	*     '_id':'vcgroup5c754feaa',
 	*     'name':'My first Group',
 	*     'vcid': 'vc5c754feaa',
-	*     'global': true,
-	*     'permission': {vc: 307 },
+	*     'global': true
 	*   }]
 	* }
 	*/
@@ -1151,8 +1150,7 @@ router.route('/:vcid/group')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Inserted VISBO Center Group',
-						groups: [ resultGroup ],
-						perm: req.listVCPerm.getPerm(req.oneVC.system ? 0: req.oneVC._id)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1256,8 +1254,7 @@ router.route('/:vcid/group/:groupid')
 	*     '_id':'vcgroup5c754feaa',
 	*     'name':'My first Group Renamed',
 	*     'vcid': 'vc5c754feaa',
-	*     'global': true,
-	*     'permission': {vc: 3 },
+	*     'global': true
 	*   }]
 	* }
 	*/
@@ -1394,8 +1391,7 @@ router.route('/:vcid/group/:groupid')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated VISBO Center Group',
-						groups: [ resultGroup ],
-						perm: req.listVCPerm.getPerm(req.oneVC.system ? 0 : req.oneVC._id)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1434,8 +1430,7 @@ router.route('/:vcid/group/:groupid')
 		*     'name':'My first Group Renamed',
 		*     'vcid': 'vc5c754feaa',
 		*     'users': [{userId: 'userId5c754feaa', email: 'new.user@visbo.de'}]
-		*     'global': true,
-		*     'permission': {vc: 3 },
+		*     'global': true
 		*   }]
 		* }
 		*/
@@ -1468,8 +1463,7 @@ router.route('/:vcid/group/:groupid')
 		|| (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to add User to VISBO Center Group',
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+					message: 'No Permission to add User to VISBO Center Group'
 				});
 		}
 		if (req.oneGroup.groupType != 'VC' && req.oneGroup.groupType != 'System') {
@@ -1540,8 +1534,7 @@ router.route('/:vcid/group/:groupid')
 								return res.status(200).send({
 									state: 'success',
 									message: 'Successfully added User to VISBO Center Group',
-									groups: [ vcGroup ],
-									perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+									groups: [ vcGroup ]
 								});
 						} else {
 							ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
@@ -1565,8 +1558,7 @@ router.route('/:vcid/group/:groupid')
 								return res.status(200).send({
 									state: 'success',
 									message: 'Successfully added User to VISBO Center',
-									groups: [ vcGroup ],
-									perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+									groups: [ vcGroup ]
 								});
 							});
 						}
@@ -1605,8 +1597,7 @@ router.route('/:vcid/group/:groupid')
 							return res.status(200).send({
 								state: 'success',
 								message: 'Successfully added User to VISBO Center Group',
-								groups: [ vcGroup ],
-								perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+								groups: [ vcGroup ]
 							});
 					} else {
 						ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
@@ -1629,8 +1620,7 @@ router.route('/:vcid/group/:groupid')
 							return res.status(200).send({
 								state: 'success',
 								message: 'Successfully added User to VISBO Center',
-								groups: [ vcGroup ],
-								perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+								groups: [ vcGroup ]
 							});
 						});
 					}
@@ -1724,8 +1714,7 @@ router.route('/:vcid/group/:groupid')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Successfully removed User from VISBO Center',
-				groups: [req.oneGroup],
-				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				groups: [req.oneGroup]
 			});
 		});
 	});
@@ -2080,8 +2069,19 @@ router.route('/:vcid/group/:groupid')
 				}
 				vcSetting.type = req.body.type;
 			}
-			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : new Date();
-			if (req.body.timestamp) vcSetting.timestamp = dateValue;
+			var dateValue = req.body.timestamp &&  Date.parse(req.body.timestamp) ? new Date(req.body.timestamp) : undefined;
+			if (vcSetting.name == 'organisaion') {
+				// use validFrom if timestamp is not set and validFrom is set
+				// set timestamp to beginning of month
+				if (!dateValue && req.body.value && req.body.value.validFrom && Date.parse(req.body.value.validFrom)) {
+					dateValue = new Date(req.body.value.validFrom);
+				} else {
+					dateValue = new Date();
+				}
+				dateValue.setDate(1);
+				dateValue.setHours(0,0,0,0);
+			}
+			vcSetting.timestamp = dateValue;
 
 			vcSetting.save(function(err, oneVCSetting) {
 				if (err) {

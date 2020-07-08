@@ -58,7 +58,7 @@ var clsPhase = new Schema({
 	AllCosts: [{ type: clsKostenart, required: true}],
 	AllResults: [{ type: clsResult, required: true }],
 	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
-	percentDone: { type: Number },		
+	percentDone: { type: Number },
 	invoice: { type: Schema.Types.Mixed },
 	penalty: { type: Schema.Types.Mixed },
 	// invoice: { value: { type: Number }, termsOfPayment: { type: Number } },
@@ -92,15 +92,15 @@ var clsKeyMetrics = new Schema({
 	timeCompletionCurrentTotal: { type: Number },
 	timeCompletionBaseLastTotal: { type: Number },
 	timeDelayFinished: { type: Number },
-	timeDelayUnFinished: { type: Number },
+  timeDelayUnFinished: { type: Number },
 	endDateCurrent: { type: Date },
 	endDateBaseLast: { type: Date },
 	deliverableCompletionCurrentActual: { type: Number },
 	deliverableCompletionCurrentTotal: { type: Number },
 	deliverableCompletionBaseLastActual: { type: Number },
 	deliverableCompletionBaseLastTotal: { type: Number },
-	deliverableDelayCurrentActual: { type: Number },
-  	deliverableDelayCurrentTotal: { type: Number }
+	deliverableDelayFinished: { type: Number },
+  deliverableDelayUnFinished: { type: Number }
 });
 
 
