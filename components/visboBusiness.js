@@ -833,7 +833,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 				finishedElements[f] = (diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV) || 0);
 			} else {
 				// in future
-				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
+				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate.getTime());
 				finishedElements[f] = (diffDays(minFinishedDate, listDeadlines[element].endDatePFV) || 0);
 			}
 			f++;
@@ -843,7 +843,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		// unfinished
 		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
 			// PFV before refdate
-			var maxUnFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate);
+			var maxUnFinishedDate = Math.max(listDeadlines[element].endDateVPV, refDate.getTime());
 			unfinishedElements[uf] = (diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV) || 0);
 		} else {
 			// PFV in future			
@@ -869,10 +869,15 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 
 // determines the difference in days of two dates
 function diffDays(date1, date2) {
+	
+	var differenceInDays = undefined;
 	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
 	var firstDate = new Date(date1);
 	var secondDate = new Date(date2);
-	var differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+	if (!isNaN(firstDate) && !isNaN(secondDate)) { 
+		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+	}
+		
 	return differenceInDays;
 }
 
@@ -958,11 +963,11 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 			}
 
-			if (allDeadlines && allDeadlines.length > 0){
-				var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
-				keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
-				keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
-			}
+			// if (allDeadlines && allDeadlines.length > 0){
+			// 	var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
+			// 	keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
+			// 	keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
+			// }
 
 			// look for the deliverables of pfv (take all)
 			var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
