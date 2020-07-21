@@ -560,6 +560,83 @@ router.route('/user/pwreset')
 router.route('/user/signup')
 
 /**
+	* @api {get} /token/user/signup?id=user5c754febb&hash=hash5c754feaa User Signup
+	* @apiVersion 1.0.0
+	* @apiGroup Authentication
+  * @apiName GetUserSignup
+	* @apiPermission none
+	* @apiError {number} 400 no valid hash delivered
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/token/user/signup?id=user5c754febb&hash=hash=hash5c754feaa
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  'state':'success',
+	*  'message':'User Registration',
+	*  'user':{
+	*    '_id':'user5c754febb',
+	*    'updatedAt':'2018-03-20T10:31:27.216Z',
+	*    'createdAt':'2018-02-28T09:38:04.774Z',
+	*    'email':'first.last@visbo.de',
+	*    '__v':0,
+	*    'profile': {
+	*      'firstname': 'First',
+	*      'lastname': 'Last',
+	*      'company': 'Company inc',
+	*      'phone': '0151-11223344',
+	*      'address' : {
+	*        'street': 'Street',
+	*        'city': 'City',
+	*        'zip': '88888',
+	*        'state': 'State',
+	*        'country': 'Country',
+	*      }
+	*    }
+	*  }
+	*}
+	*/
+// get signup info
+	.get(function(req, res) {
+		req.auditDescription = 'Signup (Read)';
+		req.auditTTLMode = 1;
+
+		var hash = req.query.hash;
+		if (!req.query.id || !hash) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Signup User ID with Hash not allowed'
+			});
+		}
+
+		visbouser.findById(req.query.id, function(err, user) {
+			if (err) {
+				errorHandler(err, res, `DB: GET Signup Info ${req.query.id} Find `, 'Error get signup info failed');
+				return;
+			}
+			if (!user || (user.status && user.status.registeredAt)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'UserID / Hash not valid or User already registered'
+				});
+			}
+			// check hash to avoid id probing
+			var secret = 'register'.concat(user._id, user.updatedAt.getTime());
+			if (!isValidHash(hash, secret)) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'UserID / Hash not valid or User already registered'
+				});
+			}
+			user.password = undefined;
+			return res.status(200).send({
+				state: 'success',
+				message: 'Signup User Information',
+				user: user
+			});
+		});
+	})
+
+/**
   * @api {post} /token/user/signup?hash=hash5c754feaa User Signup
   * @apiVersion 1.0.0
   * @apiGroup Authentication
@@ -627,7 +704,7 @@ router.route('/user/signup')
 	.post(function(req, res) {
 		req.auditDescription = 'Signup';
 
-		var hash = (req.query && req.query.hash) ? req.query.hash : undefined;
+		var hash = req.query && req.query.hash;
 		if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 		logger4js.info('Signup Request for e-Mail %s or id %s hash %s', req.body.email, req.body._id, hash);
 
