@@ -55,9 +55,9 @@ function getAllGroups(req, res, next) {
 	} else {
 		if (vcid) query.vcid = vcid;
 		query.groupType = {$in: ['VC', 'VP']};
-	}
-	if (vpid) {
-		query.vpids = vpid;
+		if (vpid) {
+			query.vpids = vpid;
+		}
 	}
 
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
@@ -156,9 +156,9 @@ function getVPGroupsOfVC(req, res, next) {
 }
 
 function checkVpfid(req, res, next, vpfid) {
-	var sysAdmin = req.query.sysadmin ? true : false;
+	var isSysAdmin = req.query.sysadmin ? true : false;
 
-	logger4js.debug('Check Portfolio ID vpfid %s user %s for url %s as SysAdmin %s', vpfid, req.decoded.email, req.url, sysAdmin);
+	logger4js.debug('Check Portfolio ID vpfid %s user %s for url %s as SysAdmin %s', vpfid, req.decoded.email, req.url, isSysAdmin);
 	if (!validate.validateObjectId(vpfid, false)) {
 		logger4js.warn('VC Groups Bad Parameter vpid %s', vpfid);
 		return res.status(400).send({
@@ -193,12 +193,12 @@ function checkVpfid(req, res, next, vpfid) {
 // Get the VP with vpid including View Permission Check and others depending on parameters
 function getVP(req, res, next, vpid) {
 	var userId = req.decoded._id;
-	var sysAdmin = req.query.sysadmin ? true : false;
+	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 	var checkView = req.method == 'GET' ? (constPermVP.View + constPermVP.ViewRestricted) : constPermVP.View;
 
 	// get the VP with Perm Check View
-	logger4js.debug('Generate VP Groups for vpid %s userId %s for url %s sysAdmin %s', vpid, userId, req.url, sysAdmin);
+	logger4js.debug('Generate VP Groups for vpid %s userId %s for url %s sysadmin %s', vpid, userId, req.url, isSysAdmin);
 	if (!validate.validateObjectId(vpid, false)) {
 		logger4js.warn('getVP Bad Parameter vpid %s', vpid);
 		return res.status(400).send({
@@ -208,9 +208,9 @@ function getVP(req, res, next, vpid) {
 	}
 
 	req.auditDescription = 'Project';
-	req.auditSysAdmin = sysAdmin;
+	req.auditSysAdmin = isSysAdmin;
 
-	if ((req.listVPPerm.getPerm(sysAdmin ? 0 : vpid).vp & checkView) == 0) {
+	if ((req.listVPPerm.getPerm(isSysAdmin ? 0 : vpid).vp & checkView) == 0) {
 		// do not accept requests without a group assignement especially to System Group
 		return res.status(403).send({
 			state: 'failure',

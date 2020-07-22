@@ -330,7 +330,7 @@ router.route('/')
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
-		logger4js.info('Get Project for user %s check sysAdmin %s', userId, isSysAdmin);
+		logger4js.info('Get Project for user %s check sysadmin %s', userId, isSysAdmin);
 
 		var query = {};
 		// Get all VPs there the user Group is assigned to
@@ -607,7 +607,7 @@ router.route('/:vpid')
 
 		logger4js.info('Get Project for userid %s email %s and vp %s oneVC %s', userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (req.query.deleted && !(perm.vp & constPermVP.Delete)) {
+		if (!isSysAdmin && req.query.deleted && !(perm.vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to deleted Projects'
@@ -945,13 +945,14 @@ router.route('/:vpid/audit')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
+		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
 
 		req.auditDescription = 'Project Audit (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info('Get Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
+		if (!(perm.vp & constPermVP.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
 					message: 'You need to have View Audit permission to get audit trail',
@@ -978,7 +979,7 @@ router.route('/:vpid/audit')
 		if (action) {
 			query.action = action;
 		}
-		if (!sysAdmin) {
+		if (!isSysAdmin) {
 			query.sysAdmin = {$exists: false};
 		}
 		var queryListCondition = [];
@@ -1083,10 +1084,10 @@ router.route('/:vpid/audit')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var sysAdmin = req.query.sysadmin ? true : false;
+			var isSysAdmin = req.query.sysadmin ? true : false;
 
 			req.auditDescription = 'Project Group (Read)';
-			req.auditSysAdmin = sysAdmin;
+			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
 			logger4js.info('Get Project Group for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
@@ -1179,7 +1180,7 @@ router.route('/:vpid/audit')
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
-			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			// var isSysAdmin = req.query && req.query.sysadmin ? true : false;
 			var groupType = 'VP';
 
 			var vgName = (req.body.name || '').trim();
@@ -2208,10 +2209,10 @@ router.route('/:vpid/portfolio')
 		// no need to check authentication, already done centrally
 
 		var userId = req.decoded._id;
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Portfolio List (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
 		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
@@ -2499,10 +2500,10 @@ router.route('/:vpid/portfolio/:vpfid')
 // Get specific portfolio version
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Portfolio List (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
 		logger4js.trace('Get Portfolio Versions');
@@ -2747,7 +2748,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			// User is authenticated already
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			// var isSysAdmin = req.query && req.query.sysadmin ? true : false;
 
 			var restrictName = (req.body.name || '').trim();
 			var groupid = req.body.groupid;

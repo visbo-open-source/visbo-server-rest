@@ -577,7 +577,7 @@ router.route('/:vcid')
 		req.auditDescription = 'VISBO Center (Delete)';
 
 		logger4js.info('DELETE VISBO Center for userid %s email %s and vc %s oneVC %s is SysAdminPerm %O', userId, useremail, req.params.vcid, req.oneVC.name, req.listVCPerm.getPerm(0));
-		// user is sysAdmin
+		// user is sysadmin
 		if (!(req.listVCPerm.getPerm(0).system & constPermSystem.DeleteVC) || req.oneVC.system) {
 			return res.status(403).send({
 				state: 'failure',
