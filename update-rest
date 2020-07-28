@@ -15,7 +15,7 @@ fi
 
 echo "02: Pull Branch from Repository Server"
 updateCmdOrg=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
-updatePackageOrg=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+updatePackageOrg=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
 pullOutput=`git pull`
 if [ $? -ne 0 ]
 then
@@ -31,7 +31,7 @@ then
   exit 0
 fi
 
-updatePackageAct=`date -r package-lock.json '+%Y-%m-%dT%H:%M:%S'`
+updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updatePackageOrg" != "$updatePackageAct" ]
 then
   echo "03: Install subcomponents from NODE environment"

@@ -23,7 +23,7 @@ router.route('/')
 	* @apiGroup VISBO System
 	* @apiName GetReSTStatus
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/status
+	*   url: https://my.visbo.net/api/status
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -80,6 +80,11 @@ router.route('/')
 					err = '';
 				}
 			}
+      if (req.query.crash != undefined) {
+				status = 'Get Status String native '.concat(req.query.objectid, ' has subid ', req.query.objectid.id);
+				logger4js.info(status);
+				err = '';
+			}
 
 			if (err) {
 				logger4js.info('Get Status: %O %s ', req.query, err.message);
@@ -114,7 +119,7 @@ router.route('/pwpolicy')
 	* @apiGroup VISBO System
 	* @apiName GetPWPolicy
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/status/pwpolicy
+	*   url: https://my.visbo.net/api/status/pwpolicy
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {

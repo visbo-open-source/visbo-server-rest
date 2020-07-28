@@ -30,8 +30,8 @@ router.route('/')
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View Permission
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/sysuser
-	*   url: http://localhost:3484/sysuser?email='visbo'&userid=us5c754feac&maxcount=100
+	*   url: https://my.visbo.net/api/sysuser
+	*   url: https://my.visbo.net/api/sysuser?email='visbo'&userid=us5c754feac&maxcount=100
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {

@@ -51,7 +51,7 @@ function VisboPermission() {
 	this.getVPIDs = function(requiredPerm, restricted) {
 		var idList = [];
 		for (var id in this.permList) {
-			if ((this.permList[id].vp & requiredPerm) == requiredPerm) {
+			if ((this.permList[id].vp & requiredPerm) != 0) {
 				idList.push(id);
 			} else if (restricted) {
 				var restrictedPerm = requiredPerm & constPermVP.View ? requiredPerm - constPermVP.View : requiredPerm;

@@ -46,7 +46,11 @@ var clsResult = new Schema({
 	originalName: { type: String },
 	appearance: { type: String },
 	deliverables: [{ type: String, required: true }],
-	percentDone: { type: Number }
+	percentDone: { type: Number },
+	invoice: { type: Schema.Types.Mixed },
+	penalty: { type: Schema.Types.Mixed }
+	// invoice: { value: { type: Number }, termsOfPayment: { type: Number } },
+	// penalty: { penaltyDate: { type: Date }, value: { type: Number } }
 });
 
 var clsPhase = new Schema({
@@ -55,6 +59,10 @@ var clsPhase = new Schema({
 	AllResults: [{ type: clsResult, required: true }],
 	AllBewertungen: [{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
 	percentDone: { type: Number },
+	invoice: { type: Schema.Types.Mixed },
+	penalty: { type: Schema.Types.Mixed },
+	// invoice: { value: { type: Number }, termsOfPayment: { type: Number } },
+	// penalty: { value: { type: Number }, penaltyDate: { type: Date } },
 	responsible: { type: String },
 	deliverables: [{ type: String , required: true}],
 	ampelStatus: { type: Number },
@@ -83,16 +91,16 @@ var clsKeyMetrics = new Schema({
 	timeCompletionBaseLastActual: { type: Number },
 	timeCompletionCurrentTotal: { type: Number },
 	timeCompletionBaseLastTotal: { type: Number },
-	timeDelayCurrentActual: { type: Number },
-  timeDelayCurrentTotal: { type: Number },
+	timeDelayFinished: { type: Number },
+  timeDelayUnFinished: { type: Number },
 	endDateCurrent: { type: Date },
 	endDateBaseLast: { type: Date },
 	deliverableCompletionCurrentActual: { type: Number },
 	deliverableCompletionCurrentTotal: { type: Number },
 	deliverableCompletionBaseLastActual: { type: Number },
 	deliverableCompletionBaseLastTotal: { type: Number },
-	deliverableDelayCurrentActual: { type: Number },
-  deliverableDelayCurrentTotal: { type: Number }
+	deliverableDelayFinished: { type: Number },
+  deliverableDelayUnFinished: { type: Number }
 });
 
 
