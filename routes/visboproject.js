@@ -2684,7 +2684,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 
-			req.auditDescription = 'VISBO Project Capacity (Read)';
+			req.auditDescription = 'Project Capacity (Read)';
 
 			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
