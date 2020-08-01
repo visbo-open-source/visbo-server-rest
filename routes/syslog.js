@@ -31,7 +31,7 @@ router.route('/')
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/syslog
+	*   url: https://my.visbo.net/api/syslog
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -130,7 +130,7 @@ router.route('/')
 		* @apiError {number} 401 Not Authenticated, no valid token
 		* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/syslog/all-the-logs.log
+		*   url: https://my.visbo.net/api/syslog/all-the-logs.log
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

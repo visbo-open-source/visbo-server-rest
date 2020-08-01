@@ -63,6 +63,7 @@ function checkUserId(req, res, next, userid) {
 	return next();
 }
 
+// get VP Groups used only for manage restrictions, we need all VP Groups not only the groups where the user is member of
 function getVPGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');

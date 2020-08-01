@@ -10,6 +10,8 @@ var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
+var verifyVpv = require('./../components/verifyVpv');
+var visboBusiness = require('./../components/visboBusiness');
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
 var User = mongoose.model('User');
@@ -254,6 +256,11 @@ router.param('vpfid', verifyVp.checkVpfid);
 router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
+// get details for capacity calculation
+router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
 
 /////////////////
 // VISBO Project API
@@ -283,8 +290,8 @@ router.route('/')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp
-	*   url: http://localhost:3484/vp?vcid=vc5aaf992&vpType=0
+	*   url: https://my.visbo.net/api/vp
+	*   url: https://my.visbo.net/api/vp?vcid=vc5aaf992&vpType=0
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -323,7 +330,7 @@ router.route('/')
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
-		logger4js.info('Get Project for user %s check sysAdmin %s', userId, isSysAdmin);
+		logger4js.info('Get Project for user %s check sysadmin %s', userId, isSysAdmin);
 
 		var query = {};
 		// Get all VPs there the user Group is assigned to
@@ -395,7 +402,7 @@ router.route('/')
 	* @apiError {number} 409 Project with same name exists already
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp
+	*   url: https://my.visbo.net/api/vp
 	* {
 	*  'name':'My first Project',
 	*  'description':'Project Description',
@@ -563,7 +570,7 @@ router.route('/:vpid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project
  	* @apiExample Example usage:
- 	*   url: http://localhost:3484/vp/5aada025
+ 	*   url: https://my.visbo.net/api/vp/5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -600,7 +607,7 @@ router.route('/:vpid')
 
 		logger4js.info('Get Project for userid %s email %s and vp %s oneVC %s', userId, useremail, req.params.vpid, req.oneVP.name);
 
-		if (req.query.deleted && !(perm.vp & constPermVP.Delete)) {
+		if (!isSysAdmin && req.query.deleted && !(perm.vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to deleted Projects'
@@ -641,7 +648,7 @@ router.route('/:vpid')
 	* @apiError {number} 423 Project is locked by another user
 	* @apiError {number} 409 Project with same name exists already or Project was updatd in between
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5cf3da025
+	*   url: https://my.visbo.net/api/vp/vp5cf3da025
 	* {
 	*  'name':'My first Project Renamed',
 	*  'description': 'New Description for VP',
@@ -791,7 +798,7 @@ router.route('/:vpid')
 	* @apiError {number} 403 No Permission to Delete Project
 	* @apiError {number} 423 Project is locked by another user
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025
+	*   url: https://my.visbo.net/api/vp/vp5aada025
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -920,7 +927,7 @@ router.route('/:vpid/audit')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
- 	* url: http://localhost:3484/vp/vp5aada025/audit
+ 	* url: https://my.visbo.net/api/vp/vp5aada025/audit
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -938,13 +945,14 @@ router.route('/:vpid/audit')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
+		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
 
 		req.auditDescription = 'Project Audit (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info('Get Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
+		if (!(perm.vp & constPermVP.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
 					message: 'You need to have View Audit permission to get audit trail',
@@ -971,7 +979,7 @@ router.route('/:vpid/audit')
 		if (action) {
 			query.action = action;
 		}
-		if (!sysAdmin) {
+		if (!isSysAdmin) {
 			query.sysAdmin = {$exists: false};
 		}
 		var queryListCondition = [];
@@ -1049,8 +1057,8 @@ router.route('/:vpid/audit')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project, or Project does not exists
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group
-		*   url: http://localhost:3484/vp/:vpid/group?userlist=true
+		*   url: https://my.visbo.net/api/vp/:vpid/group
+		*   url: https://my.visbo.net/api/vp/:vpid/group?userlist=true
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1076,10 +1084,10 @@ router.route('/:vpid/audit')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var sysAdmin = req.query.sysadmin ? true : false;
+			var isSysAdmin = req.query.sysadmin ? true : false;
 
 			req.auditDescription = 'Project Group (Read)';
-			req.auditSysAdmin = sysAdmin;
+			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
 			logger4js.info('Get Project Group for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
@@ -1148,11 +1156,11 @@ router.route('/:vpid/audit')
 		* @apiError {number} 403 No Permission to Create a Project Group
 		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/groups
+		*   url: https://my.visbo.net/api/vp/:vpid/groups
 		*  {
 		*     'name':'Group Name',
 		*     'global': true,
-		*     'permission': {vc: 307 }
+		*     'permission': {vp: 307 }
 		*  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -1163,8 +1171,7 @@ router.route('/:vpid/audit')
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group',
 		*     'vpid': 'vc5c754feaa',
-		*     'global': true,
-		*     'permission': {vp: 307 },
+		*     'global': true
 		*   }]
 		* }
 		*/
@@ -1173,7 +1180,7 @@ router.route('/:vpid/audit')
 		.post(function(req, res) {
 			// User is authenticated already
 			var userId = req.decoded._id;
-			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			// var isSysAdmin = req.query && req.query.sysadmin ? true : false;
 			var groupType = 'VP';
 
 			var vgName = (req.body.name || '').trim();
@@ -1189,10 +1196,11 @@ router.route('/:vpid/audit')
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & Const.constPermVPAll;
 			}
 			if (newPerm.vp & constPermVP.View) {
-				newPerm.vp = newPerm.vp & constPermVP.constPermVPFull;
+				// remove View Restricted if View is set
+				newPerm.vp = newPerm.vp & Const.constPermVPFull;
 			}
 
 			req.auditDescription = 'Project Group (Create)';
@@ -1259,8 +1267,7 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Inserted Project Group',
-						groups: [ resultGroup ],
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1283,7 +1290,7 @@ router.route('/:vpid/audit')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Project Group
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -1346,11 +1353,11 @@ router.route('/:vpid/audit')
 		* @apiError {number} 403 No Permission to Create a Project Group
 		* @apiError {number} 409 Project Group with same name exists already
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/group/:groupid
+		*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid
 		*  {
 	  *    'name':'My first Group Renamed',
 		*    'global': true,
-		*    'permission': {vc: 3, vp: 1 }
+		*    'permission': {vp: 1 }
 	  *   }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -1361,8 +1368,7 @@ router.route('/:vpid/audit')
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group Renamed',
 		*     'vcid': 'vc5c754feaa',
-		*     'global': true,
-		*     'permission': {vc: 3 },
+		*     'global': true
 		*   }]
 		* }
 		*/
@@ -1445,8 +1451,7 @@ router.route('/:vpid/audit')
 					return res.status(200).send({
 						state: 'success',
 						message: 'Updated Project Group',
-						groups: [ resultGroup ],
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						groups: [ resultGroup ]
 					});
 				});
 			});
@@ -1469,7 +1474,7 @@ router.route('/:vpid/audit')
 			* @apiError {number} 403 No Permission to Add a User to Project Group
 			* @apiError {number} 409 user is already member of the Project Group
 			* @apiExample Example usage:
-			*  url: http://localhost:3484/vp/:vpid/group/:groupid/user
+			*  url: https://my.visbo.net/api/vp/:vpid/group/:groupid/user
 			*  {
 		  *    'email':'new.user@visbo.de',
 			*    'message': 'Invitation message'
@@ -1484,8 +1489,7 @@ router.route('/:vpid/audit')
 			*     'name':'My first Group Renamed',
 			*     'vcid': 'vc5c754feaa',
 			*     'users': [{userId: 'userId5c754feaa', email: 'new.user@visbo.de'}]
-			*     'global': true,
-			*     'permission': {vc: 3 },
+			*     'global': true
 			*   }]
 			* }
 			*/
@@ -1697,7 +1701,7 @@ router.route('/:vpid/audit')
 			* @apiError {number} 409 user is not member of the Project Group
 			*
 			* @apiExample Example usage:
-			*   url: http://localhost:3484/vp/:vpid/group/:groupid/user/:userid
+			*   url: https://my.visbo.net/api/vp/:vpid/group/:groupid/user/:userid
 			* @apiSuccessExample {json} Success-Response:
 			* HTTP/1.1 200 OK
 			* {
@@ -1775,7 +1779,7 @@ router.route('/:vpid/lock')
 	* @apiError {number} 409 Project already locked by another user.
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/lock
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
 	* {
 	*  'variantName': 'V1',
 	*  'expiresAt': '2018-04-26T12:04:12.094Z'
@@ -1895,8 +1899,8 @@ router.route('/:vpid/lock')
 	* @apiError {number} 409 No Lock exists for the specified Project and Variant.
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/lock
-	*   url: http://localhost:3484/vp/vp5aada025/lock?variantName=Variant1
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantName=Variant1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -1969,7 +1973,7 @@ router.route('/:vpid/variant')
 	*
 	* @apiHeader {String} access-key User authentication token.
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/variant
+	*   url: https://my.visbo.net/api/vp/vp5aada025/variant
 	* {
 	*  'variantName': 'some name',
 	* }
@@ -2068,7 +2072,7 @@ router.route('/:vpid/variant/:vid')
 	* @apiError {number} 423 Variant is locked by another user
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/variant/variant5aada
+	*   url: https://my.visbo.net/api/vp/vp5aada025/variant/variant5aada
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2170,8 +2174,8 @@ router.route('/:vpid/portfolio')
 	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2205,10 +2209,10 @@ router.route('/:vpid/portfolio')
 		// no need to check authentication, already done centrally
 
 		var userId = req.decoded._id;
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Portfolio List (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
 		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
@@ -2262,18 +2266,24 @@ router.route('/:vpid/portfolio')
 				}
 				logger4js.debug('Found %d Portfolio Lists after Filtering', listVPFfiltered.length);
 				req.auditInfo = listVPFfiltered.length;
+				verifyVp.squeezePortfolio(listVPFfiltered);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Portfolios',
 					count: listVPFfiltered.length,
+					vpid: req.oneVP._id,
+					name: req.oneVP.name,
 					vpf: listVPFfiltered,
 					perm: req.listVPPerm.getPerm(req.params.vpid)
 				});
 			} else {
+				verifyVp.squeezePortfolio(req, listVPF);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned Portfolios',
 					count: listVPF.length,
+					vpid: req.oneVP._id,
+					name: req.oneVP.name,
 					vpf: listVPF,
 					perm: req.listVPPerm.getPerm(req.params.vpid).vp
 				});
@@ -2296,7 +2306,7 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 409 Variant does not exist
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/portfolio
+	*   url: https://my.visbo.net/api/vp/vp5aada025/portfolio
 	*  {
 	*    'variantName': 'name of the portfolio variant',
 	*    'allItems': [{
@@ -2459,7 +2469,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiError {number} 403 No Permission to View the Project
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aaf992/portfolio/vpf5aaf992
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio/vpf5aaf992
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2490,10 +2500,10 @@ router.route('/:vpid/portfolio/:vpfid')
 // Get specific portfolio version
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
-		var sysAdmin = req.query.sysadmin ? true : false;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'Portfolio List (Read)';
-		req.auditSysAdmin = sysAdmin;
+		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
 		logger4js.trace('Get Portfolio Versions');
@@ -2511,9 +2521,12 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.debug('Found %d Portfolios', listVPF.length);
 			logger4js.trace('Found Portfolios/n', listVPF);
 
+			verifyVp.squeezePortfolio(req, listVPF);
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Portfolios',
+				message: 'Returned Portfolio',
+				vpid: req.oneVP._id,
+				name: req.oneVP.name,
 				vpf: listVPF,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
@@ -2535,7 +2548,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiError {number} 423 Portfolio locked by another user
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vp/vp5aada025/portfolio/vpf5aada
+	*   url: https://my.visbo.net/api/vp/vp5aada025/portfolio/vpf5aada
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2625,6 +2638,75 @@ router.route('/:vpid/portfolio/:vpfid')
 		});
 	});
 
+	router.route('/:vpid/portfolio/:vpfid/capacity')
+
+	/**
+		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity Calculation
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Properties
+		* @apiName GetVISBOProjectCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version
+		*
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and roleID
+
+		*
+		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
+		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		*
+		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for the Portfolio and all the projects of the Portfolio, Projects without View Permission will be excluded
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vp/:vpid/portfolio/:vpfid/capacity
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Portfolio Capacity',
+		*   'vp':[{
+		*     '_id':'vp5c754feaa',
+		*     'name':'VISBO Portfolio Name',
+		*     'capacity': [{
+						'month': 2020-05-01T00:00:00.000Z,
+						....
+					}]
+		*   }]
+		* }
+		*/
+
+	// get VPF Capacity
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var roleID = req.query.roleID;
+
+			req.auditDescription = 'VISBO Project Capacity (Read)';
+
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
+			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+
+			req.auditInfo = '';
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Portfolio Capacity',
+				// count: listVCSetting.length,
+				vp: [ {
+					_id: req.oneVP._id,
+					name: req.oneVP.name,
+					description: req.oneVP.description,
+					roleID: roleID,
+					createdAt: req.oneVP.createdAt,
+					updatedAt: req.oneVP.updatedAt,
+					capacity: capacity
+				} ]
+			});
+		});
+
+
 	router.route('/:vpid/restrict')
 
 	/**
@@ -2641,7 +2723,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a Project Restriction
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/:vpid/restrict
+		*   url: https://my.visbo.net/api/vp/:vpid/restrict
 		*  {
 		*     'name': 'Restriction Name',
 		*     'group': 'vpgroup5c754feaa',
@@ -2666,7 +2748,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			// User is authenticated already
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			// var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+			// var isSysAdmin = req.query && req.query.sysadmin ? true : false;
 
 			var restrictName = (req.body.name || '').trim();
 			var groupid = req.body.groupid;
@@ -2753,7 +2835,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiError {number} 409 Restriction does not exists
 		*
 		* @apiExample Example usage:
-		*   url: http://localhost:3484/vp/vp5aada025/restrict/restrict5aada
+		*   url: https://my.visbo.net/api/vp/vp5aada025/restrict/restrict5aada
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

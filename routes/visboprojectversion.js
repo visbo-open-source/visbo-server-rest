@@ -121,9 +121,9 @@ router.route('/')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv
-	*   url: http://localhost:3484/vpv?vcid=vc5c754feaa&refDate=2018-01-01
-	*   url: http://localhost:3484/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
+	*   url: https://my.visbo.net/api/vpv
+	*   url: https://my.visbo.net/api/vpv?vcid=vc5c754feaa&refDate=2018-01-01
+	*   url: https://my.visbo.net/api/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -148,6 +148,7 @@ router.route('/')
 		var sysAdmin = req.query.sysadmin ? true : false;
 
 		req.auditDescription = 'VISBO Project Versions (Read)';
+		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
 
@@ -226,7 +227,6 @@ router.route('/')
 				longList = false;
 			}
 		}
-		if (longList) req.auditTTLMode = 1;
 
 		logger4js.info('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 
@@ -329,8 +329,6 @@ router.route('/')
 				} else {
 					queryVPV.select('_id vpid name timestamp startDate endDate status ampelStatus variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 				}
-			} else {
-				req.auditTTLMode = 0;	// Real Download of VISBO Project Versions
 			}
 			queryVPV.lean();
 			queryVPV.exec(function (err, listVPV) {
@@ -369,7 +367,7 @@ router.route('/')
 	* @apiGroup VISBO Project Version
 	* @apiName CreateVISBOProjectVersions
 	* @apiDescription Post creates a new VISBO Project Version.
-	* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
+	* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the Version.
 	* VISBO Project Version Properties like _id, name and timestamp are overwritten by the system
 	* @apiHeader {String} access-key User authentication token.
 	*
@@ -382,7 +380,7 @@ router.route('/')
 	* @apiError {number} 423 Project (Portfolio) is locked by another user
 	*
   * @apiExample Example usage:
-	*   url: http://localhost:3484/vpv
+	*   url: https://my.visbo.net/api/vpv
 	* {
 	*  'vpid': 'vp5c754feaa'
 	*  'allOthers': 'all properties of visbo project version'
@@ -570,7 +568,7 @@ router.route('/')
 				newVPV.complexity = req.body.complexity;
 				newVPV.description = req.body.description;
 				newVPV.businessUnit = req.body.businessUnit;
-				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 				if (!obj || Object.keys(obj).length < 1) {
 					// no valid key Metrics delivered
 					if (req.body.keyMetrics && newVPV.variantName != 'pfv' && checkValidKeyMetrics(req.body.keyMetrics)) {
@@ -616,7 +614,7 @@ router.route('/:vpvid')
 	* @apiError {number} 403 No Permission to View Project Version
 	*
  	* @apiExample Example usage:
- 	*   url: http://localhost:3484/vpv/vpv5aada025
+ 	*   url: https://my.visbo.net/api/vpv/vpv5aada025
  	* @apiSuccessExample {json} Success-Response:
  	* HTTP/1.1 200 OK
  	* {
@@ -705,7 +703,7 @@ router.route('/:vpvid')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv/vpv5cf3da025?deleted=1
+	*   url: https://my.visbo.net/api/vpv/vpv5cf3da025?deleted=1
 	* {
 	* }
 	* @apiSuccessExample {json} Success-Response:
@@ -807,7 +805,7 @@ router.route('/:vpvid')
 	*
 	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
-	*   url: http://localhost:3484/vpv/vpv5c754feaa
+	*   url: https://my.visbo.net/api/vpv/vpv5c754feaa
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -910,7 +908,7 @@ router.route('/:vpvid')
 		* @apiGroup VISBO Project Version
 		* @apiName VISBOProjectVersionCopy
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
-		* The user needs to have Modify permission in the Referenced Project or is the owner of the Variant.
+		* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
 		* @apiHeader {String} access-key User authentication token.
 		*
@@ -920,7 +918,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to Create Project Version
 		*
 	  * @apiExample Example usage:
-		*   url: http://localhost:3484/vpv/vpv5c754feaa/copy
+		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z'
 		* }
@@ -1022,7 +1020,7 @@ router.route('/:vpvid')
 			newVPV.description = req.oneVPV.description;
 			newVPV.businessUnit = req.oneVPV.businessUnit;
 			// MS TODO: ignore keyMetrics from body
-			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 			if (!newVPV.keyMetrics && req.body.keyMetrics) {
 				newVPV.keyMetrics = req.body.keyMetrics;
 			}
@@ -1091,7 +1089,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/calc?type=
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/calc?type=
 	 	* @apiSuccessExample {json} Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1105,14 +1103,15 @@ router.route('/:vpvid')
 	 	*   }]
 	 	* }
 		*/
-	// Get keyMetrics calculation for a specific Project Version
+	// Get Capacity calculation for a specific Project Version
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+			var roleID = req.query.roleID;
 
-			req.auditDescription = 'Project Version Calc (Read)';
+			req.auditDescription = 'Project Version CalcCapacity (Read)';
 			req.auditSysAdmin = sysAdmin;
 			req.auditTTLMode = 1;
 
@@ -1123,21 +1122,31 @@ router.route('/:vpvid')
 					perm: perm
 				});
 			}
+			if (roleID == undefined ) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No roleID given to Calculate Capacities',
+					perm: perm
+				});
+			}
+			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-			logger4js.info('Get Project Version Calc for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
+			var capacity = visboBusiness.calcCapacities([req.oneVPV], roleID, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
+				count: capacity.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
 					timestamp: req.oneVPV.timestamp,
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
-					name: req.oneVPV.name
+					name: req.oneVPV.name,
+					roleID: roleID,
+					capacity: capacity
 				} ],
 				perm: perm
 			});
-
 		});
 
 	router.route('/:vpvid/keyMetrics')
@@ -1149,15 +1158,15 @@ router.route('/:vpvid')
 	 	* @apiName GetVISBOProjectVersionKeyMetrics
 	 	* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
-		* With Permission Restricted View, the deliveries were filtered to the restricted View
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* Without Audit Permission the Cost Part of keyMetrics will not be delivered
 		*
 		* @apiPermission Permission: Authenticated, View Project, View Audit.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/keyMetrics
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/keyMetrics
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1185,6 +1194,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
 			req.auditDescription = 'Project Version KeyMetrics (Read)';
+			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
@@ -1196,7 +1206,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var keyMetricsVPV = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
@@ -1222,7 +1232,7 @@ router.route('/:vpvid')
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionCost
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
+		* @apiDescription Get returns the costs for a specific Project Version the user has access permission to the Project
 		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deliveries were filtered to the restricted View
 		*
@@ -1231,7 +1241,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/cost
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/cost
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1257,6 +1267,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
 			req.auditDescription = 'Project Version Cost (Read)';
+			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
 			if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
@@ -1268,7 +1279,7 @@ router.route('/:vpvid')
 			}
 			logger4js.info('Get Project Version Cost for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-			var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations ? req.visboOrganisations[0] : undefined);
+			var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Returned Project Version',
@@ -1293,8 +1304,8 @@ router.route('/:vpvid')
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionDelivery
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* @apiDescription Get returns the deliveries for a specific Project Version the user has view permission to the Project
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deliveries were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
@@ -1304,7 +1315,7 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/delivery?ref=pfv
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/delivery?ref=pfv
 	 	* @apiSuccessExample {json} Delivery-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1379,13 +1390,13 @@ router.route('/:vpvid')
 	router.route('/:vpvid/deadline')
 
 	/**
-	 	* @api {get} /vpv/:vpvid/deadline Get Deliveries for specific Version
+	 	* @api {get} /vpv/:vpvid/deadline Get Deadlines for specific Version
 		* @apiVersion 1.0.0
 	 	* @apiGroup VISBO Project Version
 	 	* @apiName GetVISBOProjectVersionDeadline
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the deadlines for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* @apiDescription Get returns the deadlines for a specific Project Version where the user has View permission to the Project
+		* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 		* With Permission Restricted View, the deadlines were filtered to the restricted View
 		*
 		* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
@@ -1395,8 +1406,8 @@ router.route('/:vpvid')
 		* @apiError {number} 403 No Permission to View Project Version
 		*
 	 	* @apiExample Example usage:
-	 	*   url: http://localhost:3484/vpv/vpv5aada025/deadline?ref=pfv
-	 	* @apiSuccessExample {json} Delivery-Response:
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/deadline?ref=pfv
+	 	* @apiSuccessExample {json} Deadline-Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
 	 	*   'state':'success',

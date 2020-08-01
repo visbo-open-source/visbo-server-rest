@@ -44,8 +44,8 @@ router.route('/')
 	* @apiError {number} 403 No Permission, user has no View & Audit Permission
 	* @apiError {number} 500 ServerIssue No DB Connection
 	* @apiExample Example usage:
-	* url: http://localhost:3484/audit
-	* url: http://localhost:3484/audit?from='2018-09-01'&to='2018-09-15'
+	* url: https://my.visbo.net/api/audit
+	* url: https://my.visbo.net/api/audit?from='2018-09-01'&to='2018-09-15'
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
