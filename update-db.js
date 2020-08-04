@@ -695,7 +695,7 @@ if (currentVersion < dateBlock) {
     if (timestamp.toISOString() !== normalised.toISOString()) {
       // print ("vcsetting ", JSON.stringify(vcSettingList[i]));
       print("Fix vcSetting _id:", vcSettingList[i]._id, " vcid: ", vcSettingList[i].vcid, " Timestamp ", timestamp.toISOString(), " normalisedTimestamp ", normalised.toISOString(), "UpdatedAt:", vcSettingList[i].updatedAt.toISOString());
-      db.vcsettings.updateOne({_id: vcSettingList[i]._id}, {$set: {"timestamp": normalised.toISOString(), "updatedAt": new Date()}})
+      db.vcsettings.updateOne({_id: vcSettingList[i]._id}, {$set: {"timestamp": normalised, "updatedAt": new Date()}})
       fixCount += 1;
     }
   }
