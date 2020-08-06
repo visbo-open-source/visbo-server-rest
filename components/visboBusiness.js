@@ -419,7 +419,7 @@ function getSummeKosten(vpv, timeZones, index){
 		var j = 0, element;
 		var newPartValues = [];
 		for (element in allCostValues) {
-			newPartValues[j] = allCostValues[element].thisCost;
+			newPartValues[j] = allCostValues[element].thisCost || 0;
 			j++;
 		}
 		costSum = 0;
@@ -941,11 +941,12 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 		if (vpv.variantName != 'pfv'){
 
 			if (organisations && organisations.length > 0){
-
+				
 				var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
 				// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
 				var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
 				var indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(pfv.startDate);
+				
 				var timeZonesPFV = splitInTimeZones(organisations, pfv.startDate, pfv.endDate);
 				keyMetrics.costBaseLastActual = getSummeKosten(pfv, timeZonesPFV, indexActual);
 				keyMetrics.costBaseLastTotal = getSummeKosten(pfv, timeZonesPFV, indexTotal);
