@@ -135,7 +135,7 @@ router.route('/user/login')
 			}
 			if (!user) {
 				logger4js.info('User not Found', req.body.email);
-				return res.status(401).send({
+				return res.status(403).send({
 					state: 'failure',
 					message: 'email or password mismatch'
 				});
@@ -146,7 +146,7 @@ router.route('/user/login')
 				logger4js.warn('Login: User %s not Registered User Status %s', req.body.email, user.status ? true: false);
 				// Send Mail to User with Register Link
 				sendMail.accountNotRegistered(req, res, user);
-				return res.status(401).send({
+				return res.status(403).send({
 					state: 'failure',
 					message: 'email or password mismatch'
 				});
@@ -157,7 +157,7 @@ router.route('/user/login')
 			var loginFailedIntervalMinute = 4 * 60;
 			if (user.status.lockedUntil && user.status.lockedUntil.getTime() > currentDate.getTime()) {
 				logger4js.info('Login: User %s locked until %s', req.body.email, user.status.lockedUntil);
-				return res.status(401).send({
+				return res.status(403).send({
 					state: 'failure',
 					message: 'email or password mismatch'
 				});
@@ -193,7 +193,7 @@ router.route('/user/login')
 						});
 					}
 					logger4js.debug('Login: Retry Count for %s incremented %s last failed %s locked until %s', req.body.email, user.status.loginRetries, user.status.lastLoginFailedAt, user.status.lockedUntil);
-					return res.status(401).send({
+					return res.status(403).send({
 						state: 'failure',
 						message: 'email or password mismatch'
 					});
@@ -215,7 +215,7 @@ router.route('/user/login')
 					if (currentDate.getTime() > user.status.expiresAt.getTime()) {
 						logger4js.info('Login Password expired at: %s', user.status.expiresAt.toISOString());
 						sendMail.passwordExpired(req, res, user);
-						return res.status(401).send({
+						return res.status(403).send({
 							state: 'failure',
 							message: 'email or password mismatch'
 						});
@@ -504,7 +504,7 @@ router.route('/user/pwreset')
 		// verifies secret and checks exp
     jwt.verify(token, jwtSecret.register.secret, function(err, decoded) {
       if (err) {
-        return res.status(401).send({
+        return res.status(403).send({
 					state: 'failure',
 					message: 'Session has expired'
         });
@@ -928,7 +928,7 @@ router.route('/user/signup')
 				// if user exists and is registered already refuse to register again
 				if (!user || (user.status && user.status.registeredAt)) {
 					if (!user) logger4js.warn('Security: invalid e-Mail confirmation for unknown userID %s', req.body._id);
-					return res.status(401).send({
+					return res.status(403).send({
 						state: 'failure',
 						message: 'No e-mail address to confirm'
 					});
@@ -939,7 +939,7 @@ router.route('/user/signup')
 				var secret = 'registerconfirm'.concat(user._id, user.updatedAt.getTime());
 				if (!isValidHash(req.body.hash, secret)) {
 					logger4js.warn('Security: invalid e-Mail & hash combination', user.email);
-					return res.status(401).send({
+					return res.status(403).send({
 						state: 'failure',
 						message: 'No e-mail address to confirm'
 					});
