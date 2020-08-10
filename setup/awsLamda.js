@@ -9,7 +9,6 @@ exports.handler = function(event, context) {
     var username = 'AWS Monitoring';
     var path = '/services/T753BM10B/BLBNDTCN4/ZUpVYbYDyM0vQHIXUHUwgwoZ';
     var subject = 'Not Set';
-    var message = 'Unkown';
     var jsonObj = undefined;
     var sendMessage = true;
 
@@ -90,7 +89,7 @@ exports.handler = function(event, context) {
             var cmd = JSON.stringify(param.commands);
             if (cmd.indexOf('aws-updateReST.sh') >= 0) {
                 text = text.concat('Command: \tUpdate Visbo Software\n');
-                extendedMessage = false
+                extendedMessage = false;
             } else {
                 text = text.concat('Commands available: \t', cmd, '\n');
             }
@@ -144,7 +143,7 @@ exports.handler = function(event, context) {
 
     var req = https.request(options, function(res) {
       res.setEncoding('utf8');
-      res.on('data', function (chunk) {
+      res.on('data', function () {
         context.done(null);
       });
     });
