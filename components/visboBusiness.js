@@ -1044,7 +1044,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 
 
 		if (!vpvs || !organisations || organisations.length <= 0 || vpvs.length <= 1 || calcC_dauer <= 0 ) {
-			return undefined;
+			return 	allCalcCapaValuesIndexed;
 		}
 
 		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
