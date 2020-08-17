@@ -2079,7 +2079,7 @@ router.route('/:vcid/group/:groupid')
 				newTimeStamp.setDate(1);
 				newTimeStamp.setHours(0,0,0,0);
 			} else {
-				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
+				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 			}
 			vcSetting.timestamp = newTimeStamp;
 
