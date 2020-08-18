@@ -1018,7 +1018,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 	var calcC_endIndex = 0;
 	var calcC_startDate = new Date(dateMaxValue);
 	var calcC_endDate = new Date(dateMinValue);
-	var calcC_dauer =0;
+	var calcC_dauer = 0;
 
 	var startCalc = new Date();
 
@@ -1043,7 +1043,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
 
-		if (!vpvs || !organisations || organisations.length <= 0 || vpvs.length <= 1 || calcC_dauer <= 0 ) {
+		if (!vpvs || vpvs.length <= 1 || !organisations || organisations.length <= 0 || calcC_dauer <= 0 ) {
 			return 	allCalcCapaValuesIndexed;
 		}
 
@@ -1057,6 +1057,11 @@ function calcCapacities(vpvs, roleIdentifier, organisations) {
 			// get Capacities for the different timeZones, in which always only one organisation is valid
 			logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
 			monthlyNeeds = getCapacityFromTimeZone(vpvs, roleIdentifier, timeZones[tz]);
+			
+			if (!monthlyNeeds) {
+				allCalcCapaValuesIndexed = [];
+				return allCalcCapaValuesIndexed;
+			}
 
 			var tzStartIndex = timeZones[tz].startIndex;
 			var tzStartDate = timeZones[tz].startdate;
@@ -1207,7 +1212,8 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 	if (roleIdentifier && allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
 
-	if (!allRoles[roleID]) {
+	if (!roleID || !allRoles[roleID]) {
+		// given roleIdentifier isn't defined in this organisation
 		return undefined;
 	}
 
