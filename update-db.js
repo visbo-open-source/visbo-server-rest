@@ -677,6 +677,35 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+
+dateBlock = "2020-08-04T00:00:00"
+if (currentVersion < dateBlock) {
+  // Update the Visbo Center Setting "organisation" to start with the beginning of month
+
+  // Update the Visbo Center Setting "organisation" to start with the beginning of month
+
+  var vcSettingList = db.vcsettings.find({type: 'organisation'}, {_id: 1, vcid: 1, type: 1, name: 1, timestamp: 1, createdAt: 1, updatedAt: 1}).toArray();
+  var fixCount = 0;
+  for (var i = 0; i < vcSettingList.length; i++) {
+    var timestamp =  vcSettingList[i].timestamp;
+    timestamp = timestamp ? new Date(timestamp) : new Date();
+    var normalised = new Date(timestamp);
+    normalised.setDate(1);
+    normalised.setHours(0,0,0,0);
+    if (timestamp.toISOString() !== normalised.toISOString()) {
+      // print ("vcsetting ", JSON.stringify(vcSettingList[i]));
+      print("Fix vcSetting _id:", vcSettingList[i]._id, " vcid: ", vcSettingList[i].vcid, " Timestamp ", timestamp.toISOString(), " normalisedTimestamp ", normalised.toISOString(), "UpdatedAt:", vcSettingList[i].updatedAt.toISOString());
+      db.vcsettings.updateOne({_id: vcSettingList[i]._id}, {$set: {"timestamp": normalised, "updatedAt": new Date()}})
+      fixCount += 1;
+    }
+  }
+  print("Finished Fix Count ", fixCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
