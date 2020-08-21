@@ -147,7 +147,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'VISBO Project Versions (Read)';
+		req.auditDescription = 'Project Versions (Read)';
 		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
