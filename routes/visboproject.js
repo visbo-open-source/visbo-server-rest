@@ -1887,10 +1887,11 @@ router.route('/:vpid/lock')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Properties
 	* @apiName DeleteLock
-	* @apiDescription Deletes a lock for a specific project and a specific variantName
+	* @apiDescription Deletes a lock for a specific project and a specific variant
 	* the user needs to have read access to the Project and either owns the lock or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
-	* @apiParam {String} variantName The Variant Name of the Project for the Lock
+	* @apiParam {String} variantID The Variant ID of the Project for the Lock
+	* @apiParam {String} variantName The Variant Name of the Project for the Lock (outdated)
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	*
 	* @apiPermission Authenticated and Permission: View Project, Modify Project.
@@ -1900,7 +1901,7 @@ router.route('/:vpid/lock')
 	*
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
-	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantName=Variant1
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantID=variant5aada029
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -1915,10 +1916,16 @@ router.route('/:vpid/lock')
 
 		req.auditDescription = 'Project Lock (Delete)';
 
-		var variantName = '';
-		variantName = req.query.variantName || '';
-		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantName);
+		var variantName = req.query.variantName || '';
+		var variantID = req.query.variantID;
+		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantID || variantName);
 
+		if (variantID) {
+			var variant = req.oneVP.variant.find(item => item._id.toString() == variantID);
+			if (variant) {
+				variantName = variant.variantName;
+			}
+		}
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
 		if (resultLock.lockindex < 0) {
@@ -2166,16 +2173,17 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 403 No Permission to View the Project
 	*
 	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, varianName.
-	* to query only the main version of a project, use variantName= in the query string.
+	* to query only the main version of a project, use variantID= in the query string.
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for the project and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
 	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
-	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantID Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantName Deliver only versions for the specified variant (outdated)
 	*
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio
-	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantID=varaint5aaf999&refNext=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2230,7 +2238,12 @@ router.route('/:vpid/portfolio')
 			query.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 			latestOnly = true;
 		}
-		if (req.query.variantName != undefined){
+		if (req.query.variantID != undefined){
+			logger4js.debug('Get Portfolio %s VariantID :%s:', req.oneVP.name, req.query.variantID);
+			const variant = req.oneVP.variant.find(item => item._id.toString() === req.query.variantID);
+			// if variantName not found return only main variant
+			query.variantName = variant ? variant.variantName : '';
+		} else if (req.query.variantName != undefined){
 			logger4js.debug('Variant Query String :%s:', req.query.variantName);
 			query.variantName = req.query.variantName;
 		}

@@ -82,6 +82,26 @@ var findVPVariantList = function(arrayItem) {
 		return arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName;
 };
 
+var convertVariantList = function(idList, vp) {
+	result = [];
+	if (idList && vp && vp.variant) {
+		for (var i=0; i < idList.length; i++) {
+			if (idList[i] == '') {
+				result.push('')
+			} else {
+				var variant = vp.variant.find(item => item._id.toString() == idList[i]);
+				if (variant) {
+					result.push(variant.variantName);
+				}
+			}
+		}
+	}
+	if (result.length == 0) {
+		result.push('')
+	}
+	return result;
+}
+
 /////////////////
 // VISBO Project Versions API
 // /vpv
@@ -111,7 +131,8 @@ router.route('/')
 	* @apiParam {String} vcid Deliver only versions for projects inside a specific VISBOCenter
 	* @apiParam {String} vpid Deliver only versions for the specified project
 	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
-	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. If client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
+	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
@@ -123,7 +144,7 @@ router.route('/')
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vpv
 	*   url: https://my.visbo.net/api/vpv?vcid=vc5c754feaa&refDate=2018-01-01
-	*   url: https://my.visbo.net/api/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantName=Variant1&longList
+	*   url: https://my.visbo.net/api/vpv?vpid=vp5c754feaa&refDate=2018-01-01&variantID=variant5c754fea9&longList
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -162,10 +183,12 @@ router.route('/')
 		var reducedPerm = false;
 		var variantName = req.query.variantName;
 		if (variantName) variantName = variantName.trim();
+		var variantID = req.query.variantID;
 
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
 		|| (req.query.vpfid && !validate.validateObjectId(req.query.vpfid, false))
+		// || (variantID && !validate.validateObjectId(variantID, false))
 		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
 			logger4js.warn('Get VPV mal formed query parameter %O ', req.query);
 			return res.status(400).send({
@@ -218,7 +241,15 @@ router.route('/')
 				queryvpv.timestamp =  req.query.refNext ? {$gt: nowDate} : {$lt: nowDate};
 				latestOnly = true;
 			}
-			if (variantName != undefined){
+			if (variantID != undefined && req.oneVP) {
+				logger4js.debug('VariantID for VP %s Query String :%s:', req.oneVP.name, variantID);
+				// MS TODO: handle multiple variantIDs
+				var variantList = convertVariantList(variantID.split(','), req.oneVP)
+				logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
+				queryvpv.variantName = {$in: variantList};
+				variantName = variantList[0];
+				logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
+			} else if (variantName != undefined){
 				logger4js.debug('Variant Query String :%s:', variantName);
 				queryvpv.variantName = {$in: variantName.split(',')};
 			}
