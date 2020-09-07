@@ -678,7 +678,7 @@ if (currentVersion < dateBlock) {
 }
 
 
-dateBlock = "2020-08-04T00:00:00"
+dateBlock = "2020-09-07T00:00:00"
 if (currentVersion < dateBlock) {
   // Update the Visbo Center Setting "organisation" to start with the beginning of month
 
@@ -699,7 +699,7 @@ if (currentVersion < dateBlock) {
       fixCount += 1;
     }
   }
-  print("Finished Fix Count ", fixCount);
+  print("Finished Fix Orga Date ", fixCount);
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})

@@ -2243,7 +2243,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info('PUT VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
 		if (req.body.name) req.body.name = req.body.name.trim();
-		if (!validate.validateName(req.body.name, true) || !validate.validateDate(req.body.timestamp, true)) {
+		if (!validate.validateName(req.body.name, true) || !validate.validateDate(req.body.timestamp, false)) {
 			logger4js.debug('PUT a new VISBO Center Setting body or value not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -2330,7 +2330,7 @@ router.route('/:vcid/group/:groupid')
 					if (req.body.name) oneVCSetting.name = req.body.name;
 					if (req.body.value) oneVCSetting.value = req.body.value;
 					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
-					if (req.body.timestamp) oneVCSetting.timestamp = dateValue;
+					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
 				}
 				oneVCSetting.save(function(err, resultVCSetting) {
 					if (err) {
@@ -2439,19 +2439,19 @@ router.route('/:vcid/group/:groupid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
+			var hierarchy = req.query.hierarchy;
 
 			req.auditDescription = 'VISBO Center Capacity (Read)';
 
-			if (roleID) roleID = roleID.replace(/%2B/g, '+');
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s', userId, useremail, req.params.vcid, roleID);
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations, hierarchy == true);
 
 			req.auditInfo = '';
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned VISBO Center Settings',
-				// count: listVCSetting.length,
+				message: 'Returned VISBO Center Capacity',
+				// count: capacity.length,
 				vc: [ {
 					_id: req.oneVC._id,
 					name: req.oneVC.name,
