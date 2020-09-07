@@ -498,6 +498,9 @@ router.route('/:vcid')
 		if (!req.body.name) req.body.name = req.oneVC.name;
 		var vpPopulate = req.oneVC.name != req.body.name ? true : false;
 
+		if (vpPopulate) {
+			req.auditInfo = req.oneVC.name.concat(' / ', req.body.name)
+		}
 		logger4js.debug('PUT/Save VISBO Center %s Name :%s: Desc :%s: Namechange: %s', req.oneVC._id, req.body.name, req.body.description, vpPopulate);
 		req.oneVC.name = req.body.name;
 		if (req.body.description != undefined) {
@@ -1069,6 +1072,7 @@ router.route('/:vcid/group')
 		if (req.body.name) req.body.name = req.body.name.trim();
 
 		req.auditDescription = 'VISBO Center Group (Create)';
+		req.auditInfo = req.body.name;
 
 		if (groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
 		if (groupType != 'VC')  checkSystemPerm = true;
@@ -1266,8 +1270,12 @@ router.route('/:vcid/group/:groupid')
 		var checkSystemPerm = false;
 
 		req.auditDescription = 'VISBO Center Group (Update)';
-
+		req.auditInfo = req.oneGroup.name;
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
+		if (req.body.name && req.body.name != req.oneGroup.name) {
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.name)
+		}
+
 		if (!validate.validateName(req.body.name, true)) {
 			logger4js.info('Body is inconsistent VC Group %s Body %O', req.oneVC._id, req.body);
 			return res.status(400).send({
@@ -2018,6 +2026,7 @@ router.route('/:vcid/group/:groupid')
 			var settingArea = 'public';
 
 			req.auditDescription = 'VISBO Center Setting (Create)';
+			req.auditInfo = req.body.name;
 
 			logger4js.trace('Post a new VISBO Center Setting Req Body: %O Name %s', req.body, req.body.name);
 			logger4js.info('Post a new VISBO Center Setting with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
@@ -2130,6 +2139,7 @@ router.route('/:vcid/group/:groupid')
 			var settingArea = 'public';
 
 			req.auditDescription = 'VISBO Center Setting (Delete)';
+			req.auditInfo = req.params.settingid;
 
 			logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
@@ -2150,6 +2160,7 @@ router.route('/:vcid/group/:groupid')
 						error: err
 					});
 				}
+				req.auditInfo = oneVCSetting.name;
 				if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
 					settingArea = 'private';
 				} else if (oneVCSetting.userId && oneVCSetting.userId.toString() == userId) {
@@ -2243,7 +2254,7 @@ router.route('/:vcid/group/:groupid')
 		logger4js.info('PUT VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
 		if (req.body.name) req.body.name = req.body.name.trim();
-		if (!validate.validateName(req.body.name, true) || !validate.validateDate(req.body.timestamp, false)) {
+		if (!validate.validateName(req.body.name, true) || !validate.validateDate(req.body.timestamp, true)) {
 			logger4js.debug('PUT a new VISBO Center Setting body or value not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -2267,6 +2278,9 @@ router.route('/:vcid/group/:groupid')
 					message: 'VISBO Center Setting not found',
 					error: err
 				});
+			}
+			if (req.auditInfo && req.auditInfo != oneVCSetting.name) {
+				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name)
 			}
 			logger4js.info('Found the Setting for VC Updated');
 
