@@ -1808,7 +1808,7 @@ router.route('/:vpid/lock')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var variantName = req.body.variantName.trim() || '';
+		var variantName = (req.body.variantName || '').trim();
 
 		req.auditDescription = 'Project Lock (Create)';
 		req.auditInfo = variantName || ' ';
@@ -1921,7 +1921,7 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		var variantName = req.query.variantName.trim() || '';
+		var variantName = (req.query.variantName || '').trim();
 		var variantID = req.query.variantID;
 		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantID || variantName);
 
