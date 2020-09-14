@@ -193,7 +193,9 @@ function calcCosts(vpv, pfv, organisations) {
 				var tzStartDiff = tzStartIndex - startIndex;
 
 				currentDate = new Date (tzStartDate);
-				currentDate.setMonth(currentDate.getMonth());
+				currentDate.setMonth(currentDate.getMonth());				
+				currentDate.setDate(1);
+				currentDate.setHours(0, 0, 0, 0);
 				// Teilabschnitte übernehmen
 				for (var i = 0 ; i < zoneDauer; i++){
 					const currentDateISO = currentDate.toISOString();
@@ -228,6 +230,8 @@ function calcCosts(vpv, pfv, organisations) {
 
 				currentDate = new Date (tzStartDate);
 				currentDate.setMonth(currentDate.getMonth());
+				currentDate.setDate(1);
+				currentDate.setHours(0, 0, 0, 0);
 				// take the calculated cost of this part of time
 				for ( i = 0 ; i < zoneDauer; i++ ){
 					const currentDateISO = currentDate.toISOString();
