@@ -83,11 +83,11 @@ var findVPVariantList = function(arrayItem) {
 };
 
 var convertVariantList = function(idList, vp) {
-	result = [];
+	var result = [];
 	if (idList && vp && vp.variant) {
 		for (var i=0; i < idList.length; i++) {
 			if (idList[i] == '') {
-				result.push('')
+				result.push('');
 			} else {
 				var variant = vp.variant.find(item => item._id.toString() == idList[i]);
 				if (variant) {
@@ -97,10 +97,10 @@ var convertVariantList = function(idList, vp) {
 		}
 	}
 	if (result.length == 0) {
-		result.push('')
+		result.push('');
 	}
 	return result;
-}
+};
 
 /////////////////
 // VISBO Project Versions API
@@ -244,7 +244,7 @@ router.route('/')
 			if (variantID != undefined && req.oneVP) {
 				logger4js.debug('VariantID for VP %s Query String :%s:', req.oneVP.name, variantID);
 				// MS TODO: handle multiple variantIDs
-				var variantList = convertVariantList(variantID.split(','), req.oneVP)
+				var variantList = convertVariantList(variantID.split(','), req.oneVP);
 				logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
 				queryvpv.variantName = {$in: variantList};
 				variantName = variantList[0];

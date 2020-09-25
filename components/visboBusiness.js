@@ -154,20 +154,22 @@ function calcCosts(vpv, pfv, organisations) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
+	var calcStartDate = new Date();
+	var calcEndDate = new Date();
 
 	if ( (vpv || pfv) && organisations && organisations.length > 0 ) {
 
 		if (pfv && vpv) {
-			var calcStartDate = Math.min(vpv.startDate, pfv.startDate);
-			var calcEndDate = Math.max(vpv.endDate, pfv.endDate);
+			calcStartDate = Math.min(vpv.startDate, pfv.startDate);
+			calcEndDate = Math.max(vpv.endDate, pfv.endDate);
 		}
 		if (!pfv && vpv) {
-			var calcStartDate = vpv.startDate;
-			var calcEndDate =  vpv.endDate;
+			calcStartDate = vpv.startDate;
+			calcEndDate =  vpv.endDate;
 		}
 		if (pfv && !vpv) {
-			var calcStartDate = pfv.startDate;
-			var calcEndDate = pfv.endDate;
+			calcStartDate = pfv.startDate;
+			calcEndDate = pfv.endDate;
 		}
 
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
@@ -829,76 +831,77 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 }
 
 
-function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
-	var result = {
-		timeDelayFinished: 0,
-		timeDelayUnFinished: 0
-	};
-	var finishedElements = [];
-	var unfinishedElements = [];
+// function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
+// 	var result = {
+// 		timeDelayFinished: 0,
+// 		timeDelayUnFinished: 0
+// 	};
+// 	var finishedElements = [];
+// 	var unfinishedElements = [];
 
-	var listDeadlines = allDeadlines.getAllDeadlines();
-	var f = 0;
-	var uf = 0;
-	for (var element = 0; listDeadlines && listDeadlines[element] &&
-							listDeadlines[element].endDatePFV &&
-							listDeadlines[element].endDateVPV &&
-							element < listDeadlines.length; element++) {
+// 	var listDeadlines = allDeadlines.getAllDeadlines();
+// 	var f = 0;
+// 	var uf = 0;
+// 	for (var element = 0; listDeadlines && listDeadlines[element] &&
+// 							listDeadlines[element].endDatePFV &&
+// 							listDeadlines[element].endDateVPV &&
+// 							element < listDeadlines.length; element++) {
 
-		if (listDeadlines[element].percentDone === 1) {
-			// finished
-			if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
-				// before refdate
-				finishedElements[f] = (diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV) || 0);
-			} else {
-				// in future
-				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate.getTime());
-				finishedElements[f] = (diffDays(minFinishedDate, listDeadlines[element].endDatePFV) || 0);
-			}
-			f++;
-			continue;
-		}
+// 		if (listDeadlines[element].percentDone === 1) {
+// 			// finished
+// 			if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
+// 				// before refdate
+// 				finishedElements[f] = (diffDays(listDeadlines[element].endDateVPV,listDeadlines[element].endDatePFV) || 0);
+// 			} else {
+// 				// in future
+// 				var minFinishedDate = Math.min(listDeadlines[element].endDateVPV, refDate.getTime());
+// 				finishedElements[f] = (diffDays(minFinishedDate, listDeadlines[element].endDatePFV) || 0);
+// 			}
+// 			f++;
+// 			continue;
+// 		}
 
-		// unfinished
-		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
-			// PFV before refdate
-			var maxUnFinishedDate = Math.max(listDeadlines[element].endDateVPV, refDate.getTime());
-			unfinishedElements[uf] = (diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV) || 0);
-		} else {
-			// PFV in future
-			unfinishedElements[uf] = (diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV) || 0);
-		}
-		uf++;
-	}
-	// sum of finished
-	var wholeDelayFinished = 0;
-	for ( f = 0; f < finishedElements.length; f++) {
-		wholeDelayFinished += 1 * (finishedElements[f] || 0);
-	}
-	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || 0);
+// 		// unfinished
+// 		if (listDeadlines[element].endDatePFV && listDeadlines[element].endDatePFV.getTime() < refDate.getTime()) {
+// 			// PFV before refdate
+// 			var maxUnFinishedDate = Math.max(listDeadlines[element].endDateVPV, refDate.getTime());
+// 			unfinishedElements[uf] = (diffDays(maxUnFinishedDate, listDeadlines[element].endDatePFV) || 0);
+// 		} else {
+// 			// PFV in future
+// 			unfinishedElements[uf] = (diffDays(listDeadlines[element].endDateVPV, listDeadlines[element].endDatePFV) || 0);
+// 		}
+// 		uf++;
+// 	}
+// 	// sum of finished
+// 	var wholeDelayFinished = 0;
+// 	for ( f = 0; f < finishedElements.length; f++) {
+// 		wholeDelayFinished += 1 * (finishedElements[f] || 0);
+// 	}
+// 	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || 0);
 
-	var wholeDelayUnFinished = 0;
-	for ( f = 0; f < unfinishedElements.length; f++) {
-		wholeDelayUnFinished += 1 * (unfinishedElements[f] || 0);
-	}
-	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || 0);
+// 	var wholeDelayUnFinished = 0;
+// 	for ( f = 0; f < unfinishedElements.length; f++) {
+// 		wholeDelayUnFinished += 1 * (unfinishedElements[f] || 0);
+// 	}
+// 	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || 0);
 
-	return result;
-}
+// 	return result;
+// }
 
-// determines the difference in days of two dates
-function diffDays(date1, date2) {
 
-	var differenceInDays = undefined;
-	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
-	var firstDate = new Date(date1);
-	var secondDate = new Date(date2);
-	if (!isNaN(firstDate) && !isNaN(secondDate)) {
-		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
-	}
+// // determines the difference in days of two dates
+// function diffDays(date1, date2) {
 
-	return differenceInDays;
-}
+// 	var differenceInDays = undefined;
+// 	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
+// 	var firstDate = new Date(date1);
+// 	var secondDate = new Date(date2);
+// 	if (!isNaN(firstDate) && !isNaN(secondDate)) {
+// 		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+// 	}
+
+// 	return differenceInDays;
+// }
 
 
 function getBreadCrumb(elemID, hrchy) {
@@ -1060,14 +1063,14 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 		var allRoles = timeZones[timeZones.length - 1].orga.value.allRoles;
 		var subroles = allRoles[roleIdentifier-1] && allRoles[roleIdentifier-1].subRoleIDs;
 		if (hierarchy && subroles) {
-			for (var i = 0; i < subroles.length; i++) {
+			for (i = 0; i < subroles.length; i++) {
 				roleIDs.push(subroles[i].key);
 			}
 		}
 		logger4js.debug('calculate for the role & subrole', roleIDs);
 
 		for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
-			var roleID = roleIDs[roleIndex];
+			roleID = roleIDs[roleIndex];
 			logger4js.debug('calculate for the different timeZones');
 			for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
 				var monthlyNeeds = [];
@@ -1107,8 +1110,8 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 
 		var j = 0, element;
 		for (element in allCalcCapaValues) {
-			const actMonthISO = element.substr(0, 24)
-			const roleID = element.substr(25)
+			const actMonthISO = element.substr(0, 24);
+			const roleID = element.substr(25);
 			allCalcCapaValuesIndexed[j] = {
 				'month': actMonthISO,
 				'roleID' : roleID,
@@ -1165,7 +1168,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 			organisations[o].timestamp.setHours(0,0,0,0);
 		}
 
-		for ( var o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
+		for ( o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
 			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
