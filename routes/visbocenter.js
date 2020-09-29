@@ -2085,6 +2085,10 @@ router.route('/:vcid/group/:groupid')
 				// set timestamp to beginning of month
 				newTimeStamp.setDate(1);
 				newTimeStamp.setHours(0,0,0,0);
+				vcSetting.value.allRoles.forEach(item => {
+					item.tagessatzExtern = undefined;
+					item.externeKapazitaet = undefined;
+				});
 			} else {
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 			}
@@ -2343,6 +2347,12 @@ router.route('/:vcid/group/:groupid')
 					if (req.body.value) oneVCSetting.value = req.body.value;
 					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
 					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
+					if (oneVCSetting.type == 'organisation') {
+						oneVCSetting.value.allRoles.forEach(item => {
+							delete item.tagessatzExtern;
+							delete item.externeKapazitaet;
+						});
+					}
 				}
 				oneVCSetting.save(function(err, resultVCSetting) {
 					if (err) {
