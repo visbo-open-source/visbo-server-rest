@@ -497,7 +497,7 @@ router.route('/:vcid')
 		var vpPopulate = req.oneVC.name != req.body.name ? true : false;
 
 		if (vpPopulate) {
-			req.auditInfo = req.oneVC.name.concat(' / ', req.body.name)
+			req.auditInfo = req.oneVC.name.concat(' / ', req.body.name);
 		}
 		logger4js.debug('PUT/Save VISBO Center %s Name :%s: Desc :%s: Namechange: %s', req.oneVC._id, req.body.name, req.body.description, vpPopulate);
 		req.oneVC.name = req.body.name;
@@ -1271,7 +1271,7 @@ router.route('/:vcid/group/:groupid')
 		req.auditInfo = req.oneGroup.name;
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
 		if (req.body.name && req.body.name != req.oneGroup.name) {
-			req.auditInfo = req.auditInfo.concat(' / ', req.body.name)
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.name);
 		}
 
 		if (!validate.validateName(req.body.name, true)) {
@@ -2282,7 +2282,7 @@ router.route('/:vcid/group/:groupid')
 				});
 			}
 			if (req.auditInfo && req.auditInfo != oneVCSetting.name) {
-				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name)
+				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name);
 			}
 			logger4js.info('Found the Setting for VC Updated');
 
