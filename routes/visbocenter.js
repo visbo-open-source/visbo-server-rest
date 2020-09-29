@@ -76,8 +76,6 @@ function squeezeSetting(item, email) {
 					allRoles[i].kapazitaet = undefined;
 					allRoles[i].defaultKapa = undefined;
 					allRoles[i].tagessatzIntern = undefined;
-					allRoles[i].tagessatzExtern = undefined;
-					allRoles[i].externeKapazitaet = undefined;
 				}
 			}
 		} else if (item.type == 'customroles') {
@@ -1797,7 +1795,7 @@ router.route('/:vcid/group/:groupid')
 				queryVCSetting.sort('type name userId -timestamp');
 			}
 			if (!longList || (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.Modify + constPermVC.ViewAudit + constPermVC.ManagePerm)) == 0) {
-				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatzExtern	-value.allRoles.externeKapazitaet	');
+				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.tagessatzIntern ');
 			}
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
