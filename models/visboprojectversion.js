@@ -24,7 +24,6 @@ var clsRole = new Schema({
 	farbe: { type: Number },
 	startkapa: { type: Number },
 	tagessatzIntern: { type: Number },
-	tagessatzExtern: { type: Number },
 	Bedarf: [{ type: Number }],
 	isCalculated: { type: Boolean }
 });
