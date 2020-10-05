@@ -48,7 +48,7 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 
-		req.auditDescription = 'SysLog (Read)';
+		req.auditDescription = 'SysLog Read';
 		req.auditSysAdmin = true;
 		req.auditTTLMode = 1;
 
@@ -141,7 +141,7 @@ router.route('/')
 		*/
 	// get syslog file
 	.get(function(req, res) {
-		req.auditDescription = 'SysLogs (Read)';
+		req.auditDescription = 'SysLogs Read';
 		req.auditSysAdmin = true;
 
 		logger4js.info('Get Logfile %s/%s ', req.params.folder, req.params.filename);

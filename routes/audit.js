@@ -169,15 +169,14 @@ router.route('/')
 			textCondition.push({'vp.name': expr});
 			textCondition.push({'vpv.name': expr});
 			textCondition.push({'host': expr});
-			textCondition.push({'url': expr});
 			textCondition.push({'action': expr});
 			textCondition.push({'actionInfo': expr});
 			textCondition.push({'actionDescription': expr});
 			textCondition.push({'result.statusText': expr});
 			textCondition.push({'userAgent': expr});
 		}
-		textCondition.push({'vc.vcjson': expr});
-		textCondition.push({'vp.vpjson': expr});
+		// textCondition.push({'vc.vcjson': expr});
+		// textCondition.push({'vp.vpjson': expr});
 		textCondition.push({'url': expr});
 		queryListCondition.push({'$or': textCondition});
 	}

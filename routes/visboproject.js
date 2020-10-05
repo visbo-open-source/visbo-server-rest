@@ -326,7 +326,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project (Read)';
+		req.auditDescription = 'Project Read';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -435,7 +435,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 
-		req.auditDescription = 'Project (Create)';
+		req.auditDescription = 'Project Create';
 
 		if (req.body.vcid == undefined || !validate.validateObjectId(req.body.vcid, false) || req.body.name == undefined) {
 			logger4js.warn('No VCID or Name in Body');
@@ -601,7 +601,7 @@ router.route('/:vpid')
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
 
-		req.auditDescription = 'Project (Read)';
+		req.auditDescription = 'Project Read';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -677,7 +677,7 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project (Update)';
+		req.auditDescription = 'Project Update';
 
 		logger4js.info('PUT/Save Project for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
@@ -703,7 +703,7 @@ router.route('/:vpid')
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVP.deletedAt) {
-			req.auditDescription = 'Project (Undelete)';
+			req.auditDescription = 'Project Undelete';
 			req.oneVP.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug('Undelete VP %s flag %O', req.oneVP._id, req.oneVP);
@@ -812,7 +812,7 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project (Delete)';
+		req.auditDescription = 'Project Delete';
 
 		logger4js.info('DELETE Project for userid %s email %s and vp %s oneVP %s  ', userId, useremail, req.params.vpid, req.oneVP.name);
 
@@ -852,7 +852,7 @@ router.route('/:vpid')
 				});
 			});
 		} else {
-			req.auditDescription = 'Project (Destroy)';
+			req.auditDescription = 'Project Destroy';
 			logger4js.warn('VP DESTROY VP %s %s ', req.oneVP._id, req.oneVP.name);
 			// Delete VPID from global Groups
 			updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
@@ -949,7 +949,7 @@ router.route('/:vpid/audit')
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
 
-		req.auditDescription = 'Project Audit (Read)';
+		req.auditDescription = 'Project Audit Read';
 		req.auditSysAdmin = isSysAdmin;
 
 		logger4js.info('Get Project Audit Trail for userid %s email %s and vp %s oneVP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
@@ -1007,10 +1007,11 @@ router.route('/:vpid/audit')
 				textCondition.push({'vpv.name': expr});
 				textCondition.push({'action': expr});
 				textCondition.push({'actionDescription': expr});
+				textCondition.push({'actionInfo': expr});
 				textCondition.push({'result.statusText': expr});
 				textCondition.push({'userAgent': expr});
 			}
-			textCondition.push({'vp.vpjson': expr});
+			// textCondition.push({'vp.vpjson': expr});
 			textCondition.push({'url': expr});
 			queryListCondition.push({'$or': textCondition});
 		}
@@ -1087,7 +1088,7 @@ router.route('/:vpid/audit')
 			var useremail = req.decoded.email;
 			var isSysAdmin = req.query.sysadmin ? true : false;
 
-			req.auditDescription = 'Project Group (Read)';
+			req.auditDescription = 'Project Group Read';
 			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
@@ -1204,7 +1205,7 @@ router.route('/:vpid/audit')
 				newPerm.vp = newPerm.vp & Const.constPermVPFull;
 			}
 
-			req.auditDescription = 'Project Group (Create)';
+			req.auditDescription = 'Project Group Create';
 			req.auditInfo = req.body.name;
 
 			logger4js.info('Post a new Project Group with name %s executed by user %s ', req.body.name, userId);
@@ -1306,7 +1307,7 @@ router.route('/:vpid/audit')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 
-			req.auditDescription = 'Project Group (Delete)';
+			req.auditDescription = 'Project Group Delete';
 			req.auditInfo = req.oneGroup.name;
 			logger4js.info('DELETE Project Group for userid %s email %s and vc %s group %s ', userId, useremail, req.params.vpid, req.params.groupid);
 
@@ -1383,7 +1384,7 @@ router.route('/:vpid/audit')
 			var newPerm = {};
 			var vgGlobal = false;
 
-			req.auditDescription = 'Project Group (Update)';
+			req.auditDescription = 'Project Group Update';
 			req.auditInfo = req.oneGroup.name;
 			if (vgName && vgName != req.oneGroup.name) {
 				req.auditInfo = req.auditInfo.concat(' / ', vgName);
@@ -1507,7 +1508,7 @@ router.route('/:vpid/audit')
 			var useremail = req.decoded.email;
 
 			logger4js.info('Post a new Project User with name %s to group %s executed by user %s with perm %s ', req.body.email, req.oneGroup.name, userId, req.listVPPerm.getPerm(req.params.vpid));
-			req.auditDescription = 'Project User (Add)';
+			req.auditDescription = 'Project User Add';
 
 			if (req.body.email) req.body.email = req.body.email.toLowerCase().trim();
 			if (!req.body.email || !validate.validateEmail(req.body.email, false)) {
@@ -1723,7 +1724,7 @@ router.route('/:vpid/audit')
 
 			logger4js.info('DELETE Project User by userid %s email %s for user %s Group %s ', userId, useremail, req.params.userid, req.oneGroup._id);
 
-			req.auditDescription = 'Project User (Delete)';
+			req.auditDescription = 'Project User Delete';
 
 			var delUser = req.oneGroup.users.find(findUserById, req.params.userid);
 			if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
@@ -1810,7 +1811,7 @@ router.route('/:vpid/lock')
 		var useremail = req.decoded.email;
 		var variantName = (req.body.variantName || '').trim();
 
-		req.auditDescription = 'Project Lock (Create)';
+		req.auditDescription = 'Project Lock Create';
 		req.auditInfo = variantName || ' ';
 
 		logger4js.info('POST Lock Project for userid %s email %s and vp %s ', userId, useremail, req.params.vpid);
@@ -1932,7 +1933,7 @@ router.route('/:vpid/lock')
 			}
 		}
 
-		req.auditDescription = 'Project Lock (Delete)';
+		req.auditDescription = 'Project Lock Delete';
 		req.auditInfo = variantName;
 
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
@@ -2012,7 +2013,7 @@ router.route('/:vpid/variant')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Variant (Create)';
+		req.auditDescription = 'Project Variant Create';
 		req.auditInfo = req.body.variantName;
 
 		logger4js.info('POST Project Variant for userid %s email %s and vp %s Variant %O Perm %O', userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
@@ -2105,7 +2106,7 @@ router.route('/:vpid/variant/:vid')
 		var variantId = req.params.vid;
 		var lockResult;
 
-		req.auditDescription = 'Project Variant (Delete)';
+		req.auditDescription = 'Project Variant Delete';
 		req.auditInfo = req.body.variantId;
 
 		logger4js.info('DELETE Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
@@ -2229,7 +2230,7 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Portfolio List (Read)';
+		req.auditDescription = 'Portfolio List Read';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -2375,7 +2376,7 @@ router.route('/:vpid/portfolio')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Portfolio List (Create)';
+		req.auditDescription = 'Portfolio List Create';
 
 		logger4js.info('POST Portfolio for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
 
@@ -2525,7 +2526,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		// no need to check authentication, already done centrally
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Portfolio List (Read)';
+		req.auditDescription = 'Portfolio List Read';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -2585,7 +2586,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
 
-		req.auditDescription = 'Portfolio List (Delete)';
+		req.auditDescription = 'Portfolio List Delete';
 
 		logger4js.debug('DELETE Portfolio in Project %s', req.oneVP.name);
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
@@ -2707,7 +2708,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 
-			req.auditDescription = 'Project Capacity (Read)';
+			req.auditDescription = 'Project Capacity Read';
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s', userId, useremail, req.params.vcid, roleID);
 			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
@@ -2778,7 +2779,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var elementPath = req.body.elementPath;
 			var inclChildren = req.body.inclChildren == true;
 
-			req.auditDescription = 'Project Restriction (Create)';
+			req.auditDescription = 'Project Restriction Create';
 			req.auditInfo = req.body.name;
 
 			logger4js.info('Post a new Project Restriction with name %s executed by user %s ', restrictName, userId);
@@ -2873,7 +2874,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var useremail = req.decoded.email;
 			var restrictId = req.params.rid;
 
-			req.auditDescription = 'Project Restrict (Delete)';
+			req.auditDescription = 'Project Restrict Delete';
 			req.auditInfo = restrictId;
 
 			logger4js.info('DELETE Project Restriction for userid %s email %s and vp %s restrict :%s:', userId, useremail, req.params.vpid, req.params.rid);

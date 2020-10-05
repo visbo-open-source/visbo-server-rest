@@ -18,18 +18,20 @@ if (!vcList) {
   var systemvc = vcList[0];
 }
 
+var oldVersion = "";
 if (continueFlag) {
-  var currentVersion = "";
   var setting = db.vcsettings.findOne({vcid: systemvc._id, name: 'DBVersion'});
   if (!setting) {
     print ("System DB Version not set")
-    currentVersion = '2018-01-01T00:00:00'
-    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "SysValue", value: {version: currentVersion}, createdAt: new Date(), updatedAt: new Date()})
+    oldVersion = '2018-01-01T00:00:00'
+    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "SysValue", value: {version: oldVersion}, createdAt: new Date(), updatedAt: new Date()})
   } else {
-    currentVersion = setting.value.version;
+    oldVersion = setting.value.version;
   }
-  print("Upgrade DB from Version ", currentVersion)
+  print("Upgrade DB from Version ", oldVersion)
 }
+
+var currentVersion = oldVersion;
 
 dateBlock = "2018-12-01T00:00:00";
 if (continueFlag && currentVersion < dateBlock) {
@@ -745,3 +747,22 @@ if (currentVersion < dateBlock) {
 //   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
 //   currentVersion = dateBlock
 // }
+
+// Add an System Update Audit Entry
+var auditUpgrade = {};
+auditUpgrade.action = "PUT";
+if (oldVersion != currentVersion) {
+  auditUpgrade.actionInfo = "From " + (oldVersion || '') + " to " + (currentVersion || '');
+} else {
+  auditUpgrade.actionInfo = "Without DB Changes";
+}
+auditUpgrade.actionDescription = "System Upgrade";
+auditUpgrade.user = {"email": "System"};
+auditUpgrade.createdAt = new Date();
+auditUpgrade.updatedAt = new Date();
+auditUpgrade.result = {};
+auditUpgrade.result.time = 0;
+auditUpgrade.result.status = 200;
+
+db.visboaudits.insert(auditUpgrade)
+// print(JSON.stringify(auditUpgrade))

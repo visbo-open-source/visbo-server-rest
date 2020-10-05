@@ -37,7 +37,7 @@ router.route('/')
 	*/
 // get status
 	.get(function(req, res) {
-		req.auditDescription = 'Status (Read)';
+		req.auditDescription = 'Status Read';
 		req.auditTTLMode = 4;			// short Time to Live
 
 		logger4js.debug('Get Satus ReST Server ');
@@ -133,7 +133,7 @@ router.route('/pwpolicy')
 	*/
 // get status/pwpolicy
 	.get(function(req, res) {
-		req.auditDescription = 'Status PW Policy (Read)';
+		req.auditDescription = 'Status PW Policy Read';
 		req.auditTTLMode = 3;
     logger4js.info('Get Password Policy ReST Server ');
     var pwPolicySetting = getSystemVCSetting('PW Policy');
@@ -148,7 +148,7 @@ router.route('/pwpolicy')
   router.route('/test')
   // get status/test
     .get(async function(req, res) {
-      req.auditDescription = 'Status Test (Read)';
+      req.auditDescription = 'Status Test Read';
       req.auditTTLMode = 4;			// short Time to Live
       var message = 'Say Hello World';
 

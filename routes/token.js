@@ -597,7 +597,7 @@ router.route('/user/signup')
 	*/
 // get signup info
 	.get(function(req, res) {
-		req.auditDescription = 'Signup (Read)';
+		req.auditDescription = 'Signup Read';
 		req.auditTTLMode = 1;
 
 		var hash = req.query.hash;
