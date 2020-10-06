@@ -2680,6 +2680,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		*
 		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for the Portfolio and all the projects of the Portfolio, Projects without View Permission will be excluded
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2707,11 +2708,12 @@ router.route('/:vpid/portfolio/:vpfid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
+			var hierarchy = req.query.hierarchy == true;
 
 			req.auditDescription = 'Project Capacity Read';
 
-			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s', userId, useremail, req.params.vcid, roleID);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
+			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations, hierarchy);
 
 			req.auditInfo = '';
 			return res.status(200).send({
