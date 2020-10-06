@@ -678,7 +678,7 @@ if (currentVersion < dateBlock) {
 }
 
 
-dateBlock = "2020-08-04T00:00:00"
+dateBlock = "2020-09-07T00:00:00"
 if (currentVersion < dateBlock) {
   // Update the Visbo Center Setting "organisation" to start with the beginning of month
 
@@ -699,8 +699,40 @@ if (currentVersion < dateBlock) {
       fixCount += 1;
     }
   }
-  print("Finished Fix Count ", fixCount);
+  print("Finished Fix Orga Date ", fixCount);
 
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2020-09-27T00:00:00"
+if (currentVersion < dateBlock) {
+  // unset tagessatzExtern
+  var vcidlist = db.vcsettings.find({type: 'organisation', $or:[{'value.allRoles.tagessatzExtern': {$exists: true}}, {'value.allRoles.externeKapazitaet': {$exists: true}}]}, {vcid:1} ).toArray();
+  var vcids = [];
+  for (var i = 0; i < vcidlist.length; i++) {
+    vcids.push(vcidlist[i].vcid)
+  }
+  print ("Unset tagessatzExtern for VisboCenters: Count: " + vcids.length);
+
+  var vcorgs = db.vcsettings.find({vcid: {$in: vcids}, type: 'organisation'}, {_id:1, type:1, name:1, 'value.allRoles.tagessatzExtern':1}).toArray();
+  print ("Unset tagessatzExtern for VisboCenter Organisations: Count: " + vcorgs.length);
+
+  if (vcorgs.length > 0) {
+    db.vcsettings.updateMany(
+        {vcid: {$in: vcids}, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].tagessatzExtern': true}},
+        {arrayFilters: [ { "elem.tagessatzExtern": { $eq: 0 } } ] }
+      );
+
+    db.vcsettings.updateMany(
+        {vcid: {$in: vcids}, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].externeKapazitaet': true}},
+        {arrayFilters: [ { "elem.externeKapazitaet": { $eq: null } } ] }
+      );
+  }
+  print("Finished Fix Cleanup external Tagessatz & Kapazitaet ", vcorgs.length);
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock

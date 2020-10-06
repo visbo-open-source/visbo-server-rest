@@ -727,6 +727,7 @@ router.route('/:vpid')
 
 		if (name == '') name = req.oneVP.name;
 		var vpPopulate = req.oneVP.name != name ? true : false;
+		req.auditInfo = vpPopulate ? req.oneVP.name.concat(' / ', name) : req.oneVP.name;
 		req.oneVP.name = name;
 
 		if (req.body.description != undefined) {
@@ -1204,6 +1205,7 @@ router.route('/:vpid/audit')
 			}
 
 			req.auditDescription = 'Project Group (Create)';
+			req.auditInfo = req.body.name;
 
 			logger4js.info('Post a new Project Group with name %s executed by user %s ', req.body.name, userId);
 			logger4js.debug('Post a new Project Group Req Body: %O Name %s Perm %O', req.body, vgName, req.listVPPerm.getPerm(req.params.vpid));
@@ -1377,12 +1379,16 @@ router.route('/:vpid/audit')
 		.put(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-
-			req.auditDescription = 'Project Group (Update)';
-
 			var vgName = (req.body.name || '').trim();
 			var newPerm = {};
 			var vgGlobal = false;
+
+			req.auditDescription = 'Project Group (Update)';
+			req.auditInfo = req.oneGroup.name;
+			if (vgName && vgName != req.oneGroup.name) {
+				req.auditInfo = req.auditInfo.concat(' / ', vgName);
+			}
+
 			if (req.body.global != undefined)
 				vgGlobal = req.body.global == true;
 			logger4js.debug('Get Global Flag %s process %s', req.body.global, vgGlobal);
@@ -1802,11 +1808,12 @@ router.route('/:vpid/lock')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var variantName = (req.body.variantName || '').trim();
 
 		req.auditDescription = 'Project Lock (Create)';
+		req.auditInfo = variantName || ' ';
 
 		logger4js.info('POST Lock Project for userid %s email %s and vp %s ', userId, useremail, req.params.vpid);
-		var variantName = req.body.variantName || '';
 		var expiredAt = (req.body.expiresAt  && Date.parse(req.body.expiresAt)) ? new Date(req.body.expiresAt) : undefined;
 		var dateNow = new Date();
 
@@ -1887,10 +1894,11 @@ router.route('/:vpid/lock')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Properties
 	* @apiName DeleteLock
-	* @apiDescription Deletes a lock for a specific project and a specific variantName
+	* @apiDescription Deletes a lock for a specific project and a specific variant
 	* the user needs to have read access to the Project and either owns the lock or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
-	* @apiParam {String} variantName The Variant Name of the Project for the Lock
+	* @apiParam {String} variantID The Variant ID of the Project for the Lock
+	* @apiParam {String} variantName The Variant Name of the Project for the Lock (outdated)
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	*
 	* @apiPermission Authenticated and Permission: View Project, Modify Project.
@@ -1900,7 +1908,7 @@ router.route('/:vpid/lock')
 	*
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vp/vp5aada025/lock
-	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantName=Variant1
+	*   url: https://my.visbo.net/api/vp/vp5aada025/lock?variantID=variant5aada029
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -1913,11 +1921,19 @@ router.route('/:vpid/lock')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Lock (Delete)';
+		var variantName = (req.query.variantName || '').trim();
+		var variantID = req.query.variantID;
+		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantID || variantName);
 
-		var variantName = '';
-		variantName = req.query.variantName || '';
-		logger4js.info('DELETE Project Lock for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, variantName);
+		if (variantID) {
+			var variant = req.oneVP.variant.find(item => item._id.toString() == variantID);
+			if (variant) {
+				variantName = variant.variantName;
+			}
+		}
+
+		req.auditDescription = 'Project Lock (Delete)';
+		req.auditInfo = variantName;
 
 		req.oneVP.lock = lockVP.lockCleanup(req.oneVP.lock);
 		var resultLock = lockVP.lockStatus(req.oneVP, useremail, variantName);
@@ -1997,6 +2013,7 @@ router.route('/:vpid/variant')
 		var useremail = req.decoded.email;
 
 		req.auditDescription = 'Project Variant (Create)';
+		req.auditInfo = req.body.variantName;
 
 		logger4js.info('POST Project Variant for userid %s email %s and vp %s Variant %O Perm %O', userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
 
@@ -2166,16 +2183,17 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 403 No Permission to View the Project
 	*
 	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, varianName.
-	* to query only the main version of a project, use variantName= in the query string.
+	* to query only the main version of a project, use variantID= in the query string.
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for the project and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
 	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
-	* @apiParam {String} variantName Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantID Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiParam {String} variantName Deliver only versions for the specified variant (outdated)
 	*
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio
-	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantName=Variant1&refNext=1
+	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio?refDate=2018-01-01&variantID=varaint5aaf999&refNext=1
 	* @apiSuccessExample {json} Success-Response:
 	* HTTP/1.1 200 OK
 	* {
@@ -2230,7 +2248,12 @@ router.route('/:vpid/portfolio')
 			query.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 			latestOnly = true;
 		}
-		if (req.query.variantName != undefined){
+		if (req.query.variantID != undefined){
+			logger4js.debug('Get Portfolio %s VariantID :%s:', req.oneVP.name, req.query.variantID);
+			const variant = req.oneVP.variant.find(item => item._id.toString() === req.query.variantID);
+			// if variantName not found return only main variant
+			query.variantName = variant ? variant.variantName : '';
+		} else if (req.query.variantName != undefined){
 			logger4js.debug('Variant Query String :%s:', req.query.variantName);
 			query.variantName = req.query.variantName;
 		}
@@ -2686,8 +2709,8 @@ router.route('/:vpid/portfolio/:vpfid')
 
 			req.auditDescription = 'Project Capacity (Read)';
 
+			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s', userId, useremail, req.params.vcid, roleID);
 			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations);
-			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			req.auditInfo = '';
 			return res.status(200).send({
@@ -2756,6 +2779,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var inclChildren = req.body.inclChildren == true;
 
 			req.auditDescription = 'Project Restriction (Create)';
+			req.auditInfo = req.body.name;
 
 			logger4js.info('Post a new Project Restriction with name %s executed by user %s ', restrictName, userId);
 			logger4js.debug('Post a new Project Restriction Req Body: %O Perm %O', req.body, req.listVPPerm.getPerm(req.params.vpid));
