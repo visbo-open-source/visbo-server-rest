@@ -188,7 +188,6 @@ router.route('/')
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
 		|| (req.query.vpfid && !validate.validateObjectId(req.query.vpfid, false))
-		// || (variantID && !validate.validateObjectId(variantID, false))
 		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
 			logger4js.warn('Get VPV mal formed query parameter %O ', req.query);
 			return res.status(400).send({
@@ -241,20 +240,22 @@ router.route('/')
 				queryvpv.timestamp =  req.query.refNext ? {$gt: nowDate} : {$lt: nowDate};
 				latestOnly = true;
 			}
-			if (variantID != undefined && req.oneVP) {
-				logger4js.debug('VariantID for VP %s Query String :%s:', req.oneVP.name, variantID);
-				// MS TODO: handle multiple variantIDs
-				var variantList = convertVariantList(variantID.split(','), req.oneVP);
-				logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
-				queryvpv.variantName = {$in: variantList};
-				variantName = variantList[0];
-				logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
+			if (variantID != undefined) {
+				logger4js.debug('GET VPV VariantID String :%s:', variantID);
+				if (req.oneVP) {
+					var variantList = convertVariantList(variantID.split(','), req.oneVP);
+					logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
+					queryvpv.variantName = {$in: variantList};
+					logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
+				} else {
+					// only option to get all variants or the main variant if several projects were requested
+					queryvpv.variantName = "";
+				}
 			} else if (variantName != undefined){
 				logger4js.debug('Variant Query String :%s:', variantName);
 				queryvpv.variantName = {$in: variantName.split(',')};
 			}
 			if (keyMetrics){
-				logger4js.debug('keyMetrics Query String :%s:', req.query.keyMetrics);
 				longList = false;
 			}
 		}
