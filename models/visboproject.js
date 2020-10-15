@@ -25,7 +25,8 @@ var variantSchema = new Schema({
 	variantName: { type: String, required: true, maxlength: 256 },
 	email: { type: String, required: false, maxlength: 256 },
 	createdAt: { type: Date, reuqired: true },
-	vpvCount: { type: Number, reuqired: true }
+	vpvCount: { type: Number, reuqired: true },
+	vpfCount: { type: Number, reuqired: false }
 });
 
 var visboProjectSchema = new mongoose.Schema({
@@ -39,6 +40,7 @@ var visboProjectSchema = new mongoose.Schema({
 		deletedAt: {type: Date, required: false}
 	},
 	vpvCount: { type: Number, required: true },
+	vpfCount: { type: Number, reuqired: false },
 	variant: [{type: variantSchema, required: false}],
 	lock: [{type: lockSchema, required: false}],
 	restrict: [{type: restrictSchema, required: false}],

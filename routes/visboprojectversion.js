@@ -168,7 +168,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Versions (Read)';
+		req.auditDescription = 'Project Versions Read';
 		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
@@ -188,7 +188,6 @@ router.route('/')
 		if ((req.query.vpid && !validate.validateObjectId(req.query.vpid, false))
 		|| (req.query.vcid && !validate.validateObjectId(req.query.vcid, false))
 		|| (req.query.vpfid && !validate.validateObjectId(req.query.vpfid, false))
-		// || (variantID && !validate.validateObjectId(variantID, false))
 		|| (req.query.refDate && !validate.validateDate(req.query.refDate))) {
 			logger4js.warn('Get VPV mal formed query parameter %O ', req.query);
 			return res.status(400).send({
@@ -241,20 +240,22 @@ router.route('/')
 				queryvpv.timestamp =  req.query.refNext ? {$gt: nowDate} : {$lt: nowDate};
 				latestOnly = true;
 			}
-			if (variantID != undefined && req.oneVP) {
-				logger4js.debug('VariantID for VP %s Query String :%s:', req.oneVP.name, variantID);
-				// MS TODO: handle multiple variantIDs
-				var variantList = convertVariantList(variantID.split(','), req.oneVP);
-				logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
-				queryvpv.variantName = {$in: variantList};
-				variantName = variantList[0];
-				logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
+			if (variantID != undefined) {
+				logger4js.debug('GET VPV VariantID String :%s:', variantID);
+				if (req.oneVP) {
+					var variantList = convertVariantList(variantID.split(','), req.oneVP);
+					logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
+					queryvpv.variantName = {$in: variantList};
+					logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
+				} else {
+					// only option to get all variants or the main variant if several projects were requested
+					queryvpv.variantName = "";
+				}
 			} else if (variantName != undefined){
 				logger4js.debug('Variant Query String :%s:', variantName);
 				queryvpv.variantName = {$in: variantName.split(',')};
 			}
 			if (keyMetrics){
-				logger4js.debug('keyMetrics Query String :%s:', req.query.keyMetrics);
 				longList = false;
 			}
 		}
@@ -352,7 +353,7 @@ router.route('/')
 			if (keyMetrics) {
 				// deliver only the short info about project versions
 
-				queryVPV.select('_id vpid name timestamp keyMetrics status startDate ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
@@ -457,7 +458,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 
-		req.auditDescription = 'Project Versions (Create)';
+		req.auditDescription = 'Project Versions Create';
 		var queryvpv = {};
 
 		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
@@ -687,7 +688,7 @@ router.route('/:vpvid')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Version (Read)';
+		req.auditDescription = 'Project Version Read';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 0;	// Real Download of Project Version
 
@@ -777,14 +778,14 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version (Update)';
+		req.auditDescription = 'Project Version Update';
 
 		logger4js.info('PUT/Save Project Version for userid %s email %s and vpv %s perm %O', userId, useremail, req.params.vpvid, req.listVPPerm);
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVPV.deletedAt) {
-			req.auditDescription = 'Project Version (Undelete)';
+			req.auditDescription = 'Project Version Undelete';
 			req.oneVPV.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug('Undelete VPV %s', req.oneVPV._id);
@@ -849,7 +850,7 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version (Delete)';
+		req.auditDescription = 'Project Version Delete';
 
 		logger4js.info('DELETE Project Version for userid %s email %s and vc %s ', userId, useremail, req.params.vpvid);
 		logger4js.debug('DELETE Project Version DETAILS ', req.oneVPV._id, req.oneVP.name, req.oneVPV.variantName);
@@ -912,7 +913,7 @@ router.route('/:vpvid')
 			});
 		} else {
 			// Destroy the Deleted Version
-			req.auditDescription = 'Project Version (Destroy)';
+			req.auditDescription = 'Project Version Destroy';
 			logger4js.info('Destroy Project Version %s %s', req.params.vpvid, req.oneVPV._id);
 			var queryVPV = {};
 			queryVPV._id = req.oneVPV._id;
@@ -994,7 +995,7 @@ router.route('/:vpvid')
 		.post(function(req, res) {
 			var userId = req.decoded._id;
 
-			req.auditDescription = 'Project Versions (Copy)';
+			req.auditDescription = 'Project Versions Copy';
 
 			var vpid = req.oneVPV.vpid;
 			var variantName = req.oneVPV.variantName;
@@ -1142,7 +1143,7 @@ router.route('/:vpvid')
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 			var roleID = req.query.roleID;
 
-			req.auditDescription = 'Project Version CalcCapacity (Read)';
+			req.auditDescription = 'Project Version Capacity Read';
 			req.auditSysAdmin = sysAdmin;
 			req.auditTTLMode = 1;
 
@@ -1224,7 +1225,7 @@ router.route('/:vpvid')
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
-			req.auditDescription = 'Project Version KeyMetrics (Read)';
+			req.auditDescription = 'Project Version KeyMetrics Read';
 			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
@@ -1297,7 +1298,7 @@ router.route('/:vpvid')
 			var sysAdmin = req.query.sysadmin ? true : false;
 			var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
-			req.auditDescription = 'Project Version Cost (Read)';
+			req.auditDescription = 'Project Version Cost Read';
 			req.auditTTLMode = 1;
 			req.auditSysAdmin = sysAdmin;
 
@@ -1317,6 +1318,7 @@ router.route('/:vpvid')
 				count: costVPV.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
+					variantName: req.oneVPV.variantName,
 					timestamp: req.oneVPV.timestamp,
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
@@ -1384,7 +1386,7 @@ router.route('/:vpvid')
 				getAll = true;
 			}
 
-			req.auditDescription = 'Project Version Deliveries (Read)';
+			req.auditDescription = 'Project Version Deliveries Read';
 			req.auditSysAdmin = sysAdmin;
 
 			var restriction;
@@ -1408,6 +1410,7 @@ router.route('/:vpvid')
 				count: deliveryVPV.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
+					variantName: req.oneVPV.variantName,
 					timestamp: req.oneVPV.timestamp,
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,
@@ -1473,7 +1476,7 @@ router.route('/:vpvid')
 				getAll = true;
 			}
 
-			req.auditDescription = 'Project Version Deadlines (Read)';
+			req.auditDescription = 'Project Version Deadlines Read';
 			req.auditSysAdmin = sysAdmin;
 
 			var restriction;
@@ -1498,6 +1501,7 @@ router.route('/:vpvid')
 				count: deadlineVPV.length,
 				vpv: [ {
 					_id: req.oneVPV._id,
+					variantName: req.oneVPV.variantName,
 					timestamp: req.oneVPV.timestamp,
 					actualDataUntil: req.oneVPV.actualDataUntil,
 					vpid: req.oneVPV.vpid,

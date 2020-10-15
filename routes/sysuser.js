@@ -66,7 +66,7 @@ router.route('/')
 	*/
 // get sysuser list
 	.get(function(req, res) {
-		req.auditDescription = 'SysUsers (Read)';
+		req.auditDescription = 'SysUsers Read';
 		req.auditSysAdmin = true;
 		req.auditTTLMode = 1;
 		var email = (req.query && req.query.email) ? req.query.email : undefined;
