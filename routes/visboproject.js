@@ -2167,7 +2167,7 @@ router.route('/:vpid/variant/:vid')
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
-		if (req.oneVP.variant[variantIndex].vpvCount > 0) {
+		if (req.oneVP.variant[variantIndex].vpvCount > 0 || req.oneVP.variant[variantIndex].vpfCount > 0) {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Project Variant still has Versions',
