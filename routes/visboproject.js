@@ -79,6 +79,28 @@ var updateVPCount = function(vcid, increment){
 	});
 };
 
+// updates the VPV Count in the VP after create/delete/undelete VISBO Project
+var updateVPFCount = function(vpid, variantName, increment){
+	var updateQuery = {_id: vpid};
+	var updateOption = {upsert: false};
+	var updateUpdate;
+
+	if (!variantName) {
+		updateUpdate = {$inc: {vpfCount: increment}};
+	} else {
+		// update a variant and increment the version counter
+		updateQuery['variant.variantName'] = variantName;
+		updateUpdate = {$inc : {'variant.$.vpfCount' : increment} };
+	}
+	logger4js.debug('Update VP %s with vpfCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
+	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			logger4js.error('Problem updating VP %s vpfCount: %s', vpid, err.message);
+		}
+		logger4js.trace('Updated VP %s vpfCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
+	});
+};
+
 // updates the VC Name in the VP after undelete as the name could have changed in between
 var updateVCName = function(vp){
 	logger4js.trace('Start Update VP%s with correct VC Name ', vp._id);
@@ -514,6 +536,9 @@ router.route('/')
 					newVP.vpType = req.body.vpType;
 				}
 				newVP.vpvCount = 0;
+				if (newVP.vpType == 1) {
+					newVP.vpfCount = 0;
+				}
 				// Create new VP Group
 				var newVG = new VisboGroup();
 				newVG.name = 'VISBO Project Admin';
@@ -2054,6 +2079,9 @@ router.route('/:vpid/variant')
 		newVariant.variantName = variantName;
 		newVariant.createdAt = new Date();
 		newVariant.vpvCount = 0;
+		if (req.oneVP.vpType == 1) {
+			newVariant.vpfCount = 0;
+		}
 		variantList.push(newVariant);
 		req.oneVP.variant = variantList;
 		logger4js.trace('Variant List new %O ', variantList);
@@ -2233,6 +2261,7 @@ router.route('/:vpid/portfolio')
 		req.auditDescription = 'Portfolio List Read';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
+		var checkDeleted = req.query.deleted == true;
 
 		if (req.query.refDate && !validate.validateDate(req.query.refDate)) {
 			logger4js.warn('Get VPF mal formed query parameter %O ', req.query);
@@ -2258,7 +2287,7 @@ router.route('/:vpid/portfolio')
 			logger4js.debug('Variant Query String :%s:', req.query.variantName);
 			query.variantName = req.query.variantName;
 		}
-		query.deletedAt = {$exists: false};
+		query.deletedAt = {$exists: checkDeleted};
 
 		logger4js.debug('Get Portfolio Version for user %s with query parameters %O', userId, query);
 
@@ -2468,6 +2497,8 @@ router.route('/:vpid/portfolio')
 					return;
 				}
 				req.oneVPF = onePortfolio;
+				// update the version count of the base version or the variant
+				updateVPFCount(req.oneVPF.vpid, variantName, 1);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Portfolio Version',
@@ -2488,6 +2519,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
+	* @apiParam (Parameter) {Boolean} [deletedVPF=false]  Request Deleted VPFs, only allowed for users with DeleteVP Permission.
 	* @apiPermission Authenticated and Permission: View Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project
@@ -2534,7 +2566,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		var query = {};
 		query._id = req.params.vpfid;
 		query.vpid = req.oneVP._id;
-		query.deletedAt = {$exists: false};
+		// MS TODO: Check if the user has permission to get deleted VPFs
+		query.deletedAt = {$exists: req.query.deletedVPF ? true : false};
 
 		var queryVPF = VisboPortfolio.find(query);
 		queryVPF.exec(function (err, listVPF) {
@@ -2542,8 +2575,15 @@ router.route('/:vpid/portfolio/:vpfid')
 				errorHandler(err, res, 'DB: GET VPF Version find', 'Error getting Versions of Portfolio');
 				return;
 			}
+
 			logger4js.debug('Found %d Portfolios', listVPF.length);
 			logger4js.trace('Found Portfolios/n', listVPF);
+			if (listVPF.length === 0) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'Portfolio Version not found or deleted'
+				});
+			}
 
 			verifyVp.squeezePortfolio(req, listVPF);
 			return res.status(200).send({
@@ -2553,6 +2593,94 @@ router.route('/:vpid/portfolio/:vpfid')
 				name: req.oneVP.name,
 				vpf: listVPF,
 				perm: req.listVPPerm.getPerm(req.params.vpid)
+			});
+		});
+	})
+
+/**
+	* @api {put} /vp/:vpid/portfolio/:vpfid Update Portfolio Version
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Project Portfolio
+	* @apiName UpdateVISBOPortfolio
+	* @apiDescription Put updates a specific Portfolio Version used for undelete
+	* the system checks if the user has Delete permission to the Project.
+	* @apiHeader {String} access-key User authentication token.
+	* @apiPermission Authenticated and Permission: View Project, Delete Project.
+	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Un-Delete Portfolio
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vp/vp5cf3da025/portfolio/vpf541c754feaa?deleted=1
+	* {
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Returned Portfolios',
+	*   'vpf': [{
+	*   'updatedAt': '2018-06-07T13:17:35.434Z',
+	*   'createdAt': '2018-06-07T13:17:35.434Z',
+	*   'sortType': 1,
+	*   'timestamp': '2018-06-07T13:17:35.000Z',
+	*   'name': 'VP Test01 PF',
+	*   'variantName': '',
+	*   'vpid': 'vp50f5702a2c',
+	*   '_id': 'vpf116619a5ab',
+	*   'allItems': [{
+	*     'vpid': 'vp150506ab9633',
+	*     'name': 'Project Name',
+	*     'variantName': '',
+	*     'Start': '2018-04-01T12:00:00.000Z',
+	*     'show': true,
+	*     'zeile': 2,
+	*     'reasonToInclude': 'Description Text Include',
+	*     'reasonToExclude': 'Description Text Exclude',
+	*     '_id': '5b19306f53eb4b516619a5ac'
+	*   }]
+  * }
+	*/
+// Update Portfolio Version (Undelete)
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+
+		req.auditDescription = 'Portfolio List Update';
+
+		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s perm %O', userId, useremail, req.params.vpfid, req.listVPPerm);
+		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to undelete Portfolio List',
+				perm: req.listVPPerm.getPerm(req.params.vpid)
+			});
+		}
+
+		var vpfUndelete = false;
+		// undelete the VPF in case of change
+		if (req.oneVPF.deletedAt) {
+			req.auditDescription = 'Portfolio List Undelete';
+			req.oneVPF.deletedAt = undefined;
+			vpfUndelete = true;
+			logger4js.debug('Undelete VPF %s', req.oneVPF._id);
+		}
+		if (!vpfUndelete) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'not possible to change Portfolio List'
+			});
+		}
+
+		logger4js.debug('PUT VPF: save now %s unDelete %s', req.oneVPF._id, vpfUndelete);
+		req.oneVPF.save(function(err, oneVPF) {
+			if (err) {
+				errorHandler(err, res, 'DB: PUT VPF Save', 'Error updating Portfolio List ');
+				return;
+			}
+			req.oneVPF = oneVPF;
+			updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, 1);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Portfolio List Undeleted',
+				vpf: [ oneVPF ]
 			});
 		});
 	})
@@ -2648,6 +2776,8 @@ router.route('/:vpid/portfolio/:vpfid')
 				});
 			}
 			oneVPF.deletedAt = new Date();
+			// update the version count of the base version or the variant
+			updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, -1);
 			oneVPF.save(function(err, oneVPF) {
 				if (err) {
 					errorHandler(err, res, 'DB: DELETE VPF', 'Error deleting Portfolio');
