@@ -1050,7 +1050,7 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
 
-		if (vpvs.length <= 1 || calcC_dauer <= 0 ) {
+		if (vpvs.length < 1 || calcC_dauer <= 0 ) {
 			return 	allCalcCapaValuesIndexed;
 		}
 
@@ -1080,7 +1080,8 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 
 				if (!monthlyNeeds) {
 					allCalcCapaValuesIndexed = [];
-					return allCalcCapaValuesIndexed;
+					continue;
+					// return allCalcCapaValuesIndexed;
 				}
 
 				var tzStartIndex = timeZones[tz].startIndex;
