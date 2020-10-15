@@ -193,7 +193,7 @@ function calcCosts(vpv, pfv, organisations) {
 				var tzStartDiff = tzStartIndex - startIndex;
 
 				currentDate = new Date (tzStartDate);
-				currentDate.setMonth(currentDate.getMonth());				
+				currentDate.setMonth(currentDate.getMonth());
 				currentDate.setDate(1);
 				currentDate.setHours(0, 0, 0, 0);
 				// Teilabschnitte übernehmen
@@ -1010,7 +1010,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
+function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -1026,104 +1026,107 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisations && organisations.length > 0) {
+	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
+		logger4js.info('Calculate Capacities missing vpvs or organisation ');
+		return allCalcCapaValuesIndexed;
+	}
 
-		// get startIndex and endIndex and dauer of the several vpvs
-		for (var i = 0; vpvs && i < vpvs.length; i++) {
-			var vpv = vpvs[i];
-			if (vpv) {
-				calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
-				calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
-				calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
-				calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
-				calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	// get startIndex and endIndex and dauer of the several vpvs
+	for (var i = 0; i < vpvs.length; i++) {
+		var vpv = vpvs[i];
+		if (!vpv) {
+			// skip the version
+			continue;
+		}
+		calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
+		calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
+		calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
+		calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
+		calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	}
+
+	var currentDate = new Date(calcC_startDate);
+	logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
+	currentDate.setDate(1);
+	currentDate.setHours(0, 0, 0, 0);
+	logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
+
+	if (vpvs.length <= 1 || calcC_dauer <= 0 ) {
+		return 	allCalcCapaValuesIndexed;
+	}
+
+	// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
+	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
+
+	var roleIDs = [];
+	roleIDs.push(roleIdentifier); // Main role
+	var allRoles = timeZones[timeZones.length - 1].orga.value.allRoles;
+	var subroles = allRoles[roleIdentifier-1] && allRoles[roleIdentifier-1].subRoleIDs;
+	if (hierarchy && subroles) {
+		for (var i = 0; i < subroles.length; i++) {
+			roleIDs.push(subroles[i].key);
+		}
+	}
+	logger4js.debug('calculate for the role & subrole', roleIDs);
+
+	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
+		var roleID = roleIDs[roleIndex];
+		logger4js.debug('calculate for the different timeZones');
+		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
+			var monthlyNeeds = [];
+			// get Capacities for the different timeZones, in which always only one organisation is valid
+			logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
+			monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
+
+			if (!monthlyNeeds) {
+				allCalcCapaValuesIndexed = [];
+				return allCalcCapaValuesIndexed;
+			}
+
+			var tzStartIndex = timeZones[tz].startIndex;
+			var tzStartDate = timeZones[tz].startdate;
+			var tzEndIndex = timeZones[tz].endIndex;
+			var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
+			currentDate = new Date (tzStartDate);
+			currentDate.setMonth(currentDate.getMonth());
+
+			// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
+			for (i = 0 ; i < zoneDauer; i++){
+				const currentIndex = currentDate.toISOString().concat('_', roleID);
+				allCalcCapaValues[currentIndex] = {
+					'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
+					'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
+					'internCapa_PT': monthlyNeeds[i + tzStartIndex].internCapa_PT ,
+					'externCapa_PT': monthlyNeeds[i + tzStartIndex].externCapa_PT ,
+					'actualCost': monthlyNeeds[i + tzStartIndex].actCost  || 0,
+					'plannedCost': monthlyNeeds[i + tzStartIndex].plannedCost  || 0,
+					'internCapa': monthlyNeeds[i + tzStartIndex].internCapa  || 0,
+					'externCapa': monthlyNeeds[i + tzStartIndex].externCapa  || 0
+				};
+				currentDate.setMonth(currentDate.getMonth() + 1);
 			}
 		}
+	}
 
-		var currentDate = new Date(calcC_startDate);
-		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
-		currentDate.setDate(1);
-		currentDate.setHours(0, 0, 0, 0);
-		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
-
-
-		if (vpvs.length <= 1 || calcC_dauer <= 0 ) {
-			return 	allCalcCapaValuesIndexed;
-		}
-
-		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
-		logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
-		var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
-
-		var roleIDs = [];
-		roleIDs.push(roleIdentifier); // Main role
-		var allRoles = timeZones[timeZones.length - 1].orga.value.allRoles;
-		var subroles = allRoles[roleIdentifier-1] && allRoles[roleIdentifier-1].subRoleIDs;
-		if (hierarchy && subroles) {
-			for (var i = 0; i < subroles.length; i++) {
-				roleIDs.push(subroles[i].key);
-			}
-		}
-		logger4js.debug('calculate for the role & subrole', roleIDs);
-
-		for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
-			var roleID = roleIDs[roleIndex];
-			logger4js.debug('calculate for the different timeZones');
-			for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
-				var monthlyNeeds = [];
-				// get Capacities for the different timeZones, in which always only one organisation is valid
-				logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
-				monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
-
-				if (!monthlyNeeds) {
-					allCalcCapaValuesIndexed = [];
-					return allCalcCapaValuesIndexed;
-				}
-
-				var tzStartIndex = timeZones[tz].startIndex;
-				var tzStartDate = timeZones[tz].startdate;
-				var tzEndIndex = timeZones[tz].endIndex;
-				var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
-				currentDate = new Date (tzStartDate);
-				currentDate.setMonth(currentDate.getMonth());
-
-				// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
-				for (i = 0 ; i < zoneDauer; i++){
-					const currentIndex = currentDate.toISOString().concat('_', roleID);
-					allCalcCapaValues[currentIndex] = {
-						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
-						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
-						'internCapa_PT': monthlyNeeds[i + tzStartIndex].internCapa_PT ,
-						'externCapa_PT': monthlyNeeds[i + tzStartIndex].externCapa_PT ,
-						'actualCost': monthlyNeeds[i + tzStartIndex].actCost  || 0,
-						'plannedCost': monthlyNeeds[i + tzStartIndex].plannedCost  || 0,
-						'internCapa': monthlyNeeds[i + tzStartIndex].internCapa  || 0,
-						'externCapa': monthlyNeeds[i + tzStartIndex].externCapa  || 0
-					};
-					currentDate.setMonth(currentDate.getMonth() + 1);
-				}
-			}
-		}
-
-		var j = 0, element;
-		for (element in allCalcCapaValues) {
-			const actMonthISO = element.substr(0, 24)
-			const roleID = element.substr(25)
-			allCalcCapaValuesIndexed[j] = {
-				'month': actMonthISO,
-				'roleID' : roleID,
-				'roleName' : allRoles[roleID-1] && allRoles[roleID-1].name,
-				'actualCost_PT': allCalcCapaValues[element].actualCost_PT || 0,
-				'plannedCost_PT': allCalcCapaValues[element].plannedCost_PT || 0,
-				'internCapa_PT': allCalcCapaValues[element].internCapa_PT || 0,
-				'externCapa_PT' : allCalcCapaValues[element].externCapa_PT || 0,
-				'actualCost': allCalcCapaValues[element].actualCost || 0,
-				'plannedCost': allCalcCapaValues[element].plannedCost || 0,
-				'internCapa': allCalcCapaValues[element].internCapa || 0,
-				'externCapa' :allCalcCapaValues[element].externCapa || 0
-			};
-			j++;
-		}
+	var j = 0, element;
+	for (element in allCalcCapaValues) {
+		const actMonthISO = element.substr(0, 24)
+		const roleID = element.substr(25)
+		allCalcCapaValuesIndexed[j] = {
+			'month': actMonthISO,
+			'roleID' : roleID,
+			'roleName' : allRoles[roleID-1] && allRoles[roleID-1].name,
+			'actualCost_PT': allCalcCapaValues[element].actualCost_PT || 0,
+			'plannedCost_PT': allCalcCapaValues[element].plannedCost_PT || 0,
+			'internCapa_PT': allCalcCapaValues[element].internCapa_PT || 0,
+			'externCapa_PT' : allCalcCapaValues[element].externCapa_PT || 0,
+			'actualCost': allCalcCapaValues[element].actualCost || 0,
+			'plannedCost': allCalcCapaValues[element].plannedCost || 0,
+			'internCapa': allCalcCapaValues[element].internCapa || 0,
+			'externCapa' :allCalcCapaValues[element].externCapa || 0
+		};
+		j++;
 	}
 
 	var endCalc = new Date();

@@ -283,6 +283,7 @@ router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFPFVs);
 
 /////////////////
 // VISBO Project API
@@ -2843,7 +2844,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			req.auditDescription = 'Project Capacity Read';
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations, hierarchy);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy);
 
 			req.auditInfo = '';
 			return res.status(200).send({
