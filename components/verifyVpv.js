@@ -230,7 +230,7 @@ function getVPV(req, res, next, vpvid) {
 	});
 }
 
-// Generate the Groups where the user is member of and has VP Permission
+// Generate the Portfolio List of VPs and the List of VPs including the Variant
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.originalUrl.split('?')[0];
@@ -587,19 +587,19 @@ function getVPFPFVs(req, res, next) {
 	}
 	queryvpv.deletedAt = {$exists: false};
 	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
-	// collect the VPIDs where the user has View permission to
-	var vpidList = [];
-	var requiredPerm = constPermVP.View;
-	vpidList = req.listVPPerm.getVPIDs(requiredPerm);
 
+	var vpCondition = [];
+	vpCondition.push({'vpid': {$in: req.listVPPerm.getVPIDs(constPermVP.View)}});	// View Permission to the Project
+	vpCondition.push({'vpid': {$in: req.listPortfolioVP}});		// Project of the Portfolio
+	queryvpv['$and'] = vpCondition;
+
+	queryvpv.variantName = 'pfv';
 	if (req.query.refDate){
 		var refDate = new Date(req.query.refDate);
 		queryvpv.timestamp =  {$lt: refDate};
 	} else if (!req.query.refDate) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
-	queryvpv.vpid = {$in: vpidList};
-	queryvpv.variantName = 'pfv';
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();

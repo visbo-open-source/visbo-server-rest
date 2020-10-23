@@ -96,9 +96,6 @@ var convertVariantList = function(idList, vp) {
 			}
 		}
 	}
-	if (result.length == 0) {
-		result.push('');
-	}
 	return result;
 };
 
