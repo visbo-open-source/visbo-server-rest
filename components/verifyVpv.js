@@ -221,7 +221,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'calc') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
