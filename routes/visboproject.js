@@ -283,6 +283,7 @@ router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFPFVs);
 
 /////////////////
 // VISBO Project API
@@ -1251,11 +1252,11 @@ router.route('/:vpid/audit')
 				});
 			}
 			logger4js.debug('Post Group to VP %s/%s Permission is ok, check unique name', req.oneVP.name, req.oneVP._id);
-			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP', name: req.body.name};
-			var queryVCGroup = VisboGroup.findOne(query);
-			queryVCGroup.select('name');
-			queryVCGroup.lean();
-			queryVCGroup.exec(function (err, oneGroup) {
+			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, name: req.body.name};
+			var queryGroup = VisboGroup.findOne(query);
+			queryGroup.select('name');
+			queryGroup.lean();
+			queryGroup.exec(function (err, oneGroup) {
 				if (err) {
 					errorHandler(err, res, `DB: POST VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
@@ -1448,10 +1449,10 @@ router.route('/:vpid/audit')
 
 			logger4js.debug('Update Project Group after permission check vpid %s groupName %s', req.params.vpid, req.oneGroup.name);
 			// check unique group name
-			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP', name: req.body.name};
-			var queryVCGroup = VisboGroup.find(query);
-			queryVCGroup.lean();
-			queryVCGroup.exec(function (err, listVPGroup) {
+			var query = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, name: req.body.name};
+			var queryGroup = VisboGroup.find(query);
+			queryGroup.lean();
+			queryGroup.exec(function (err, listVPGroup) {
 				if (err) {
 					errorHandler(err, res, `DB: PUT VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
@@ -1850,20 +1851,29 @@ router.route('/:vpid/lock')
 		}
 		logger4js.info('POST Lock Project %s Check variant %s does exists  ', req.params.vpid, variantName);
 
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
-				|| (req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant))) {
+		var variant;
+		if (variantName) {
+			variant = req.oneVP.variant.find(item => item.variantName == variantName);
+			if (!variant) {
+				logger4js.warn('POST Lock Project %s variant %s does not exists  ', req.params.vpid, variantName);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Variant does not exist',
+					vp: [req.oneVP],
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+		}
+		var hasPerm = false;
+		if (req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify) {
+			hasPerm = true;
+		} else if (variant && variant.email == useremail && req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant) {
+			hasPerm = true;
+		}
+		if (!hasPerm) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to lock Project',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
-			});
-		}
-		if (variantName != '' && req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
-				logger4js.warn('POST Lock Project %s variant %s does not exists  ', req.params.vpid, variantName);
-				return res.status(400).send({
-				state: 'failure',
-				message: 'Project Variant does not exist',
-				vp: [req.oneVP],
 				perm: req.listVPPerm.getPerm(req.params.vpid)
 			});
 		}
@@ -2273,8 +2283,13 @@ router.route('/:vpid/portfolio')
 		var query = {};
 		var latestOnly = false; 	// as default show all portfolio lists of the project
 		query.vpid = req.oneVP._id;
-		if (req.query.refDate){
-			var refDate = new Date(req.query.refDate);
+		var refDate;
+		if (req.query.refDate && Date.parse(req.query.refDate)) {
+			refDate = new Date(req.query.refDate)
+		} else if (req.query.refDate == '') {
+			refDate = new Date();
+		}
+		if (refDate){
 			query.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 			latestOnly = true;
 		}
@@ -2843,7 +2858,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			req.auditDescription = 'Project Capacity Read';
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, roleID, req.visboOrganisations, hierarchy);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy);
 
 			req.auditInfo = '';
 			return res.status(200).send({

@@ -221,7 +221,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'calc') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -230,7 +230,7 @@ function getVPV(req, res, next, vpvid) {
 	});
 }
 
-// Generate the Groups where the user is member of and has VP Permission
+// Generate the Portfolio List of VPs and the List of VPs including the Variant
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.originalUrl.split('?')[0];
@@ -565,6 +565,89 @@ function getVPFVPVs(req, res, next) {
 	});
 }
 
+// Get pfv-vpvs of the Portfolio Version related to refDate for capacity calculation
+function getVPFPFVs(req, res, next) {
+	var userId = req.decoded._id;
+
+	logger4js.info('Get Project pfv-Versions of VPF for user %s with query params %O ', userId, req.query);
+	var queryvpv = {};
+	var queryvpvids = {};
+	var nowDate = new Date();
+
+	if (!req.query.pfv) {
+		logger4js.debug('No PFV Calculation ');
+		return next();
+	}
+	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
+		logger4js.warn('Get VPF Capacity mal formed query parameter %O ', req.query);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'Bad Content in Query Parameters'
+		});
+	}
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
+
+	var vpCondition = [];
+	vpCondition.push({'vpid': {$in: req.listVPPerm.getVPIDs(constPermVP.View)}});	// View Permission to the Project
+	vpCondition.push({'vpid': {$in: req.listPortfolioVP}});		// Project of the Portfolio
+	queryvpv['$and'] = vpCondition;
+
+	queryvpv.variantName = 'pfv';
+	if (req.query.refDate){
+		var refDate = new Date(req.query.refDate);
+		queryvpv.timestamp =  {$lt: refDate};
+	} else if (!req.query.refDate) {
+		queryvpv.timestamp = {$lt: nowDate};
+	}
+
+	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
+	var timeMongoStart = new Date();
+	var queryVPV = VisboProjectVersion.find(queryvpv);
+	queryVPV.sort('vpid variantName -timestamp');
+	queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, listVPV) {
+		if (err) {
+			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			return;
+		}
+		var timeMongoEnd = new Date();
+		logger4js.debug('Found %d Project Versions in %s ms ', listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
+		// if latestonly, reduce the list and deliver only the latest version of each project and variant
+		var vpvidsList = [];
+
+		if (listVPV.length > 0) {
+			vpvidsList.push(listVPV[0]._id);
+		}
+		for (let i = 1; i < listVPV.length; i++){
+			//compare current item with previous and ignore if it is the same vpid & variantname
+			logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+				|| listVPV[i].variantName != listVPV[i-1].variantName
+			) {
+				vpvidsList.push(listVPV[i]._id);
+				logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			}
+		}
+		logger4js.debug('Found %d Project Version IDs', vpvidsList.length);
+
+		queryvpvids._id = {$in: vpvidsList};
+		var queryVPV = VisboProjectVersion.find(queryvpvids);
+
+		queryVPV.lean();
+		queryVPV.exec(function (err, listVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				return;
+			}
+			req.listVPVPFV = listVPV;
+			logger4js.debug('Found %d Project PFV-Version for Calculation ', vpvidsList.length);
+			return next();
+		});
+	});
+}
+
 // find a project in an array of a structured projects (name, id)
 var findVPVariantList = function(arrayItem) {
 		// console.log('compare %s %s result %s', JSON.stringify(arrayItem), JSON.stringify(this), arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName);
@@ -669,6 +752,7 @@ module.exports = {
 	getVPVpfv: getVPVpfv,
 	getCurrentVPVpfv: getCurrentVPVpfv,
 	getVPFVPVs: getVPFVPVs,
+	getVPFPFVs: getVPFPFVs,
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs
 };
