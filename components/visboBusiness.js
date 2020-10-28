@@ -1118,7 +1118,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
 
 	var roleIDs = [];
-	var allRoles = timeZones && timeZones[timeZones.length - 1] && timeZones[timeZones.length - 1].orga
+	var allRoles = (timeZones && timeZones[timeZones.length - 1] && timeZones[timeZones.length - 1].orga
 									&& timeZones[timeZones.length - 1].orga.value && timeZones[timeZones.length - 1].orga.value.allRoles) || [];
 	var role = allRoles.find(item => item.uid == roleIdentifier);
 	if (!role) {
