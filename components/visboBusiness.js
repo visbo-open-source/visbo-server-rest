@@ -1015,6 +1015,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
+	// sort the organisations ascending
+	organisations.sort(function(a, b) { return a.timestamp.getTime() - b.timestamp.getTime(); });
+
 	var capaVPV = calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy);
 	var capaPFV = [];
 
@@ -1049,7 +1052,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 		capa.push({
 			'month': actMonthISO,
 			'roleID' : roleID,
-// 			'roleName' : allRoles[roleID-1] && allRoles[roleID-1].name,
+			'roleName' : capaVPV[item].roleName,
 			'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 			'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 			'internCapa_PT': capaVPV[item].internCapa_PT || 0,
@@ -1115,18 +1118,29 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
 
 	var roleIDs = [];
-	roleIDs.push(roleIdentifier); // Main role
-	var allRoles = timeZones[timeZones.length - 1].orga.value.allRoles;
-	var subroles = allRoles[roleIdentifier-1] && allRoles[roleIdentifier-1].subRoleIDs;
-	if (hierarchy && subroles) {
-		for (var i = 0; i < subroles.length; i++) {
-			roleIDs.push(subroles[i].key);
+	var allRoles = timeZones && timeZones[timeZones.length - 1] && timeZones[timeZones.length - 1].orga
+									&& timeZones[timeZones.length - 1].orga.value && timeZones[timeZones.length - 1].orga.value.allRoles) || [];
+	var role = allRoles.find(item => item.uid == roleIdentifier);
+	if (!role) {
+		return allCalcCapaValuesIndexed;
+	}
+	roleIDs.push({uid: role.uid, roleName: role.name}); // Main role
+	if (hierarchy) {
+		if (role && role.subRoleIDs) {
+			for (var j=0; j < role.subRoleIDs.length; j++) {
+				var subrole = allRoles.find(item => item.uid == role.subRoleIDs[j].key);
+				if (!subrole) {
+					continue
+				}
+				roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Main role
+			}
 		}
 	}
-	logger4js.debug('calculate for the role & subrole', roleIDs);
+	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
 	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
-		var roleID = roleIDs[roleIndex];
+		var roleID = roleIDs[roleIndex].uid;
+		var roleName = roleIDs[roleIndex].roleName;
 		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
 			var monthlyNeeds = [];
@@ -1144,6 +1158,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 				for (i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
+						'roleName': roleName,
 						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
 						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
 						'internCapa_PT': monthlyNeeds[i + tzStartIndex].internCapa_PT ,
@@ -1186,13 +1201,9 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 		timeZones.push(timeZoneElem);
 	} else {
-		// sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		// newest orga at the end of the array
-		organisations.reverse();
-
+		// organisations are sorted ascending
 		// determine for all organisations the beginning on the first day of month of the timestamp
-		for ( var o = 0;  organisations && organisations[o] && o < organisations.length; o++) {
+		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
 			organisations[o].timestamp.setHours(0,0,0,0);
 		}
