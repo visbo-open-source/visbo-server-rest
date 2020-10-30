@@ -831,7 +831,7 @@ router.route('/:vcid/audit')
 			try {
 				expr = new RegExp(text, 'i');
 			} catch(e) {
-				logger4js.info('System Audit RegEx corrupt: %s ', text);
+				logger4js.info('Audit RegEx corrupt: %s ', text);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'No Valid Regular Expression'
@@ -1344,7 +1344,7 @@ router.route('/:vcid/group/:groupid')
 				return;
 			}
 			if (listVCGroup.length > 1 || (listVCGroup.length == 1 &&  listVCGroup[0]._id.toString() != req.oneGroup._id.toString())) {
-				logger4js.debug('Create VISBO Center Group (Name is not unique) %O', listVCGroup);
+				logger4js.debug('Put VISBO Center Group (Name is not unique) %O', listVCGroup);
 				return res.status(409).send({
 					state: 'failure',
 					message: 'VISBO Center Group already exists'
