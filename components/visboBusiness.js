@@ -1015,8 +1015,6 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// sort the organisations ascending
-	organisations.sort(function(a, b) { return a.timestamp.getTime() - b.timestamp.getTime(); });
 
 	var capaVPV = calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy);
 	var capaPFV = [];
