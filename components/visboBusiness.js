@@ -1804,6 +1804,11 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.status = undefined;
 }
 
+function verifyOrganisation(neworga, oldorga) {
+	// updates neworga if possible and returns true/false if the orga could be used
+	return true;
+}
+
 module.exports = {
 	// getAllPersonalKosten: getAllPersonalKosten,
 	// getAllOtherCost: getAllOtherCost,
@@ -1814,5 +1819,6 @@ module.exports = {
 	calcCapacities: calcCapacities,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
-	getRessourcenBedarfe: getRessourcenBedarfe
+	getRessourcenBedarfe: getRessourcenBedarfe,
+	verifyOrganisation: verifyOrganisation
 };

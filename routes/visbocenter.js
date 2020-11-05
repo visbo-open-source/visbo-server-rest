@@ -84,6 +84,106 @@ function squeezeSetting(item, email) {
 	}
 }
 
+function generateNewRole(item) {
+	var statusOk = true;
+	var minDate = new Date("0001-01-01");
+	var maxDate = new Date("2200-01-01");
+	if (!item) {
+		statusOk = false;
+	}
+	var newRole = {};
+	if (item.uid >= 0) {
+		newRole.uid = item.uid;
+	} else {
+		statusOk = false;
+	}
+	if (item.name) {
+		newRole.name = item.name;
+	} else {
+		statusOk = false;
+	}
+	if (item.employeeNr) {
+		newRole.employeeNr = item.employeeNr;
+	}
+	if (item.entryDate) {
+		var entryDate = new Date(item.entryDate)
+		if (entryDate.getTime() > minDate.getTime()) {
+			newRole.entryDate = item.entryDate;
+		}
+	}
+	if (item.exitDate) {
+		var exitDate = new Date(item.exitDate)
+		if (exitDate.getTime() < maxDate.getTime()) {
+			newRole.exitDate = item.exitDate;
+		}
+	}
+	if (item.aliases) {
+		newRole.aliases = item.aliases;
+	}
+
+	var isGroup = false;
+
+	newRole.subRoleIDs = item.subRoleIDs || [];
+	if (newRole.subRoleIDs.length > 0) {
+		isGroup = true;
+	}
+	if (item.isTeam) {
+		newRole.isTeam = item.isTeam;
+		isGroup = true;
+	}
+	newRole.teamIDs = item.teamIDs || [];
+	if (!isGroup) {
+		if (item.defaultKapa >= 0) {
+			newRole.defaultKapa = item.defaultKapa;
+		}
+		if (item.defaultDayCapa >= 0) {
+			newRole.defaultDayCapa = item.defaultDayCapa;
+		}
+		if (item.isExternRole) {
+			newRole.isExternRole = item.isExternRole;
+		}
+		if (item.tagessatzIntern >= 0) {
+			newRole.tagessatzIntern = item.tagessatzIntern;
+			newRole.tagessatz = item.tagessatzIntern;
+		}
+		if (item.tagessatz >= 0) {
+			newRole.tagessatz = item.tagessatz;
+		}
+		if (item.startOfCal) {
+			var startOfCal = new Date(item.startOfCal)
+			if (startOfCal.getTime() < startOfCal.getTime()) {
+				newRole.startOfCal = item.startOfCal;
+			}
+		}
+		if (item.kapazitaet) {
+			newRole.kapazitaet = item.kapazitaet;
+		}
+	}
+	if (!statusOk) newRole = undefined;
+	return newRole;
+}
+
+function generateNewCost(item) {
+	var statusOk = true;
+	if (!item) {
+		statusOk = false;
+	}
+	var newCost = {};
+	if (item.uid >= 0) {
+		newCost.uid = item.uid;
+	} else {
+		statusOk = false;
+	}
+	if (item.name) {
+		newCost.name = item.name;
+	} else {
+		statusOk = false;
+	}
+	newCost.subCostIDs = item.subCostIDs || [];
+	if (!statusOk) newCost = undefined;
+	return newCost;
+}
+
 // Generates hash using bCrypt
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
@@ -2080,16 +2180,34 @@ router.route('/:vcid/group/:groupid')
 			// var newTimeStamp = req.body.timestamp || (req.body.value && req.body.value.validFrom);
 			var newTimeStamp = req.body.timestamp;
 			if (vcSetting.type == 'organisation') {
+				// normalize the organisaion to defined values
+				var value = req.body.value;
+				var orga = {};
+				orga.allRoles = [];
+				value.allRoles.forEach(item => {
+					var newRole = generateNewRole(item);
+					orga.allRoles.push(newRole);
+				});
+
+				orga.allCosts = [];
+				value.allCosts.forEach(item => {
+					var newCost = generateNewCost(item);
+					orga.allCosts.push(newCost);
+				});
+				if (!visboBusiness.verifyOrganisation(orga, undefined)) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Incorrect Information in organisation',
+						organisation: orga
+					});
+				}
+				vcSetting.value = orga;
 				// use validFrom if timestamp is not set and validFrom is set
-				newTimeStamp = req.body.timestamp || (req.body.value && req.body.value.validFrom);
+				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
 				// set timestamp to beginning of month
 				newTimeStamp.setDate(1);
 				newTimeStamp.setHours(0,0,0,0);
-				vcSetting.value.allRoles.forEach(item => {
-					item.tagessatzExtern = undefined;
-					item.externeKapazitaet = undefined;
-				});
 			} else {
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 			}
@@ -2348,11 +2466,30 @@ router.route('/:vcid/group/:groupid')
 					if (req.body.value) oneVCSetting.value = req.body.value;
 					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
 					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
-					if (oneVCSetting.type == 'organisation') {
-						oneVCSetting.value.allRoles.forEach(item => {
-							delete item.tagessatzExtern;
-							delete item.externeKapazitaet;
+					if (oneVCSetting.type == 'organisation' && req.body.value) {
+						// normalize the organisaion to defined values
+						var value = req.body.value;
+						var orga = {};
+						orga.allRoles = [];
+						value.allRoles.forEach(item => {
+							var newRole = generateNewRole(item);
+							orga.allRoles.push(newRole);
 						});
+
+						orga.allCosts = [];
+						value.allCosts.forEach(item => {
+							var newCost = generateNewCost(item);
+							orga.allCosts.push(newCost);
+						});
+
+						if (!visboBusiness.verifyOrganisation(orga, undefined)) {
+							return res.status(400).send({
+								state: 'failure',
+								message: 'Incorrect Information in organisation',
+								organisation: orga
+							});
+						}
+						oneVCSetting.value = orga;
 					}
 				}
 				oneVCSetting.save(function(err, resultVCSetting) {

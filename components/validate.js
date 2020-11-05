@@ -112,6 +112,15 @@ var validateEmail = function(email, allowEmpty) {
 	return true;
 };
 
+function convertNumber(str) {
+	var result = Number(str);
+	if (isNAN(result) && result.indexOf(',') >= 0) {
+		var convert = str.replace(',', ".");
+		result = Number(convert);
+	}
+	return result;
+}
+
 var evaluateLanguage = function(req) {
 	var lang;
 	if (req) {
@@ -129,5 +138,6 @@ module.exports = {
 	validateEmail: validateEmail,
 	validateDate: validateDate,
 	validateNumber: validateNumber,
-	evaluateLanguage: evaluateLanguage
+	evaluateLanguage: evaluateLanguage,
+	convertNumber: convertNumber
 };
