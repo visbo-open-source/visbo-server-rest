@@ -128,6 +128,9 @@ function generateNewRole(item) {
 		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
 		isGroup = true;
 	}
+	if (item.farbe >= 0) {
+		newRole.farbe = item.farbe;
+	}
 	if (item.isTeam) {
 		newRole.isTeam = item.isTeam;
 		isGroup = true;
@@ -179,6 +182,9 @@ function generateNewCost(item) {
 		newCost.name = item.name;
 	} else {
 		statusOk = false;
+	}
+	if (item.farbe >= 0) {
+		newCost.farbe = item.farbe;
 	}
 	// newCost.subCostIDs = item.subCostIDs || [];
 	newCost.subCostIDs = [];

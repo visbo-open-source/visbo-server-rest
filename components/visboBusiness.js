@@ -67,7 +67,7 @@ function getAllPersonalKosten(vpv, organisation) {
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
 					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
-					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
+					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatz : 0;
 					// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 					if (role &&  role.Bedarf) {
 						var dimension = role.Bedarf.length;
@@ -1406,7 +1406,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 				actRoleID = intersectArray[i].role;
 				logger4js.trace('Calculate Intersect %s Role %s', i, actRoleID);
-				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatzIntern : 0;
+				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 				teamID = intersectArray[i].teamID;
 				var phasesWithActRole = intersectArray[i].phases;
 
@@ -1472,7 +1472,7 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 		var actRoleID = concerningRoles[cR].actRole.uid;
 		var faktor = concerningRoles[cR].faktor;
 
-		var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatzIntern : 0;
+		var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 		var capaProRole = allRoles[actRoleID] ? allRoles[actRoleID].kapazitaet : 0;
 		var roleIsExtern = allRoles[actRoleID] ? allRoles[actRoleID].isExternRole : 0;
 
@@ -1552,8 +1552,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 				var team = crElem.actRole.teamIDs[t];
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
-				var teamValue = parseFloat(team.value.replace(',', '.'));
-				crElem.faktor = teamValue;
+				crElem.faktor = team.value;
 				concerningRoles.push(crElem);
 			}
 		} else {
