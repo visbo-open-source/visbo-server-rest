@@ -123,8 +123,9 @@ function generateNewRole(item) {
 
 	var isGroup = false;
 
-	newRole.subRoleIDs = item.subRoleIDs || [];
-	if (newRole.subRoleIDs.length > 0) {
+	newRole.subRoleIDs = [];
+	if (item.subRoleIDs && item.subRoleIDs.length > 0) {
+		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
 		isGroup = true;
 	}
 	if (item.isTeam) {
@@ -179,7 +180,12 @@ function generateNewCost(item) {
 	} else {
 		statusOk = false;
 	}
-	newCost.subCostIDs = item.subCostIDs || [];
+	// newCost.subCostIDs = item.subCostIDs || [];
+	newCost.subCostIDs = [];
+	if (item.subCostIDs && item.subCostIDs.length > 0) {
+		item.subCostIDs.forEach(item => newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
+		isGroup = true;
+	}
 	if (!statusOk) newCost = undefined;
 	return newCost;
 }

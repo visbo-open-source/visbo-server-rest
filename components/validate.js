@@ -114,7 +114,7 @@ var validateEmail = function(email, allowEmpty) {
 
 function convertNumber(str) {
 	var result = Number(str);
-	if (isNAN(result) && result.indexOf(',') >= 0) {
+	if (isNaN(result) && str.indexOf(',') >= 0) {
 		var convert = str.replace(',', ".");
 		result = Number(convert);
 	}
