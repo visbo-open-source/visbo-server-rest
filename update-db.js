@@ -876,25 +876,25 @@ if (currentVersion < dateBlock) {
       );
   }
 
-  var query = {vcid: {$in: vcids}, type: 'organisation', 'value.allRoles.tagessatzIntern': {$exists: true}};
-  query._id = ObjectId('5fa3e192595c155f1255e36a');
+  var query = {vcid: {$in: vcids}, type: 'organisation'};
   var vcorgs = db.vcsettings.find(query).toArray();
-  print ("convert tagessatz for VisboCenter Organisations: Count: " + vcorgs.length);
+  print ("convert tagessatz and subRoleIDs for VisboCenter Organisations: Count: " + vcorgs.length);
+  var updateCount = 0;
   for (var i=0; i < vcorgs.length; i++) {
-    print("check vcorgs", vcorgs[i].name, vcorgs[i]._id.toString());
+    // print("check vcorgs", vcorgs[i].name, vcorgs[i]._id.toString());
     var update = false;
     var allRoles = vcorgs[i] && vcorgs[i].value && vcorgs[i].value.allRoles;
     for (var j=0; j < allRoles.length; j++) {
       if (allRoles[j].tagessatzIntern > 0 && allRoles[j].tagessatzIntern != allRoles[j].tagessatz) {
-        print("modify vcorgs tagessatz", vcorgs[i].name, "Role", allRoles[j].uid);
+        // print("modify vcorgs tagessatz", vcorgs[i].name, "Role", allRoles[j].uid);
         allRoles[j].tagessatz = allRoles[j].tagessatzIntern;
         update = true;
       }
       if (allRoles[j].subRoleIDs && allRoles[j].subRoleIDs.length > 0 ) {
-        print("verify subRoleIDS", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].subRoleIDs.length);
+        // print("verify subRoleIDS", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].subRoleIDs.length);
         for (var k=0; k < allRoles[j].subRoleIDs.length; k++) {
           var subRole = allRoles[j].subRoleIDs[k];
-          print("verify subRole", typeof subRole.key, typeof subRole.value, JSON.stringify(subRole));
+          // print("verify subRole", typeof subRole.key, typeof subRole.value, JSON.stringify(subRole));
           if (typeof subRole.key == 'string' || typeof subRole.value == 'string') {
             subRole.key = Number(subRole.key);
             var str = subRole.value.replace(',', '.');
@@ -904,43 +904,30 @@ if (currentVersion < dateBlock) {
           }
         }
       }
+      if (allRoles[j].teamIDs && allRoles[j].teamIDs.length > 0 ) {
+        // print("verify teamIDs", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].teamIDs.length);
+        for (var k=0; k < allRoles[j].teamIDs.length; k++) {
+          var subTeam = allRoles[j].teamIDs[k];
+          // print("verify subTeam", typeof subTeam.key, typeof subTeam.value, JSON.stringify(subTeam));
+          if (typeof subTeam.key == 'string' || typeof subTeam.value == 'string') {
+            subTeam.key = Number(subTeam.key);
+            var str = subTeam.value.replace(',', '.');
+            subTeam.value = Number(str);
+            print("update subTeam", JSON.stringify(subTeam));
+            update = true;
+          }
+        }
+      }
     }
     if (update) {
       print("update orga", vcorgs[i].name, vcorgs[i]._id.toString());
+      db.vcsettings.replaceOne({_id: vcorgs[i]._id}, vcorgs[i]);
+      updateCount += 1;
     }
   }
 
-
-  // if (vcorgs.length > 0) {
-  //   // set isTeam Attribute
-  //   db.vcsettings.updateMany(
-  //       query,
-  //       {$set: {'value.allRoles.$[elem].tagessatz1': "$value.allRoles.$[elem].tagessatzIntern"}},
-  //       {arrayFilters: [ { $and: [{ "elem.tagessatzIntern": { $gt: -1 }}, {"elem.tagessatz": { $exists: false }} ] } ] }
-  //     );
-  // }
-  //
-  // { $and: [{"x.a": {$gt: 85}}, {"x.b": {$gt: 80}}] }
-
-  // for (var i=0; i<vcListAll.length; i++) {
-  //   vc = vcListAll[i]
-  //   db.visbocenters.updateOne({_id: vc._id}, {$set: {deletedAt: vc.deleted.deletedAt}})
-  // }
-  //
-  // if (vcorgs.length > 0) {
-  //   db.vcsettings.updateMany(
-  //       {vcid: {$in: vcids}, type: 'organisation'},
-  //       {$unset: {'value.allRoles.$[elem].tagessatzExtern': true}},
-  //       {arrayFilters: [ { "elem.tagessatzExtern": { $eq: 0 } } ] }
-  //     );
-  //
-  //   db.vcsettings.updateMany(
-  //       {vcid: {$in: vcids}, type: 'organisation'},
-  //       {$unset: {'value.allRoles.$[elem].externeKapazitaet': true}},
-  //       {arrayFilters: [ { "elem.externeKapazitaet": { $eq: null } } ] }
-  //     );
-  // }
-  print("Finished Fix Change Orga tagessatzIntern, isTeam, subRoleIDs ", vcorgs.length);
+  print("Finished Fix Change Orga tagessatzIntern, subRoleIDs ", updateCount);
+  
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock

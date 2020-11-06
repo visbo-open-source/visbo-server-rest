@@ -135,7 +135,10 @@ function generateNewRole(item) {
 		newRole.isTeam = item.isTeam;
 		isGroup = true;
 	}
-	newRole.teamIDs = item.teamIDs || [];
+	newRole.teamIDs = [];
+	if (item.teamIDs && item.teamIDs.length > 0) {
+		item.teamIDs.forEach(item => newRole.teamIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
+	}
 	if (!isGroup) {
 		if (item.defaultKapa >= 0) {
 			newRole.defaultKapa = item.defaultKapa;
