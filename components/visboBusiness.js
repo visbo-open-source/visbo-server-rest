@@ -956,7 +956,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.costBaseLastTotal = getSummeKosten(pfv, timeZonesPFV, indexTotal);
 
 				indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
-				indexActual = getColumnOfDate(vpv.actualDataUntil) - getColumnOfDate(vpv.startDate);
+				indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate);
 				var timeZonesVPV = splitInTimeZones(organisations, vpv.startDate, vpv.endDate);
 				keyMetrics.costCurrentTotal= getSummeKosten(vpv, timeZonesVPV, indexTotal);
 				keyMetrics.costCurrentActual= getSummeKosten(vpv, timeZonesVPV, indexActual);
