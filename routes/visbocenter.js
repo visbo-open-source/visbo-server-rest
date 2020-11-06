@@ -128,12 +128,13 @@ function generateNewRole(item) {
 		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
 		isGroup = true;
 	}
-	if (item.farbe >= 0) {
-		newRole.farbe = item.farbe;
-	}
 	newRole.teamIDs = [];
 	if (item.teamIDs && item.teamIDs.length > 0) {
 		item.teamIDs.forEach(item => newRole.teamIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
+	}
+
+	if (item.farbe >= 0) {
+		newRole.farbe = item.farbe;
 	}
 	if (item.isTeam || item.isTeamParent) {
 		newRole.isTeam = item.isTeam;
