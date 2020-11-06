@@ -856,6 +856,84 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2020-11-06T00:00:00"
+if (currentVersion < dateBlock) {
+  // convert organisation
+  var vcidlist = db.vcsettings.find({type: 'organisation'}, {vcid:1} ).toArray();
+  var vcids = [];
+  vcidlist.forEach(item => vcids.push(item.vcid));
+  print ("Convert Organisation for VisboCenters: Count: " + vcids.length);
+
+  var query = {vcid: {$in: vcids}, type: 'organisation', 'value.allRoles.isTeamParent': true};
+  var vcorgs = db.vcsettings.find(query, {_id:1, type:1}).toArray();
+  print ("convert isTeamParent for VisboCenter Organisations: Count: " + vcorgs.length);
+  if (vcorgs.length > 0) {
+    // set isTeam Attribute to true for isTeamParent = true
+    db.vcsettings.updateMany(
+        query,
+        {$set: {'value.allRoles.$[elem].isTeam': true}},
+        {arrayFilters: [ { "elem.isTeamParent": { $eq: true } } ] }
+      );
+  }
+
+  var query = {vcid: {$in: vcids}, type: 'organisation'};
+  var vcorgs = db.vcsettings.find(query).toArray();
+  print ("convert tagessatz and subRoleIDs for VisboCenter Organisations: Count: " + vcorgs.length);
+  var updateCount = 0;
+  for (var i=0; i < vcorgs.length; i++) {
+    // print("check vcorgs", vcorgs[i].name, vcorgs[i]._id.toString());
+    var update = false;
+    var allRoles = vcorgs[i] && vcorgs[i].value && vcorgs[i].value.allRoles;
+    for (var j=0; j < allRoles.length; j++) {
+      if (allRoles[j].tagessatzIntern > 0 && allRoles[j].tagessatzIntern != allRoles[j].tagessatz) {
+        // print("modify vcorgs tagessatz", vcorgs[i].name, "Role", allRoles[j].uid);
+        allRoles[j].tagessatz = allRoles[j].tagessatzIntern;
+        update = true;
+      }
+      if (allRoles[j].subRoleIDs && allRoles[j].subRoleIDs.length > 0 ) {
+        // print("verify subRoleIDS", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].subRoleIDs.length);
+        for (var k=0; k < allRoles[j].subRoleIDs.length; k++) {
+          var subRole = allRoles[j].subRoleIDs[k];
+          // print("verify subRole", typeof subRole.key, typeof subRole.value, JSON.stringify(subRole));
+          if (typeof subRole.key == 'string' || typeof subRole.value == 'string') {
+            subRole.key = Number(subRole.key);
+            var str = subRole.value.replace(',', '.');
+            subRole.value = Number(str);
+            print("update subRole", JSON.stringify(subRole));
+            update = true;
+          }
+        }
+      }
+      if (allRoles[j].teamIDs && allRoles[j].teamIDs.length > 0 ) {
+        // print("verify teamIDs", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].teamIDs.length);
+        for (var k=0; k < allRoles[j].teamIDs.length; k++) {
+          var subTeam = allRoles[j].teamIDs[k];
+          // print("verify subTeam", typeof subTeam.key, typeof subTeam.value, JSON.stringify(subTeam));
+          if (typeof subTeam.key == 'string' || typeof subTeam.value == 'string') {
+            subTeam.key = Number(subTeam.key);
+            var str = subTeam.value.replace(',', '.');
+            subTeam.value = Number(str);
+            print("update subTeam", JSON.stringify(subTeam));
+            update = true;
+          }
+        }
+      }
+    }
+    if (update) {
+      print("update orga", vcorgs[i].name, vcorgs[i]._id.toString());
+      db.vcsettings.replaceOne({_id: vcorgs[i]._id}, vcorgs[i]);
+      updateCount += 1;
+    }
+  }
+
+  print("Finished Fix Change Orga tagessatzIntern, subRoleIDs ", updateCount);
+  
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
