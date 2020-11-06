@@ -131,13 +131,13 @@ function generateNewRole(item) {
 	if (item.farbe >= 0) {
 		newRole.farbe = item.farbe;
 	}
-	if (item.isTeam || item.isTeamParent) {
-		newRole.isTeam = item.isTeam;
-		isGroup = true;
-	}
 	newRole.teamIDs = [];
 	if (item.teamIDs && item.teamIDs.length > 0) {
 		item.teamIDs.forEach(item => newRole.teamIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
+	}
+	if (item.isTeam || item.isTeamParent) {
+		newRole.isTeam = item.isTeam;
+		isGroup = true;
 	}
 	if (!isGroup) {
 		if (item.defaultKapa >= 0) {
