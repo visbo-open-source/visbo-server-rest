@@ -357,7 +357,7 @@ function getVCOrganisation(vcid, req, res, next) {
 	if (req.method == 'POST') {
 		queryVCSetting.select('-value.allRoles.kapazitaet');
 	}
-	queryVCSetting.sort('-timestamp');
+	queryVCSetting.sort('+timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
