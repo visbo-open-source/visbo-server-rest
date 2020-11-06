@@ -856,6 +856,97 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2020-11-06T00:00:00"
+if (currentVersion < dateBlock) {
+  // convert organisation
+  var vcidlist = db.vcsettings.find({type: 'organisation'}, {vcid:1} ).toArray();
+  var vcids = [];
+  vcidlist.forEach(item => vcids.push(item.vcid));
+  print ("Convert Organisation for VisboCenters: Count: " + vcids.length);
+
+  var query = {vcid: {$in: vcids}, type: 'organisation', 'value.allRoles.isTeamParent': true};
+  var vcorgs = db.vcsettings.find(query, {_id:1, type:1}).toArray();
+  print ("convert isTeamParent for VisboCenter Organisations: Count: " + vcorgs.length);
+  if (vcorgs.length > 0) {
+    // set isTeam Attribute to true for isTeamParent = true
+    db.vcsettings.updateMany(
+        query,
+        {$set: {'value.allRoles.$[elem].isTeam': true}},
+        {arrayFilters: [ { "elem.isTeamParent": { $eq: true } } ] }
+      );
+  }
+
+  var query = {vcid: {$in: vcids}, type: 'organisation', 'value.allRoles.tagessatzIntern': {$exists: true}};
+  query._id = ObjectId('5fa3e192595c155f1255e36a');
+  var vcorgs = db.vcsettings.find(query).toArray();
+  print ("convert tagessatz for VisboCenter Organisations: Count: " + vcorgs.length);
+  for (var i=0; i < vcorgs.length; i++) {
+    print("check vcorgs", vcorgs[i].name, vcorgs[i]._id.toString());
+    var update = false;
+    var allRoles = vcorgs[i] && vcorgs[i].value && vcorgs[i].value.allRoles;
+    for (var j=0; j < allRoles.length; j++) {
+      if (allRoles[j].tagessatzIntern > 0 && allRoles[j].tagessatzIntern != allRoles[j].tagessatz) {
+        print("modify vcorgs tagessatz", vcorgs[i].name, "Role", allRoles[j].uid);
+        allRoles[j].tagessatz = allRoles[j].tagessatzIntern;
+        update = true;
+      }
+      if (allRoles[j].subRoleIDs && allRoles[j].subRoleIDs.length > 0 ) {
+        print("verify subRoleIDS", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].subRoleIDs.length);
+        for (var k=0; k < allRoles[j].subRoleIDs.length; k++) {
+          var subRole = allRoles[j].subRoleIDs[k];
+          print("verify subRole", typeof subRole.key, typeof subRole.value, JSON.stringify(subRole));
+          if (typeof subRole.key == 'string' || typeof subRole.value == 'string') {
+            subRole.key = Number(subRole.key);
+            var str = subRole.value.replace(',', '.');
+            subRole.value = Number(str);
+            print("update subRole", JSON.stringify(subRole));
+            update = true;
+          }
+        }
+      }
+    }
+    if (update) {
+      print("update orga", vcorgs[i].name, vcorgs[i]._id.toString());
+    }
+  }
+
+
+  // if (vcorgs.length > 0) {
+  //   // set isTeam Attribute
+  //   db.vcsettings.updateMany(
+  //       query,
+  //       {$set: {'value.allRoles.$[elem].tagessatz1': "$value.allRoles.$[elem].tagessatzIntern"}},
+  //       {arrayFilters: [ { $and: [{ "elem.tagessatzIntern": { $gt: -1 }}, {"elem.tagessatz": { $exists: false }} ] } ] }
+  //     );
+  // }
+  //
+  // { $and: [{"x.a": {$gt: 85}}, {"x.b": {$gt: 80}}] }
+
+  // for (var i=0; i<vcListAll.length; i++) {
+  //   vc = vcListAll[i]
+  //   db.visbocenters.updateOne({_id: vc._id}, {$set: {deletedAt: vc.deleted.deletedAt}})
+  // }
+  //
+  // if (vcorgs.length > 0) {
+  //   db.vcsettings.updateMany(
+  //       {vcid: {$in: vcids}, type: 'organisation'},
+  //       {$unset: {'value.allRoles.$[elem].tagessatzExtern': true}},
+  //       {arrayFilters: [ { "elem.tagessatzExtern": { $eq: 0 } } ] }
+  //     );
+  //
+  //   db.vcsettings.updateMany(
+  //       {vcid: {$in: vcids}, type: 'organisation'},
+  //       {$unset: {'value.allRoles.$[elem].externeKapazitaet': true}},
+  //       {arrayFilters: [ { "elem.externeKapazitaet": { $eq: null } } ] }
+  //     );
+  // }
+  print("Finished Fix Change Orga tagessatzIntern, isTeam, subRoleIDs ", vcorgs.length);
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

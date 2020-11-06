@@ -131,7 +131,7 @@ function generateNewRole(item) {
 	if (item.farbe >= 0) {
 		newRole.farbe = item.farbe;
 	}
-	if (item.isTeam) {
+	if (item.isTeam || item.isTeamParent) {
 		newRole.isTeam = item.isTeam;
 		isGroup = true;
 	}
