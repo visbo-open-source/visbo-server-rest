@@ -1018,12 +1018,13 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 
 	var capaVPV = calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy);
 	var capaPFV = [];
+	var item;
 
 	if (pfvs) {
 		// calc the corresponding of the PFVs
 		capaPFV = calcCapacityVPVs(pfvs, roleIdentifier, organisations, hierarchy);
 		// insert or update capa values
-		for (var item in capaPFV) {
+		for (item in capaPFV) {
 			if (!capaVPV[item]) {
 				// insert new Value
 				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
@@ -1044,7 +1045,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 	}
 
 	var capa = [];
-	for (var item in capaVPV) {
+	for (item in capaVPV) {
 		const actMonthISO = item.substr(0, 24);
 		const roleID = item.substr(25);
 		capa.push({
@@ -1128,7 +1129,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 			for (var j=0; j < role.subRoleIDs.length; j++) {
 				var subrole = allRoles.find(item => item.uid == role.subRoleIDs[j].key);
 				if (!subrole) {
-					continue
+					continue;
 				}
 				roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Main role
 			}
@@ -1137,7 +1138,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
 	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
-		var roleID = roleIDs[roleIndex].uid;
+		roleID = roleIDs[roleIndex].uid;
 		var roleName = roleIDs[roleIndex].roleName;
 		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {

@@ -2285,7 +2285,7 @@ router.route('/:vpid/portfolio')
 		query.vpid = req.oneVP._id;
 		var refDate;
 		if (req.query.refDate && Date.parse(req.query.refDate)) {
-			refDate = new Date(req.query.refDate)
+			refDate = new Date(req.query.refDate);
 		} else if (req.query.refDate == '') {
 			refDate = new Date();
 		}
