@@ -12,6 +12,8 @@ var moment = require('moment');
 var process = require('process');
 var os = require( 'os' );
 
+var passport = require('passport')
+
 var logging = require('./components/logging');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger('OTHER');
@@ -211,11 +213,12 @@ i18n.configure({
     directory: __dirname + '/i18n'
 });
 app.use(i18n.init);
-// logger4js.warn('Starting Localised %s', i18n.__('Hello'));
-
 logger4js.warn('Internationalisation done');
+
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
+
+app.use(passport.initialize());
 
 // define the log entry for processing pages
 app.use(logger(function (tokens, req, res) {

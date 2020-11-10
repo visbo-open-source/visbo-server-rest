@@ -10,6 +10,9 @@ var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
+var passport = require('passport')
+var GoogleStrategy = require('passport-google-oauth20').Strategy;
+
 var moment = require('moment');
 moment.locale('de');
 
@@ -54,6 +57,29 @@ var isValidPassword = function(user, password){
 var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
+
+passport.use(new GoogleStrategy({
+    clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
+    clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
+    callbackURL: "http://localhost:3484/token/user/googleRedirect"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+		// logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
+		logger4js.trace("Profile", profile)
+    logger4js.info("GOOGLE BASED OAUTH VALIDATION for ", profile && profile.displayName);
+		return cb(null, profile) // MS TODO: What is the callback Function
+  }
+));
+
+passport.serializeUser(function(user, cb) {
+    logger4js.info('User authenticated', JSON.stringify(user));
+    cb(null, user);
+});
+
+passport.deserializeUser(function(obj, cb) {
+    logger4js.info('User not authenticated', JSON.stringify(obj))
+    cb(null, obj);
+});
 
 router.route('/user/login')
 
@@ -313,6 +339,173 @@ router.route('/user/login')
 			}
 		});
 	});
+
+router.route('/user/logingoogle')
+
+	// get google authentication
+	.get(passport.authenticate('google', { scope: ['profile','email'] }))
+	// .get(function(req, res) {
+	// 	req.auditDescription = 'Login (Google)';
+	// 	req.auditTTLMode = 1;
+	//
+	// 	var result = passport.authenticate('google', { scope: ['profile', 'email'] });
+	// 	console.log('logingoogle result', JSON.stringify(result));
+	// })
+
+router.route('/user/googleRedirect')
+
+	// get google confirmation
+	.get(passport.authenticate('google'),(req, res)=>{
+	    logger4js.info('redirected', req.user && req.user.displayName)
+	    let user = {
+	        displayName: req.user.displayName,
+	        name: req.user.name.givenName,
+	        email: req.user._json.email,
+	        provider: req.user.provider }
+	    logger4js.debug("google Redirect", user)
+
+			var currentDate = new Date();
+			req.auditDescription = 'Login';
+
+			logger4js.info('Try to Login google user %s', user.email);
+			logger4js.debug('Login Headers %O', req.headers);
+			var lang = validate.evaluateLanguage(req);
+	    logger4js.debug('The Accepted Language is: ' + lang);
+			req.body.email = user.email.toLowerCase().trim();
+			req.visboUserAgent = visboShortUA(req.headers['user-agent']);
+			logger4js.debug('Shortened User Agent ', req.visboUserAgent);
+
+			visbouser.findOne({ 'email' : req.body.email }, function(err, user) {
+				if (err) {
+					errorHandler(err, res, `DB: POST Login ${req.body.email} Find `, 'Error Login Failed');
+					return;
+				}
+				if (!user) {
+					logger4js.info('User not Found', req.body.email);
+					return res.status(403).send({
+						state: 'failure',
+						message: 'email not registered for this authentication'
+					});
+				}
+				logger4js.debug('Try to Login User Found %s', user.email);
+
+				if (!user.status || !user.status.registeredAt) {
+					logger4js.warn('Login: User %s not Registered User Status %s', req.body.email, user.status ? true: false);
+					// Send Mail to User with Register Link
+					sendMail.accountNotRegistered(req, res, user);
+					return res.status(403).send({
+						state: 'failure',
+						message: 'email or password mismatch'
+					});
+				}
+				logger4js.debug('Login: User %s Check Login Retries %s', req.body.email, user.status.loginRetries);
+				var loginRetries = 3;
+				var lockMinutes = 15;
+				var loginFailedIntervalMinute = 4 * 60;
+				if (user.status.lockedUntil && user.status.lockedUntil.getTime() > currentDate.getTime()) {
+					logger4js.info('Login: User %s locked until %s', req.body.email, user.status.lockedUntil);
+					return res.status(403).send({
+						state: 'failure',
+						message: 'email or password mismatch'
+					});
+				}
+					// Login Successful
+					var message = 'Successfully logged in.';
+
+					logger4js.debug('Try to Login (google) %s user accepted', req.body.email);
+					var passwordCopy = user.password;
+					user.password = undefined;
+					if (!user.status) user.status = {};
+					// add info about the session ip and userAgent to verify during further requests to avoid session steeling
+					user.session = {};
+					user.session.ip = req.headers['x-real-ip'] || req.ip;
+					user.session.ticket = req.get('User-Agent');
+
+					var userReduced = {};
+					userReduced._id = user._id;
+					userReduced.email = user.email;
+					userReduced.profile = user.profile;
+					userReduced.status = user.status;
+					userReduced.session = user.session;
+					logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
+					// jwt.sign(user.toJSON(), jwtSecret.user.secret,
+					jwt.sign(userReduced, jwtSecret.user.secret,
+						{ expiresIn: jwtSecret.user.expiresIn },
+						function(err, token) {
+							if (err) {
+								logger4js.error('JWT Signing Error %s ', err.message);
+								return res.status(500)({
+									state: 'failure',
+									message: 'token generation failed',
+									error: err
+								});
+							}
+							logger4js.trace('JWT Signing Success ');
+							// set the last login and reset the password retries
+
+							if (!user.status) user.status = {};
+							if (!user.status.loginRetries) user.status.loginRetries = 0;
+							var lastLoginAt = user.status.lastLoginAt || currentDate;
+							user.status.lastLoginAt = currentDate;
+							user.status.loginRetries = 0;
+							user.status.lockedUntil = undefined;
+							user.password = passwordCopy;
+							user.session = undefined;
+							// Check user Agent and update or add it and send e-Mail about new login
+							var curAgent = {};
+							curAgent.userAgent = req.visboUserAgent;
+							curAgent.createdAt = new Date();
+							curAgent.lastUsedAt = curAgent.createdAt;
+							logger4js.trace('User Agent prepared %s', curAgent.userAgents);
+
+							if (!user.userAgents || user.userAgents.length == 0) {
+								user.userAgents = [];
+								user.userAgents.push(curAgent);
+								logger4js.debug('Init User Agent first Login %s', JSON.stringify(user.userAgents));
+							} else {
+								// Check List of User Agents and add or updated
+								var index = user.userAgents.findIndex(findUserAgent, curAgent);
+								if (index >= 0) {
+									user.userAgents[index].lastUsedAt = curAgent.lastUsedAt;
+								} else {
+									user.userAgents.push(curAgent);
+									// Send Mail about new Login with unknown User Agent
+									sendMail.accountNewLogin(req, res, user);
+									logger4js.debug('New Login with new User Agent %s', req.visboUserAgent);
+								}
+								// Cleanup old User Agents older than 3 Months
+								var expiredAt = new Date();
+								expiredAt.setMonth(expiredAt.getMonth()-3);
+								logger4js.trace('User before Filter %s User Agents %s', expiredAt, JSON.stringify(user.userAgents));
+								user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ));
+							}
+							logger4js.trace('User before Save User Agents %s', JSON.stringify(user.userAgents));
+							user.save(function(err, user) {
+								if (err) {
+									logger4js.error('Login User Update DB Connection %s', err.message);
+									return res.status(500).send({
+										state: 'failure',
+										message: 'database error, failed to update user',
+										error: err
+									});
+								}
+								user.password = undefined;
+								user.status.lastLoginAt = lastLoginAt;
+
+								res.header('access-key', token);
+					    	res.redirect('http://localhost:4200')
+
+								// return res.status(200).send({
+								// 	state: 'success',
+								// 	message: message,
+								// 	token: token,
+								// 	user: user
+								// });
+							});
+						}
+					);
+			});
+	})
 
 router.route('/user/pwforgotten')
 
