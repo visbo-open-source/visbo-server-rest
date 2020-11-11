@@ -246,7 +246,7 @@ router.route('/')
 					logger4js.debug('VariantName %s for VP %s', queryvpv.variantName, req.oneVP.name);
 				} else {
 					// only option to get all variants or the main variant if several projects were requested
-					queryvpv.variantName = "";
+					queryvpv.variantName = '';
 				}
 			} else if (variantName != undefined){
 				logger4js.debug('Variant Query String :%s:', variantName);

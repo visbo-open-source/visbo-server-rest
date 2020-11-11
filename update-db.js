@@ -899,7 +899,7 @@ if (currentVersion < dateBlock) {
             subRole.key = Number(subRole.key);
             var str = subRole.value.replace(',', '.');
             subRole.value = Number(str);
-            print("update subRole", JSON.stringify(subRole));
+            // print("update subRole", JSON.stringify(subRole));
             update = true;
           }
         }
@@ -927,7 +927,7 @@ if (currentVersion < dateBlock) {
   }
 
   print("Finished Fix Change Orga tagessatzIntern, subRoleIDs ", updateCount);
-  
+
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
