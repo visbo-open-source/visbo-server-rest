@@ -62,6 +62,8 @@ router.route('/user/login')
 	* @apiVersion 1.0.0
 	* @apiGroup Authentication
 	* @apiName UserLogin
+	* @apiDescription POST Login returns if it was successful an access token and the user profile information
+	* of the authenticated user. The token has to be passed to every subsequent API Call in the header with name "access-key"
 	* @apiPermission none
 	* @apiError {number} 401 user & password do not match
 	* @apiError {number} 400 User or password missing
