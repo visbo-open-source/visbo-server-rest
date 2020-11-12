@@ -8,13 +8,13 @@ var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
 var errorHandler = require('./../components/errorhandler').handler;
-var getSystemUrl = require('./../components/systemVC').getSystemUrl;
+var systemVC = require('./../components/systemVC');
+var getSystemVCSetting = systemVC.getSystemVCSetting;
+var getSystemUrl = systemVC.getSystemUrl;
+var getReSTUrl = systemVC.getReSTUrl;
 
 var passport = require('passport')
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
-
-var moment = require('moment');
-moment.locale('de');
 
 var useragent = require('useragent');
 var eMailTemplates = '/../emailTemplates/';
@@ -61,7 +61,7 @@ var createHash = function(secret){
 passport.use(new GoogleStrategy({
     clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
     clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
-    callbackURL: "http://localhost:3484/token/user/googleRedirect"
+    callbackURL: (getSystemUrl() || 'http://localhost:3484').concat('/token/user/googleRedirect')
   },
   function(accessToken, refreshToken, profile, cb) {
 		// logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
@@ -343,6 +343,7 @@ router.route('/user/login')
 router.route('/user/logingoogle')
 
 	// get google authentication
+	// MS TODO: setup as middleware function??
 	.get(passport.authenticate('google', { scope: ['profile','email'] }))
 	// .get(function(req, res) {
 	// 	req.auditDescription = 'Login (Google)';
@@ -492,8 +493,15 @@ router.route('/user/googleRedirect')
 								user.password = undefined;
 								user.status.lastLoginAt = lastLoginAt;
 
+								// MS TODO: store a hash and the token
+
 								res.header('access-key', token);
-					    	res.redirect('http://localhost:4200')
+								var uiURL = getSystemUrl().concat('/oauthconfirm');
+								// MS TODO: do not sent the token as parameter but instead use a hash
+								if (token) {
+									uiURL = uiURL.concat('?hash=', token);
+								}
+					    	res.redirect(uiURL)
 
 								// return res.status(200).send({
 								// 	state: 'success',

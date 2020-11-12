@@ -231,11 +231,25 @@ var getSystemUrl = function () {
 	return result;
 };
 
+var getReSTUrl = function () {
+	var vcSetting = getSystemVCSetting('UI URL');
+	var result = vcSetting && vcSetting.value && vcSetting.value.UIUrl;
+	if (!result || result.indexOf('http://localhost') == 0) {
+		result = 'http://localhost:3484';
+	} else {
+		result = result.concat('/api')
+	}
+	logger4js.debug('Get VISBO System Url: %s', result);
+
+	return result;
+};
+
 module.exports = {
 	createSystemVC: createSystemVC,
 	getSystemVC: getSystemVC,
 	getSystemVCSetting: getSystemVCSetting,
 	getSystemUrl: getSystemUrl,
+	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
 	reloadSystemSetting: reloadSystemSetting
 };
