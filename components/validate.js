@@ -104,7 +104,7 @@ var validateEmail = function(email, allowEmpty) {
 		logger4js.info('Check Name: No Domain part? %s', email);
 		return false;
 	}
-	emailPart = emailPart[1].split('.')
+	emailPart = emailPart[1].split('.');
 	if (emailPart.length < 2 || emailPart[0].length == 0 || emailPart[1].length == 0) {
 		logger4js.info('Check Name: No correct domain separator ? %s', email);
 		return false;
@@ -115,7 +115,7 @@ var validateEmail = function(email, allowEmpty) {
 function convertNumber(str) {
 	var result = Number(str);
 	if (isNaN(result) && str.indexOf(',') >= 0) {
-		var convert = str.replace(',', ".");
+		var convert = str.replace(',', '.');
 		result = Number(convert);
 	}
 	return result;

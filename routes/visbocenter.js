@@ -86,8 +86,8 @@ function squeezeSetting(item, email) {
 
 function generateNewRole(item) {
 	var statusOk = true;
-	var minDate = new Date("0001-01-01");
-	var maxDate = new Date("2200-01-01");
+	var minDate = new Date('0001-01-01');
+	var maxDate = new Date('2200-01-01');
 	if (!item) {
 		statusOk = false;
 	}
@@ -106,13 +106,13 @@ function generateNewRole(item) {
 		newRole.employeeNr = item.employeeNr;
 	}
 	if (item.entryDate) {
-		var entryDate = new Date(item.entryDate)
+		var entryDate = new Date(item.entryDate);
 		if (entryDate.getTime() > minDate.getTime()) {
 			newRole.entryDate = item.entryDate;
 		}
 	}
 	if (item.exitDate) {
-		var exitDate = new Date(item.exitDate)
+		var exitDate = new Date(item.exitDate);
 		if (exitDate.getTime() < maxDate.getTime()) {
 			newRole.exitDate = item.exitDate;
 		}
@@ -158,7 +158,7 @@ function generateNewRole(item) {
 			newRole.tagessatz = item.tagessatz;
 		}
 		if (item.startOfCal) {
-			var startOfCal = new Date(item.startOfCal)
+			var startOfCal = new Date(item.startOfCal);
 			if (startOfCal.getTime() < startOfCal.getTime()) {
 				newRole.startOfCal = item.startOfCal;
 			}
@@ -194,7 +194,6 @@ function generateNewCost(item) {
 	newCost.subCostIDs = [];
 	if (item.subCostIDs && item.subCostIDs.length > 0) {
 		item.subCostIDs.forEach(item => newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-		isGroup = true;
 	}
 	if (!statusOk) newCost = undefined;
 	return newCost;
