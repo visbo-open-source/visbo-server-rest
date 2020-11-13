@@ -218,8 +218,6 @@ logger4js.warn('Internationalisation done');
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
 
-app.use(passport.initialize());
-
 // define the log entry for processing pages
 app.use(logger(function (tokens, req, res) {
   // ignore calls for OPTIONS
@@ -279,6 +277,9 @@ app.use(function(req, res, next) {
   logger4js.trace('Method %s %s', req.method, req.url);
   next();
 });
+
+app.use(passport.initialize());
+logger4js.warn('OAuth Google done');
 
 // // Catch all routes from the ui client and return the index file
 // app.get('/ui/*', (req, res) => {

@@ -26,7 +26,7 @@ var redisClient = undefined;
 
 // Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body) {
-	logger4js.info('Create System VISBO Center if not existent');
+	logger4js.debug('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
 		logger4js.warn('No Body or no users System VISBO Center %s', body);
 		return undefined;
@@ -49,7 +49,7 @@ var createSystemVC = function (body) {
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
-		logger4js.debug('Create System VISBO Center ');
+		logger4js.warn('No System VISBO Center, Create a new one');
 		var newVC = new VisboCenter();
 		newVC.name = nameSystemVC;
 		newVC.system = true;

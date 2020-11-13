@@ -61,23 +61,24 @@ var createHash = function(secret){
 passport.use(new GoogleStrategy({
     clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
     clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
-    callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
+    // callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
+		callbackURL: 'http://localhost:348/token/user/googleRedirect'
   },
   function(accessToken, refreshToken, profile, cb) {
-		// logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
+		logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
 		logger4js.trace("Profile", profile)
-    logger4js.info("GOOGLE BASED OAUTH VALIDATION for ", profile && profile.displayName);
+    logger4js.warn("GOOGLE BASED OAUTH VALIDATION for ", profile && profile.displayName);
 		return cb(null, profile) // MS TODO: What is the callback Function
   }
 ));
 
 passport.serializeUser(function(user, cb) {
-    logger4js.debug('User authenticated', JSON.stringify(user));
+    logger4js.warn('User authenticated', JSON.stringify(user));
     cb(null, user);
 });
 
 passport.deserializeUser(function(obj, cb) {
-    logger4js.debug('User not authenticated', JSON.stringify(obj))
+    logger4js.warn('User not authenticated', JSON.stringify(obj))
     cb(null, obj);
 });
 
