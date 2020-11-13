@@ -145,42 +145,42 @@ router.route('/pwpolicy')
 		});
 	});
 
-router.route('/setting')
-/**
-	* @api {get} /status/setting Get Settings of ReST Server
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO System
-	* @apiName GetSettings
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/status/setting
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*  'state':'success',
-	*  'message':'VISBO ReST Settings',
-	*  'vcsetting':[{
-	*    'name': 'OAuthGoogle',
-  *    'type': 'boolean',
-  *    'value': '1'
-	*  }]
-	* }
-	*/
-// get status/setting
-	.get(function(req, res) {
-		req.auditDescription = 'Status Setting Read (Public)';
-		req.auditTTLMode = 3;
-    logger4js.info('Get Settings from ReST Server ');
-    var vcsetting = [];
-    if (getSystemVCSetting('OAuthGoogle')) {
-      vcsetting.push({name: 'OAuthGoogle', type: 'boolean', value: '1'} );
-    }
+  router.route('/setting')
+  /**
+  	* @api {get} /status/setting Get Settings of ReST Server
+  	* @apiVersion 1.0.0
+  	* @apiGroup VISBO System
+  	* @apiName GetSettings
+  	* @apiExample Example usage:
+  	*   url: https://my.visbo.net/api/status/setting
+  	* @apiSuccessExample {json} Success-Response:
+  	* HTTP/1.1 200 OK
+  	* {
+  	*  'state':'success',
+  	*  'message':'VISBO ReST Settings',
+  	*  'vcsetting':[{
+  	*    'name': 'OAuthGoogle',
+    *    'type': 'boolean',
+    *    'value': '1'
+  	*  }]
+  	* }
+  	*/
+  // get status/setting
+  	.get(function(req, res) {
+  		req.auditDescription = 'Status Setting Read (Public)';
+  		req.auditTTLMode = 3;
+      logger4js.info('Get Settings from ReST Server ');
+      var vcsetting = [];
+      if (getSystemVCSetting('OAuthGoogle')) {
+        vcsetting.push({name: 'OAuthGoogle', type: 'boolean', value: '1'} );
+      }
 
-		return res.status(200).send({
-			state: 'success',
-			message: 'VISBO ReST Settings (Public)',
-			vcsetting: vcsetting
-		});
-	});
+  		return res.status(200).send({
+  			state: 'success',
+  			message: 'VISBO ReST Settings (Public)',
+  			vcsetting: vcsetting
+  		});
+  	});
 
   router.route('/test')
   // get status/test
