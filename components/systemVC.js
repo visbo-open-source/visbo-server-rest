@@ -25,7 +25,7 @@ var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
 // Verify/Create VISBO Center with an initial user
-var createSystemVC = function (body) {
+var createSystemVC = function (body, launchServer) {
 	logger4js.debug('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
 		logger4js.warn('No Body or no users System VISBO Center %s', body);
@@ -45,7 +45,7 @@ var createSystemVC = function (body) {
 			vcSystem = vc;
 			// redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
-			initSystemSettings(vcSystem._id.toString());
+			initSystemSettings(launchServer);
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
@@ -95,9 +95,13 @@ var getSystemVC = function () {
 	return vcSystem;
 };
 
-var initSystemSettings = function() {
+var initSystemSettings = function(launchServer) {
 	// Get the Default Log Level from DB
-	if (!vcSystem) return;
+	logger4js.warn('Check System VC during init setting');
+	if (!vcSystem) {
+		logger4js.warn('No System VC during init setting');
+		return;
+	}
 	var query = {};
 	query.vcid = vcSystem._id;
 	query.type = 'SysConfig';
@@ -125,6 +129,7 @@ var initSystemSettings = function() {
 		}
 		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4);
 		logging.setLogLevelConfig(getSystemVCSetting('DEBUG').value);
+		launchServer();
 
 		logger4js.info('Cache System Setting last Updated %s', lastUpdatedAt.toISOString());
 	});
