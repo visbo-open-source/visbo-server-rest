@@ -206,7 +206,7 @@ function dbConnect(dbconnection, launchServer) {
 }
 
 function launchServer() {
-  logger4js.warn('launch Server started', app? 'app defined' : 'app undefined');
+  logger4js.warn('Launch Server after DB Connection');
 
   visboTaskScheduleInit();
   app.use(express.static(path.join(__dirname, 'public'), options));

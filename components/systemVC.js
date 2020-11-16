@@ -97,7 +97,7 @@ var getSystemVC = function () {
 
 var initSystemSettings = function(launchServer) {
 	// Get the Default Log Level from DB
-	logger4js.warn('Check System VC during init setting');
+	logger4js.info('Check System VC during init setting');
 	if (!vcSystem) {
 		logger4js.warn('No System VC during init setting');
 		return;
@@ -129,8 +129,9 @@ var initSystemSettings = function(launchServer) {
 		}
 		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4);
 		logging.setLogLevelConfig(getSystemVCSetting('DEBUG').value);
-		launchServer();
-
+		if (launchServer) {
+			launchServer();
+		}
 		logger4js.info('Cache System Setting last Updated %s', lastUpdatedAt.toISOString());
 	});
 };

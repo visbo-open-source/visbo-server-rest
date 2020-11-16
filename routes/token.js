@@ -61,8 +61,8 @@ var createHash = function(secret){
 passport.use(new GoogleStrategy({
     clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
     clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
-    // callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
-		callbackURL: 'http://localhost:3484/token/user/googleRedirect'
+    callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
+		// callbackURL: 'http://localhost:3484/token/user/googleRedirect'
   },
   function(accessToken, refreshToken, profile, cb) {
 		logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
