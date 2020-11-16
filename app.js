@@ -35,19 +35,6 @@ require('./models/vcsetting');
 
 var systemVC = require('./components/systemVC');
 
-// include the route modules
-var user = require('./routes/user');
-var token = require('./routes/token');
-var vc = require('./routes/visbocenter');
-var vp = require('./routes/visboproject');
-var vpv = require('./routes/visboprojectversion');
-var audit = require('./routes/audit');
-var sysLog = require('./routes/syslog');
-var sysUser = require('./routes/sysuser');
-var status = require('./routes/status');
-
-var visboAudit = require('./components/visboAudit');
-
 // Require mongoose
 var mongoose = require('mongoose');
 var dbOptions = {
@@ -206,6 +193,19 @@ function dbConnect(dbconnection, launchServer) {
 }
 
 function launchServer() {
+  // include the route modules
+  var user = require('./routes/user');
+  var token = require('./routes/token');
+  var vc = require('./routes/visbocenter');
+  var vp = require('./routes/visboproject');
+  var vpv = require('./routes/visboprojectversion');
+  var audit = require('./routes/audit');
+  var sysLog = require('./routes/syslog');
+  var sysUser = require('./routes/sysuser');
+  var status = require('./routes/status');
+
+  var visboAudit = require('./components/visboAudit');
+
   logger4js.warn('Launch Server after DB Connection');
 
   visboTaskScheduleInit();

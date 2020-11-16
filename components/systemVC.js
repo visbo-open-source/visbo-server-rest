@@ -245,7 +245,7 @@ var getReSTUrl = function () {
 	} else {
 		result = result.concat('/api')
 	}
-	logger4js.warn('Get VISBO ReST Url: %s', result);
+	logger4js.info('Get VISBO ReST Url: %s', result);
 
 	return result;
 };

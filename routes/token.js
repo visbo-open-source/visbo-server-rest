@@ -58,6 +58,9 @@ var createHash = function(secret){
 	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
 };
 
+var redirectURL = getReSTUrl().concat('/token/user/googleRedirect');
+logger4js.warn("Redirect URL", redirectURL);
+
 passport.use(new GoogleStrategy({
     clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
     clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
