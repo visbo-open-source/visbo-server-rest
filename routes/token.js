@@ -62,7 +62,6 @@ passport.use(new GoogleStrategy({
     clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
     clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
     callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
-		// callbackURL: 'http://localhost:3484/token/user/googleRedirect'
   },
   function(accessToken, refreshToken, profile, cb) {
 		logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
@@ -500,6 +499,7 @@ router.route('/user/googleRedirect')
 
 								// res.header('access-key', token);
 								var uiURL = getSystemUrl().concat('/oauthconfirm');
+								logger4js.info('Login google redirect to ', uiURL);
 								// MS TODO: do not sent the token as parameter but instead use a hash
 								if (token) {
 									uiURL = uiURL.concat('?hash=', token);

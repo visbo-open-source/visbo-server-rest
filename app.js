@@ -222,7 +222,7 @@ function launchServer() {
   });
 
   app.use(passport.initialize());
-  logger4js.warn('OAuth Google done');
+  logger4js.info('OAuth Google initialised');
 
   // Register the main routes
   app.use('/user', user);
