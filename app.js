@@ -12,6 +12,8 @@ var moment = require('moment');
 var process = require('process');
 var os = require( 'os' );
 
+var passport = require('passport')
+
 var logging = require('./components/logging');
 var log4js = require('log4js');
 var logger4js = log4js.getLogger('OTHER');
@@ -32,18 +34,6 @@ require('./models/vccost');
 require('./models/vcsetting');
 
 var systemVC = require('./components/systemVC');
-
-// include the route modules
-var user = require('./routes/user');
-var token = require('./routes/token');
-var vc = require('./routes/visbocenter');
-var vp = require('./routes/visboproject');
-var vpv = require('./routes/visboprojectversion');
-var audit = require('./routes/audit');
-var sysLog = require('./routes/syslog');
-var sysUser = require('./routes/sysuser');
-var status = require('./routes/status');
-
 var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
@@ -54,6 +44,41 @@ var dbOptions = {
   // reconnectInterval: 3000,
   useNewUrlParser: true,
   useUnifiedTopology: true
+};
+
+// CORS Config, whitelist is an array
+// var whitelist = [
+//   'https://my.visbo.net', // Production Support
+//   'https://staging.visbo.net', // Staging Support
+//   'http://localhost:4200', // Development
+//   'https://dev.visbo.net' // Development AWS Support
+// ]
+// corsoptions is an object consisting of a property origin, the function is called if property is requested
+var uiUrl = undefined;
+
+var corsOptions = {
+  origin: function (origin, callback) {
+    if (!uiUrl) uiUrl = systemVC.getSystemUrl();
+    // check if the origin is from same system or not set in case of ClientApp or Postman
+    if (!origin || origin == uiUrl) {
+      callback(null, true);
+    } else {
+      logger4js.warn('CorsOptions deny  %s vs allowed %s', origin, uiUrl);
+      callback(origin + ' is not allowed to access', null);
+    }
+  }
+};
+
+var options = {
+  dotfiles: 'ignore',
+  etag: false,
+  extensions: ['htm', 'html'],
+  index: 'index.html',
+  maxAge: '1d',
+  redirect: false,
+  setHeaders: function (res /*, path , stat*/) {
+    res.set('x-timestamp', Date.now());
+  }
 };
 
 var reconnectTries = 0;
@@ -132,7 +157,7 @@ function initLog() {
   }
 }
 
-function dbConnect(dbconnection) {
+function dbConnect(dbconnection, launchServer) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
   } else {
@@ -151,8 +176,7 @@ function dbConnect(dbconnection) {
       // mongoose.set('debug', function (coll, method, query, doc, options) {
       //    logger4js.trace('Mongo: %s.%s(%s, %s)', coll, method, JSON.stringify(query), doc ? JSON.stringify(doc) : '');
       // });
-      systemVC.createSystemVC({ users: [ { 'email':'support@visbo.de' } ]});
-
+      systemVC.createSystemVC({ users: [ { 'email':'support@visbo.de' } ]}, launchServer);
     }, function(err) {
       logger4js.fatal('Database connection failed: %O', err);
 
@@ -163,44 +187,101 @@ function dbConnect(dbconnection) {
         trialDelay += trialDelay;
         if (trialDelay>7200) trialDelay = 7200;
         // enable recurtion
-        dbConnect(dbconnection);
+        dbConnect(dbconnection, launchServer);
       });
     });
   }
 }
 
-// CORS Config, whitelist is an array
-// var whitelist = [
-//   'https://my.visbo.net', // Production Support
-//   'https://staging.visbo.net', // Staging Support
-//   'http://localhost:4200', // Development
-//   'https://dev.visbo.net' // Development AWS Support
-// ]
-// corsoptions is an object consisting of a property origin, the function is called if property is requested
-var uiUrl = undefined;
+function launchServer() {
+  // include the route modules
+  var user = require('./routes/user');
+  var token = require('./routes/token');
+  var vc = require('./routes/visbocenter');
+  var vp = require('./routes/visboproject');
+  var vpv = require('./routes/visboprojectversion');
+  var audit = require('./routes/audit');
+  var sysLog = require('./routes/syslog');
+  var sysUser = require('./routes/sysuser');
+  var status = require('./routes/status');
 
-var corsOptions = {
-  origin: function (origin, callback) {
-    if (!uiUrl) uiUrl = systemVC.getSystemUrl();
-    // check if the origin is from same system or not set in case of ClientApp or Postman
-    if (!origin || origin == uiUrl || origin.indexOf('http://localhost:') >= 0) {
-      callback(null, true);
-    } else {
-      logger4js.info('CorsOptions deny  %s vs allowed %s', origin, uiUrl);
-      callback(origin + ' is not allowed to access', null);
-    }
+  logger4js.warn('Launch Server after DB Connection');
+
+  visboTaskScheduleInit();
+  app.use(express.static(path.join(__dirname, 'public'), options));
+  // app.use(cookieParser());
+  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
+
+  // simple logger for this router's requests
+  // all requests to this router will first hit this middleware
+  app.use(function(req, res, next) {
+    logger4js.trace('Method %s %s', req.method, req.url);
+    next();
+  });
+
+  app.use(passport.initialize());
+  logger4js.info('OAuth Google initialised');
+
+  // Register the main routes
+  app.use('/user', user);
+  //app.use('/admin', admin);
+  app.use('/token', token);
+  app.use('/vc', vc);
+  app.use('/vp', vp);
+  app.use('/vpv', vpv);
+  app.use('/audit', audit);
+  app.use('/sysuser', sysUser);
+  app.use('/syslog', sysLog);
+  app.use('/status', status);
+
+  // catch 404 and forward to error handler
+  app.use(function(req, res /*, next*/) {
+    logger4js.warn('Error 404 OriginalURL :%s: Parameter %O; Query %O', req.originalUrl, req.params, req.query);
+    return res.status(404).send({
+      state: 'failure',
+      message: 'Sorry can\'t find the URL',
+      url: req.originalUrl
+    });
+  });
+
+  // error handlers
+
+  // development error handler
+  // will print stacktrace
+  if (process.env.NODE_ENV === 'development') {
+    app.use(function(err, req, res /*, next*/) {
+      var errCode = err.status || 500;
+      var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
+      logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
+      res.status(errCode);
+      res.send({
+        state: 'failure',
+        message: errMessage,
+        error: err
+      });
+    });
+  } else {
+    // production error handler
+    // no stacktraces leaked to user
+    app.use(function(err, req, res /*, next*/) {
+      var errCode = err.status || 500;
+      var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
+      logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
+      res.status(errCode);
+      res.send({
+        state: 'failure',
+        message: errMessage
+      });
+    });
   }
-};
+}
 
 // setup environment variables
 environment.config();
 
 // start express app
 var app = express();
-// PM2 Setup for multi server
-// var port = process.env.PORT ||'3484';
-// // app.set('port', port);
-// app.listen(port)
 
 initLog();
 logger4js.warn('Starting in Environment %s', process.env.NODE_ENV);
@@ -211,9 +292,8 @@ i18n.configure({
     directory: __dirname + '/i18n'
 });
 app.use(i18n.init);
-// logger4js.warn('Starting Localised %s', i18n.__('Hello'));
-
 logger4js.warn('Internationalisation done');
+
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
 
@@ -249,91 +329,6 @@ app.use(logger(function (tokens, req, res) {
 app.use(cors(corsOptions));
 
 logger4js.warn('Connecting Database');
-dbConnect(process.env.NODE_VISBODB);
-
-visboTaskScheduleInit();
-
-var options = {
-  dotfiles: 'ignore',
-  etag: false,
-  extensions: ['htm', 'html'],
-  index: 'index.html',
-  maxAge: '1d',
-  redirect: false,
-  setHeaders: function (res /*, path , stat*/) {
-    res.set('x-timestamp', Date.now());
-  }
-};
-
-app.use(express.static(path.join(__dirname, 'public'), options));
-// app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
-
-// simple logger for this router's requests
-// all requests to this router will first hit this middleware
-app.use(function(req, res, next) {
-  logger4js.trace('Method %s %s', req.method, req.url);
-  next();
-});
-
-// // Catch all routes from the ui client and return the index file
-// app.get('/ui/*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'public/ui/index.html'));
-// });
-//
-
-// Register the main routes
-app.use('/user', user);
-//app.use('/admin', admin);
-app.use('/token', token);
-app.use('/vc', vc);
-app.use('/vp', vp);
-app.use('/vpv', vpv);
-app.use('/audit', audit);
-app.use('/sysuser', sysUser);
-app.use('/syslog', sysLog);
-app.use('/status', status);
-
-// catch 404 and forward to error handler
-app.use(function(req, res /*, next*/) {
-  logger4js.warn('Error 404 OriginalURL :%s: Parameter %O; Query %O', req.originalUrl, req.params, req.query);
-  return res.status(404).send({
-    state: 'failure',
-    message: 'Sorry can\'t find the URL',
-    url: req.originalUrl
-  });
-});
-
-// error handlers
-
-// development error handler
-// will print stacktrace
-if (process.env.NODE_ENV === 'development') {
-  app.use(function(err, req, res /*, next*/) {
-    var errCode = err.status || 500;
-    var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
-    logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
-    res.status(errCode);
-    res.send({
-      state: 'failure',
-      message: errMessage,
-      error: err
-    });
-  });
-} else {
-  // production error handler
-  // no stacktraces leaked to user
-  app.use(function(err, req, res /*, next*/) {
-    var errCode = err.status || 500;
-    var errMessage = errCode == 400 ? 'Bad Request' : 'Server Error';
-    logger4js.warn('Error %s :%s: Error %O; Parameter %O; Query %O', req.originalUrl, errCode, err, req.params, req.query);
-    res.status(errCode);
-    res.send({
-      state: 'failure',
-      message: errMessage
-    });
-  });
-}
+dbConnect(process.env.NODE_VISBODB, launchServer);
 
 module.exports = app;
