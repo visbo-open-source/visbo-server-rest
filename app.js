@@ -34,6 +34,7 @@ require('./models/vccost');
 require('./models/vcsetting');
 
 var systemVC = require('./components/systemVC');
+var visboAudit = require('./components/visboAudit');
 
 // Require mongoose
 var mongoose = require('mongoose');
@@ -203,8 +204,6 @@ function launchServer() {
   var sysLog = require('./routes/syslog');
   var sysUser = require('./routes/sysuser');
   var status = require('./routes/status');
-
-  var visboAudit = require('./components/visboAudit');
 
   logger4js.warn('Launch Server after DB Connection');
 
