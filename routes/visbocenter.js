@@ -140,6 +140,13 @@ function generateNewRole(item) {
 		newRole.isTeam = item.isTeam;
 		isGroup = true;
 	}
+	if (item.tagessatzIntern >= 0) {
+		newRole.tagessatzIntern = item.tagessatzIntern;
+		newRole.tagessatz = item.tagessatzIntern;
+	}
+	if (item.tagessatz >= 0) {
+		newRole.tagessatz = item.tagessatz;
+	}
 	if (!isGroup) {
 		if (item.defaultKapa >= 0) {
 			newRole.defaultKapa = item.defaultKapa;
@@ -149,13 +156,6 @@ function generateNewRole(item) {
 		}
 		if (item.isExternRole) {
 			newRole.isExternRole = item.isExternRole;
-		}
-		if (item.tagessatzIntern >= 0) {
-			newRole.tagessatzIntern = item.tagessatzIntern;
-			newRole.tagessatz = item.tagessatzIntern;
-		}
-		if (item.tagessatz >= 0) {
-			newRole.tagessatz = item.tagessatz;
 		}
 		if (item.startOfCal) {
 			var startOfCal = new Date(item.startOfCal);
