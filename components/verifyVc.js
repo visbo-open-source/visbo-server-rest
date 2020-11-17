@@ -4,6 +4,7 @@ var constPermSystem = Const.constPermSystem;
 var constPermVC = Const.constPermVC;
 
 var systemVC = require('./../components/systemVC');
+var verifyVpv = require('./../components/verifyVpv');
 
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
@@ -189,10 +190,37 @@ function getSystemGroups(req, res, next) {
 	});
 }
 
+function checkVCOrgs(req, res, next) {
+	logger4js.trace('Check if we need Orga');
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+
+	if (!req.oneVC) {
+		logger4js.debug('No VC Defined');
+		return next();
+	}
+	// MS TODO: Add additional check to include PUT if required
+	if ((req.method == 'POST')
+	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
+		// User does a POST of a setting, check if it is an organisation
+		if (req.body.type == 'organisation') {
+			logger4js.debug('Check old Organisation');
+			verifyVpv.getVCOrganisation(req.oneVC._id, req, res, next);
+		} else {
+			logger4js.debug('No POST Setting', req.method, "urlComponent", urlComponent);
+			return next();
+		}
+	} else {
+		logger4js.debug('Other Request', req.method, "urlComponent", urlComponent);
+		return next();
+	}
+}
+
 module.exports = {
 	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
 	getVC: getVC,
 	getVCVP: getVCVP,
-	getSystemGroups: getSystemGroups
+	getSystemGroups: getSystemGroups,
+	checkVCOrgs: checkVCOrgs
 };

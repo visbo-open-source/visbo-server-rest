@@ -46,7 +46,7 @@ function verifyUser(req, res, next) {
     // verifies secret and checks exp
     jwt.verify(token, jwtSecret.user.secret, function(err, decoded) {
       if (err) {
-				logger4js.warn('Authentication with token. Decode Issue', JSON.stringify(decoded));
+				logger4js.debug('Authentication with token. Decode Issue', JSON.stringify(decoded));
 				if (decoded) req.decoded = decoded;
         return res.status(401).send({
 					state: 'failure',
@@ -56,11 +56,11 @@ function verifyUser(req, res, next) {
         // if everything is good, check IP and User Agent to prevent session steeling
 				var sessionValid = true;
 				if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
-					logger4js.warn('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
+					logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
 					sessionValid = false;
 				}
 				// if (decoded.session.ticket != req.get('User-Agent')) {
-				// 	logger4js.warn('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
+				// 	logger4js.info('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
 				// 	sessionValid = false;
 				// }
 				if (!sessionValid) {
@@ -79,8 +79,8 @@ function verifyUser(req, res, next) {
 							message: 'Logout Validation'
 						});
 					}
-					logger4js.warn('Redis Token Found %s user %s', token, reply, );
 					if (reply) {
+						logger4js.info('Token already terminated');
 						return res.status(401).send({
 							state: 'failure',
 							message: 'Session already terminated'
@@ -93,7 +93,7 @@ function verifyUser(req, res, next) {
       }
     });
   } else {
-		logger4js.warn('Authentication without token. Headers', JSON.stringify(req.headers));
+		logger4js.info('Authentication without token. Headers', JSON.stringify(req.headers));
 		return res.status(401).send({
 			state: 'failure',
 			message: 'No token provided'
