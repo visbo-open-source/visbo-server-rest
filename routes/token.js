@@ -59,20 +59,24 @@ var createHash = function(secret){
 };
 
 var redirectURL = getReSTUrl().concat('/token/user/googleRedirect');
-logger4js.warn("Redirect URL", redirectURL);
+var settingOAuth = getSystemVCSetting('OAuthGoogle')
+if (settingOAuth && settingOAuth.value) { settingOAuth = settingOAuth.value; }
 
-passport.use(new GoogleStrategy({
-    clientID: "915896668682-15q3ulpabekbup5ejk5tti5fjrcurp1a.apps.googleusercontent.com",
-    clientSecret: "NLq9B4G5GREXbZs-T02tCHik",
-    callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
-  },
-  function(accessToken, refreshToken, profile, cb) {
-		logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
-		logger4js.trace("Profile", profile)
-    logger4js.warn("GOOGLE BASED OAUTH VALIDATION for ", profile && profile.displayName);
-		return cb(null, profile) // MS TODO: What is the callback Function
-  }
-));
+if (settingOAuth) {
+	logger4js.warn("Redirect URL", redirectURL);
+	passport.use(new GoogleStrategy({
+	    clientID: settingOAuth.clientID,
+	    clientSecret: settingOAuth.clientSecret,
+	    callbackURL: getReSTUrl().concat('/token/user/googleRedirect')
+	  },
+	  function(accessToken, refreshToken, profile, cb) {
+			logger4js.trace("Access Token", accessToken, "Refresh Token", refreshToken)
+			logger4js.trace("Profile", profile)
+	    logger4js.warn("GOOGLE BASED OAUTH VALIDATION for ", profile && profile.displayName);
+			return cb(null, profile) // MS TODO: What is the callback Function
+	  }
+	));
+}
 
 passport.serializeUser(function(user, cb) {
     logger4js.info('User authenticated', user && user.displayName);
