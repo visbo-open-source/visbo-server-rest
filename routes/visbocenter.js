@@ -59,6 +59,8 @@ router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
 
+router.use('/:vcid/setting', verifyVc.checkVCOrgs);
+
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
 	return currentUser.userId.toString() == this.toString();
@@ -140,32 +142,30 @@ function generateNewRole(item) {
 		newRole.isTeam = item.isTeam;
 		isGroup = true;
 	}
-	if (!isGroup) {
-		if (item.defaultKapa >= 0) {
-			newRole.defaultKapa = item.defaultKapa;
+	if (item.tagessatzIntern >= 0) {
+		newRole.tagessatzIntern = item.tagessatzIntern;
+		newRole.tagessatz = item.tagessatzIntern;
+	}
+	if (item.tagessatz >= 0) {
+		newRole.tagessatz = item.tagessatz;
+	}
+	if (item.defaultKapa >= 0) {
+		newRole.defaultKapa = item.defaultKapa;
+	}
+	if (item.defaultDayCapa >= 0) {
+		newRole.defaultDayCapa = item.defaultDayCapa;
+	}
+	if (item.isExternRole) {
+		newRole.isExternRole = item.isExternRole;
+	}
+	if (item.startOfCal) {
+		var startOfCal = new Date(item.startOfCal);
+		if (startOfCal.getTime() < startOfCal.getTime()) {
+			newRole.startOfCal = item.startOfCal;
 		}
-		if (item.defaultDayCapa >= 0) {
-			newRole.defaultDayCapa = item.defaultDayCapa;
-		}
-		if (item.isExternRole) {
-			newRole.isExternRole = item.isExternRole;
-		}
-		if (item.tagessatzIntern >= 0) {
-			newRole.tagessatzIntern = item.tagessatzIntern;
-			newRole.tagessatz = item.tagessatzIntern;
-		}
-		if (item.tagessatz >= 0) {
-			newRole.tagessatz = item.tagessatz;
-		}
-		if (item.startOfCal) {
-			var startOfCal = new Date(item.startOfCal);
-			if (startOfCal.getTime() < startOfCal.getTime()) {
-				newRole.startOfCal = item.startOfCal;
-			}
-		}
-		if (item.kapazitaet) {
-			newRole.kapazitaet = item.kapazitaet;
-		}
+	}
+	if (item.kapazitaet) {
+		newRole.kapazitaet = item.kapazitaet;
 	}
 	if (!statusOk) newRole = undefined;
 	return newRole;
@@ -2209,7 +2209,14 @@ router.route('/:vcid/group/:groupid')
 					var newCost = generateNewCost(item);
 					orga.allCosts.push(newCost);
 				});
-				if (!visboBusiness.verifyOrganisation(orga, undefined)) {
+
+				var oldOrga = undefined;
+				if (req.visboOrganisations && req.visboOrganisations.length > 0) {
+					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
+					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
+				}
+				logger4js.info('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
+				if (!visboBusiness.verifyOrganisation(orga, oldOrga)) {
 					return res.status(400).send({
 						state: 'failure',
 						message: 'Incorrect Information in organisation',

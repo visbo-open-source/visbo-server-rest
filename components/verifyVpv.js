@@ -754,5 +754,6 @@ module.exports = {
 	getVPFVPVs: getVPFVPVs,
 	getVPFPFVs: getVPFPFVs,
 	getOneVP: getOneVP,
-	getVCVPVs: getVCVPVs
+	getVCVPVs: getVCVPVs,
+	getVCOrganisation: getVCOrganisation
 };
