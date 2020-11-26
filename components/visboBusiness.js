@@ -983,11 +983,11 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 			}
 
-			// if (allDeadlines && allDeadlines.length > 0){
-			// 	var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
-			// 	keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
-			// 	keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
-			// }
+			if (allDeadlines && allDeadlines.length > 0){
+				var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
+				keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
+				keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
+			}
 
 			// look for the deliverables of pfv (take all)
 			var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
