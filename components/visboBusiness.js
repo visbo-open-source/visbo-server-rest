@@ -1813,6 +1813,7 @@ function verifyOrganisation(newOrga, oldOrga) {
 	// updates newOrga if possible and returns true/false if the orga could be used
 	// newOrga is the pure Orga Value
 	// oldOrga is the full setting including timestamp, vcid, ...
+	logger4js.debug('verify Organisation ', newOrga && newOrga.value && newOrga.value.timestamp, oldOrga && oldOrga.name);
 	return true;
 }
 

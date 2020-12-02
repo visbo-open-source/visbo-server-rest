@@ -12,7 +12,7 @@ var moment = require('moment');
 var process = require('process');
 var os = require( 'os' );
 
-var passport = require('passport')
+var passport = require('passport');
 
 var logging = require('./components/logging');
 var log4js = require('log4js');

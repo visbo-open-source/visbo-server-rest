@@ -122,12 +122,9 @@ function generateNewRole(item) {
 		newRole.aliases = item.aliases;
 	}
 
-	var isGroup = false;
-
 	newRole.subRoleIDs = [];
 	if (item.subRoleIDs && item.subRoleIDs.length > 0) {
 		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-		isGroup = true;
 	}
 	newRole.teamIDs = [];
 	if (item.teamIDs && item.teamIDs.length > 0) {
@@ -139,7 +136,6 @@ function generateNewRole(item) {
 	}
 	if (item.isTeam || item.isTeamParent) {
 		newRole.isTeam = item.isTeam;
-		isGroup = true;
 	}
 	if (item.tagessatzIntern >= 0) {
 		newRole.tagessatzIntern = item.tagessatzIntern;
