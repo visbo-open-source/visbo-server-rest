@@ -59,10 +59,10 @@ function verifyUser(req, res, next) {
 					logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
 					sessionValid = false;
 				}
-				// if (decoded.session.ticket != req.get('User-Agent')) {
-				// 	logger4js.info('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
-				// 	sessionValid = false;
-				// }
+				if (decoded.session.ticket != req.get('User-Agent')) {
+					logger4js.info('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
+					sessionValid = false;
+				}
 				if (!sessionValid) {
 					return res.status(401).send({
 						state: 'failure',

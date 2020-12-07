@@ -207,11 +207,11 @@ function checkVCOrgs(req, res, next) {
 			logger4js.debug('Check old Organisation');
 			verifyVpv.getVCOrganisation(req.oneVC._id, req, res, next);
 		} else {
-			logger4js.debug('No POST Setting', req.method, "urlComponent", urlComponent);
+			logger4js.debug('No POST Setting', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
 	} else {
-		logger4js.debug('Other Request', req.method, "urlComponent", urlComponent);
+		logger4js.debug('Other Request', req.method, 'urlComponent', urlComponent);
 		return next();
 	}
 }

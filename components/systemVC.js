@@ -243,7 +243,7 @@ var getReSTUrl = function () {
 	if (!result || result.indexOf('http://localhost') == 0) {
 		result = 'http://localhost:3484';
 	} else {
-		result = result.concat('/api')
+		result = result.concat('/api');
 	}
 	logger4js.info('Get VISBO ReST Url: %s', result);
 

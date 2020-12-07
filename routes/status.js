@@ -145,69 +145,69 @@ router.route('/pwpolicy')
 		});
 	});
 
-  router.route('/setting')
-  /**
-  	* @api {get} /status/setting Get Settings of ReST Server
-  	* @apiVersion 1.0.0
-  	* @apiGroup VISBO System
-  	* @apiName GetSettings
-  	* @apiExample Example usage:
-  	*   url: https://my.visbo.net/api/status/setting
-  	* @apiSuccessExample {json} Success-Response:
-  	* HTTP/1.1 200 OK
-  	* {
-  	*  'state':'success',
-  	*  'message':'VISBO ReST Settings',
-  	*  'vcsetting':[{
-  	*    'name': 'OAuthGoogle',
-    *    'type': 'boolean',
-    *    'value': '1'
-  	*  }]
-  	* }
-  	*/
-  // get status/setting
-  	.get(function(req, res) {
-  		req.auditDescription = 'Status Setting Read (Public)';
-  		req.auditTTLMode = 3;
-      logger4js.info('Get Settings from ReST Server ');
-      var vcsetting = [];
-      if (getSystemVCSetting('OAuthGoogle')) {
-        vcsetting.push({name: 'OAuthGoogle', type: 'boolean', value: '1'} );
-      }
+router.route('/setting')
+/**
+	* @api {get} /status/setting Get Settings of ReST Server
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO System
+	* @apiName GetSettings
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/status/setting
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  'state':'success',
+	*  'message':'VISBO ReST Settings',
+	*  'vcsetting':[{
+	*    'name': 'OAuthGoogle',
+  *    'type': 'boolean',
+  *    'value': '1'
+	*  }]
+	* }
+	*/
+// get status/setting
+  .get(function(req, res) {
+    req.auditDescription = 'Status Setting Read (Public)';
+    req.auditTTLMode = 3;
+    logger4js.info('Get Settings from ReST Server ');
+    var vcsetting = [];
+    if (getSystemVCSetting('OAuthGoogle')) {
+      vcsetting.push({name: 'OAuthGoogle', type: 'boolean', value: '1'} );
+    }
 
-  		return res.status(200).send({
-  			state: 'success',
-  			message: 'VISBO ReST Settings (Public)',
-  			vcsetting: vcsetting
-  		});
-  	});
-
-  router.route('/test')
-  // get status/test
-    .get(async function(req, res) {
-      req.auditDescription = 'Status Test Read';
-      req.auditTTLMode = 4;			// short Time to Live
-      var message = 'Say Hello World';
-
-      var status = 'UNDEFINED';
-      logger4js.info('Get Status Test ');
-      try {
-        var result = await sleep(500);
-        logger4js.info('Get Status after say hello: %s Result %O ', message, result);
-        status = message;
-      } catch (ex) {
-        logger4js.info('Say Hello Again Catch Error %O', ex);
-        return res.status(500).send({
-          state: 'failure',
-          message: 'Status Test Check Failed',
-          error: JSON.stringify(ex)
-        });
-      }
-      return res.status(200).send({
-        state: 'success',
-        message: 'Status Test Check',
-        status: status
-      });
+    return res.status(200).send({
+      state: 'success',
+      message: 'VISBO ReST Settings (Public)',
+      vcsetting: vcsetting
     });
+  });
+
+router.route('/test')
+// get status/test
+  .get(async function(req, res) {
+    req.auditDescription = 'Status Test Read';
+    req.auditTTLMode = 4;			// short Time to Live
+    var message = 'Say Hello World';
+
+    var status = 'UNDEFINED';
+    logger4js.info('Get Status Test ');
+    try {
+      var result = await sleep(500);
+      logger4js.info('Get Status after say hello: %s Result %O ', message, result);
+      status = message;
+    } catch (ex) {
+      logger4js.info('Say Hello Again Catch Error %O', ex);
+      return res.status(500).send({
+        state: 'failure',
+        message: 'Status Test Check Failed',
+        error: JSON.stringify(ex)
+      });
+    }
+    return res.status(200).send({
+      state: 'success',
+      message: 'Status Test Check',
+      status: status
+    });
+  });
 
 module.exports = router;

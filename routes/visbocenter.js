@@ -75,9 +75,8 @@ function squeezeSetting(item, email) {
 			if (item.value && item.value.allRoles) {
 				var allRoles = item.value.allRoles;
 				for (var i=0; i<allRoles.length; i++) {
-					allRoles[i].kapazitaet = undefined;
-					allRoles[i].defaultKapa = undefined;
 					allRoles[i].tagessatzIntern = undefined;
+					allRoles[i].tagessatz = undefined;
 				}
 			}
 		} else if (item.type == 'customroles') {
@@ -123,12 +122,9 @@ function generateNewRole(item) {
 		newRole.aliases = item.aliases;
 	}
 
-	var isGroup = false;
-
 	newRole.subRoleIDs = [];
 	if (item.subRoleIDs && item.subRoleIDs.length > 0) {
 		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-		isGroup = true;
 	}
 	newRole.teamIDs = [];
 	if (item.teamIDs && item.teamIDs.length > 0) {
@@ -140,7 +136,6 @@ function generateNewRole(item) {
 	}
 	if (item.isTeam || item.isTeamParent) {
 		newRole.isTeam = item.isTeam;
-		isGroup = true;
 	}
 	if (item.tagessatzIntern >= 0) {
 		newRole.tagessatzIntern = item.tagessatzIntern;
@@ -1910,8 +1905,8 @@ router.route('/:vcid/group/:groupid')
 			} else {
 				queryVCSetting.sort('type name userId -timestamp');
 			}
-			if (!longList || (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.Modify + constPermVC.ViewAudit + constPermVC.ManagePerm)) == 0) {
-				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.tagessatzIntern ');
+			if (!longList || (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
 			}
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
@@ -2081,7 +2076,7 @@ router.route('/:vcid/group/:groupid')
 				} else {
 					listVCSettingfiltered = listVCSetting;
 				}
-				if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit + constPermVC.Modify))) {
+				if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit))) {
 					// if user has no Modify/Audit permission the personal settings of other users were removed
 					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
 					// squeeze private settings, remove sensitive Information
@@ -2504,7 +2499,7 @@ router.route('/:vcid/group/:groupid')
 							orga.allCosts.push(newCost);
 						});
 
-						if (!visboBusiness.verifyOrganisation(orga, undefined)) {
+						if (!visboBusiness.verifyOrganisation(orga, oneVCSetting)) {
 							return res.status(400).send({
 								state: 'failure',
 								message: 'Incorrect Information in organisation',

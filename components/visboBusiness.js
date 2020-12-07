@@ -1212,7 +1212,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
 				// old: if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
-				// old: if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {				
+				// old: if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
 				if (  (intervallStart < organisations[o+1].timestamp) ) {
 					// prepare organisation: change the new modelling of capacities into the old version for calculation
 					organisation_converted = convertOrganisation(organisations[o]);
@@ -1809,8 +1809,11 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.status = undefined;
 }
 
-function verifyOrganisation(neworga, oldorga) {
-	// updates neworga if possible and returns true/false if the orga could be used
+function verifyOrganisation(newOrga, oldOrga) {
+	// updates newOrga if possible and returns true/false if the orga could be used
+	// newOrga is the pure Orga Value
+	// oldOrga is the full setting including timestamp, vcid, ...
+	logger4js.debug('verify Organisation ', newOrga && newOrga.value && newOrga.value.timestamp, oldOrga && oldOrga.name);
 	return true;
 }
 
