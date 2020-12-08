@@ -1010,7 +1010,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
+function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, onlyPT) {
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
@@ -1048,21 +1048,34 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy) {
 	for (item in capaVPV) {
 		const actMonthISO = item.substr(0, 24);
 		const roleID = item.substr(25);
-		capa.push({
-			'month': actMonthISO,
-			'roleID' : roleID,
-			'roleName' : capaVPV[item].roleName,
-			'actualCost_PT': capaVPV[item].actualCost_PT || 0,
-			'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
-			'internCapa_PT': capaVPV[item].internCapa_PT || 0,
-			'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
-			'actualCost': capaVPV[item].actualCost || 0,
-			'plannedCost': capaVPV[item].plannedCost || 0,
-			'internCapa': capaVPV[item].internCapa || 0,
-			'externCapa': capaVPV[item].externCapa || 0,
-			'baselineCost': capaVPV[item].baselineCost,
-			'baselineCost_PT': capaVPV[item].baselineCost_PT
-		});
+		if (onlyPT) {
+			capa.push({
+				'month': actMonthISO,
+				'roleID' : roleID,
+				'roleName' : capaVPV[item].roleName,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		} else {
+			capa.push({
+				'month': actMonthISO,
+				'roleID' : roleID,
+				'roleName' : capaVPV[item].roleName,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'actualCost': capaVPV[item].actualCost || 0,
+				'plannedCost': capaVPV[item].plannedCost || 0,
+				'internCapa': capaVPV[item].internCapa || 0,
+				'externCapa': capaVPV[item].externCapa || 0,
+				'baselineCost': capaVPV[item].baselineCost,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		}
 	}
 	return capa;
 }

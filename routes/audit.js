@@ -33,7 +33,7 @@ router.route('/')
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
-	* @apiPermission user must be authenticated and needs to have System Admin Permission
+	* @apiPermission Authenticate and System.View and System.ViewAudit Permission for the VISBO System
 	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
 	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.

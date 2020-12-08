@@ -45,7 +45,7 @@ router.route('/profile')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName GetUserProfile
-	* @apiPermission user must be authenticated
+	* @apiPermission Authenticated
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
@@ -102,6 +102,7 @@ router.route('/profile')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName UpdateUserProfile
+	* @apiPermission Authenticated
 	* @apiError {number} 400 required fields for profile missing
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
@@ -205,6 +206,7 @@ router.route('/passwordchange')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName PasswordChange
+	* @apiPermission Authenticated
 	* @apiError {number} 400 old or new password missing
 	* @apiError {number} 409 password mismatch
 	* @apiError {number} 401 user not authenticated

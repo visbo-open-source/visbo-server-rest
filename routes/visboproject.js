@@ -309,7 +309,7 @@ router.route('/')
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs, only allowed for users with DeleteVP Permission.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  if true, request VPs for Appl. Admin User
 	*
-	* @apiPermission Permission: Authenticated, View Project, Delete Project.
+	* @apiPermission Authenticated.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
 	* @apiExample Example usage:
@@ -417,7 +417,7 @@ router.route('/')
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
 	* @apiHeader {String} access-key User authentication token.
   *
-	* @apiPermission Authenticated and Permission: View Project, Create Project.
+	* @apiPermission Authenticated and VP.View and VP.Create Permission for the Project.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 missing name or VISBO Center ID of Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -590,7 +590,7 @@ router.route('/:vpid')
 	* @apiDescription Get a specific Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
-	* @apiPermission Permission: Authenticated, View Project.
+	* @apiPermission Authenticated and  VP.View Permission for the Project.
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -666,7 +666,8 @@ router.route('/:vpid')
 	* If the Project Name has changed, the Name will be populated to the Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Project, Modify Project. In case of undelete a Project the user needs to have Delete Project permission.
+	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Project.
+	* In case of undelete a Project the user needs to have VP.Delete Permission in addition.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 no Data provided in Body for updating the Visbp Project
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -819,7 +820,7 @@ router.route('/:vpid')
 	* @apiName DeleteVISBOProject
 	* @apiDescription Deletes a specific Project.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Project, Delete Project.
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete Project
@@ -944,7 +945,7 @@ router.route('/:vpid/audit')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Project, View Project Audit
+	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project
 	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
@@ -1079,7 +1080,7 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all groups of the specified Project
 		*
-		* @apiPermission Authenticated and Permission: View Project.
+		* @apiPermission Authenticated and VP.View Permission for the Project.
 		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1177,8 +1178,7 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new group inside the Project
 		*
-		* @apiPermission Authenticated and System Permission: View Project, Manage Project Permission.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 missing name of Project Group during Creation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a Project Group
@@ -1313,8 +1313,7 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified group in the Project
 		*
-		* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 delete of internal Project Group or a VISBO Center Group inside the Project not allowed.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a Project Group
@@ -1375,7 +1374,7 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Put updates a group inside the Project
 		*
-		* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
+		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 400 Not allowed to change a VISBO Center Group inside the Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1500,7 +1499,7 @@ router.route('/:vpid/audit')
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Adds the specified user from body to the group
 			*
-			* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
+			* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 			* @apiError {number} 400 missing user name to add to the Project Group or the Group is a VISBO Center Group
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1726,7 +1725,7 @@ router.route('/:vpid/audit')
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Deletes the specified user in the Project Group
 			*
-			* @apiPermission Authenticated and Permission: View Project, Manage Project Permission.
+			* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 			* @apiError {number} 400 the group is a VISBO Center Group
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1804,8 +1803,7 @@ router.route('/:vpid/lock')
 	* In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock.
 	* A User who can not Modify the Project can not lock the Project only a Variant of a Project, if the user has CreateVariant Permission.
   *
-	* @apiPermission Authenticated and Permission: View Project, Modify Project, Create Variant.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 400 no valid lock date or a variant that does not exist
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Lock the Project
@@ -1937,9 +1935,9 @@ router.route('/:vpid/lock')
 	* @apiParam {String} variantName The Variant Name of the Project for the Lock (outdated)
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	*
-	* @apiPermission Authenticated and Permission: View Project, Modify Project.
+	* @apiPermission Authenticated and VP.View and optional VP.Modify Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Lock the Project
+	* @apiError {number} 403 No Permission to UnLock the Project
 	* @apiError {number} 409 No Lock exists for the specified Project and Variant.
 	*
 	* @apiExample Example usage:
@@ -2018,7 +2016,7 @@ router.route('/:vpid/variant')
 	* @apiName CreateVISBOProjectVariant
 	* @apiDescription Post creates a new Variant for the Project
 	*
-	* @apiPermission Authenticated and Permission: View Project, Modify Project or Create Variant.
+	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create a Variant for the Project
 	* @apiError {number} 409 Variant already exists.
@@ -2117,11 +2115,11 @@ router.route('/:vpid/variant/:vid')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Properties
 	* @apiName DeleteVISBOProjectVariant
-	* @apiDescription Deletes a specific Variant for a project and also the project Versions
-	* the user needs to have read access to the Project and either owns the Variant or has Modify Permission in the Project
+	* @apiDescription Deletes a specific Variant for a project if the variant does not contain versions.
+	* The user needs to either own the Variant or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and Permission: View Project, Modify Project.
+	* @apiPermission Authenticated and VP.View and optional VP.Modify Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Lock the Project
 	* @apiError {number} 409 Variant does not exists or still contains Versions
@@ -2217,7 +2215,7 @@ router.route('/:vpid/portfolio')
 	* @apiDescription GET /vp/:vpid/portfolio returns all Portfolio List Versions in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
-	* @apiPermission Authenticated and Permission: View Project.
+	* @apiPermission Authenticated and VP.View Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project
 	*
@@ -2367,7 +2365,7 @@ router.route('/:vpid/portfolio')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new Definition of a Portfolio for the Project
 	*
-	* @apiPermission Authenticated and Permission: View Project, Modify Project.
+	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Portfolio.
 	* @apiError {number} 400 no Project Items specified for Portfolio or Project is not a Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Visb Project (Portfolio) or Modify the Project (Portfolio) or Variant
@@ -2535,7 +2533,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
 	* @apiParam (Parameter) {Boolean} [deletedVPF=false]  Request Deleted VPFs, only allowed for users with DeleteVP Permission.
-	* @apiPermission Authenticated and Permission: View Project.
+	* @apiPermission Authenticated and VP.View Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project
 	*
@@ -2620,7 +2618,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiDescription Put updates a specific Portfolio Version used for undelete
 	* the system checks if the user has Delete permission to the Project.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Project, Delete Project.
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
 	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Un-Delete Portfolio
@@ -2709,7 +2707,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* the user needs to have Delete Project Permission to the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and Permission: View Project, Delete Project.
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project or no Delete Permission to delete the Version
 	* @apiError {number} 423 Portfolio locked by another user
@@ -2810,28 +2808,30 @@ router.route('/:vpid/portfolio/:vpfid')
 	router.route('/:vpid/portfolio/:vpfid/capacity')
 
 	/**
-		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity Calculation
+		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity of VISBO Portfolio
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Project Properties
-		* @apiName GetVISBOProjectCapacity
+		* @apiName GetVISBOPortfolioCapacity
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version
+		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version.
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
+		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
-		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and roleID
-
-		*
-		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
+		* @apiParam {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		*
-		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for the Portfolio and all the projects of the Portfolio, Projects without View Permission will be excluded
+		* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
+		* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
+		* If the user has VP.ViewAudit Permission for the Portfolio and all Projects with View Permission, he gets in addition to the PD Values also the money values.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
+		* @apiError {number} 409 No Organisation configured in the VISBO Center
 		* @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vp/:vpid/portfolio/:vpfid/capacity
+		*   url: https://my.visbo.net/api/vp/:vpid/portfolio/:vpfid/capacity?roleID=1
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -2855,10 +2855,57 @@ router.route('/:vpid/portfolio/:vpfid')
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
 
-			req.auditDescription = 'Project Capacity Read';
+			req.auditDescription = 'Portfolio Capacity Read';
+
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & (constPermVP.Modify + constPermVP.ViewAudit))) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to calculate Portfolio Capacity',
+					perm: req.listVPPerm.getPerm(req.params.vpid)
+				});
+			}
+
+			var onlyPT = false;
+			var vpCalc = 0;
+			var vpCount = 0;
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
+				onlyPT  = true;
+			}
+			// Validate Permission for all projects to get Capacity at all and to get PD or euro
+			if (req.oneVPF && req.oneVPF.allItems) {
+				// collect vpids with View Permission that have to be Checked
+				vpCount = req.oneVPF.allItems.length;
+				var vpList = [];
+				req.oneVPF.allItems.forEach(item => {
+					if (req.listVPPerm.getPerm(item.vpid).vp & constPermVP.View) {
+						vpList.push(item.vpid)
+					}
+				});
+				vpCalc = vpList.length;
+				logger4js.debug('VPF  %s, AllItems %d ViewItems %d', req.oneVPF.name, req.oneVPF.allItems.length, vpCalc);
+
+				let canCalcCapacity = true;
+				vpList.forEach(item =>
+					canCalcCapacity = canCalcCapacity && (req.listVPPerm.getPerm(item).vp & (constPermVP.Modify + constPermVP.ViewAudit)) > 0
+				);
+				logger4js.debug('VPF  %s, canCalcCapacity %s', req.oneVPF.name, canCalcCapacity);
+				if (!canCalcCapacity) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Permission to calculate Portfolio Capacity for all Projects'
+					});
+				}
+
+				let canSeeCost = true;
+				vpList.forEach(item => canSeeCost = canSeeCost && (req.listVPPerm.getPerm(item).vp & constPermVP.ViewAudit) > 0);
+				logger4js.debug('VPF  %s, canSeeCost %s', req.oneVPF.name, canSeeCost);
+				if (!onlyPT && !canSeeCost) {
+					onlyPT = true;
+				}
+			}
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
 
 			req.auditInfo = '';
 			return res.status(200).send({
@@ -2870,6 +2917,8 @@ router.route('/:vpid/portfolio/:vpfid')
 					name: req.oneVP.name,
 					description: req.oneVP.description,
 					roleID: roleID,
+					vpAll: vpCount,
+					vpCalc: vpCalc,
 					createdAt: req.oneVP.createdAt,
 					updatedAt: req.oneVP.updatedAt,
 					capacity: capacity
@@ -2888,8 +2937,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new group inside the Project
 		*
-		* @apiPermission Authenticated and System Permission: View Project, Manage Project Permission.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 missing name or group of Project Restriction during Creation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a Project Restriction
@@ -3001,7 +3049,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* the user needs to have read access to the Project and Modify Permission in the Project
 		* @apiHeader {String} access-key User authentication token.
 		*
-		* @apiPermission Authenticated and Permission: View Project, Modify Project.
+		* @apiPermission Authenticated and VP.View and VP.Modfiy Permission for the Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to delete Restriction in the Project
 		* @apiError {number} 409 Restriction does not exists

@@ -260,7 +260,7 @@ router.route('/')
 	* @apiDescription Get retruns all VC where the user has access permission to
 	* In case of success it delivers an array of VCs, the array contains in each element a VC
 	* if systemvc is specified only the systemvc is retrieved if the user has permission to see it
-	* @apiPermission Permission: Authenticated, View VISBO Center.
+	* @apiPermission Authenticated.
 	* In case of AppAdmin Parameters the User needs to have View VISBO Center Permission on System Level.
 	* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
 	* @apiParam (Parameter AppAdmin) {Boolean} [systemvc=false]  Optional Request System VC
@@ -348,7 +348,7 @@ router.route('/')
 	 * Optinal initial admin can be defined who will get VISBO Center Administrator, if none is specified, the current user is added.
 	 * In case of success it delivers an array of VCs. The array contains one element for the created VC.
 	 * @apiHeader {String} access-key User authentication token.
-	 * @apiPermission Authenticated and System Permission: View Sytem, Create VISBO Center.
+	 * @apiPermission Authenticated and System.ViewVC and System.CreateVC Permission for the VISBO System.
 	 * @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	 * @apiError {number} 400 missing name of VISBO Center during Creation
 	 * @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -465,7 +465,7 @@ router.route('/:vcid')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
  	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Permission: Authenticated, View VISBO Center.
+	* @apiPermission Authenticated and VC.View for the VISBO Center.
  	* @apiError NotAuthenticated no valid token HTTP 401
 	* In case of AppAdmin Parameters the User needs to have View VISBO Center Permission on System Level.
 	* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
@@ -537,7 +537,7 @@ router.route('/:vcid')
 	*
 	* If the VC Name is changed, the VC Name is populated to the VISBO Center Projects.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
+	* @apiPermission Authenticated and VC.View and VC.Modify Permissionfor the VISBO Center.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 no Data provided in Body for updating the VISBO Center
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -666,7 +666,7 @@ router.route('/:vcid')
 	* @apiDescription Deletes a specific VISBO Center.
 	* the system checks if the user has Delete VISBO Center permission to it.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and System Permission: View VISBO Center, Delete VISBO Center.
+	* @apiPermission Authenticated and System.ViewVC and System.Delete Permission for the VISBO System.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify VISBO Center or VISBO Center does not exists
@@ -851,7 +851,7 @@ router.route('/:vcid/audit')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View VISBO Center, View VISBO Center Audit.
+	* @apiPermission Authenticated and VC.View and VC.ViewAudit Permission for the VISBO Center.
 	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
 	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
@@ -1005,7 +1005,7 @@ router.route('/:vcid/group')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Gets all groups of the specified VISBO Center
 	*
-	* @apiPermission Authenticated and Permission: View VISBO Center.
+	* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
 	* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1127,7 +1127,7 @@ router.route('/:vcid/group')
 	* @apiName PostVISBOCenterGroup
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new group inside the VISBO Center
-	* @apiPermission Authenticated and System Permission: View VISBO Center, Manage VISBO Center Permission.
+	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 missing name of VISBO Center Group during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1280,7 +1280,7 @@ router.route('/:vcid/group/:groupid')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Deletes the specified group in the VISBO Center
 	*
-	* @apiPermission Authenticated and Permission: View VISBO Center, Manage VISBO Center Permission.
+	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 delete of internal VISBO Center Group not allowed
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1345,7 +1345,7 @@ router.route('/:vcid/group/:groupid')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Put updates a group inside the VISBO Center
 	*
-	* @apiPermission Authenticated and Permission: View VISBO Center, Manage VISBO Center Permission.
+	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 name of internal group can not be changed or new permission does not meet the minimal permission for internal group.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1525,7 +1525,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Adds the specified user from body to the group
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center, Manage VISBO Center Permission.
+		* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 400 missing user name to add to the VISBO Center Group
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1756,7 +1756,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified user in the VISBO Center Group
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center, Manage VISBO Center Permission.
+		* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 400 no Admin user will be left in internal VISBO Center Group
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1853,7 +1853,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
 		* @apiParam {Boolean} longList Deliver also information like Capacities
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center. For longList it requires also one of the following Permissions: ViewAudit, Modify, Change Permission
+		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
 		* Depending of custom roles the organisation could be filtered in addition to a specific branch inside the organisation.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
@@ -1982,7 +1982,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {String} userId Deliver only settings that has set the specified userId
 		* @apiParam {String} groupBy Groups the Settings regarding refDate by Type and userId and returns one per group
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center.
+		* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
@@ -2100,7 +2100,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new setting inside the VISBO Center
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
+		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
 		* @apiError {number} 400 no valid setting definition
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a VISBO Center Setting
@@ -2255,7 +2255,7 @@ router.route('/:vcid/group/:groupid')
 	  * @apiHeader {String} access-key User authentication token.
 	  * @apiDescription Deletes the specified setting in the VISBO Center
 	  *
-		* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
+		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Delete a VISBO Center Setting
 		* @apiError {number} 409 VISBO Center Setting does not exists
@@ -2350,7 +2350,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Put updates a setting definition inside the VISBO Center, the type and userId could not be changed for security reasons, use delete and create instead.
 		*
-		* @apiPermission Authenticated and Permission: View VISBO Center, Modify VISBO Center.
+		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Update a VISBO Center Setting
 		* @apiError {number} 409 VISBO Center Setting does not exists or was updated in between.
@@ -2575,27 +2575,30 @@ router.route('/:vcid/group/:groupid')
 	router.route('/:vcid/capacity')
 
 	/**
-		* @api {get} /vc/:vcid/capacity Get Capacity
+		* @api {get} /vc/:vcid/capacity Get Capacity of Visbo Center
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterCapacity
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the capacity numbers for the specified VISBO Center
+		* @apiDescription Gets the capacity numbers for the specified VISBO Center.
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
+		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
-		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate and roleID
-		*
-		* @apiParam {Date} refDate only the latest VPV with a timestamp before the reference date is used for calculation
+		* @apiParam {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion-uid, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		*
-		* @apiPermission Authenticated and Permission: View & View Audit VISBO Center.and in addition View Project for all the projects of the VC, Projects without View Permission will be excluded
+		* @apiPermission Authenticated and VC.View and VC.Modify or VC.ViewAudit for the VISBO Center.
+		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has View Permission. This filtered list is checked to have either VP.ViewAudit & VP.Modify Permission for each project, if not the request fails with permission denied.
+		* If the user has VP.ViewAudit Permission for all Projects with View Permission, he gets in addition to the PD Values also the money values.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
+		* @apiError {number} 409 No Organisation configured in the VISBO Center
 		* @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vc/:vcid/capacity
+		*   url: https://my.visbo.net/api/vc/:vcid/capacity?roleID=1
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -2622,8 +2625,19 @@ router.route('/:vcid/group/:groupid')
 			req.auditDescription = 'VISBO Center Capacity Read';
 
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
+			if (!req.visboOrganisations) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'No VISBO Center Organisation',
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
+			}
+			var onlyPT = true;
+			if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
+				onlyPT = false;
+			}
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy);
+			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
 
 			req.auditInfo = '';
 			return res.status(200).send({

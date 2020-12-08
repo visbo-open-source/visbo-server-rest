@@ -26,7 +26,7 @@ router.route('/')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup VISBO System
 	* @apiName GetSysUsers
-	* @apiPermission user must be authenticated and has System View Permission
+	* @apiPermission Authenticate and System.View Permission for the VISBO System
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View Permission
 	* @apiExample Example usage:
