@@ -1829,6 +1829,7 @@ function checkUIDs(newOrga, oldOrga) {
 		}
 	}
 	if (i != oldOrga.allRoles.length) return false;
+	logger4js.debug('allRoles of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
 
 	// check all UIDs of costs - they all have to exist in the newOrga as well
 	var allNewCosts = [];
@@ -1844,6 +1845,8 @@ function checkUIDs(newOrga, oldOrga) {
 		}
 	}
 	if (i != oldOrga.allCosts.length) return false;
+	logger4js.debug('allCosts of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
+	
 	return true;
 }
 
