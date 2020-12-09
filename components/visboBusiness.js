@@ -1808,13 +1808,54 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.keyMetrics = undefined;
 	vpv.status = undefined;
 }
+function checkUIDs(newOrga, oldOrga) {
+	
+	if (!oldOrga || !newOrga) return False;	
+	//if (oldOrga && oldOrga.allRoles && oldOrga.allCosts) 
+	if ((oldOrga.allCosts.length < newOrga.allCosts.length)) return False;
+	if ((oldOrga.allRoles.length < newOrga.allRoles.length)) return False;
+
+	// check all UIDs of roles - they all have to exist in the newOrga as well
+	var allNewRoles = [];
+	for (var i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
+		allNewRoles[newOrga.allRoles[i].uid] = newOrga.allRoles[i];
+	}
+	for ( var i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
+		var thisRole = oldOrga.allRoles[i];
+		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
+			logger4js.debug('UID missing in newOrga', thisRole.uid + ' Name: ', thisRole.name);
+			return false;
+			break;
+		}
+	}
+	if (i != oldOrga.allRoles.length) return false;
+
+	// check all UIDs of costs - they all have to exist in the newOrga as well
+	var allNewCosts = [];
+	for (var i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
+		allNewCosts[newOrga.allCosts[i].uid] = newOrga.allCosts[i];
+	}
+	for ( var i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
+		var thisCost = oldOrga.allCosts[i];
+		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
+			logger4js.debug('Cost-UID missing in newOrga', thisCost.uid + ' Name: ', thisCost.name);
+			return false;
+			break;
+		}
+	}
+	if (i != oldOrga.allCosts.length) return false;
+	return true;
+}
 
 function verifyOrganisation(newOrga, oldOrga) {
 	// updates newOrga if possible and returns true/false if the orga could be used
 	// newOrga is the pure Orga Value
 	// oldOrga is the full setting including timestamp, vcid, ...
-	logger4js.debug('verify Organisation ', newOrga && newOrga.value && newOrga.value.timestamp, oldOrga && oldOrga.name);
-	return true;
+	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
+	if (newOrga && oldOrga && oldOrga.value) {
+		var result =  checkUIDs(newOrga, oldOrga.value);
+	}
+	return result;
 }
 
 module.exports = {
