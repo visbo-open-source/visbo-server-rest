@@ -2210,6 +2210,13 @@ router.route('/:vcid/group/:groupid')
 					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
 					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
 				}
+				// use validFrom if timestamp is not set and validFrom is set
+				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
+				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
+				// set timestamp to beginning of month
+				newTimeStamp.setDate(1);
+				newTimeStamp.setHours(0,0,0,0);
+				orga.validFrom = newTimeStamp;
 				logger4js.info('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
 				if (!visboBusiness.verifyOrganisation(orga, oldOrga)) {
 					return res.status(400).send({
@@ -2219,12 +2226,6 @@ router.route('/:vcid/group/:groupid')
 					});
 				}
 				vcSetting.value = orga;
-				// use validFrom if timestamp is not set and validFrom is set
-				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
-				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
-				// set timestamp to beginning of month
-				newTimeStamp.setDate(1);
-				newTimeStamp.setHours(0,0,0,0);
 			} else {
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 			}
