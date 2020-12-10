@@ -13,6 +13,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var Const = require('../models/constants');
 var constPermVP = Const.constPermVP;
+var constPermVC = Const.constPermVC;
 
 var logModule = 'VPV';
 var log4js = require('log4js');
@@ -134,7 +135,7 @@ router.route('/')
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
 	*
-	* @apiPermission Permission: Authenticated, View Project.
+	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the View Permission for the specified object.
 	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
@@ -396,11 +397,11 @@ router.route('/')
 	* @apiGroup VISBO Project Version
 	* @apiName CreateVISBOProjectVersions
 	* @apiDescription Post creates a new VISBO Project Version.
-	* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the Version.
+	* The user needs to have Modify permission in the referenced Project or has CreateVariant permission and is the owner of the Variant, where he wants to store the Version.
 	* VISBO Project Version Properties like _id, name and timestamp are overwritten by the system
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and Permission: View Project, Modify Project or Create Variant.
+	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create Project Version
@@ -637,7 +638,7 @@ router.route('/:vpvid')
 	* @apiDescription Get returns a specific Project Version the user has access permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	*
-	* @apiPermission Permission: Authenticated, View Project.
+	* @apiPermission Authenticated and VP.View Permission for the Project.
 	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
@@ -727,7 +728,7 @@ router.route('/:vpvid')
 	* @apiDescription Put updates a specific Project Version used for undelete
 	* the system checks if the user has Delete permission to the Project.
 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and Permission: View Project, Delete Project.
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
 	* @apiError {number} 400 not allowed to change Project Version or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
@@ -826,7 +827,7 @@ router.route('/:vpvid')
 	* @apiDescription Deletes a specific Project Version.
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Permission: Authenticated, View Project, Delete Project.
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
 	* @apiError {number} 400 Bad Parameter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete Project Version or Project Version does not exists
@@ -937,11 +938,11 @@ router.route('/:vpvid/copy')
 		* @apiGroup VISBO Project Version
 		* @apiName VISBOProjectVersionCopy
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
-		* The user needs to have Modify permission in the referenced Project or is the owner of the Variant, where he wants to store the VPV.
+		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
 		* @apiHeader {String} access-key User authentication token.
 		*
-		* @apiPermission Authenticated and Permission: View Project, Modify Project or Create Variant.
+		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create Project Version
@@ -1103,22 +1104,25 @@ router.route('/:vpvid/copy')
 router.route('/:vpvid/capacity')
 
 	/**
-	 	* @api {get} /vpv/:vpvid/capacity Get capacity for specific Version
+	 	* @api {get} /vpv/:vpvid/capacity Get Capacity for VISBO Project
 		* @apiVersion 1.0.0
 	 	* @apiGroup VISBO Project Version
-	 	* @apiName GetVISBOProjectVersionCapacity
+	 	* @apiName GetVISBOProjectCapacity
 	 	* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Get returns the capacity for a specific Project Version the user has access permission to the Project
-		* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
+		* @apiDescription Get returns the capacity for a specific Project Version of the Project
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
+		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
 		* @apiParam {String=''} type Specifies the type of calculation for the VPV
-		* @apiPermission Permission: Authenticated, View Project, ViewAudit.
+		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
+		* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
 		* @apiError {number} 400 Bad Values in paramter in URL
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-		* @apiError {number} 403 No Permission to View Project Version
+		* @apiError {number} 403 No Permission to View Project Version, or View Visbo Center to get the organisation.
+		* @apiError {number} 409 No Organisation configured in the VISBO Center
 		*
 	 	* @apiExample Example usage:
-	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/capacity
+	 	*   url: https://my.visbo.net/api/vpv/vpv5aada025/capacity?roleID=1
 	 	* @apiSuccessExample {json} Response:
 	 	* HTTP/1.1 200 OK
 	 	* {
@@ -1144,12 +1148,16 @@ router.route('/:vpvid/capacity')
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
-		if ((perm.vp & constPermVP.ViewAudit) == 0 ) {
+		if ((perm.vc & constPermVC.View) == 0 && (perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to Calculate Project Version',
+				message: 'No Permission to get Capacity of Project',
 				perm: perm
 			});
+		}
+		var onlyPT = true;
+		if (perm.vp & constPermVP.ViewAudit ) {
+			onlyPT = false;
 		}
 		if (roleID == undefined ) {
 			return res.status(400).send({
@@ -1160,7 +1168,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.visboOrganisations, req.query.hierarchy == true);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
@@ -1186,11 +1194,11 @@ router.route('/:vpvid/keyMetrics')
  	* @apiGroup VISBO Project Version
  	* @apiName GetVISBOProjectVersionKeyMetrics
  	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Get returns the deliveries for a specific Project Version the user has access permission to the Project
+	* @apiDescription Get returns the keyMetrics for a specific Project Version the user has access permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	* Without Audit Permission the Cost Part of keyMetrics will not be delivered
 	*
-	* @apiPermission Permission: Authenticated, View Project, View Audit.
+	* @apiPermission Authenticated and VP.View and otional VP.ViewAudit Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*
@@ -1265,7 +1273,7 @@ router.route('/:vpvid/cost')
 	* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	* With Permission Restricted View, the deliveries were filtered to the restricted View
 	*
-	* @apiPermission Permission: Authenticated, View Project, View Audit.
+	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*
@@ -1340,7 +1348,7 @@ router.route('/:vpvid/delivery')
 	*
 	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
-	* @apiPermission Permission: Authenticated, View Project.
+	* @apiPermission Authenticated and VP.View Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*
@@ -1432,7 +1440,7 @@ router.route('/:vpvid/deadline')
 	*
 	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
-	* @apiPermission Permission: Authenticated, View Project.
+	* @apiPermission Authenticated and VP.View Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*
