@@ -1846,7 +1846,7 @@ function checkUIDs(newOrga, oldOrga) {
 	}
 	if (i != oldOrga.allCosts.length) return false;
 	logger4js.debug('allCosts of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
-	
+
 	return true;
 }
 
@@ -1856,6 +1856,8 @@ function verifyOrganisation(newOrga, oldOrga) {
 	// oldOrga is the full setting including timestamp, vcid, ...
 	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
 	if (newOrga && oldOrga && oldOrga.value) {
+		var datenow = new Date();
+		if(oldOrga.timestamp > datenow ) return false;
 		var result =  checkUIDs(newOrga, oldOrga.value);
 	}
 	return result;
