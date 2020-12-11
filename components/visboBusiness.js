@@ -1868,9 +1868,15 @@ function verifyOrganisation(newOrga, oldOrga) {
 	// newOrga is the pure Orga Value
 	// oldOrga is the full setting including timestamp, vcid, ...
 	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
-	if (newOrga && oldOrga && oldOrga.value) {
+	var result = true;
+	if ( newOrga && oldOrga && oldOrga.value ) {
 		var datenow = new Date();
-		if(oldOrga.timestamp > datenow ) return false;
+		var doldO = new Date(oldOrga.timestamp);
+		var dnewO = new Date(newOrga.validFrom);
+		if ( dnewO < doldO ) {
+			result = false;
+			return result;
+		}
 		var result =  checkUIDs(newOrga, oldOrga.value);
 	}
 	return result;
