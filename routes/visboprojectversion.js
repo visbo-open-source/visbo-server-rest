@@ -108,7 +108,7 @@ var convertVariantList = function(idList, vp) {
 router.route('/')
 
 /**
-	* @api {get} /vpv Get Versions
+	* @api {get} /vpv Get Versions 
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Version
 	* @apiName GetVISBOProjectVersions
