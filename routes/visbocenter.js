@@ -87,7 +87,7 @@ function squeezeSetting(item, email) {
 
 function generateNewRole(item) {
 	var statusOk = true;
-	var minDate = new Date('0001-01-01');
+	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
 	if (!item) {
 		statusOk = false;
@@ -112,7 +112,7 @@ function generateNewRole(item) {
 			entryDate = new Date(entryDate);
 			if (entryDate.getTime() > minDate.getTime()) {
 				newRole.entryDate = new Date(entryDate);
-			})
+			}
 		}
 	}
 	if (item.exitDate) {
@@ -121,6 +121,7 @@ function generateNewRole(item) {
 			exitDate = new Date(exitDate);
 			if (exitDate.getTime() < maxDate.getTime()) {
 				newRole.exitDate = new Date(exitDate);
+			}
 		}
 	}
 	if (item.aliases) {
@@ -161,7 +162,10 @@ function generateNewRole(item) {
 	if (item.startOfCal) {
 		var startOfCal = validate.validateDate(item.startOfCal, false);
 		if (startOfCal) {
-			newRole.startOfCal = new Date(startOfCal);
+			startOfCal = new Date(startOfCal);
+			if (startOfCal.getTime() > minDate.getTime()) {
+				newRole.startOfCal = startOfCal;
+			}
 		}
 	}
 	if (item.kapazitaet) {
