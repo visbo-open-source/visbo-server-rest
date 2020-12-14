@@ -108,14 +108,19 @@ function generateNewRole(item) {
 	}
 	if (item.entryDate) {
 		var entryDate = validate.validateDate(item.entryDate, false);
-		if (entryDate && entryDate.getTime() > minDate.getTime()) {
-			newRole.entryDate = new Date(entryDate);
+		if (entryDate) {
+			entryDate = new Date(entryDate);
+			if (entryDate.getTime() > minDate.getTime()) {
+				newRole.entryDate = new Date(entryDate);
+			})
 		}
 	}
 	if (item.exitDate) {
 		var exitDate = validate.validateDate(item.exitDate, false);
-		if (exitDate && exitDate.getTime() < maxDate.getTime()) {
-			newRole.exitDate = new Date(exitDate);
+		if (exitDate) {
+			exitDate = new Date(exitDate);
+			if (exitDate.getTime() < maxDate.getTime()) {
+				newRole.exitDate = new Date(exitDate);
 		}
 	}
 	if (item.aliases) {
