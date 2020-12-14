@@ -107,15 +107,15 @@ function generateNewRole(item) {
 		newRole.employeeNr = item.employeeNr;
 	}
 	if (item.entryDate) {
-		var entryDate = new Date(item.entryDate);
-		if (entryDate.getTime() > minDate.getTime()) {
-			newRole.entryDate = item.entryDate;
+		var entryDate = validate.validateDate(item.entryDate, false);
+		if (entryDate && entryDate.getTime() > minDate.getTime()) {
+			newRole.entryDate = new Date(entryDate);
 		}
 	}
 	if (item.exitDate) {
-		var exitDate = new Date(item.exitDate);
-		if (exitDate.getTime() < maxDate.getTime()) {
-			newRole.exitDate = item.exitDate;
+		var exitDate = validate.validateDate(item.exitDate, false);
+		if (exitDate && exitDate.getTime() < maxDate.getTime()) {
+			newRole.exitDate = new Date(exitDate);
 		}
 	}
 	if (item.aliases) {
@@ -154,9 +154,9 @@ function generateNewRole(item) {
 		newRole.isExternRole = item.isExternRole;
 	}
 	if (item.startOfCal) {
-		var startOfCal = new Date(item.startOfCal);
-		if (startOfCal.getTime() < startOfCal.getTime()) {
-			newRole.startOfCal = item.startOfCal;
+		var startOfCal = validate.validateDate(item.startOfCal, false);
+		if (startOfCal) {
+			newRole.startOfCal = new Date(startOfCal);
 		}
 	}
 	if (item.kapazitaet) {
