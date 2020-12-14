@@ -113,7 +113,8 @@ router.route('/')
 	* @apiGroup VISBO Project Version
 	* @apiName GetVISBOProjectVersions
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Get versions returns for all VISBOProjects, the user has access permission to, the latest VISBOProjectVersion
+	* @apiDescription Get versions returns for all VISBOProjects, the user has access permission to, the latest VISBOProjectVersion.
+	* In case the User has only VP.ViewRestricted view, he gets only short information (_id, timestamp, name, ...) about the versions without a specific variant.
 	*
 	* In case of success it delivers an array of VPVs, the array contains in each element a VPV.
 	* Instead of delivering the whole VPV document a reduced document is delivered, to get the full document the client
@@ -135,7 +136,7 @@ router.route('/')
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
 	*
-	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the View Permission for the specified object.
+	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the VP.View or VP.ViewRestricted Permission for the specified object.
 	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	*
@@ -635,10 +636,11 @@ router.route('/:vpvid')
  	* @apiGroup VISBO Project Version
  	* @apiName GetVISBOProjectVersion
  	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Get returns a specific Project Version the user has access permission to the Project
+	* @apiDescription Get returns a specific Project Version the user has access permission to the Project.
+	* If the user has only VP.ViewRestricted Permission the Version is cleaned up to contain only information about the Deadlines & Deliveries the User is allowed to see.
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	*
-	* @apiPermission Authenticated and VP.View Permission for the Project.
+	* @apiPermission Authenticated and VP.View or VP.ViewRestricted Permission for the Project.
 	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
@@ -1344,11 +1346,11 @@ router.route('/:vpvid/delivery')
  	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get returns the deliveries for a specific Project Version the user has view permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
-	* With Permission Restricted View, the deliveries were filtered to the restricted View
+	* With Permission VP.ViewRestriced, the deliveries were filtered to the restricted View
 	*
 	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
-	* @apiPermission Authenticated and VP.View Permission for the Project.
+	* @apiPermission Authenticated and VP.View or VP.ViewRestriced Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*
@@ -1436,11 +1438,11 @@ router.route('/:vpvid/deadline')
  	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get returns the deadlines for a specific Project Version where the user has View permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
-	* With Permission Restricted View, the deadlines were filtered to the restricted View
+	* With Permission VP.ViewRestriced, the deadlines were filtered to the restricted View
 	*
 	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
-	* @apiPermission Authenticated and VP.View Permission for the Project.
+	* @apiPermission Authenticated and VP.View or VP.ViewRestriced Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
 	*

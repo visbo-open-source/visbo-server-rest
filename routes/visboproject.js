@@ -299,7 +299,7 @@ router.route('/')
 	* @apiGroup VISBO Project
 	* @apiName GetVISBOProjects
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp retruns all Projects the user has access permission to
+	* @apiDescription GET /vp retruns all Projects the user has either VP.View or VP.ViewRestricted permission to
 	* In case of success it delivers an array of VPs, the array contains in each element a Project
 	* The lock section is empty if no lock is set, otherwise it delivers the list of locks that were set for the Project and the respective Variant.
 	* The variant section is empty if there are no variants for this Project, otherwise it contains a list of variants that exists for this project.
@@ -590,7 +590,7 @@ router.route('/:vpid')
 	* @apiDescription Get a specific Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
-	* @apiPermission Authenticated and  VP.View Permission for the Project.
+	* @apiPermission Authenticated and  VP.View or VP.ViewRestricted Permission for the Project.
 	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
