@@ -894,9 +894,9 @@ function diffDays(date1, date2) {
 	var firstDate = new Date(date1);
 	var secondDate = new Date(date2);
 	if (!isNaN(firstDate) && !isNaN(secondDate)) {
-		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		// differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		differenceInDays = Math.round((firstDate.getTime() - secondDate.getTime())/(oneDay));
 	}
-
 	return differenceInDays;
 }
 
