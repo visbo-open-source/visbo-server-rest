@@ -894,9 +894,9 @@ function diffDays(date1, date2) {
 	var firstDate = new Date(date1);
 	var secondDate = new Date(date2);
 	if (!isNaN(firstDate) && !isNaN(secondDate)) {
-		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		// differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		differenceInDays = Math.round((firstDate.getTime() - secondDate.getTime())/(oneDay));
 	}
-
 	return differenceInDays;
 }
 
@@ -983,11 +983,11 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 			}
 
-			// if (allDeadlines && allDeadlines.length > 0){
-			// 	var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
-			// 	keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
-			// 	keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
-			// }
+			if (allDeadlines && allDeadlines.length > 0){
+				var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
+				keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
+				keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
+			}
 
 			// look for the deliverables of pfv (take all)
 			var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
@@ -1821,13 +1821,65 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.keyMetrics = undefined;
 	vpv.status = undefined;
 }
+function checkUIDs(newOrga, oldOrga) {
+	
+	if (!oldOrga || !newOrga) return False;	
+	//if (oldOrga && oldOrga.allRoles && oldOrga.allCosts) 
+	if ((oldOrga.allCosts.length < newOrga.allCosts.length)) return False;
+	if ((oldOrga.allRoles.length < newOrga.allRoles.length)) return False;
+
+	// check all UIDs of roles - they all have to exist in the newOrga as well
+	var allNewRoles = [];
+	for (var i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
+		allNewRoles[newOrga.allRoles[i].uid] = newOrga.allRoles[i];
+	}
+	for ( var i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
+		var thisRole = oldOrga.allRoles[i];
+		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
+			logger4js.debug('UID missing in newOrga', thisRole.uid + ' Name: ', thisRole.name);
+			return false;
+			break;
+		}
+	}
+	if (i != oldOrga.allRoles.length) return false;
+	logger4js.debug('allRoles of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
+
+	// check all UIDs of costs - they all have to exist in the newOrga as well
+	var allNewCosts = [];
+	for (var i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
+		allNewCosts[newOrga.allCosts[i].uid] = newOrga.allCosts[i];
+	}
+	for ( var i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
+		var thisCost = oldOrga.allCosts[i];
+		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
+			logger4js.debug('Cost-UID missing in newOrga', thisCost.uid + ' Name: ', thisCost.name);
+			return false;
+			break;
+		}
+	}
+	if (i != oldOrga.allCosts.length) return false;
+	logger4js.debug('allCosts of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
+
+	return true;
+}
 
 function verifyOrganisation(newOrga, oldOrga) {
 	// updates newOrga if possible and returns true/false if the orga could be used
 	// newOrga is the pure Orga Value
 	// oldOrga is the full setting including timestamp, vcid, ...
-	logger4js.debug('verify Organisation ', newOrga && newOrga.value && newOrga.value.timestamp, oldOrga && oldOrga.name);
-	return true;
+	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
+	var result = true;
+	if ( newOrga && oldOrga && oldOrga.value ) {
+		var datenow = new Date();
+		var doldO = new Date(oldOrga.timestamp);
+		var dnewO = new Date(newOrga.validFrom);
+		if ( dnewO < doldO ) {
+			result = false;
+			return result;
+		}
+		result =  checkUIDs(newOrga, oldOrga.value);
+	}
+	return result;
 }
 
 module.exports = {

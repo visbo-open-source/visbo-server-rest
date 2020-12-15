@@ -2221,13 +2221,15 @@ router.route('/:vcid/group/:groupid')
 					orga.allCosts.push(newCost);
 				});
 
+				orga.validFrom = new Date(value.validFrom);
+
 				var oldOrga = undefined;
 				if (req.visboOrganisations && req.visboOrganisations.length > 0) {
 					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
 					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
 				}
 				// use validFrom if timestamp is not set and validFrom is set
-				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
+				newTimeStamp = req.body.timestamp || req.body.value.validFrom;				
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
 				// set timestamp to beginning of month
 				newTimeStamp.setDate(1);
@@ -2515,6 +2517,8 @@ router.route('/:vcid/group/:groupid')
 							var newCost = generateNewCost(item);
 							orga.allCosts.push(newCost);
 						});
+						
+						orga.validFrom = value.validFrom;
 
 						if (!visboBusiness.verifyOrganisation(orga, oneVCSetting)) {
 							return res.status(400).send({
