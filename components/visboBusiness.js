@@ -1877,7 +1877,7 @@ function verifyOrganisation(newOrga, oldOrga) {
 			result = false;
 			return result;
 		}
-		var result =  checkUIDs(newOrga, oldOrga.value);
+		result =  checkUIDs(newOrga, oldOrga.value);
 	}
 	return result;
 }
