@@ -87,7 +87,7 @@ function squeezeSetting(item, email) {
 
 function generateNewRole(item) {
 	var statusOk = true;
-	var minDate = new Date('0001-01-01');
+	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
 	if (!item) {
 		statusOk = false;
@@ -107,15 +107,21 @@ function generateNewRole(item) {
 		newRole.employeeNr = item.employeeNr;
 	}
 	if (item.entryDate) {
-		var entryDate = new Date(item.entryDate);
-		if (entryDate.getTime() > minDate.getTime()) {
-			newRole.entryDate = item.entryDate;
+		var entryDate = validate.validateDate(item.entryDate, false);
+		if (entryDate) {
+			entryDate = new Date(entryDate);
+			if (entryDate.getTime() > minDate.getTime()) {
+				newRole.entryDate = new Date(entryDate);
+			}
 		}
 	}
 	if (item.exitDate) {
-		var exitDate = new Date(item.exitDate);
-		if (exitDate.getTime() < maxDate.getTime()) {
-			newRole.exitDate = item.exitDate;
+		var exitDate = validate.validateDate(item.exitDate, false);
+		if (exitDate) {
+			exitDate = new Date(exitDate);
+			if (exitDate.getTime() < maxDate.getTime()) {
+				newRole.exitDate = new Date(exitDate);
+			}
 		}
 	}
 	if (item.aliases) {
@@ -154,9 +160,12 @@ function generateNewRole(item) {
 		newRole.isExternRole = item.isExternRole;
 	}
 	if (item.startOfCal) {
-		var startOfCal = new Date(item.startOfCal);
-		if (startOfCal.getTime() < startOfCal.getTime()) {
-			newRole.startOfCal = item.startOfCal;
+		var startOfCal = validate.validateDate(item.startOfCal, false);
+		if (startOfCal) {
+			startOfCal = new Date(startOfCal);
+			if (startOfCal.getTime() > minDate.getTime()) {
+				newRole.startOfCal = startOfCal;
+			}
 		}
 	}
 	if (item.kapazitaet) {
@@ -1851,7 +1860,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
-		* @apiParam {Boolean} longList Deliver also information like Capacities
+		* @apiParam {Boolean} shortList Deliver only hierarchy but no capacity & tagessatz
 		*
 		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
 		* Depending of custom roles the organisation could be filtered in addition to a specific branch inside the organisation.
@@ -1880,7 +1889,6 @@ router.route('/:vcid/group/:groupid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
-			var longList = req.query.longList == true;
 
 			req.auditDescription = 'VISBO Center Organisation Read';
 			req.auditTTLMode = 1;
@@ -1905,8 +1913,12 @@ router.route('/:vcid/group/:groupid')
 			} else {
 				queryVCSetting.sort('type name userId -timestamp');
 			}
-			if (!longList || (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
-				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
+			if (req.query.shortList) {
+				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
+			} else {
+				if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+					queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
+				}
 			}
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
@@ -1981,6 +1993,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {String} type Deliver only settings of the the specified type
 		* @apiParam {String} userId Deliver only settings that has set the specified userId
 		* @apiParam {String} groupBy Groups the Settings regarding refDate by Type and userId and returns one per group
+		* @apiParam {String} shortList Delivers only the Settings without the value structure (to be able to check what is available)
 		*
 		* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2043,6 +2056,9 @@ router.route('/:vcid/group/:groupid')
 
 			logger4js.info('Find VC Settings with query %O', query);
 			var queryVCSetting = VCSetting.find(query);
+			if (req.query.shortList == true) {
+				queryVCSetting.select('-value');
+			}
 			// queryVCSetting.select('_id vcid name');
 			queryVCSetting.sort(sortColumns);
 			queryVCSetting.lean();
