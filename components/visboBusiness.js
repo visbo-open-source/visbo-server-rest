@@ -1831,12 +1831,12 @@ function checkUIDs(newOrga, oldOrga) {
 		return false;	
 	}
 	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) {
-		logger4js.warn('Error: more old costs %s then new costs %s are in the organisations', oldOrga.allCosts.length, newOrga.allCosts.length);
+		logger4js.warn('Error: more old costs (%s) than new costs (%s) are in the organisation', oldOrga.allCosts.length, newOrga.allCosts.length);
 		result = false;
 	}
 	
 	if ((oldOrga.allRoles.length > newOrga.allRoles.length)){
-		logger4js.warn('Error: more old roles %s than new roles %s are in the organisations', oldOrga.allCosts.length, newOrga.allCosts.length);
+		logger4js.warn('Error: more old roles (%s) than new roles (%s) in the organisation', oldOrga.allRoles.length, newOrga.allRoles.length);
 		result = false;
 	} 
 
@@ -1849,12 +1849,12 @@ function checkUIDs(newOrga, oldOrga) {
 	for ( var i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
 		var thisRole = oldOrga.allRoles[i];
 		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
-			logger4js.warn('Error: UID missing in newOrga', thisRole.uid + ' Name: ', thisRole.name);
+			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
 			resultRoles = resultRoles && false;			
 		}
 	}
 	if (resultRoles) {		
-		logger4js.debug('allRoles of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
+		logger4js.debug('allRoles (%s) of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
 	}
 
 	// check all UIDs of costs - they all have to exist in the newOrga as well
@@ -1866,12 +1866,12 @@ function checkUIDs(newOrga, oldOrga) {
 	for ( var i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
 		var thisCost = oldOrga.allCosts[i];
 		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
-			logger4js.warn('Error: Cost-UID missing in newOrga', thisCost.uid + ' Name: ', thisCost.name);
+			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
 			resultCosts = resultCosts && false;			
 		}
 	}	
 	if ( resultCosts ) {
-		logger4js.debug('allCosts of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
+		logger4js.debug('allCosts (%s) of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
 	}
 
 	result = result && resultCosts && resultRoles;
