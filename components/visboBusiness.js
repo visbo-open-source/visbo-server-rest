@@ -1,6 +1,7 @@
 
 var logModule = 'VPV';
 var log4js = require('log4js');
+const { validateDate } = require('./validate');
 var logger4js = log4js.getLogger(logModule);
 
 var refMonth = undefined;
@@ -870,18 +871,19 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		}
 		uf++;
 	}
+	
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
 		wholeDelayFinished += 1 * (finishedElements[f] || 0);
 	}
-	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || 0);
+	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || undefined);
 
 	var wholeDelayUnFinished = 0;
 	for ( f = 0; f < unfinishedElements.length; f++) {
 		wholeDelayUnFinished += 1 * (unfinishedElements[f] || 0);
 	}
-	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || 0);
+	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || undefined);
 
 	return result;
 }
@@ -1821,46 +1823,59 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.keyMetrics = undefined;
 	vpv.status = undefined;
 }
-
 function checkUIDs(newOrga, oldOrga) {
-	if (!oldOrga || !newOrga) return false;
-	//if (oldOrga && oldOrga.allRoles && oldOrga.allCosts)
-	if ((oldOrga.allCosts.length < newOrga.allCosts.length)) return false;
-	if ((oldOrga.allRoles.length < newOrga.allRoles.length)) return false;
+	logger4js.debug('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
+	var result = true;
+	if (!oldOrga || !newOrga) {
+		logger4js.warn('Error: either the new organisation or the old organisation or both are undefined');
+		return false;	
+	}
+	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) {
+		logger4js.warn('Error: more old costs (%s) than new costs (%s) are in the organisation', oldOrga.allCosts.length, newOrga.allCosts.length);
+		result = false;
+	}
+	
+	if ((oldOrga.allRoles.length > newOrga.allRoles.length)){
+		logger4js.warn('Error: more old roles (%s) than new roles (%s) in the organisation', oldOrga.allRoles.length, newOrga.allRoles.length);
+		result = false;
+	} 
 
 	// check all UIDs of roles - they all have to exist in the newOrga as well
 	var allNewRoles = [];
 	for (var i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
 		allNewRoles[newOrga.allRoles[i].uid] = newOrga.allRoles[i];
 	}
+	var resultRoles = true;
 	for ( var i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
 		var thisRole = oldOrga.allRoles[i];
 		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
-			logger4js.debug('UID missing in newOrga', thisRole.uid + ' Name: ', thisRole.name);
-			return false;
-			break;
+			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
+			resultRoles = resultRoles && false;			
 		}
 	}
-	if (i != oldOrga.allRoles.length) return false;
-	logger4js.debug('allRoles of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
+	if (resultRoles) {		
+		logger4js.debug('allRoles (%s) of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
+	}
 
 	// check all UIDs of costs - they all have to exist in the newOrga as well
 	var allNewCosts = [];
 	for (var i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
 		allNewCosts[newOrga.allCosts[i].uid] = newOrga.allCosts[i];
 	}
+	var resultCosts = true;
 	for ( var i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
 		var thisCost = oldOrga.allCosts[i];
 		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
-			logger4js.debug('Cost-UID missing in newOrga', thisCost.uid + ' Name: ', thisCost.name);
-			return false;
-			break;
+			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
+			resultCosts = resultCosts && false;			
 		}
+	}	
+	if ( resultCosts ) {
+		logger4js.debug('allCosts (%s) of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
 	}
-	if (i != oldOrga.allCosts.length) return false;
-	logger4js.debug('allCosts of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
 
-	return true;
+	result = result && resultCosts && resultRoles;
+	return result;
 }
 
 function verifyOrganisation(newOrga, oldOrga) {
@@ -1869,17 +1884,18 @@ function verifyOrganisation(newOrga, oldOrga) {
 	// oldOrga is the full setting including timestamp, vcid, ...
 	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
 	var result = true;
-	return true;
 	if ( newOrga && oldOrga && oldOrga.value ) {
-		var datenow = new Date();
-		var doldO = new Date(oldOrga.timestamp);
-		var dnewO = new Date(newOrga.validFrom);
+		var doldO = validateDate(oldOrga.timestamp,false);
+		var dnewO = validateDate(newOrga.validFrom,false);
 		if ( dnewO < doldO ) {
 			result = false;
 			return result;
 		}
+		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
 		result =  checkUIDs(newOrga, oldOrga.value);
 	}
+	
+	logger4js.debug('Verification of the new organisation:  ', result);
 	return result;
 }
 
