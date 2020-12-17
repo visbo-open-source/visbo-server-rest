@@ -1825,10 +1825,9 @@ function cleanupRestrictedVersion(vpv) {
 }
 function checkUIDs(newOrga, oldOrga) {
 	
-	if (!oldOrga || !newOrga) return False;	
-	//if (oldOrga && oldOrga.allRoles && oldOrga.allCosts) 
-	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) return False;
-	if ((oldOrga.allRoles.length > newOrga.allRoles.length)) return False;
+	if (!oldOrga || !newOrga) return false;	
+	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) return false;
+	if ((oldOrga.allRoles.length > newOrga.allRoles.length)) return false;
 
 	// check all UIDs of roles - they all have to exist in the newOrga as well
 	var allNewRoles = [];
