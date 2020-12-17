@@ -31,6 +31,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 
 var Const = require('../models/constants');
 var constPermVC = Const.constPermVC;
+var constPermVP = Const.constPermVP;
 var constPermSystem = Const.constPermSystem;
 
 var mail = require('../components/mail');
@@ -58,6 +59,7 @@ router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
+router.use('/:vcid/capacity', verifyVpv.getVCPFVs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 
@@ -2229,7 +2231,7 @@ router.route('/:vcid/group/:groupid')
 					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
 				}
 				// use validFrom if timestamp is not set and validFrom is set
-				newTimeStamp = req.body.timestamp || req.body.value.validFrom;				
+				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
 				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
 				// set timestamp to beginning of month
 				newTimeStamp.setDate(1);
@@ -2497,11 +2499,6 @@ router.route('/:vcid/group/:groupid')
 						}
 					}
 				} else {
-					// allow to change all beside userId and type
-					if (req.body.name) oneVCSetting.name = req.body.name;
-					if (req.body.value) oneVCSetting.value = req.body.value;
-					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
-					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
 					if (oneVCSetting.type == 'organisation' && req.body.value) {
 						// normalize the organisaion to defined values
 						var value = req.body.value;
@@ -2517,7 +2514,7 @@ router.route('/:vcid/group/:groupid')
 							var newCost = generateNewCost(item);
 							orga.allCosts.push(newCost);
 						});
-						
+
 						orga.validFrom = value.validFrom;
 
 						if (!visboBusiness.verifyOrganisation(orga, oneVCSetting)) {
@@ -2528,7 +2525,14 @@ router.route('/:vcid/group/:groupid')
 							});
 						}
 						oneVCSetting.value = orga;
+					} else {
+						if (req.body.value) oneVCSetting.value = req.body.value;
 					}
+					// allow to change all beside userId and type
+					if (req.body.name) oneVCSetting.name = req.body.name;
+					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
+					// ignore new timestamp during PUT for organisation
+					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
 				}
 				oneVCSetting.save(function(err, resultVCSetting) {
 					if (err) {
@@ -2613,7 +2617,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		*
 		* @apiPermission Authenticated and VC.View and VC.Modify or VC.ViewAudit for the VISBO Center.
-		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has View Permission. This filtered list is checked to have either VP.ViewAudit & VP.Modify Permission for each project, if not the request fails with permission denied.
+		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has VP.View Permission and VP.ViewAudit or VP.Modify permission.
 		* If the user has VP.ViewAudit Permission for all Projects with View Permission, he gets in addition to the PD Values also the money values.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to generate Capacity Figures for the VISBO Center
@@ -2657,8 +2661,28 @@ router.route('/:vcid/group/:groupid')
 			if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
 				onlyPT = false;
 			}
+			var listVPV = [];
+			req.listVPV && req.listVPV.forEach(vpv => {
+					var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+					if (perm & constPermVP.ViewAudit == 0) {
+						onlyPT = true;
+					}
+					if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+						listVPV.push(vpv);
+					}
+				});
+			var listVPVPFV = [];
+			req.listVPVPFV && req.listVPVPFV.forEach(vpv => {
+					var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+					if (perm & constPermVP.ViewAudit == 0) {
+						onlyPT = true;
+					}
+					if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+						listVPVPFV.push(vpv);
+					}
+				});
 
-			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
 
 			req.auditInfo = '';
 			return res.status(200).send({
