@@ -2878,7 +2878,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				var vpList = [];
 				req.oneVPF.allItems.forEach(item => {
 					if (req.listVPPerm.getPerm(item.vpid).vp & constPermVP.View) {
-						vpList.push(item.vpid)
+						vpList.push(item.vpid);
 					}
 				});
 				vpCalc = vpList.length;
