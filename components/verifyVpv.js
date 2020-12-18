@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants');
 var constPermVP = Const.constPermVP;
-var constPermVC = Const.constPermVC;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
