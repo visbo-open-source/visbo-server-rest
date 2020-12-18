@@ -155,20 +155,22 @@ function calcCosts(vpv, pfv, organisations) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
+	var calcStartDate = undefined;
+	var calcEndDate = undefined;
 
 	if ( (vpv || pfv) && organisations && organisations.length > 0 ) {
 
 		if (pfv && vpv) {
-			var calcStartDate = Math.min(vpv.startDate, pfv.startDate);
-			var calcEndDate = Math.max(vpv.endDate, pfv.endDate);
+			calcStartDate = Math.min(vpv.startDate, pfv.startDate);
+			calcEndDate = Math.max(vpv.endDate, pfv.endDate);
 		}
 		if (!pfv && vpv) {
-			var calcStartDate = vpv.startDate;
-			var calcEndDate =  vpv.endDate;
+			calcStartDate = vpv.startDate;
+			calcEndDate =  vpv.endDate;
 		}
 		if (pfv && !vpv) {
-			var calcStartDate = pfv.startDate;
-			var calcEndDate = pfv.endDate;
+			calcStartDate = pfv.startDate;
+			calcEndDate = pfv.endDate;
 		}
 
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
@@ -1197,7 +1199,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 	var timeZones = [];
 	var organisation_converted = {};
 
-	if (!organisations && organisations.length <= 0 && !calcC_startDate && !calcC_endDate) {
+	if (!organisations || organisations.length <= 0 || !calcC_startDate || !calcC_endDate) {
 		return timeZones;
 	}
 
@@ -1220,9 +1222,9 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
 			organisations[o].timestamp.setHours(0,0,0,0);
-		}
+	}
 
-		for ( var o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
+		for ( o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
 			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
@@ -1826,6 +1828,8 @@ function cleanupRestrictedVersion(vpv) {
 function checkUIDs(newOrga, oldOrga) {
 	logger4js.debug('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
 	var result = true;
+	var i = 0;
+	
 	if (!oldOrga || !newOrga) {
 		logger4js.warn('Error: either the new organisation or the old organisation or both are undefined');
 		return false;	
@@ -1842,11 +1846,11 @@ function checkUIDs(newOrga, oldOrga) {
 
 	// check all UIDs of roles - they all have to exist in the newOrga as well
 	var allNewRoles = [];
-	for (var i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
+	for ( i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
 		allNewRoles[newOrga.allRoles[i].uid] = newOrga.allRoles[i];
 	}
 	var resultRoles = true;
-	for ( var i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
+	for ( i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
 		var thisRole = oldOrga.allRoles[i];
 		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
 			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
@@ -1859,11 +1863,11 @@ function checkUIDs(newOrga, oldOrga) {
 
 	// check all UIDs of costs - they all have to exist in the newOrga as well
 	var allNewCosts = [];
-	for (var i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
+	for ( i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
 		allNewCosts[newOrga.allCosts[i].uid] = newOrga.allCosts[i];
 	}
 	var resultCosts = true;
-	for ( var i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
+	for ( i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
 		var thisCost = oldOrga.allCosts[i];
 		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
 			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
