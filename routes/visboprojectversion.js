@@ -36,6 +36,7 @@ router.use('/', verifyVpv.getPortfolioVPs);
 router.param('vpvid', verifyVpv.getVPV);
 // register the get VPF middleware for calls for a specific VPV, like /cost, /capacity, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
+router.use('/:vpvid', verifyVpv.getVCGroups);
 
 
 // check if keyMetrics from Client is valid
@@ -108,7 +109,7 @@ var convertVariantList = function(idList, vp) {
 router.route('/')
 
 /**
-	* @api {get} /vpv Get Versions 
+	* @api {get} /vpv Get Versions
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Version
 	* @apiName GetVISBOProjectVersions
@@ -1150,7 +1151,7 @@ router.route('/:vpvid/capacity')
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
-		if ((perm.vc & constPermVC.View) == 0 && (perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
+		if ((perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to get Capacity of Project',
@@ -1309,6 +1310,13 @@ router.route('/:vpvid/cost')
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
+		if ((perm.vc & constPermVC.View) == 0 || (perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to get VISBO Center Organisation',
+				perm: perm
+			});
+		}
 		if ((perm.vp & (constPermVP.View + constPermVP.ViewAudit)) != (constPermVP.View + constPermVP.ViewAudit)) {
 			return res.status(403).send({
 				state: 'failure',

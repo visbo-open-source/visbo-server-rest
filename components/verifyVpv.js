@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var Const = require('../models/constants');
 var constPermVP = Const.constPermVP;
+var constPermVC = Const.constPermVC;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
@@ -147,6 +148,68 @@ function getAllVPVGroups(req, res, next) {
 		return next();
 	});
 }
+
+// Add the VC Groups to check Permission for Organisation
+function getVCGroups(req, res, next) {
+	var userId = req.decoded._id;
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	var startCalc = new Date();
+
+	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity') < 0) {
+		return next();
+	}
+	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
+	var query = {};
+	var checkPerm = constPermVC.View;
+
+	query = {'users.userId': userId};	// search for VC groups where user is member
+	query.deletedByParent = {$exists: false};
+	logger4js.debug('Search for VC Groups vcid %s vpid %s', req.oneVP.vcid, req.oneVP._id);
+
+	if ((req.listVPPerm.getPerm(req.oneVP._id).vc & checkPerm) > 0) {
+		// user has already view permission by a global VC Group for this project
+		return next();
+	}
+	query.vcid = req.oneVP.vcid;
+	query.groupType = {$in: ['VC']};				// search for VC Groups only the other we have already
+
+	logger4js.debug('Query VGs %s', JSON.stringify(query));
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vcid vpids groupType');
+	queryVG.lean();
+	queryVG.exec(function (err, listVG) {
+		if (err) {
+			errorHandler(err, res, 'DB: VC Group all find', 'Error getting VISBO Center Groups ');
+			return;
+		}
+		logger4js.debug('Found VGs %d', listVG.length);
+		// Convert the permission to request
+		var listVCPerm = new VisboPermission();
+		for (var i=0; i < listVG.length; i++) {
+			// Check all VPIDs in Group
+			var permGroup = listVG[i];
+			if (permGroup.groupType == 'VC') {
+				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
+			}
+		}
+		logger4js.trace('VPV Combined Perm List %s Len %s', JSON.stringify(listVCPerm), listVCPerm.length);
+		req.listVCPerm = listVCPerm;
+
+		if ((req.listVCPerm.getPerm(req.oneVP.vcid).vc & checkPerm) == 0) {
+			// user does not have View Permission for the VC
+			logger4js.debug('Can not access the organisation beacause of missing VC View Perm', req.oneVP.vcid);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No access to Organization'
+			});
+		}
+		var endCalc = new Date();
+		logger4js.debug('Calculate verifyVPV Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
+		return next();
+	});
+}
+
 
 // Get the VPV for the specific vpvid
 function getVPV(req, res, next, vpvid) {
@@ -826,6 +889,7 @@ function getVCPFVs(req, res, next) {
 
 module.exports = {
 	getAllVPVGroups: getAllVPVGroups,
+	getVCGroups: getVCGroups,
 	getVPV: getVPV,
 	getPortfolioVPs: getPortfolioVPs,
 	getVCOrgs: getVCOrgs,
