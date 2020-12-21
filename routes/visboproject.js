@@ -490,8 +490,7 @@ router.route('/')
 		if ((req.listVCPerm.getPerm(vcid).vc & requiredPerm) != requiredPerm) {
 				return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to create Project',
-				perm: req.listVCPerm.getPerm(vcid)
+				message: 'No Permission to create Project'
 			});
 		}
 		var query = {'_id': vcid};
@@ -625,7 +624,9 @@ router.route('/:vpid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
-		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.params.vpid);
+		var perm = req.listVPPerm.getPerm(isSysAdmin ? 0 : req.oneVP._id);
+		var permVC = req.listVCPerm.getPerm(isSysAdmin ? 0 : req.oneVP.vcid);
+		perm.vc = perm.vc | permVC.vc;
 
 		req.auditDescription = 'Project Read';
 		req.auditSysAdmin = isSysAdmin;
@@ -747,8 +748,7 @@ router.route('/:vpid')
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Project locked',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		}
 
@@ -806,8 +806,7 @@ router.route('/:vpid')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Updated Project',
-					vp: [ oneVP ],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vp: [ oneVP ]
 				});
 			});
 		});
@@ -846,16 +845,14 @@ router.route('/:vpid')
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No permission to delete Project',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No permission to delete Project'
 			});
 		}
 		if (lockVP.lockStatus(req.oneVP, useremail, undefined).locked) {
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Project locked',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		}
 		var destroyVP = req.oneVP.deletedAt;
@@ -983,8 +980,7 @@ router.route('/:vpid/audit')
 		if (!(perm.vp & constPermVP.ViewAudit)) {
 			return res.status(403).send({
 					state: 'failure',
-					message: 'You need to have View Audit permission to get audit trail',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to see Audit Trail'
 				});
 		}
 
@@ -1155,16 +1151,14 @@ router.route('/:vpid/audit')
 						message: 'Returned Project Groups',
 						count: listVPGroup.length,
 						groups: listVPGroup,
-						users: listVPUsers,
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						users: listVPUsers
 					});
 				} else {
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned Project Groups',
 						count: listVPGroup.length,
-						groups: listVPGroup,
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						groups: listVPGroup
 					});
 				}
 			});
@@ -1240,8 +1234,7 @@ router.route('/:vpid/audit')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to change Permission of Project',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to change Permission of Project'
 				});
 			}
 			if (!req.body.name) {
@@ -1264,8 +1257,7 @@ router.route('/:vpid/audit')
 				if (oneGroup) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Project Group already exists',
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						message: 'Project Group already exists'
 					});
 				}
 
@@ -1339,8 +1331,7 @@ router.route('/:vpid/audit')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to delete Project Group',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to delete Project Group'
 				});
 			}
 			logger4js.debug('Delete Project Group after permission check %s', req.params.vpid);
@@ -1349,8 +1340,7 @@ router.route('/:vpid/audit')
 			if (req.oneGroup.internal || req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Project Group not deletable',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'Project Group not deletable'
 			});
 			}
 			req.oneGroup.remove(function(err) {
@@ -1360,8 +1350,7 @@ router.route('/:vpid/audit')
 				}
 				return res.status(200).send({
 					state: 'success',
-					message: 'Deleted Project Group',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'Deleted Project Group'
 				});
 			});
 		})
@@ -1434,15 +1423,13 @@ router.route('/:vpid/audit')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to change Project Group',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to change Project Group'
 				});
 			}
 			if (req.oneGroup.groupType != 'VP') {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'not a Project Group',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'not a Project Group'
 				});
 			}
 
@@ -1459,8 +1446,7 @@ router.route('/:vpid/audit')
 				if (listVPGroup.length > 1 || (listVPGroup.length == 1 &&  listVPGroup[0]._id.toString() != req.oneGroup._id.toString())) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Project Group already exists',
-						perm: req.listVPPerm.getPerm(req.params.vpid)
+						message: 'Project Group already exists'
 					});
 				}
 				// fill in the required fields
@@ -1857,8 +1843,7 @@ router.route('/:vpid/lock')
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Project Variant does not exist',
-					vp: [req.oneVP],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vp: [req.oneVP]
 				});
 			}
 		}
@@ -1871,8 +1856,7 @@ router.route('/:vpid/lock')
 		if (!hasPerm) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to lock Project',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No Permission to lock Project'
 			});
 		}
 
@@ -1880,8 +1864,7 @@ router.route('/:vpid/lock')
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Project already locked',
-				lock: req.oneVP.lock,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				lock: req.oneVP.lock
 			});
 		}
 		if (expiredAt <= dateNow) {
@@ -1889,8 +1872,7 @@ router.route('/:vpid/lock')
 			return res.status(400).send({
 				state: 'failure',
 				message: 'New Lock already expired',
-				lock: req.oneVP.lock,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				lock: req.oneVP.lock
 			});
 		}
 		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
@@ -1917,8 +1899,7 @@ router.route('/:vpid/lock')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated Project Locks',
-				lock: [newLock],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				lock: [newLock]
 			});
 		});
 	})
@@ -1975,9 +1956,8 @@ router.route('/:vpid/lock')
 			logger4js.info('Delete Lock for VP :%s: No Lock exists', req.oneVP.name);
 			return res.status(409).send({
 				state: 'failure',
-				message: 'VP no Lock exists for Deletion',
-				lock: req.oneVP.lock,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'Lock does not exists for Deletion',
+				lock: req.oneVP.lock
 			});
 		}
 		if (resultLock.locked && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)) {	// lock from a different user and no Admin, deny to delete
@@ -1985,8 +1965,7 @@ router.route('/:vpid/lock')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete the Lock',
-				lock: req.oneVP.lock,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				lock: req.oneVP.lock
 			});
 		}
 
@@ -2002,8 +1981,7 @@ router.route('/:vpid/lock')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Deleted Project Locks',
-				lock: req.oneVP.lock,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				lock: req.oneVP.lock
 			});
 		});
 	});
@@ -2065,8 +2043,7 @@ router.route('/:vpid/variant')
 				|| req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to create Variant',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No Permission to create Variant'
 			});
 		}
 		logger4js.trace('Variant %s current list %O', variantName, variantList);
@@ -2077,8 +2054,7 @@ router.route('/:vpid/variant')
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Variant already exists',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 		});
 		}
 		logger4js.trace('Variant List %d orig %O ', variantList.length, variantList);
@@ -2102,8 +2078,7 @@ router.route('/:vpid/variant')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Created Project Variant',
-				variant: [newVariant],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				variant: [newVariant]
 			});
 		});
 	});
@@ -2162,8 +2137,7 @@ router.route('/:vpid/variant/:vid')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete Variant',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		}
 		lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
@@ -2171,16 +2145,14 @@ router.route('/:vpid/variant/:vid')
 			return res.status(423).send({
 				state: 'failure',
 				message: 'Project locked',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		}
 		if (req.oneVP.variant[variantIndex].vpvCount > 0 || req.oneVP.variant[variantIndex].vpfCount > 0) {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Project Variant still has Versions',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		}
 		req.oneVP.variant.splice(variantIndex, 1);
@@ -2199,8 +2171,7 @@ router.route('/:vpid/variant/:vid')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Deleted Project Variant',
-				vp: [req.oneVP],
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vp: [req.oneVP]
 			});
 		});
 	});
@@ -2256,7 +2227,6 @@ router.route('/:vpid/portfolio')
 	*     'reasonToExclude': 'Description Text Exclude',
 	*     '_id': '5b19306f53eb4b516619a5ac'
 	*   }]
-	*   'perm': {'vc': 307, 'vp': 1331}
   * }
 	*/
 // Get Portfolio Versions
@@ -2339,8 +2309,7 @@ router.route('/:vpid/portfolio')
 					count: listVPFfiltered.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
-					vpf: listVPFfiltered,
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vpf: listVPFfiltered
 				});
 			} else {
 				verifyVp.squeezePortfolio(req, listVPF);
@@ -2350,8 +2319,7 @@ router.route('/:vpid/portfolio')
 					count: listVPF.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
-					vpf: listVPF,
-					perm: req.listVPPerm.getPerm(req.params.vpid).vp
+					vpf: listVPF
 				});
 			}
 		});
@@ -2454,8 +2422,7 @@ router.route('/:vpid/portfolio')
 		&& !((req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant) && variantName != '')) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to create Portfolio List',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No Permission to create Portfolio List'
 			});
 		}
 
@@ -2515,8 +2482,7 @@ router.route('/:vpid/portfolio')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Portfolio Version',
-					vpf: [onePortfolio],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vpf: [onePortfolio]
 				});
 			});
 		});
@@ -2604,8 +2570,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				message: 'Returned Portfolio',
 				vpid: req.oneVP._id,
 				name: req.oneVP.name,
-				vpf: listVPF,
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				vpf: listVPF
 			});
 		});
 	})
@@ -2662,8 +2627,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to undelete Portfolio List',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No Permission to undelete Portfolio List'
 			});
 		}
 
@@ -2733,8 +2697,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to delete Portfolio List',
-				perm: req.listVPPerm.getPerm(req.params.vpid)
+				message: 'No Permission to delete Portfolio List'
 			});
 		}
 		var query = {};
@@ -2769,8 +2732,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(423).send({
 					state: 'failure',
 					message: 'Portfolio Project locked',
-					vp: [req.oneVP],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vp: [req.oneVP]
 				});
 			}
 			// user needs to have Delete Permission or owns the Variant
@@ -2784,8 +2746,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				logger4js.warn('VP Portfolio List Delete no Permission %s %s', req.params.vpid, variantName);
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No permission to delete Portfolio List Version',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No permission to delete Portfolio List Version'
 				});
 			}
 			oneVPF.deletedAt = new Date();
@@ -2860,8 +2821,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & (constPermVP.Modify + constPermVP.ViewAudit))) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to calculate Portfolio Capacity',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to calculate Portfolio Capacity'
 				});
 			}
 
@@ -2877,7 +2837,9 @@ router.route('/:vpid/portfolio/:vpfid')
 				vpCount = req.oneVPF.allItems.length;
 				var vpList = [];
 				req.oneVPF.allItems.forEach(item => {
-					if (req.listVPPerm.getPerm(item.vpid).vp & constPermVP.View) {
+					var perm = req.listVPPerm.getPerm(item.vpid).vp;
+					if (perm & constPermVP.View
+					&& (perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
 						vpList.push(item.vpid);
 					}
 				});
@@ -2983,8 +2945,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ManagePerm)) {
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No Permission to change Permission of Project',
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					message: 'No Permission to change Permission of Project'
 				});
 			}
 			if (!validateName(restrictName, false)
@@ -3032,8 +2993,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Created Project Restriction',
-					restrict: [newRestrict],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					restrict: [newRestrict]
 				});
 			});
 
@@ -3089,8 +3049,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Permission to delete Restriction',
-					vp: [req.oneVP],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vp: [req.oneVP]
 				});
 			}
 			req.oneVP.restrict.splice(restrictIndex, 1);
@@ -3103,8 +3062,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Deleted Project Restriction',
-					vp: [req.oneVP],
-					perm: req.listVPPerm.getPerm(req.params.vpid)
+					vp: [req.oneVP]
 				});
 			});
 		});

@@ -172,6 +172,7 @@ function getVCGroups(req, res, next) {
 		return next();
 	}
 	query.vcid = req.oneVP.vcid;
+	query.global = false;										// check only local VC Groups
 	query.groupType = {$in: ['VC']};				// search for VC Groups only the other we have already
 
 	logger4js.debug('Query VGs %s', JSON.stringify(query));

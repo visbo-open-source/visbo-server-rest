@@ -2646,8 +2646,17 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
+			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 
 			req.auditDescription = 'VISBO Center Capacity Read';
+
+			if ((perm.vc & (constPermVC.ViewAudit + constPermVC.Modify)) == 0) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to calculate Capacity',
+					perm: perm
+				});
+			}
 
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			if (!req.visboOrganisations) {

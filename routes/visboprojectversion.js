@@ -1145,11 +1145,21 @@ router.route('/:vpvid/capacity')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+		var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
+		perm.vc = perm.vc | permVC.vc;
 		var roleID = req.query.roleID;
 
 		req.auditDescription = 'Project Version Capacity Read';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
+
+		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisations) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Organisation or no Permission to get Organisation from VISBO Center',
+				perm: perm
+			});
+		}
 
 		if ((perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
 			return res.status(403).send({
@@ -1305,15 +1315,17 @@ router.route('/:vpvid/cost')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+		var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
+		perm.vc = perm.vc | permVC.vc;
 
 		req.auditDescription = 'Project Version Cost Read';
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
-		if ((perm.vc & constPermVC.View) == 0 || (perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
+		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisations) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to get VISBO Center Organisation',
+				message: 'No Organisation or no Permission to get Organisation from VISBO Center',
 				perm: perm
 			});
 		}
