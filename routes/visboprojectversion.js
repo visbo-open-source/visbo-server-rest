@@ -1120,7 +1120,7 @@ router.route('/:vpvid/capacity')
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
-		*‚
+		*
 		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
 		* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
 		* @apiError {number} 400 Bad Values in paramter in URL
@@ -1149,8 +1149,10 @@ router.route('/:vpvid/capacity')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
-		var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
-		perm.vc = perm.vc | permVC.vc;
+		if (req.listVCPerm && req.oneVP) {
+			var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
+			perm.vc = perm.vc | permVC.vc;
+		}
 		var roleID = req.query.roleID;
 
 		req.auditDescription = 'Project Version Capacity Read';
@@ -1319,8 +1321,10 @@ router.route('/:vpvid/cost')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
-		var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
-		perm.vc = perm.vc | permVC.vc;
+		if (req.listVCPerm && req.oneVP) {
+			var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
+			perm.vc = perm.vc | permVC.vc;
+		}
 
 		req.auditDescription = 'Project Version Cost Read';
 		req.auditTTLMode = 1;

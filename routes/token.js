@@ -366,10 +366,10 @@ router.route('/user/googleRedirect')
 
 	// get google confirmation
 	.get(passport.authenticate('google'),(req, res)=>{
-		logger4js.info('redirected', req.user && req.user.displayName);
+		logger4js.warn('redirected', req.user && req.user.displayName, JSON.stringify(req.user));
 		let user = {
 			displayName: req.user.displayName,
-			name: req.user.name.givenName,
+			name: req.user.name && req.user.name.givenName,
 			email: req.user._json.email,
 			provider: req.user.provider
 		};
