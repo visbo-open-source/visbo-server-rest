@@ -62,7 +62,7 @@ var corsOptions = {
     // check if the origin is from same system or not set in case of ClientApp or Postman
     if (!origin || origin == uiUrl) {
       callback(null, true);
-    } else if (uiUrl.findIndex('https://dev.visbo.net') == 0) {
+    } else if (uiUrl.indexOf('https://dev.visbo.net') == 0) {
       // allow i.e. localhost ui client to access dev.visbo.net
       callback(null, true);
     } else {
