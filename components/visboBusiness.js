@@ -1407,6 +1407,10 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					for (tID in rclists[actRoleID]) {
 						intersectElem.phases = intersectElem.phases.concat(rclists[actRoleID][tID]);
 					}
+					// remove duplicate phases from intersectElem.phases-Array
+					intersectElem.phases = intersectElem.phases.filter( function (item, index, inputArray ) {
+						return inputArray.indexOf(item) == index;
+					});
 					intersectArray.push(intersectElem);
 				} else {
 					if (rclists[actRoleID][teamID]) {
@@ -1493,7 +1497,9 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
 
 		var actRoleID = concerningRoles[cR].actRole.uid;
-		var faktor = concerningRoles[cR].faktor;
+		//var faktor = concerningRoles[cR].faktor;
+		// for the capa now always the faktor=1, since new skill management
+		var faktor = 1;
 
 		var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 		var capaProRole = allRoles[actRoleID] ? allRoles[actRoleID].kapazitaet : 0;
