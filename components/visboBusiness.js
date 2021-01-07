@@ -1169,6 +1169,8 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 				var zoneDauer = timeZones[tz].endIndex - tzStartIndex + 1;
 				currentDate = new Date (timeZones[tz].startdate);
 				currentDate.setMonth(currentDate.getMonth());
+				currentDate.setDate(1);
+				currentDate.setHours(0, 0, 0, 0);
 
 				// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
 				for (i = 0 ; i < zoneDauer; i++){
@@ -1382,10 +1384,12 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 		logger4js.trace('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
 
+		var isTeam = allRoles[roleID].isTeam;
+
 
 		// build role/cost - lists with teams
-		logger4js.trace('Build Role / Cost List for Project Version %s',  vpv._id);
-		var rclists = buildRClists(vpv);
+		logger4js.trace('Build Role / Cost or Team List for Project Version %s',  vpv._id);
+		var rclists = buildRClists(vpv, isTeam);
 
 		// build an intersection ?!?!?!
 		var intersectArray = [];
@@ -1449,7 +1453,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
-						if (phase.AllRoles[k].RollenTyp == actRoleID) {
+						if ((phase.AllRoles[k].RollenTyp == actRoleID)|| (phase.AllRoles[k].teamID == actRoleID)) {
 							var role = phase.AllRoles[k];
 							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
 							if (role &&  role.Bedarf) {
@@ -1519,8 +1523,9 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 }
 
 
-function buildRClists(vpv) {
+function buildRClists(vpv, team) {
 	var rclists = {};
+	var teamlists = {};
 
 	if (vpv){
 		// prepare rclists of this vpv
@@ -1559,11 +1564,41 @@ function buildRClists(vpv) {
 					}
 
 				}
+					// teamlists.addRP
+					if (!teamlists[role.teamID]){
+						var phasesPerTeam = [];
+						var newTeam = {};
+						phasesPerTeam.push(phase.name);
+						newTeam[role.RollenTyp] = phasesPerTeam;
+						teamlists[role.teamID]=newTeam;
+					} else {
+						newTeam = teamlists[role.teamID];
+						if (newTeam[role.RollenTyp]){
+							phasesPerTeam = newTeam[role.RollenTyp];
+							var indexPhase= phasesPerTeam.indexOf(phase.name);
+							if (!(indexPhase >= 0)) {
+								phasesPerTeam.push(phase.name);
+								newTeam[role.RollenTyp] = phasesPerTeam;
+								teamlists[role.teamID] = newTeam;
+							}
+						} else {
+							phasesPerTeam = [];
+							phasesPerTeam.push(phase.name);
+							newTeam[role.RollenTyp] = phasesPerTeam;
+							teamlists[role.teamID]=newTeam;
+						}
+	
+					}
 			}
 		}
 	}
-	return rclists;
+	if ( team ) {
+		return teamlists;
+	} else {
+		return rclists;
+	}
 }
+
 
 
 function getConcerningRoles(allRoles, allTeams, roleID) {
