@@ -1304,7 +1304,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation
-	logger4js.debug('getting roles, which are concerned/connected with roleID in the given organisation %s',  roleID);
+	logger4js.debug('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
 	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
@@ -1385,7 +1385,6 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 		var hrchy = convertHierarchy(vpv);
 
 		var isTeam = allRoles[roleID].isTeam;
-
 
 		// build role/cost - lists with teams
 		logger4js.trace('Build Role / Cost or Team List for Project Version %s',  vpv._id);
@@ -1496,12 +1495,19 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 		capaValues[i] = capaElem;
 	}
 
+	var concerningUIDs = [];
 
 	// Calculate the Capacities of this Role
 	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
-
 		var actRoleID = concerningRoles[cR].actRole.uid;
-		//var faktor = concerningRoles[cR].faktor;
+		var indexUID = concerningUIDs.indexOf(actRoleID);
+		
+		// UIDs should only be added once
+		if ( indexUID >= 0 ) continue;
+
+		// collect the UIDs, which were added to the capa
+		concerningUIDs.push(actRoleID);				
+				
 		// for the capa now always the faktor=1, since new skill management
 		var faktor = 1;
 
@@ -1517,7 +1523,7 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 				capaValues[mon].internCapa_PT = (capaValues[mon].internCapa_PT || 0) + capaProRole[startIndex + mon + 1] * faktor;
 				capaValues[mon].internCapa = (capaValues[mon].internCapa || 0) + capaProRole[startIndex + mon + 1] * tagessatz * faktor / 1000 ;
 			}
-		}
+		}		
 	}
 	return capaValues;
 }
@@ -1564,31 +1570,30 @@ function buildRClists(vpv, team) {
 					}
 
 				}
-					// teamlists.addRP
-					if (!teamlists[role.teamID]){
-						var phasesPerTeam = [];
-						var newTeam = {};
+				// teamlists.addRP
+				if (!teamlists[role.teamID]){
+					var phasesPerTeam = [];
+					var newTeam = {};
+					phasesPerTeam.push(phase.name);
+					newTeam[role.RollenTyp] = phasesPerTeam;
+					teamlists[role.teamID]=newTeam;
+				} else {
+					newTeam = teamlists[role.teamID];
+					if (newTeam[role.RollenTyp]){
+						phasesPerTeam = newTeam[role.RollenTyp];
+						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						if (!(indexPhase >= 0)) {
+							phasesPerTeam.push(phase.name);
+							newTeam[role.RollenTyp] = phasesPerTeam;
+							teamlists[role.teamID] = newTeam;
+						}
+					} else {
+						phasesPerTeam = [];
 						phasesPerTeam.push(phase.name);
 						newTeam[role.RollenTyp] = phasesPerTeam;
 						teamlists[role.teamID]=newTeam;
-					} else {
-						newTeam = teamlists[role.teamID];
-						if (newTeam[role.RollenTyp]){
-							phasesPerTeam = newTeam[role.RollenTyp];
-							var indexPhase= phasesPerTeam.indexOf(phase.name);
-							if (!(indexPhase >= 0)) {
-								phasesPerTeam.push(phase.name);
-								newTeam[role.RollenTyp] = phasesPerTeam;
-								teamlists[role.teamID] = newTeam;
-							}
-						} else {
-							phasesPerTeam = [];
-							phasesPerTeam.push(phase.name);
-							newTeam[role.RollenTyp] = phasesPerTeam;
-							teamlists[role.teamID]=newTeam;
-						}
-	
 					}
+				}
 			}
 		}
 	}
@@ -1607,9 +1612,11 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 	function findConcerningRoles(value, parentRole) {
 		//value is the Id of one subrole
-		var hroleID = value.key;
+		var hroleID = value.key;		
 		crElem = {};
-		crElem.actRole = allRoles[hroleID];
+		crElem.actRole = allRoles[hroleID];		
+		crElem.teamID = -1;
+		crElem.faktor = 1.0;
 
 		if (parentRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
@@ -1617,19 +1624,15 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
 				crElem.faktor = team.value;
-				concerningRoles.push(crElem);
 			}
-		} else {
-			crElem.teamID = -1;
-			crElem.faktor = 1.0;
-			concerningRoles.push(crElem);
+		}		
+		concerningRoles.push(crElem);
 
-			var newParent = crElem.actRole;
-			if (newParent && newParent.subRoleIDs.length > 0){
-				var shroles = newParent.subRoleIDs;
-				for (var sr = 0; shroles && sr < shroles.length; sr++) {
-					findConcerningRoles(shroles[sr], newParent);
-				}
+		var newParent = crElem.actRole;
+		if (newParent && newParent.subRoleIDs.length > 0){
+			var shroles = newParent.subRoleIDs;
+			for (var sr = 0; shroles && sr < shroles.length; sr++) {
+				findConcerningRoles(shroles[sr], newParent);
 			}
 		}
 	}
@@ -1638,7 +1641,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 	if (roleID || roleID != ''){
 		var actRole = allRoles[roleID];
 		crElem = {};
-		crElem.actRole = allRoles[roleID];
+		crElem.actRole = allRoles[roleID];		
 		crElem.teamID = -1;
 		crElem.faktor = 1;
 		concerningRoles.push(crElem);
@@ -1648,36 +1651,6 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
 				findConcerningRoles(subRoles[sr], actRole);
 			}
-		}
-	}
-
-	// eliminate duplicates of the pair roleID|teamID
-	var concerningRolesIndexed = [];
-	for (var dup = 0; dup < concerningRoles.length; dup++) {
-		var crElement = concerningRoles[dup];
-		var key = crElement.actRole.uid + '|' + crElement.teamID;
-		concerningRolesIndexed[key] = crElement;
-	}
-	var isConcerningTeam = true;
-	for (var t=0; t < allTeams.length; t++) {
-		var team = allTeams[t];
-		var teamkey = team.uid + '|' + '-1';
-		if (team &&  team.subRoleIDs.length > 0 && !concerningRolesIndexed[teamkey]) {
-			for ( sr = 0; sr < team.subRoleIDs.length; sr++){
-				key = team.subRoleIDs[sr].key + '|' + '-1';
-				if (!concerningRolesIndexed[key]) {
-					isConcerningTeam = false;
-					break;
-				}
-			}
-		}
-		if (isConcerningTeam) {
-			crElem = {};
-			crElem.actRole = team;
-			crElem.teamID = -1;
-			crElem.faktor = 1;
-			concerningRolesIndexed[teamkey] = crElem;
-			concerningRoles.push(crElem);
 		}
 	}
 	return concerningRoles;
@@ -1956,4 +1929,4 @@ module.exports = {
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
 	verifyOrganisation: verifyOrganisation
-};
+}
