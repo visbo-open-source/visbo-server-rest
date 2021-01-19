@@ -2210,6 +2210,10 @@ router.route('/:vpid/portfolio')
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
+	*   'updatedFrom': {
+	*		  'userId': 'user5b01b11',
+	*		  'email': 'someone@visbo.de'
+	*   },
 	*   'sortType': 1,
 	*   'timestamp': '2018-06-07T13:17:35.000Z',
 	*   'name': 'VP Test01 PF',
@@ -2364,6 +2368,10 @@ router.route('/:vpid/portfolio')
 	*      '_id':'vpf541c754feaa',
 	*      'updatedAt':'2018-03-16T12:39:54.042Z',
 	*      'createdAt':'2018-03-12T09:54:56.411Z',
+	*      'updatedFrom': {
+	*		     'userId': 'user5b01b11',
+	*		     'email': 'someone@visbo.de'
+	*      },
 	*      'vpid' : 'vp5aada025',
 	*      'name' : 'Project Name',
 	*      'allItems': [{
@@ -2470,6 +2478,9 @@ router.route('/:vpid/portfolio')
 			logger4js.warn('Replaced in List (%d) correct VP Names %s', newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
 			newPortfolio.sortType = req.body.sortType;
 			newPortfolio.sortList = req.body.sortList;
+			newPortfolio.updatedFrom = {};
+			newPortfolio.updatedFrom.userId = userId;
+			newPortfolio.updatedFrom.email = useremail;
 
 			newPortfolio.save(function(err, onePortfolio) {
 				if (err) {
@@ -2513,6 +2524,10 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
+	*   'updatedFrom': {
+	*		  'userId': 'user5b01b11',
+	*		  'email': 'someone@visbo.de'
+	*   },
 	*   'sortType': 1,
 	*   'timestamp': '2018-06-07T13:17:35.000Z',
 	*   'name': 'VP Test01 PF',
@@ -2597,6 +2612,10 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
+	*   'updatedFrom': {
+	*		  'userId': 'user5b01b11',
+	*		  'email': 'someone@visbo.de'
+	*   },
 	*   'sortType': 1,
 	*   'timestamp': '2018-06-07T13:17:35.000Z',
 	*   'name': 'VP Test01 PF',
@@ -2616,50 +2635,111 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
-// Update Portfolio Version (Undelete)
+// Update Portfolio Version including undelete
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var variantName = req.body.variantName == undefined ? '' : req.body.variantName.trim();
 
 		req.auditDescription = 'Portfolio List Update';
 
 		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s perm %O', userId, useremail, req.params.vpfid, req.listVPPerm);
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
-			return res.status(403).send({
-				state: 'failure',
-				message: 'No Permission to undelete Portfolio List'
-			});
-		}
-
-		var vpfUndelete = false;
-		// undelete the VPF in case of change
+		// undelete the VPF in case of PUT
 		if (req.oneVPF.deletedAt) {
 			req.auditDescription = 'Portfolio List Undelete';
-			req.oneVPF.deletedAt = undefined;
-			vpfUndelete = true;
-			logger4js.debug('Undelete VPF %s', req.oneVPF._id);
-		}
-		if (!vpfUndelete) {
-			return res.status(400).send({
-				state: 'failure',
-				message: 'not possible to change Portfolio List'
-			});
-		}
-
-		logger4js.debug('PUT VPF: save now %s unDelete %s', req.oneVPF._id, vpfUndelete);
-		req.oneVPF.save(function(err, oneVPF) {
-			if (err) {
-				errorHandler(err, res, 'DB: PUT VPF Save', 'Error updating Portfolio List ');
-				return;
+			if (!req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to undelete Portfolio List!'
+				});
+			} else {
+				logger4js.debug('Undelete VPF %s', req.oneVPF._id);
+				req.oneVPF.deletedAt = undefined;
+				req.oneVPF.save(function(err, oneVPF) {
+					if (err) {
+						errorHandler(err, res, 'DB: PUT VPF Save', 'Error updating Portfolio List ');
+						return;
+					}
+					req.oneVPF = oneVPF;
+					updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, 1);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Portfolio List undeleted',
+						vpf: [ oneVPF ]
+					});
+				});
 			}
-			req.oneVPF = oneVPF;
-			updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, 1);
-			return res.status(200).send({
-				state: 'success',
-				message: 'Portfolio List Undeleted',
-				vpf: [ oneVPF ]
+		} else {
+			var today = new Date();
+	    today.setHours(0,0,0,0);
+
+			if ((userId != (req.oneVPF.updatedFrom && req.oneVPF.updatedFrom.userId.toString()))
+		    || (req.oneVPF.updatedAt.getTime() < today.getTime())) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No permission to change Portfolio List'
+				});
+			}
+
+			// MS TODO: Check & update Portfolio List
+			req.oneVPF.variantName = variantName;
+			req.oneVPF.timestamp = req.body.timestamp || new Date();
+			// check that the vpid exist and user has permission to access
+			var listVPid = new Array();
+			for (var i = 0; i < req.body.allItems.length; i++) {
+				// build up unique project list to check that they exist
+				if (validate.validateObjectId(req.body.allItems[i].vpid, false) && !listVPid.find(findVP, req.body.allItems[i].vpid)){
+					listVPid.push(req.body.allItems[i].vpid);
+				}
+			}
+			logger4js.debug('Check vpids if they exist %s', JSON.stringify(listVPid));
+			var query = {'_id': {'$in': listVPid}};
+			var queryVP = VisboProject.find(query);
+			queryVP.select('_id name');
+			queryVP.exec(function (err, listVP) {
+				if (err) {
+					errorHandler(err, res, 'DB: PUT VPF find', 'Error getting Projects for Portfolio');
+					return;
+				}
+				if (listVP.length != req.body.allItems.length) {
+					logger4js.warn('Found only %d of %d VP IDs', listVP.length, req.body.allItems.length);
+					return res.status(403).send({
+						state: 'failure',
+						message: 'Not all Projects exists or User has permission to',
+						list: listVP
+					});
+				}
+				// MS TODO Check that the sort lists only contain projects from the arrayList, if not return error
+
+				req.oneVPF.allItems = [];
+				// Copy the items to the newPortfolio
+				for (var i = 0; i < req.body.allItems.length; i++) {
+					// get the item, overwrite Project name with correct name
+					req.body.allItems[i].name = listVP.find(findVPList, req.body.allItems[i].vpid).name;
+					if (!req.body.allItems[i].variantName) req.body.allItems[i].variantName = '';
+					delete req.body.allItems[i]._id;
+					req.oneVPF.allItems.push(req.body.allItems[i]);
+				}
+				logger4js.warn('Replaced in List (%d) correct VP Names %s', req.oneVPF.allItems.length, JSON.stringify(req.oneVPF.allItems));
+				if (req.body.sortType) req.oneVPF.sortType = req.body.sortType;
+				if (req.body.sortType) req.oneVPF.sortList = req.body.sortList;
+
+				logger4js.debug('PUT VPF: save now %s', req.oneVPF._id);
+				req.oneVPF.save(function(err, oneVPF) {
+					if (err) {
+						errorHandler(err, res, 'DB: PUT VPF Save', 'Error updating Portfolio List ');
+						return;
+					}
+					req.oneVPF = oneVPF;
+					updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, 1);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Portfolio List updated',
+						vpf: [ oneVPF ]
+					});
+				});
 			});
-		});
+		}
 	})
 
 /**
