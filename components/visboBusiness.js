@@ -873,7 +873,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		}
 		uf++;
 	}
-	
+
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
@@ -1587,11 +1587,15 @@ function buildRClists(vpv, team) {
 							newTeam[role.RollenTyp] = phasesPerTeam;
 							teamlists[role.teamID] = newTeam;
 						}
+<<<<<<< HEAD
 					} else {
 						phasesPerTeam = [];
 						phasesPerTeam.push(phase.name);
 						newTeam[role.RollenTyp] = phasesPerTeam;
 						teamlists[role.teamID]=newTeam;
+=======
+
+>>>>>>> ms-development
 					}
 				}
 			}
@@ -1843,20 +1847,20 @@ function checkUIDs(newOrga, oldOrga) {
 	logger4js.debug('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
 	var result = true;
 	var i = 0;
-	
+
 	if (!oldOrga || !newOrga) {
 		logger4js.warn('Error: either the new organisation or the old organisation or both are undefined');
-		return false;	
+		return false;
 	}
 	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) {
 		logger4js.warn('Error: more old costs (%s) than new costs (%s) are in the organisation', oldOrga.allCosts.length, newOrga.allCosts.length);
 		result = false;
 	}
-	
+
 	if ((oldOrga.allRoles.length > newOrga.allRoles.length)){
 		logger4js.warn('Error: more old roles (%s) than new roles (%s) in the organisation', oldOrga.allRoles.length, newOrga.allRoles.length);
 		result = false;
-	} 
+	}
 
 	// check all UIDs of roles - they all have to exist in the newOrga as well
 	var allNewRoles = [];
@@ -1868,10 +1872,10 @@ function checkUIDs(newOrga, oldOrga) {
 		var thisRole = oldOrga.allRoles[i];
 		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
 			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
-			resultRoles = resultRoles && false;			
+			resultRoles = resultRoles && false;
 		}
 	}
-	if (resultRoles) {		
+	if (resultRoles) {
 		logger4js.debug('allRoles (%s) of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
 	}
 
@@ -1885,9 +1889,9 @@ function checkUIDs(newOrga, oldOrga) {
 		var thisCost = oldOrga.allCosts[i];
 		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
 			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
-			resultCosts = resultCosts && false;			
+			resultCosts = resultCosts && false;
 		}
-	}	
+	}
 	if ( resultCosts ) {
 		logger4js.debug('allCosts (%s) of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
 	}
@@ -1912,11 +1916,12 @@ function verifyOrganisation(newOrga, oldOrga) {
 		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
 		result =  checkUIDs(newOrga, oldOrga.value);
 	}
-	
+
 	logger4js.debug('Verification of the new organisation:  ', result);
 	return result;
 }
 
+<<<<<<< HEAD
 
 function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
 	// updates newOrga if possible and returns true/false if the orga could be used
@@ -2022,6 +2027,14 @@ function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
 	}	
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
 	return newPFV;
+=======
+function convertVPV(oldVPV, oldPFV, orga) {
+	// this function converts an oldVPV to a newVPV and returns it to the caller
+	// if an orga is delivered all individual roles will be replaced by the parent orga unit
+	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
+	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
+	return oldVPV;
+>>>>>>> ms-development
 }
 
 module.exports = {
@@ -2036,5 +2049,10 @@ module.exports = {
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
 	verifyOrganisation: verifyOrganisation,
+<<<<<<< HEAD
 	generatePFV: generatePFV
 }
+=======
+	convertVPV: convertVPV
+};
+>>>>>>> ms-development

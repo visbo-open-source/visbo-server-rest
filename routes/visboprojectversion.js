@@ -943,7 +943,11 @@ router.route('/:vpvid/copy')
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
 		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
-		* @apiHeader {String} access-key User authentication token.
+		*
+		* @apiParam {Boolean} squeezeOrga If true, squeezes the role assignments to a group role instead of having assignments to individuals
+		* @apiParam {Boolean} squeezeToPFV If true, squeezes Phases/Deadlines/Deliveries to the ones that were defined in the related pfv version
+		*
+ 		* @apiHeader {String} access-key User authentication token.
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -1052,8 +1056,16 @@ router.route('/:vpvid/copy')
 		newVPV.complexity = req.oneVPV.complexity;
 		newVPV.description = req.oneVPV.description;
 		newVPV.businessUnit = req.oneVPV.businessUnit;
-		// MS TODO: ignore keyMetrics from body
-		newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
+
+		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
+		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
+		if (orga || pfv) {
+			newVPV = visboBusiness.convertVPV(newVPV, pfv, orga);
+		}
+
+		if (newVPV.variantName != 'pfv') {
+			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
+		}
 		if (!newVPV.keyMetrics && req.body.keyMetrics) {
 			newVPV.keyMetrics = req.body.keyMetrics;
 		}

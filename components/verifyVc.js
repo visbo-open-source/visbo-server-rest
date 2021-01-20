@@ -94,7 +94,7 @@ function getVC(req, res, next, vcid) {
 	logger4js.debug('Generate VC Groups for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
 	var query = {};
 	if (!validate.validateObjectId(vcid, false)) {
-		logger4js.warn('VC Groups Bad Parameter vcid %s', vcid);
+		logger4js.warn('getVC Bad Parameter vcid %s', vcid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid VISBO Center'
