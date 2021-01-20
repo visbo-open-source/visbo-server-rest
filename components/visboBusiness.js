@@ -1921,9 +1921,13 @@ function verifyOrganisation(newOrga, oldOrga) {
 	return result;
 }
 
-<<<<<<< HEAD
 
-function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
+function convertVPV(oldVPV, oldPFV, actOrga) {
+	// this function converts an oldVPV to a newVPV and returns it to the caller
+	// if an orga is delivered all individual roles will be replaced by the parent orga unit
+	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
+	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
+
 	// updates newOrga if possible and returns true/false if the orga could be used
 	// newOrga is the pure Orga Value
 	// oldOrga is the full setting including timestamp, vcid, ...
@@ -1931,68 +1935,55 @@ function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
 	
 	var newPFV = new VisboProjectVersion();
 
-	if ( oneVPV && oldPFV && actOrga && customRoles ) {
-	// 	var doldO = validateDate(oldOrga.timestamp,false);
-	// 	var dnewO = validateDate(newOrga.validFrom,false);
-	// 	if ( dnewO < doldO ) {
-	// 		result = false;
-	// 		return result;
-	// 	}
-	// 	logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
-	// 	result =  checkUIDs(newOrga, oldOrga.value);
-	}
-	if ( oneVPV && oldPFV && actOrga ) {
+	if ( oldVPV && oldPFV && actOrga  ) {
 
-	}
-	if ( oneVPV && actOrga && customRoles) {
+	}	
 
-	}
-
-	if ( oneVPV && actOrga ) {
+	if ( oldVPV && actOrga ) {
 		logger4js.debug('generate a new PFV based on the given VPV without any changes');
 		// keep unchangable attributes
-		newPFV.name = oneVPV.name;
+		newPFV.name = oldVPV.name;
 		// newPFV.vpid = oneVP._id;
 		newPFV.variantName = 'pfv';
-		if (req.body.timestamp && Date.parse(oneVPV.timestamp)) {
-			newPFV.timestamp = new Date(oneVPV.timestamp);
+		if (req.body.timestamp && Date.parse(oldVPV.timestamp)) {
+			newPFV.timestamp = new Date(oldVPV.timestamp);
 		} else {
 			newPFV.timestamp = new Date();
 		}
 
 		// copy all attributes
-		newPFV.variantDescription = oneVPV.variantDescription;
-		newPFV.Risiko = oneVPV.Risiko;
-		newPFV.StrategicFit = oneVPV.StrategicFit;
-		newPFV.customDblFields = oneVPV.customDblFields;
-		newPFV.customStringFields = oneVPV.customStringFields;
-		newPFV.customBoolFields = oneVPV.customBoolFields;
+		newPFV.variantDescription = oldVPV.variantDescription;
+		newPFV.Risiko = oldVPV.Risiko;
+		newPFV.StrategicFit = oldVPV.StrategicFit;
+		newPFV.customDblFields = oldVPV.customDblFields;
+		newPFV.customStringFields = oldVPV.customStringFields;
+		newPFV.customBoolFields = oldVPV.customBoolFields;
 		// ? newPFV.actualDataUntil = oneVPV.actualDataUntil;
-		newPFV.Erloes = oneVPV.Erloes;
-		newPFV.leadPerson = oneVPV.leadPerson;
-		newPFV.startDate = oneVPV.startDate;
-		newPFV.endDate = oneVPV.endDate;
-		newPFV.earliestStart = oneVPV.earliestStart;
-		newPFV.earliestStartDate = oneVPV.earliestStartDate;
-		newPFV.latestStart = oneVPV.latestStart;
-		newPFV.latestStartDate = oneVPV.latestStartDate;
-		newPFV.status = oneVPV.status;
-		newPFV.ampelStatus = oneVPV.ampelStatus;
-		newPFV.ampelErlaeuterung = oneVPV.ampelErlaeuterung;
-		newPFV.farbe = oneVPV.farbe;
-		newPFV.Schrift = oneVPV.Schrift;
-		newPFV.Schriftfarbe = oneVPV.Schriftfarbe;
-		newPFV.VorlagenName = oneVPV.VorlagenName;
-		newPFV.Dauer = oneVPV.Dauer;
-		newPFV.hierarchy = oneVPV.hierarchy;
-		newPFV.volumen = oneVPV.volumen;
-		newPFV.complexity = oneVPV.complexity;
-		newPFV.description = oneVPV.description;
-		newPFV.businessUnit = oneVPV.businessUnit;	
+		newPFV.Erloes = oldVPV.Erloes;
+		newPFV.leadPerson = oldVPV.leadPerson;
+		newPFV.startDate = oldVPV.startDate;
+		newPFV.endDate = oldVPV.endDate;
+		newPFV.earliestStart = oldVPV.earliestStart;
+		newPFV.earliestStartDate = oldVPV.earliestStartDate;
+		newPFV.latestStart = oldVPV.latestStart;
+		newPFV.latestStartDate = oldVPV.latestStartDate;
+		newPFV.status = oldVPV.status;
+		newPFV.ampelStatus = oldVPV.ampelStatus;
+		newPFV.ampelErlaeuterung = oldVPV.ampelErlaeuterung;
+		newPFV.farbe = oldVPV.farbe;
+		newPFV.Schrift = oldVPV.Schrift;
+		newPFV.Schriftfarbe = oldVPV.Schriftfarbe;
+		newPFV.VorlagenName = oldVPV.VorlagenName;
+		newPFV.Dauer = oldVPV.Dauer;
+		newPFV.hierarchy = oldVPV.hierarchy;
+		newPFV.volumen = oldVPV.volumen;
+		newPFV.complexity = oldVPV.complexity;
+		newPFV.description = oldVPV.description;
+		newPFV.businessUnit = oldVPV.businessUnit;	
 		
 		// newPFV.AllPhases have to be created new ones
 		var onePhase = new clsPhase();
-		const pfvAllPhases = oneVPV.AllPhases;
+		const pfvAllPhases = oldVPV.AllPhases;
 		for (var i = 0; pfvAllPhases && i <= pfvAllPhases.length ; i++){
 			const pfvAllRoles = pfvAllPhases[i].AllRoles;
 			const pfvAllCosts = pfvAllPhases[i].AllCosts;
@@ -2026,17 +2017,16 @@ function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
 
 	}	
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
-	return newPFV;
-=======
+	return oldVPV;
+}
+
 function convertVPV(oldVPV, oldPFV, orga) {
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// if an orga is delivered all individual roles will be replaced by the parent orga unit
 	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
 	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
 	return oldVPV;
->>>>>>> ms-development
 }
-
 module.exports = {
 	// getAllPersonalKosten: getAllPersonalKosten,
 	// getAllOtherCost: getAllOtherCost,
@@ -2048,11 +2038,7 @@ module.exports = {
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
-	verifyOrganisation: verifyOrganisation,
-<<<<<<< HEAD
+	verifyOrganisation: verifyOrganisation,	
+	convertVPV: convertVPV,
 	generatePFV: generatePFV
 }
-=======
-	convertVPV: convertVPV
-};
->>>>>>> ms-development
