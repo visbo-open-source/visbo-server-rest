@@ -1917,6 +1917,113 @@ function verifyOrganisation(newOrga, oldOrga) {
 	return result;
 }
 
+
+function generatePFV(oneVPV, oldPFV, actOrga, customRoles) {
+	// updates newOrga if possible and returns true/false if the orga could be used
+	// newOrga is the pure Orga Value
+	// oldOrga is the full setting including timestamp, vcid, ...
+	logger4js.debug('generate new PFV out of VPV, oldPFV, actOrga, customRoles ', VPV && VPV.name + VPV.variantName , oldPFV && oldPFV.name , actOrga && actOrga.timestamp , customRoles && customRoles.type && customRoles.type.timestamp);
+	
+	var newPFV = new VisboProjectVersion();
+
+	if ( oneVPV && oldPFV && actOrga && customRoles ) {
+	// 	var doldO = validateDate(oldOrga.timestamp,false);
+	// 	var dnewO = validateDate(newOrga.validFrom,false);
+	// 	if ( dnewO < doldO ) {
+	// 		result = false;
+	// 		return result;
+	// 	}
+	// 	logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
+	// 	result =  checkUIDs(newOrga, oldOrga.value);
+	}
+	if ( oneVPV && oldPFV && actOrga ) {
+
+	}
+	if ( oneVPV && actOrga && customRoles) {
+
+	}
+
+	if ( oneVPV && actOrga ) {
+		logger4js.debug('generate a new PFV based on the given VPV without any changes');
+		// keep unchangable attributes
+		newPFV.name = oneVPV.name;
+		// newPFV.vpid = oneVP._id;
+		newPFV.variantName = 'pfv';
+		if (req.body.timestamp && Date.parse(oneVPV.timestamp)) {
+			newPFV.timestamp = new Date(oneVPV.timestamp);
+		} else {
+			newPFV.timestamp = new Date();
+		}
+
+		// copy all attributes
+		newPFV.variantDescription = oneVPV.variantDescription;
+		newPFV.Risiko = oneVPV.Risiko;
+		newPFV.StrategicFit = oneVPV.StrategicFit;
+		newPFV.customDblFields = oneVPV.customDblFields;
+		newPFV.customStringFields = oneVPV.customStringFields;
+		newPFV.customBoolFields = oneVPV.customBoolFields;
+		// ? newPFV.actualDataUntil = oneVPV.actualDataUntil;
+		newPFV.Erloes = oneVPV.Erloes;
+		newPFV.leadPerson = oneVPV.leadPerson;
+		newPFV.startDate = oneVPV.startDate;
+		newPFV.endDate = oneVPV.endDate;
+		newPFV.earliestStart = oneVPV.earliestStart;
+		newPFV.earliestStartDate = oneVPV.earliestStartDate;
+		newPFV.latestStart = oneVPV.latestStart;
+		newPFV.latestStartDate = oneVPV.latestStartDate;
+		newPFV.status = oneVPV.status;
+		newPFV.ampelStatus = oneVPV.ampelStatus;
+		newPFV.ampelErlaeuterung = oneVPV.ampelErlaeuterung;
+		newPFV.farbe = oneVPV.farbe;
+		newPFV.Schrift = oneVPV.Schrift;
+		newPFV.Schriftfarbe = oneVPV.Schriftfarbe;
+		newPFV.VorlagenName = oneVPV.VorlagenName;
+		newPFV.Dauer = oneVPV.Dauer;
+		newPFV.hierarchy = oneVPV.hierarchy;
+		newPFV.volumen = oneVPV.volumen;
+		newPFV.complexity = oneVPV.complexity;
+		newPFV.description = oneVPV.description;
+		newPFV.businessUnit = oneVPV.businessUnit;	
+		
+		// newPFV.AllPhases have to be created new ones
+		var onePhase = new clsPhase();
+		const pfvAllPhases = oneVPV.AllPhases;
+		for (var i = 0; pfvAllPhases && i <= pfvAllPhases.length ; i++){
+			const pfvAllRoles = pfvAllPhases[i].AllRoles;
+			const pfvAllCosts = pfvAllPhases[i].AllCosts;
+			const pfvAllResults = pfvAllPhases[i].AllResults;
+			const pfvAllBewertungen = pfvAllPhases[i].AllBewertungen;
+			const pfvdeliverables = pfvAllPhases[i].deliverables;
+
+			onePhase.percentDone= pfvAllPhases[i].percentDone;
+			onePhase.invoice= pfvAllPhases[i].invoice;
+			onePhase.penalty= pfvAllPhases[i].penalty;
+			onePhase.responsible= pfvAllPhases[i].responsible;
+			onePhase.ampelStatus= pfvAllPhases[i].ampelStatus;
+			onePhase.ampelErlaeuterung= pfvAllPhases[i].ampelErlaeuterung;
+			onePhase.earliestStart= pfvAllPhases[i].earliestStart;
+			onePhase.latestStart= pfvAllPhases[i].latestStart;
+			onePhase.minDauer= pfvAllPhases[i].minDauer;
+			onePhase.maxDauer= pfvAllPhases[i].maxDauer;
+			onePhase.relStart= pfvAllPhases[i].relStart;
+			onePhase.relEnde= pfvAllPhases[i].relEnde;
+			onePhase.startOffsetinDays= pfvAllPhases[i].startOffsetinDays;
+			onePhase.dauerInDays= pfvAllPhases[i].dauerInDays;
+			onePhase.name= pfvAllPhases[i].name;
+			onePhase.farbe= pfvAllPhases[i].farbe;
+			onePhase.shortName= pfvAllPhases[i].shortName;
+			onePhase.originalName= pfvAllPhases[i].originalName;
+			onePhase.appearance= pfvAllPhases[i].appearance;
+			newPFV.AllPhases.push(onePhase);
+		}
+
+		// newPFV.AllPhases = oneVPV.AllPhases;
+
+	}	
+	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+	return newPFV;
+}
+
 module.exports = {
 	// getAllPersonalKosten: getAllPersonalKosten,
 	// getAllOtherCost: getAllOtherCost,
@@ -1928,5 +2035,6 @@ module.exports = {
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
-	verifyOrganisation: verifyOrganisation
+	verifyOrganisation: verifyOrganisation,
+	generatePFV: generatePFV
 }
