@@ -1004,6 +1004,9 @@ router.route('/:vpvid/copy')
 
 		var vpid = req.oneVPV.vpid;
 		var variantName = req.oneVPV.variantName;
+		if (req.body.variantName || req.body.variantName == "") {
+			var variantName = req.body.variantName;
+		}
 
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var newVPV = new VisboProjectVersion();
@@ -1021,7 +1024,7 @@ router.route('/:vpvid/copy')
 		// keep unchangable attributes
 		newVPV.name = req.oneVPV.name;
 		newVPV.vpid = req.oneVPV.vpid;
-		newVPV.variantName = req.oneVPV.variantName;
+		newVPV.variantName = variantName;
 		if (req.body.timestamp && Date.parse(req.body.timestamp)) {
 			newVPV.timestamp = new Date(req.body.timestamp);
 		} else {
@@ -1111,7 +1114,7 @@ router.route('/:vpvid/copy')
 			return res.status(200).send({
 				state: 'success',
 				message: 'Successfully created new Project Version',
-				vpv: [ reducedVPV ]
+				vpv: [ oneVPV ]
 			});
 		});
 	});
