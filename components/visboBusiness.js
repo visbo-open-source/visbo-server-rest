@@ -2128,7 +2128,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		logger4js.debug('generate a new PFV based on the given VPV without any changes');
 		// keep unchangable attributes
 		newPFV.name = oldVPV.name;
-		// newPFV.vpid = oneVP._id;
+		newPFV.vpid = oldVPV._id;
 		newPFV.variantName = 'pfv';
 		if (oldVPV.timestamp && Date.parse(oldVPV.timestamp)) {
 			newPFV.timestamp = new Date(oldVPV.timestamp);
