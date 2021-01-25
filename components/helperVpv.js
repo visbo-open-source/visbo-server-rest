@@ -43,7 +43,7 @@ function initVPV(vpv) {
 		|| !validate.validateName(vpv.ampelErlaeuterung, true)
 		|| !validate.validateName(vpv.VorlagenName, true)
 		|| !validate.validateName(vpv.description, true)
-		|| !validate.validateName(vpv.timestamp, true)
+		|| !validate.validateDate(vpv.timestamp, true)
 		|| !validate.validateDate(vpv.startDate, true)
 		|| !validate.validateDate(vpv.endDate, true)
 		|| !validate.validateDate(vpv.earliestStartDate, true)
@@ -100,7 +100,7 @@ function initVPV(vpv) {
 }
 
 function saveVPV(req, res, newVPV) {
-	logger4js.warn('Store VPV for vpid %s/%s ', newVPV._id, newVPV.name);
+	logger4js.debug('Store VPV for vpid %s/%s ', newVPV._id, newVPV.name);
 	delete newVPV._id;
 	newVPV.save(function(err, oneVPV) {
 		if (err) {

@@ -566,7 +566,7 @@ router.route('/')
 				});
 				// set the VP Name
 				newVP.vc.name = vc.name;
-				logger4js.warn('VP Create add VP Name %s %O', vc.name, newVP);
+				logger4js.trace('VP Create add VP Name %s %O', vc.name, newVP);
 				logger4js.debug('Save Project %s %s from Template %s VPV %s', newVP.name, newVP._id, req.oneVPTemplate && req.oneVPTemplate._id, req.oneVPVTemplate && req.oneVPVTemplate.timestamp);
 
 				newVP.save(function(err, vp) {
