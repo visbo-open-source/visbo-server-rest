@@ -955,7 +955,7 @@ router.route('/:vpvid/copy')
 		* @apiError {number} 403 No Permission to Create Project Version
 		*
 	  * @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
+		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z'
 		* }
@@ -1060,7 +1060,7 @@ router.route('/:vpvid/copy')
 		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
 		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
 		if (orga || pfv) {
-			newVPV = visboBusiness.convertVPV(newVPV, pfv, orga);
+			newVPV = visboBusiness.convertVPV(req.oneVPV, pfv, orga);
 		}
 
 		if (newVPV.variantName != 'pfv') {
@@ -1131,7 +1131,7 @@ router.route('/:vpvid/capacity')
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
-		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
+		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all direct childs of roleID
 		*
 		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
 		* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
