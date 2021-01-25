@@ -11,6 +11,8 @@ var lockVP = require('./../components/lock');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
 var verifyVpv = require('./../components/verifyVpv');
+var helperVpv = require('./../components/helperVpv');
+
 var visboBusiness = require('./../components/visboBusiness');
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
@@ -270,6 +272,8 @@ router.use('/', auth.verifyUser);
 router.use('/', verifyVp.getAllGroups);
 // register the VP middleware to get all Groups of the VP
 router.use('/', verifyVg.getVPGroups);
+// register the VP middleware to get VP Template during creation of VP
+router.use('/', verifyVp.getVPTemplate);
 // register the VP middleware to check that the user has access to the VP
 router.param('vpid', verifyVp.getVP);
 // register the VP middleware to check that the vpfid is valid
@@ -539,6 +543,10 @@ router.route('/')
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
 				}
+				if (req.oneVPTemplate && req.oneVPTemplate.variant) {
+					newVP.variant = [];
+					req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
+				}
 				// Create new VP Group
 				var newVG = new VisboGroup();
 				newVG.name = 'VISBO Project Admin';
@@ -558,8 +566,9 @@ router.route('/')
 				});
 				// set the VP Name
 				newVP.vc.name = vc.name;
-				logger4js.trace('VP Create add VP Name %s %O', vc.name, newVP);
-				logger4js.debug('Save Project %s %s', newVP.name, newVP._id);
+				logger4js.warn('VP Create add VP Name %s %O', vc.name, newVP);
+				logger4js.debug('Save Project %s %s from Template %s VPV %s', newVP.name, newVP._id, req.oneVPTemplate && req.oneVPTemplate._id, req.oneVPVTemplate && req.oneVPVTemplate.timestamp);
+
 				newVP.save(function(err, vp) {
 					if (err) {
 						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Project ${req.body.name}`);
@@ -569,11 +578,46 @@ router.route('/')
 					logger4js.debug('Update VC %s with %d Projects ', req.oneVC.name, req.oneVC.vpCount);
 					updatePermAddVP(req.oneVP.vcid, req.oneVP._id); // async
 					updateVPCount(req.oneVP.vcid, 1); // async
-					return res.status(200).send({
-						state: 'success',
-						message: 'Successfully created new Project',
-						vp: [ vp ]
-					});
+					if (req.oneVPVTemplate) {
+						// Transform the VPV
+						var newVPV = helperVpv.initVPV(req.oneVPVTemplate);
+						if (!newVPV) {
+							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
+							return;
+						}
+						newVPV.VorlagenName = req.oneVPVTemplate.name;
+						newVPV.name = req.oneVP.name;
+						newVPV.vpid = req.oneVP._id;
+						// Transform Start & End Date & Budget
+						var startDate = new Date();
+						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
+							startDate = new Date(req.body.startDate);
+						} else {
+							startDate.setDate(1);
+							startDate.setHours(0, 0, 0, 0);
+							startDate.setMonth(startDate.getMonth() + 1);
+						}
+						var endDate;
+						if (req.body.endDate && validate.validateDate(req.body.endDate)) {
+							endDate = new Date(req.body.endDate);
+						} else if (req.oneVPVTemplate.startDate && req.oneVPVTemplate.endDate) {
+							var diff = req.oneVPVTemplate.endDate.getTime() - req.oneVPVTemplate.startDate.getTime();
+							endDate = new Date();
+							endDate.setTime(startDate.getTime() + diff);
+						}
+						newVPV.startDate = startDate;
+						newVPV.earliestStartDate = startDate;
+						newVPV.latestStartDate = startDate;
+
+						newVPV.endDate = endDate;
+						helperVpv.saveVPV(req, res, newVPV);
+					} else {
+						return res.status(200).send({
+							state: 'success',
+							message: 'Successfully created new Project',
+							vp: [ vp ]
+						});
+					}
 				});
 			});
 		});
@@ -2190,7 +2234,7 @@ router.route('/:vpid/portfolio')
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project
 	*
-	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, varianName.
+	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, variantName.
 	* to query only the main version of a project, use variantID= in the query string.
 	*
 	* @apiParam {Date} refDate only the latest version before the reference date for the project and variant is delivered
@@ -2671,10 +2715,10 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 		} else {
 			var today = new Date();
-	    today.setHours(0,0,0,0);
+			today.setHours(0,0,0,0);
 
 			if ((userId != (req.oneVPF.updatedFrom && req.oneVPF.updatedFrom.userId.toString()))
-		    || (req.oneVPF.updatedAt.getTime() < today.getTime())) {
+			|| (req.oneVPF.updatedAt.getTime() < today.getTime())) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No permission to change Portfolio List'

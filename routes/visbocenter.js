@@ -2647,7 +2647,7 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
-			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
 			req.auditDescription = 'VISBO Center Capacity Read';
 

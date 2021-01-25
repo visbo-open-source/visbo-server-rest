@@ -7,6 +7,7 @@ var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVpv = require('./../components/verifyVpv');
+var helperVpv = require('./../components/helperVpv');
 var visboBusiness = require('./../components/visboBusiness');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
@@ -55,28 +56,6 @@ function checkValidKeyMetrics(km) {
 	}
 	return countKM > 0;
 }
-
-// updates the VPV Count in the VP after create/delete/undelete VISBO Project
-var updateVPVCount = function(vpid, variantName, increment){
-	var updateQuery = {_id: vpid};
-	var updateOption = {upsert: false};
-	var updateUpdate;
-
-	if (!variantName) {
-		updateUpdate = {$inc: {vpvCount: increment}};
-	} else {
-		// update a variant and increment the version counter
-		updateQuery['variant.variantName'] = variantName;
-		updateUpdate = {$inc : {'variant.$.vpvCount' : increment} };
-	}
-	logger4js.debug('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
-	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-		if (err){
-			logger4js.error('Problem updating VP %s vpvCount: %s', vpid, err.message);
-		}
-		logger4js.trace('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
-	});
-};
 
 // find a project in an array of a structured projects (name, id)
 var findVPVariantList = function(arrayItem) {
@@ -466,7 +445,6 @@ router.route('/')
 		var variantIndex = -1;
 
 		logger4js.info('Post a new Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
-		var newVPV = new VisboProjectVersion();
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
 		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
@@ -545,14 +523,8 @@ router.route('/')
 					}
 				}
 
-				if (!validate.validateName(req.body.status, true)
-				|| !validate.validateName(req.body.leadPerson, true)
-				|| !validate.validateName(req.body.variantDescription, true)
-				|| !validate.validateName(req.body.ampelErlaeuterung, true)
-				|| !validate.validateName(req.body.VorlagenName, true)
-				|| !validate.validateName(req.body.description, true)
-				|| !validate.validateName(req.body.businessUnit, true)
-				) {
+				var newVPV = helperVpv.initVPV(req.body);
+				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
 						state: 'failure',
@@ -564,42 +536,7 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				if (req.body.timestamp && Date.parse(req.body.timestamp)) {
-					newVPV.timestamp = new Date(req.body.timestamp);
-				} else {
-					newVPV.timestamp = new Date();
-				}
 
-				// copy all attributes
-				newVPV.variantDescription = req.body.variantDescription;
-				newVPV.Risiko = req.body.Risiko;
-				newVPV.StrategicFit = req.body.StrategicFit;
-				newVPV.customDblFields = req.body.customDblFields;
-				newVPV.customStringFields = req.body.customStringFields;
-				newVPV.customBoolFields = req.body.customBoolFields;
-				newVPV.actualDataUntil = req.body.actualDataUntil;
-				newVPV.Erloes = req.body.Erloes;
-				newVPV.leadPerson = req.body.leadPerson;
-				newVPV.startDate = req.body.startDate;
-				newVPV.endDate = req.body.endDate;
-				newVPV.earliestStart = req.body.earliestStart;
-				newVPV.earliestStartDate = req.body.earliestStartDate;
-				newVPV.latestStart = req.body.latestStart;
-				newVPV.latestStartDate = req.body.latestStartDate;
-				newVPV.status = req.body.status;
-				newVPV.ampelStatus = req.body.ampelStatus;
-				newVPV.ampelErlaeuterung = req.body.ampelErlaeuterung;
-				newVPV.farbe = req.body.farbe;
-				newVPV.Schrift = req.body.Schrift;
-				newVPV.Schriftfarbe = req.body.Schriftfarbe;
-				newVPV.VorlagenName = req.body.VorlagenName;
-				newVPV.Dauer = req.body.Dauer;
-				newVPV.AllPhases = req.body.AllPhases;
-				newVPV.hierarchy = req.body.hierarchy;
-				newVPV.volumen = req.body.volumen;
-				newVPV.complexity = req.body.complexity;
-				newVPV.description = req.body.description;
-				newVPV.businessUnit = req.body.businessUnit;
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 				if (!obj || Object.keys(obj).length < 1) {
 					// no valid key Metrics delivered
@@ -618,7 +555,7 @@ router.route('/')
 					}
 					req.oneVPV = oneVPV;
 					// update the version count of the base version or the variant
-					updateVPVCount(req.oneVPV.vpid, variantName, 1);
+					helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, 1);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Successfully created new Project Version',
@@ -813,7 +750,7 @@ router.route('/:vpvid')
 				return;
 			}
 			req.oneVPV = oneVPV;
-			updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+			helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated Project Version',
@@ -906,7 +843,7 @@ router.route('/:vpvid')
 				}
 				req.oneVPV = oneVPV;
 
-				updateVPVCount(req.oneVPV.vpid, variantName, -1);
+				helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, -1);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Successfully deleted Project Version'
@@ -1004,9 +941,11 @@ router.route('/:vpvid/copy')
 
 		var vpid = req.oneVPV.vpid;
 		var variantName = req.oneVPV.variantName;
+		if (req.body.variantName || req.body.variantName == '') {
+			variantName = req.body.variantName;
+		}
 
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
-		var newVPV = new VisboProjectVersion();
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
 		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
@@ -1018,44 +957,13 @@ router.route('/:vpvid/copy')
 				perm: perm
 			});
 		}
-		// keep unchangable attributes
-		newVPV.name = req.oneVPV.name;
-		newVPV.vpid = req.oneVPV.vpid;
-		newVPV.variantName = req.oneVPV.variantName;
-		if (req.body.timestamp && Date.parse(req.body.timestamp)) {
-			newVPV.timestamp = new Date(req.body.timestamp);
-		} else {
-			newVPV.timestamp = new Date();
+		var newVPV = helperVpv.initVPV(req.oneVPV);
+		if (!newVPV) {
+			errorHandler(undefined, res, 'DB: POST VPV Copy of ${req.oneVPV._id}', 'Error creating Project Versions during copy ');
+			return;
 		}
-		newVPV.variantDescription = req.oneVPV.variantDescription;
-		newVPV.Risiko = req.oneVPV.Risiko;
-		newVPV.StrategicFit = req.oneVPV.StrategicFit;
-		newVPV.customDblFields = req.oneVPV.customDblFields;
-		newVPV.customStringFields = req.oneVPV.customStringFields;
-		newVPV.customBoolFields = req.oneVPV.customBoolFields;
-		newVPV.actualDataUntil = req.oneVPV.actualDataUntil;
-		newVPV.Erloes = req.oneVPV.Erloes;
-		newVPV.leadPerson = req.oneVPV.leadPerson;
-		newVPV.startDate = req.oneVPV.startDate;
-		newVPV.endDate = req.oneVPV.endDate;
-		newVPV.earliestStart = req.oneVPV.earliestStart;
-		newVPV.earliestStartDate = req.oneVPV.earliestStartDate;
-		newVPV.latestStart = req.oneVPV.latestStart;
-		newVPV.latestStartDate = req.oneVPV.latestStartDate;
-		newVPV.status = req.oneVPV.status;
-		newVPV.ampelStatus = req.oneVPV.ampelStatus;
-		newVPV.ampelErlaeuterung = req.oneVPV.ampelErlaeuterung;
-		newVPV.farbe = req.oneVPV.farbe;
-		newVPV.Schrift = req.oneVPV.Schrift;
-		newVPV.Schriftfarbe = req.oneVPV.Schriftfarbe;
-		newVPV.VorlagenName = req.oneVPV.VorlagenName;
-		newVPV.Dauer = req.oneVPV.Dauer;
-		newVPV.AllPhases = req.oneVPV.AllPhases;
-		newVPV.hierarchy = req.oneVPV.hierarchy;
-		newVPV.volumen = req.oneVPV.volumen;
-		newVPV.complexity = req.oneVPV.complexity;
-		newVPV.description = req.oneVPV.description;
-		newVPV.businessUnit = req.oneVPV.businessUnit;
+		// change variantName if defined in body
+		newVPV.variantName = variantName;
 
 		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
 		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
@@ -1070,48 +978,21 @@ router.route('/:vpvid/copy')
 			newVPV.keyMetrics = req.body.keyMetrics;
 		}
 
-		logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);
+		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.varianName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
 			}
+			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.varianName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
-			updateVPVCount(req.oneVPV.vpid, variantName, 1);
-			let reducedVPV = {};
-			reducedVPV._id = oneVPV._id;
-			reducedVPV.name = oneVPV.name;
-			reducedVPV.vpid = oneVPV.vpid;
-			reducedVPV.variantName = oneVPV.variantName;
-			reducedVPV.timestamp = oneVPV.timestamp;
-			reducedVPV.Risiko = oneVPV.Risiko;
-			reducedVPV.StrategicFit = oneVPV.StrategicFit;
-			reducedVPV.actualDataUntil = oneVPV.actualDataUntil;
-			reducedVPV.Erloes = oneVPV.Erloes;
-			reducedVPV.leadPerson = oneVPV.leadPerson;
-			reducedVPV.startDate = oneVPV.startDate;
-			reducedVPV.endDate = oneVPV.endDate;
-
-			reducedVPV.earliestStart = oneVPV.earliestStart;
-			reducedVPV.earliestStartDate = oneVPV.earliestStartDate;
-			reducedVPV.latestStart = oneVPV.latestStart;
-			reducedVPV.latestStartDate = oneVPV.latestStartDate;
-			reducedVPV.status = oneVPV.status;
-			reducedVPV.ampelStatus = oneVPV.ampelStatus;
-			reducedVPV.ampelErlaeuterung = oneVPV.ampelErlaeuterung;
-			reducedVPV.VorlagenName = oneVPV.VorlagenName;
-			reducedVPV.Dauer = oneVPV.Dauer;
-			reducedVPV.volumen = oneVPV.volumen;
-			reducedVPV.complexity = oneVPV.complexity;
-			reducedVPV.description = oneVPV.description;
-			reducedVPV.businessUnit = oneVPV.businessUnit;
-			reducedVPV.keyMetrics = oneVPV.keyMetrics;
+			helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, 1);
 
 			return res.status(200).send({
 				state: 'success',
-				message: 'Successfully created new Project Version',
-				vpv: [ reducedVPV ]
+				message: 'Successfully created new Project Version1',
+				vpv: [ oneVPV ]
 			});
 		});
 	});
