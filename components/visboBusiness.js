@@ -2107,25 +2107,23 @@ function convertVPV(oldVPV, oldPFV, orga) {
 
 	var newPFV = new VisboProjectVersion();
 
-	if ( oldVPV && orga ) {
+	// check the existence of the orga
+	if ( !orga || orga.length < 1 ) {
+		logger4js.debug('creation of new PFV is going wrong because of no valid orga');
+		return undefined;
+	}
 
-		if ( !orga && orga.length < 1 ) {
-			logger4js.debug('creation of new PFV is going wrong because of no valid orga');
-			return undefined;
-		}
-
-		const actOrga = convertOrganisation(orga[orga.length-1]);
-		const orgalist = buildOrgaList(actOrga);
-		
-		// var collectRoleIDs = [];
-		// var level = 1;
-		// collectRoleIDs = findRoleIDsAtLevel( level, actOrga);
-
-
-
-		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
+	// check the existence of oldVPV, which will be the base of the newPFV
+	if ( !oldVPV ) {
+		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
+		return undefined;
 	
-		logger4js.debug('generate a new PFV based on the given VPV without any changes');
+	} else {
+		// it exists the oldVPV and at least one organisation
+		const actOrga = convertOrganisation(orga[orga.length-1]);
+		const orgalist = buildOrgaList(actOrga);		
+		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
+
 		// keep unchangable attributes
 		newPFV.name = oldVPV.name;
 		newPFV.vpid = oldVPV._id;
@@ -2135,7 +2133,6 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		} else {
 			newPFV.timestamp = new Date();
 		}
-
 		// copy all attributes
 		newPFV.variantDescription = oldVPV.variantDescription;
 		newPFV.Risiko = oldVPV.Risiko;
@@ -2164,14 +2161,15 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV.volumen = oldVPV.volumen;
 		newPFV.complexity = oldVPV.complexity;
 		newPFV.description = oldVPV.description;
-		newPFV.businessUnit = oldVPV.businessUnit;	
-		
-		// newPFV.AllPhases have to be created new ones		
+		newPFV.businessUnit = oldVPV.businessUnit;
+
+		// newPFV.AllPhases have to be created new ones	and the ressources will be aggregated to sumRoles	
 		var newpfvAllPhases = [];
 		for (var i = 0; oldVPV && oldVPV.AllPhases && i < oldVPV.AllPhases.length ; i++){
 			var onePhase = {};
 			var phase = oldVPV.AllPhases[i];			
-			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV to generate a newPFV ', phase.nameID);
+			
+			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
 			onePhase.AllRoles  = aggregateRoles(phase, orgalist, 1);			
 			
 			var newAllCosts = [];
@@ -2207,21 +2205,11 @@ function convertVPV(oldVPV, oldPFV, orga) {
 				oneResult.deliverables = newmsdeliverables;
 				newAllResults.push(oneResult);
 			}
-			onePhase.AllResults = newAllResults;
+			onePhase.AllResults = newAllResults; 
 
-			var newAllBewertungen = phase.AllBewertungen;
-			// for (var ib = 0; phase && phase.AllBewertungen && ib < phase.AllBewertungen.length; ib++){
-			// 	var oneBewertung = {};
-			// 	oneBewertung.color = phase.AllBewertungen[ib].color;
-			// 	oneBewertung.description = phase.AllBewertungen[ib].description;				
-			// 	oneBewertung.bewerterName = phase.AllBewertungen[ib].bewerterName;
-			// 	oneBewertung.datum = phase.AllBewertungen[ib].datum;
-			// 	// oneBewertung.deliverables = phase.AllBewertungen[ib].deliverables;
-			// 	newAllBewertungen.push(oneBewertung);
-			// }
-			onePhase.AllBewertungen = newAllBewertungen;
-			;
-
+			// AllBewertungen keep as they are
+			onePhase.AllBewertungen = phase.AllBewertungen;					
+		
 			var newdeliverables = [];
 			for (var id = 0;  phase && phase.deliverables && id < phase.deliverables.length; id++){				
 				newdeliverables.push(phase.deliverables[id]);
@@ -2251,17 +2239,38 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		}
 		newPFV.AllPhases = newpfvAllPhases;	
 	}
+
+	logger4js.debug('newPFV now with aggregated resources')
 		
 	if ( oldVPV && oldPFV  ) {
 		// oldVPV is to be squeezed to the deadlines and deliveries of the oldPFV
 		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the oldPFV');
+		
+		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
+
+		var hrchy_pfv = convertHierarchy(oldPFV);
+		// look for the deadlines of pfv (take all)
+		var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
+		
+		var hrchy_vpv = convertHierarchy(oldVPV);
+		// change the deadlines of the oldVPV			
+		var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
+	}	
+
+	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+	return newPFV;
+}
+
+function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
+
+	if (oldVPV && oldPFV && newPFV){
 		// look for the deliverables of pfv (take all)
 		var hrchy_pfv = convertHierarchy(oldPFV);
 		var allPFVDeliverables = getAllDeliverables(oldPFV, hrchy_pfv, undefined);		
-	
-		// change the deliverables of the oldVPV
+
+		// look for the deliverables of the oldVPV
 		var hrchy_vpv = convertHierarchy(oldVPV);
-		var allnewDeliverables = getAllDeliverables(newPFV, hrchy_vpv, undefined);
+		var allnewDeliverables = getAllDeliverables(oldVPV, hrchy_vpv, undefined);
 		var listDeliveries = allnewDeliverables.getAllDeliveries();
 
 		var DelivToDelete = [];
@@ -2292,14 +2301,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			}			
 			relevElem.deliverables = newDelivs;
 		}
-	
-		// look for the deadlines of pfv (take all)
-		var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
-		// change the deadlines of the oldVPV			
-		var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
-	}	
-
-	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+	}
 	return newPFV;
 }
 
