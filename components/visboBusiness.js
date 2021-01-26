@@ -2160,7 +2160,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV.Schriftfarbe = oldVPV.Schriftfarbe;
 		newPFV.VorlagenName = oldVPV.VorlagenName;
 		newPFV.Dauer = oldVPV.Dauer;
-		// ? newPFV.hierarchy = oldVPV.hierarchy;
+		newPFV.hierarchy = oldVPV.hierarchy;
 		newPFV.volumen = oldVPV.volumen;
 		newPFV.complexity = oldVPV.complexity;
 		newPFV.description = oldVPV.description;
@@ -2170,23 +2170,9 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		var newpfvAllPhases = [];
 		for (var i = 0; oldVPV && oldVPV.AllPhases && i < oldVPV.AllPhases.length ; i++){
 			var onePhase = {};
-			var phase = oldVPV.AllPhases[i];
-			var newAllRoles = [];
-			newAllRoles = aggregateRoles(phase, orgalist, 1)
-			// for ( var ir = 0; phase && phase.AllRoles && ir < phase.AllRoles.length; ir++){
-			// 	var oneRole = {};
-			// 	var role = phase.AllRoles[ir];
-			// 	oneRole.RollenTyp = role.RollenTyp;
-			// 	// oneRole.name = role.name;
-			// 	oneRole.teamID = role.teamID;
-			// 	// oneRole.farbe = role.farbe;
-			// 	// oneRole.startkapa = role.startkapa;
-			// 	// oneRole.tagessatzIntern = role.tagessatzIntern;
-			// 	oneRole.Bedarf = role.Bedarf;
-			// 	// oneRole.isCalculated = role.isCalculated;
-			// 	newAllRoles.push(oneRole);
-			// }
-			onePhase.AllRoles = newAllRoles;
+			var phase = oldVPV.AllPhases[i];			
+			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV to generate a newPFV ', phase.nameID);
+			onePhase.AllRoles  = aggregateRoles(phase, orgalist, 1);			
 			
 			var newAllCosts = [];
 			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
@@ -2223,16 +2209,16 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			}
 			onePhase.AllResults = newAllResults;
 
-			var newAllBewertungen = [];
-			for (var ib = 0; phase && phase.AllBewertungen && ib < phase.AllBewertungen.length; ib++){
-				var oneBewertung = {};
-				oneBewertung.color = phase.AllBewertungen[ib].color;
-				oneBewertung.description = phase.AllBewertungen[ib].description;				
-				oneBewertung.bewerterName = phase.AllBewertungen[ib].bewerterName;
-				oneBewertung.datum = phase.AllBewertungen[ib].datum;
-				// oneBewertung.deliverables = phase.AllBewertungen[ib].deliverables;
-				newAllBewertungen.push(oneBewertung);
-			}
+			var newAllBewertungen = phase.AllBewertungen;
+			// for (var ib = 0; phase && phase.AllBewertungen && ib < phase.AllBewertungen.length; ib++){
+			// 	var oneBewertung = {};
+			// 	oneBewertung.color = phase.AllBewertungen[ib].color;
+			// 	oneBewertung.description = phase.AllBewertungen[ib].description;				
+			// 	oneBewertung.bewerterName = phase.AllBewertungen[ib].bewerterName;
+			// 	oneBewertung.datum = phase.AllBewertungen[ib].datum;
+			// 	// oneBewertung.deliverables = phase.AllBewertungen[ib].deliverables;
+			// 	newAllBewertungen.push(oneBewertung);
+			// }
 			onePhase.AllBewertungen = newAllBewertungen;
 			;
 
@@ -2269,19 +2255,54 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	if ( oldVPV && oldPFV  ) {
 		// oldVPV is to be squeezed to the deadlines and deliveries of the oldPFV
 		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the oldPFV');
-			// look for the deliverables of pfv (take all)
-			var hrchy_pfv = convertHierarchy(oldPFV);
-			var allDeliverables = getAllDeliverables(oldPFV, hrchy_pfv, undefined);
-			// change the deliverables of the oldVPV
+		// look for the deliverables of pfv (take all)
+		var hrchy_pfv = convertHierarchy(oldPFV);
+		var allPFVDeliverables = getAllDeliverables(oldPFV, hrchy_pfv, undefined);		
+	
+		// change the deliverables of the oldVPV
+		var hrchy_vpv = convertHierarchy(oldVPV);
+		var allnewDeliverables = getAllDeliverables(newPFV, hrchy_vpv, undefined);
+		var listDeliveries = allnewDeliverables.getAllDeliveries();
 
-			// look for the deadlines of pfv (take all)
-			var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
-			// change the deadlines of the oldVPV
+		var DelivToDelete = [];
+		var fittingDeliv = [];
+		for (element = 0; element < listDeliveries.length; element++) {
+			var actDeliv = listDeliveries[element];	
+			if ( allPFVDeliverables && allPFVDeliverables.allDeliverables && !allPFVDeliverables.allDeliverables[actDeliv.description] ) {
+				DelivToDelete.push(actDeliv);
+			} else {
+				fittingDeliv.push(actDeliv);
+			}
+		}
+		// delete the deliverables DelivToDelete
+		for ( var del = 0; del < DelivToDelete.length; del++) {
+			actDeliv = DelivToDelete[del];
+			var newDelivs = [];
+			var elemID = actDeliv.nameID;
+			var relevElem = {};
+			if (elemIdIsMilestone(elemID)) {
+				relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
+			} else {
+				relevElem = getPhaseByID(hrchy_vpv, newPFV,elemID);
+			}
+			for (var i = 0; relevElem && relevElem.deliverables && i < relevElem.deliverables.length; i++){
+				if (relevElem.deliverables[i] != actDeliv.description) {
+					newDelivs.push(relevElem.deliverables[i]);
+				}	
+			}			
+			relevElem.deliverables = newDelivs;
+		}
+	
+		// look for the deadlines of pfv (take all)
+		var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
+		// change the deadlines of the oldVPV			
+		var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
 	}	
 
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
 	return newPFV;
 }
+
 function aggregateRoles(phase, orgalist, anzLevel){
 	
 	var newAllRoles = [];
@@ -2323,7 +2344,7 @@ function aggregateRoles(phase, orgalist, anzLevel){
 			var newRole = newAllRoles[newir];
 			if (actUID == newRole.RollenTyp) {							
 				for (var m = 0; newRole && m < newRole.Bedarf.length; m++) {
-					sumRole[m] = sumRole[m] + newRole.Bedarf[m];
+					sumRole.Bedarf[m] = sumRole.Bedarf[m] + newRole.Bedarf[m];
 				}
 			}
 		}
