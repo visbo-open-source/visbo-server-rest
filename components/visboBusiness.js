@@ -713,6 +713,7 @@ function getDeliverableCompletionMetric(allDeliverables, refDate){
 			deliverableCompletionCurrentActual: 0,
 			deliverableCompletionCurrentTotal: 0
 		};
+	if (!refDate) { refDate = new Date(); }
 
 	var listDeliveries = allDeliverables.getAllDeliveries();
 	for (var element = 0; element < listDeliveries.length; element++) {
@@ -811,6 +812,7 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 		timeCompletionCurrentActual: 0,
 		timeCompletionCurrentTotal: 0
 	};
+	if (!refDate) { refDate = new Date(); }
 
 	var listDeadlines = allDeadlines.getAllDeadlines();
 	for (var element = 0; element < listDeadlines.length; element++) {
@@ -837,6 +839,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		timeDelayFinished: 0,
 		timeDelayUnFinished: 0
 	};
+	if (!refDate) { refDate = new Date(); }
 	var finishedElements = [];
 	var unfinishedElements = [];
 

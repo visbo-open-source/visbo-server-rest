@@ -8,6 +8,7 @@ var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
+var verifyVpv = require('./../components/verifyVpv');
 var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = 'VP';
@@ -339,11 +340,40 @@ function getVPTemplate(req, res, next) {
 	});
 }
 
+// Get the organisations for keyMetrics calculation
+function getVPOrgs(req, res, next) {
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
+
+	let skip = true;
+	if (req.method == 'POST' && baseUrl == '/vp') {	// create VP request
+		if (req.query.vpid) { // with a VP Template that requires keyMetrics calculation
+			skip = false;
+		}
+	}
+	if (skip) {
+		return next();
+	}
+
+	if (!req.body.vcid) {
+		logger4js.warn('No VISBO Center identified');
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No VISBO Center specified'
+		});
+	}
+	verifyVpv.getVCOrganisation(req.body.vcid, req, res, next);
+}
+
+
+
 module.exports = {
 	getAllGroups: getAllGroups,
 	getVPGroupsOfVC: getVPGroupsOfVC,
 	getVP: getVP,
 	checkVpfid: checkVpfid,
 	squeezePortfolio: squeezePortfolio,
-	getVPTemplate: getVPTemplate
+	getVPTemplate: getVPTemplate,
+	getVPOrgs: getVPOrgs
 };

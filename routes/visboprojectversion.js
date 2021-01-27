@@ -40,23 +40,6 @@ router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
 
 
-// check if keyMetrics from Client is valid
-function checkValidKeyMetrics(km) {
-	var countKM = 0;
-	if (km) {
-		if (km.costCurrentTotal > 0 && km.costBaseLastTotal > 0) {
-			countKM += 1;
-		}
-		if (km.timeCompletionCurrentTotal > 0 && km.timeCompletionBaseLastTotal > 0) {
-			countKM += 1;
-		}
-		if (km.deliverableCompletionCurrentTotal > 0 && km.deliverableCompletionBaseLastTotal > 0) {
-			countKM += 1;
-		}
-	}
-	return countKM > 0;
-}
-
 // find a project in an array of a structured projects (name, id)
 var findVPVariantList = function(arrayItem) {
 		// console.log('compare %s %s result %s', JSON.stringify(arrayItem), JSON.stringify(this), arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName);
@@ -540,7 +523,7 @@ router.route('/')
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 				if (!obj || Object.keys(obj).length < 1) {
 					// no valid key Metrics delivered
-					if (req.body.keyMetrics && newVPV.variantName != 'pfv' && checkValidKeyMetrics(req.body.keyMetrics)) {
+					if (req.body.keyMetrics && newVPV.variantName != 'pfv' && helperVpv.checkValidKeyMetrics(req.body.keyMetrics)) {
 						newVPV.keyMetrics = req.body.keyMetrics;
 					}
 				} else {
@@ -894,7 +877,8 @@ router.route('/:vpvid/copy')
 	  * @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
 		* {
-		*  'timestamp': '2019-03-19T11:04:12.094Z'
+		*  'timestamp': '2019-03-19T11:04:12.094Z',
+		*  'variantName': 'pfv'
 		* }
 		* @apiSuccessExample {json} Success-Response:
 		*     HTTP/1.1 200 OK
@@ -944,6 +928,17 @@ router.route('/:vpvid/copy')
 		if (req.body.variantName || req.body.variantName == '') {
 			variantName = req.body.variantName;
 		}
+		if (variantName != '') {
+			// check that the Variant exists
+			if (req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
+				logger4js.warn('VPV Post Copy: Variant does not exist %s %s', vpid, variantName);
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Project variant does not exist',
+					vp: [req.oneVP]
+				});
+			}
+		}
 
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
@@ -967,6 +962,7 @@ router.route('/:vpvid/copy')
 
 		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
 		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
+		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (orga || pfv) {
 			newVPV = visboBusiness.convertVPV(newVPV, pfv, orga);
 		}
@@ -977,6 +973,7 @@ router.route('/:vpvid/copy')
 		if (!newVPV.keyMetrics && req.body.keyMetrics) {
 			newVPV.keyMetrics = req.body.keyMetrics;
 		}
+		helperVpv.setKeyAttributes(newVPV, keyVPV);
 
 		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.varianName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
