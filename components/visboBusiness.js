@@ -2248,13 +2248,15 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		
 		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
 
-		var hrchy_pfv = convertHierarchy(oldPFV);
-		// look for the deadlines of pfv (take all)
-		var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
+		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
+
+		// var hrchy_pfv = convertHierarchy(oldPFV);
+		// // look for the deadlines of pfv (take all)
+		// var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
 		
-		var hrchy_vpv = convertHierarchy(oldVPV);
-		// change the deadlines of the oldVPV			
-		var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
+		// var hrchy_vpv = convertHierarchy(oldVPV);
+		// // change the deadlines of the oldVPV			
+		// var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
 	}	
 
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
@@ -2262,19 +2264,22 @@ function convertVPV(oldVPV, oldPFV, orga) {
 }
 
 function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
-
+	
+	logger4js.debug('adapt all deliverables of the newPFV to the oldPFV');
+	
 	if (oldVPV && oldPFV && newPFV){
-		// look for the deliverables of pfv (take all)
+		logger4js.debug('look for the deliverables of  existing pfv');
 		var hrchy_pfv = convertHierarchy(oldPFV);
 		var allPFVDeliverables = getAllDeliverables(oldPFV, hrchy_pfv, undefined);		
-
-		// look for the deliverables of the oldVPV
+		
+		logger4js.debug('look for the deliverables of actual vpv');
 		var hrchy_vpv = convertHierarchy(oldVPV);
 		var allnewDeliverables = getAllDeliverables(oldVPV, hrchy_vpv, undefined);
 		var listDeliveries = allnewDeliverables.getAllDeliveries();
 
 		var DelivToDelete = [];
 		var fittingDeliv = [];
+		logger4js.debug('find the deliverables, which are only in the vpv and should be deleted for a new PFV');
 		for (element = 0; element < listDeliveries.length; element++) {
 			var actDeliv = listDeliveries[element];	
 			if ( allPFVDeliverables && allPFVDeliverables.allDeliverables && !allPFVDeliverables.allDeliverables[actDeliv.description] ) {
@@ -2283,7 +2288,7 @@ function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 				fittingDeliv.push(actDeliv);
 			}
 		}
-		// delete the deliverables DelivToDelete
+		logger4js.debug('delete the deliverables found out');
 		for ( var del = 0; del < DelivToDelete.length; del++) {
 			actDeliv = DelivToDelete[del];
 			var newDelivs = [];
@@ -2304,6 +2309,118 @@ function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 	}
 	return newPFV;
 }
+function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
+
+	// var rootKey = '0';
+	// var rootphaseID = '0§.§';
+	
+	logger4js.debug('adapt all deadlines of the newPFV to the oldPFV');
+	var hrchy_pfv = convertHierarchy(oldPFV);
+	// look for the deadlines of pfv (take all)
+	var allPFVDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
+	
+	var hrchy_vpv = convertHierarchy(oldVPV);
+	// change the deadlines of the oldVPV			
+	var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
+	var listDeadlines = allnewDeadlines.getAllDeadlines();
+	
+	var DeadlineToDelete = [];
+	var fittingDeadline = [];
+	logger4js.debug('find the deliverables, which are only in the vpv and should be deleted for a new PFV');
+	for (element = 0; element < listDeadlines.length; element++) {
+		var actDeadline = listDeadlines[element];	
+		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {
+			// // change nameID "0" to nameID "0§.§"
+			// if (actDeadline.nameID === rootKey){
+			// 	actDeadline.nameId = rootphaseID;
+			// }
+			DeadlineToDelete.push(actDeadline);
+		} else {
+			fittingDeadline.push(actDeadline);
+		}
+	}
+
+	logger4js.debug('delete the deadlines found out');
+	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
+		actDeadline = DeadlineToDelete[dl];
+		if (actDeadline.type === 'Milestone') {
+			newPFV = deleteMSFromVPV(hrchy_vpv, newPFV, actDeadline);
+		} else {
+			newPFV = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
+		}
+
+
+		// var elemID = actDeadline.nameID;
+		// var relevElem = {};
+		// if (elemIdIsMilestone(elemID)) {
+		// 	relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
+		// 	parentElem = actDeadline.phasePFV;
+		// 	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
+		// 	var newResults = [];
+		// 	for ( var ar = 0; parPhase && parPhase.AllResults && ar < parPhase.AllResults.length; ar++) {				
+		// 		if (parPhase.AllResults[ar].name != elemID) {
+		// 			newResults.push(parPhase.AllResults[ar]);
+		// 		}
+		// 	}
+		// 	parPhase.AllResults = newResults;
+
+		// } else {
+		// 	relevElem = getPhaseByID(hrchy_vpv, newPFV,elemID);
+		// }
+
+	
+	}
+
+
+	return newPFV;
+}
+
+function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
+
+	logger4js.debug('Delete one Milestone from Phase of VPV');
+	var elemID = elem.nameID;	
+	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
+	var parentElem = elem.phasePFV;
+	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
+	var newResults = [];
+	for ( var ar = 0; parPhase && parPhase.AllResults && ar < parPhase.AllResults.length; ar++) {				
+		if (parPhase.AllResults[ar].name != elemID) {
+			newResults.push(parPhase.AllResults[ar]);
+		}
+	}
+	parPhase.AllResults = newResults;
+
+	logger4js.debug('Delete one Milestone from hiearchy of VPV');
+
+	// elemID muss aus der Hierarchy.allNodes entfernt werden und aus den childNodeKeys-Array des parents
+	var hrchy_node = hrchy_vpv[elemID];	
+	if (hrchy_node) {
+		var parentNode = hrchy_node.hryNode.parentNodeKey;
+	}	
+	var origHrchyNodes = newPFV.hierarchy.allNodes;
+	var newHryAllNodes = [];
+	// in the allNodes-Array at the beginning there are the phases and then follow the milestones.
+	for (var an = 0; origHrchyNodes && an < origHrchyNodes.length; an++){
+		if (origHrchyNodes[an].hryNodeKey === parentNode) {
+			var relevantPhaseChildren = origHrchyNodes[an].hryNode.childNodeKeys;
+			var newChildNodeKeys = [];
+			for ( var ch = 0; relevantPhaseChildren && ch < relevantPhaseChildren.length; ch++){
+				if (relevantPhaseChildren[ch] != elemID) {
+					newChildNodeKeys.push(relevantPhaseChildren[ch])
+				}
+			}
+			origHrchyNodes[an].hryNode.childNodeKeys = newChildNodeKeys;
+		}
+		if (origHrchyNodes[an].hryNodeKey != elemID) {
+			newHryAllNodes.push(origHrchyNodes[an]);
+		}
+	}
+	newPFV.hierarchy.allNodes = newHryAllNodes;
+
+	return newPFV;
+}
+
+
 
 function aggregateRoles(phase, orgalist, anzLevel){
 	

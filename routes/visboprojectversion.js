@@ -978,16 +978,16 @@ router.route('/:vpvid/copy')
 			newVPV.keyMetrics = req.body.keyMetrics;
 		}
 
-		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.varianName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
+		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
 			}
-			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.varianName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
+			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
-			helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, 1);
+			helperVpv.updateVPVCount(req.oneVPV.vpid, oneVPV.variantName, 1);
 
 			return res.status(200).send({
 				state: 'success',
