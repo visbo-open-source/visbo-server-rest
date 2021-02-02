@@ -2249,14 +2249,6 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
 
 		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
-
-		// var hrchy_pfv = convertHierarchy(oldPFV);
-		// // look for the deadlines of pfv (take all)
-		// var allDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
-		
-		// var hrchy_vpv = convertHierarchy(oldVPV);
-		// // change the deadlines of the oldVPV			
-		// var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
 	}	
 
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
@@ -2309,6 +2301,8 @@ function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 	}
 	return newPFV;
 }
+
+
 function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 
 	// var rootKey = '0';
@@ -2348,30 +2342,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 		} else {
 			newPFV = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
 		}
-
-
-		// var elemID = actDeadline.nameID;
-		// var relevElem = {};
-		// if (elemIdIsMilestone(elemID)) {
-		// 	relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
-		// 	parentElem = actDeadline.phasePFV;
-		// 	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
-		// 	var newResults = [];
-		// 	for ( var ar = 0; parPhase && parPhase.AllResults && ar < parPhase.AllResults.length; ar++) {				
-		// 		if (parPhase.AllResults[ar].name != elemID) {
-		// 			newResults.push(parPhase.AllResults[ar]);
-		// 		}
-		// 	}
-		// 	parPhase.AllResults = newResults;
-
-		// } else {
-		// 	relevElem = getPhaseByID(hrchy_vpv, newPFV,elemID);
-		// }
-
-	
 	}
-
-
 	return newPFV;
 }
 
@@ -2404,6 +2375,7 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 		if (origHrchyNodes[an].hryNodeKey === parentNode) {
 			var relevantPhaseChildren = origHrchyNodes[an].hryNode.childNodeKeys;
 			var newChildNodeKeys = [];
+
 			for ( var ch = 0; relevantPhaseChildren && ch < relevantPhaseChildren.length; ch++){
 				if (relevantPhaseChildren[ch] != elemID) {
 					newChildNodeKeys.push(relevantPhaseChildren[ch])
