@@ -1,6 +1,7 @@
 
 var logModule = 'VPV';
 var log4js = require('log4js');
+const { validateDate } = require('./validate');
 var logger4js = log4js.getLogger(logModule);
 
 var refMonth = undefined;
@@ -46,7 +47,7 @@ function getAllPersonalKosten(vpv, organisation) {
 		allRoles[organisation.value.allRoles[i].uid] = organisation.value.allRoles[i];
 	}
 	var endCalc = new Date();
-	logger4js.debug('Calculate Personal Cost Convert ', endCalc.getTime() - startCalc.getTime());
+	logger4js.trace('Calculate Personal Cost Convert ', endCalc.getTime() - startCalc.getTime());
 
 	startCalc = new Date();
 	var startIndex = getColumnOfDate(vpv.startDate);
@@ -67,7 +68,7 @@ function getAllPersonalKosten(vpv, organisation) {
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
 					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
-					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatzIntern : 0;
+					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatz : 0;
 					// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 					if (role &&  role.Bedarf) {
 						var dimension = role.Bedarf.length;
@@ -154,20 +155,22 @@ function calcCosts(vpv, pfv, organisations) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
+	var calcStartDate = undefined;
+	var calcEndDate = undefined;
 
 	if ( (vpv || pfv) && organisations && organisations.length > 0 ) {
 
 		if (pfv && vpv) {
-			var calcStartDate = Math.min(vpv.startDate, pfv.startDate);
-			var calcEndDate = Math.max(vpv.endDate, pfv.endDate);
+			calcStartDate = Math.min(vpv.startDate, pfv.startDate);
+			calcEndDate = Math.max(vpv.endDate, pfv.endDate);
 		}
 		if (!pfv && vpv) {
-			var calcStartDate = vpv.startDate;
-			var calcEndDate =  vpv.endDate;
+			calcStartDate = vpv.startDate;
+			calcEndDate =  vpv.endDate;
 		}
 		if (pfv && !vpv) {
-			var calcStartDate = pfv.startDate;
-			var calcEndDate = pfv.endDate;
+			calcStartDate = pfv.startDate;
+			calcEndDate = pfv.endDate;
 		}
 
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
@@ -193,7 +196,7 @@ function calcCosts(vpv, pfv, organisations) {
 				var tzStartDiff = tzStartIndex - startIndex;
 
 				currentDate = new Date (tzStartDate);
-				currentDate.setMonth(currentDate.getMonth());				
+				currentDate.setMonth(currentDate.getMonth());
 				currentDate.setDate(1);
 				currentDate.setHours(0, 0, 0, 0);
 				// Teilabschnitte übernehmen
@@ -870,18 +873,19 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		}
 		uf++;
 	}
+	
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
 		wholeDelayFinished += 1 * (finishedElements[f] || 0);
 	}
-	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || 0);
+	result.timeDelayFinished = ((wholeDelayFinished / finishedElements.length) || undefined);
 
 	var wholeDelayUnFinished = 0;
 	for ( f = 0; f < unfinishedElements.length; f++) {
 		wholeDelayUnFinished += 1 * (unfinishedElements[f] || 0);
 	}
-	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || 0);
+	result.timeDelayUnFinished = ((wholeDelayUnFinished / unfinishedElements.length) || undefined);
 
 	return result;
 }
@@ -894,9 +898,9 @@ function diffDays(date1, date2) {
 	var firstDate = new Date(date1);
 	var secondDate = new Date(date2);
 	if (!isNaN(firstDate) && !isNaN(secondDate)) {
-		differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		// differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
+		differenceInDays = Math.round((firstDate.getTime() - secondDate.getTime())/(oneDay));
 	}
-
 	return differenceInDays;
 }
 
@@ -956,7 +960,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.costBaseLastTotal = getSummeKosten(pfv, timeZonesPFV, indexTotal);
 
 				indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
-				indexActual = getColumnOfDate(vpv.actualDataUntil) - getColumnOfDate(vpv.startDate);
+				indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate);
 				var timeZonesVPV = splitInTimeZones(organisations, vpv.startDate, vpv.endDate);
 				keyMetrics.costCurrentTotal= getSummeKosten(vpv, timeZonesVPV, indexTotal);
 				keyMetrics.costCurrentActual= getSummeKosten(vpv, timeZonesVPV, indexActual);
@@ -983,11 +987,11 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 				keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 			}
 
-			// if (allDeadlines && allDeadlines.length > 0){
-			// 	var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
-			// 	keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
-			// 	keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
-			// }
+			if (allDeadlines && allDeadlines.length > 0){
+				var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
+				keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
+				keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
+			}
 
 			// look for the deliverables of pfv (take all)
 			var allDeliverables = getAllDeliverables(pfv, hrchy_pfv, undefined);
@@ -1010,7 +1014,77 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
+function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, onlyPT) {
+	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
+		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
+		return [];
+	}
+
+	var capaVPV = calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy);
+	var capaPFV = [];
+	var item;
+
+	if (pfvs) {
+		// calc the corresponding of the PFVs
+		capaPFV = calcCapacityVPVs(pfvs, roleIdentifier, organisations, hierarchy);
+		// insert or update capa values
+		for (item in capaPFV) {
+			if (!capaVPV[item]) {
+				// insert new Value
+				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
+				capaVPV[item] = {};
+				capaVPV[item].actualCost_PT = 0;
+				capaVPV[item].plannedCost_PT = 0;
+				capaVPV[item].actualCost = 0;
+				capaVPV[item].actualCost_PT = 0;
+				capaVPV[item].plannedCost = 0;
+				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
+				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
+				capaVPV[item].internCapa = (capaPFV[item].internCapa || 0);
+				capaVPV[item].externCapa = (capaPFV[item].externCapa || 0);
+			}
+			capaVPV[item].baselineCost = (capaPFV[item].actualCost || 0) + (capaPFV[item].plannedCost || 0);
+			capaVPV[item].baselineCost_PT = (capaPFV[item].actualCost_PT || 0) + (capaPFV[item].plannedCost_PT || 0);
+		}
+	}
+
+	var capa = [];
+	for (item in capaVPV) {
+		const actMonthISO = item.substr(0, 24);
+		const roleID = item.substr(25);
+		if (onlyPT) {
+			capa.push({
+				'month': actMonthISO,
+				'roleID' : roleID,
+				'roleName' : capaVPV[item].roleName,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		} else {
+			capa.push({
+				'month': actMonthISO,
+				'roleID' : roleID,
+				'roleName' : capaVPV[item].roleName,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'actualCost': capaVPV[item].actualCost || 0,
+				'plannedCost': capaVPV[item].plannedCost || 0,
+				'internCapa': capaVPV[item].internCapa || 0,
+				'externCapa': capaVPV[item].externCapa || 0,
+				'baselineCost': capaVPV[item].baselineCost,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		}
+	}
+	return capa;
+}
+
+function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
@@ -1026,71 +1100,83 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 
 	var startCalc = new Date();
 
-	if ( vpvs && organisations && organisations.length > 0) {
+	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
+		logger4js.info('Calculate Capacities missing vpvs or organisation ');
+		return allCalcCapaValuesIndexed;
+	}
 
-		// get startIndex and endIndex and dauer of the several vpvs
-		for (var i = 0; vpvs && i < vpvs.length; i++) {
-			var vpv = vpvs[i];
-			if (vpv) {
-				calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
-				calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
-				calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
-				calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
-				calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
-			}
+	// get startIndex and endIndex and dauer of the several vpvs
+	for (var i = 0; i < vpvs.length; i++) {
+		var vpv = vpvs[i];
+		if (!vpv) {
+			// skip the version
+			continue;
 		}
+		calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
+		calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
+		calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
+		calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
+		calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	}
 
-		var currentDate = new Date(calcC_startDate);
-		logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
-		currentDate.setDate(1);
-		currentDate.setHours(0, 0, 0, 0);
-		logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
+	var currentDate = new Date(calcC_startDate);
+	logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
+	currentDate.setDate(1);
+	currentDate.setHours(0, 0, 0, 0);
+	logger4js.trace('Calculate Capacities and Cost of Role currentDate %s ', currentDate.toISOString());
 
+	if (vpvs.length <= 0 || calcC_dauer <= 0 ) {
+		return 	allCalcCapaValuesIndexed;
+	}
 
-		if (vpvs.length <= 1 || calcC_dauer <= 0 ) {
-			return 	allCalcCapaValuesIndexed;
-		}
+	// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
+	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
 
-		// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
-		logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
-		var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
-
-		var roleIDs = [];
-		roleIDs.push(roleIdentifier); // Main role
-		var allRoles = timeZones[timeZones.length - 1].orga.value.allRoles;
-		var subroles = allRoles[roleIdentifier-1] && allRoles[roleIdentifier-1].subRoleIDs;
-		if (hierarchy && subroles) {
-			for (var i = 0; i < subroles.length; i++) {
-				roleIDs.push(subroles[i].key);
-			}
-		}
-		logger4js.debug('calculate for the role & subrole', roleIDs);
-
-		for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
-			var roleID = roleIDs[roleIndex];
-			logger4js.debug('calculate for the different timeZones');
-			for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
-				var monthlyNeeds = [];
-				// get Capacities for the different timeZones, in which always only one organisation is valid
-				logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
-				monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
-
-				if (!monthlyNeeds) {
-					allCalcCapaValuesIndexed = [];
-					return allCalcCapaValuesIndexed;
+	var roleIDs = [];
+	var allRoles = (timeZones && timeZones[timeZones.length - 1] && timeZones[timeZones.length - 1].orga
+									&& timeZones[timeZones.length - 1].orga.value && timeZones[timeZones.length - 1].orga.value.allRoles) || [];
+	var role = allRoles.find(item => item.uid == roleIdentifier);
+	if (!role) {
+		return allCalcCapaValuesIndexed;
+	}
+	roleIDs.push({uid: role.uid, roleName: role.name}); // Main role
+	if (hierarchy) {
+		if (role && role.subRoleIDs) {
+			for (var j=0; j < role.subRoleIDs.length; j++) {
+				var subrole = allRoles.find(item => item.uid == role.subRoleIDs[j].key);
+				if (!subrole) {
+					continue;
 				}
+				roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Main role
+			}
+		}
+	}
+	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
+	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
+		roleID = roleIDs[roleIndex].uid;
+		var roleName = roleIDs[roleIndex].roleName;
+		logger4js.debug('calculate for the different timeZones');
+		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
+			var monthlyNeeds = [];
+			// get Capacities for the different timeZones, in which always only one organisation is valid
+			logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
+
+			monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
+			if (monthlyNeeds) {
 				var tzStartIndex = timeZones[tz].startIndex;
-				var tzStartDate = timeZones[tz].startdate;
-				var tzEndIndex = timeZones[tz].endIndex;
-				var zoneDauer = tzEndIndex - timeZones[tz].startIndex + 1;
-				currentDate = new Date (tzStartDate);
+				var zoneDauer = timeZones[tz].endIndex - tzStartIndex + 1;
+				currentDate = new Date (timeZones[tz].startdate);
 				currentDate.setMonth(currentDate.getMonth());
+				currentDate.setDate(1);
+				currentDate.setHours(0, 0, 0, 0);
 
 				// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
 				for (i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
+						'roleName': roleName,
 						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
 						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
 						'internCapa_PT': monthlyNeeds[i + tzStartIndex].internCapa_PT ,
@@ -1104,31 +1190,10 @@ function calcCapacities(vpvs, roleIdentifier, organisations, hierarchy) {
 				}
 			}
 		}
-
-		var j = 0, element;
-		for (element in allCalcCapaValues) {
-			const actMonthISO = element.substr(0, 24)
-			const roleID = element.substr(25)
-			allCalcCapaValuesIndexed[j] = {
-				'month': actMonthISO,
-				'roleID' : roleID,
-				'roleName' : allRoles[roleID-1] && allRoles[roleID-1].name,
-				'actualCost_PT': allCalcCapaValues[element].actualCost_PT || 0,
-				'plannedCost_PT': allCalcCapaValues[element].plannedCost_PT || 0,
-				'internCapa_PT': allCalcCapaValues[element].internCapa_PT || 0,
-				'externCapa_PT' : allCalcCapaValues[element].externCapa_PT || 0,
-				'actualCost': allCalcCapaValues[element].actualCost || 0,
-				'plannedCost': allCalcCapaValues[element].plannedCost || 0,
-				'internCapa': allCalcCapaValues[element].internCapa || 0,
-				'externCapa' :allCalcCapaValues[element].externCapa || 0
-			};
-			j++;
-		}
 	}
-
 	var endCalc = new Date();
 	logger4js.info('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
-	return allCalcCapaValuesIndexed;
+	return allCalcCapaValues;
 }
 
 
@@ -1136,7 +1201,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 	var timeZones = [];
 	var organisation_converted = {};
 
-	if (!organisations && organisations.length <= 0 && !calcC_startDate && !calcC_endDate) {
+	if (!organisations || organisations.length <= 0 || !calcC_startDate || !calcC_endDate) {
 		return timeZones;
 	}
 
@@ -1154,23 +1219,20 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 		timeZones.push(timeZoneElem);
 	} else {
-		// sort the organisations descending
-		organisations.sort(function(a, b) { return b.timestamp - a.timestamp; });
-		// newest orga at the end of the array
-		organisations.reverse();
-
+		// organisations are sorted ascending
 		// determine for all organisations the beginning on the first day of month of the timestamp
-		for ( var o = 0;  organisations && organisations[o] && o < organisations.length; o++) {
+		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
 			organisations[o].timestamp.setHours(0,0,0,0);
-		}
+	}
 
-		for ( var o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
+		for ( o = 0; intervallStart && organisations && organisations[o] && o < organisations.length; o++) {
 			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
-				if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
-				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
+				// old: if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
+				// old: if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
+				if (  (intervallStart < organisations[o+1].timestamp) ) {
 					// prepare organisation: change the new modelling of capacities into the old version for calculation
 					organisation_converted = convertOrganisation(organisations[o]);
 					timeZoneElem.orga = organisation_converted;
@@ -1179,6 +1241,10 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 					if (intervallEnd >= organisations[o+1].timestamp) {
 						timeZoneElem.enddate = organisations[o+1].timestamp;
 						timeZoneElem.enddate.setMonth(organisations[o+1].timestamp.getMonth() - 1);
+						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
+					} else {
+						timeZoneElem.enddate = intervallEnd;
+						timeZoneElem.enddate.setMonth(intervallEnd.getMonth() - 1);
 						timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 					}
 				} else { continue; }
@@ -1208,7 +1274,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	var tz_dauer = tz_endIndex - tz_startIndex + 1;
 
 	// prepare the tz_organisation for direct access to uid
-	logger4js.debug('prepare organisation for direct access to uid');
+	logger4js.trace('prepare organisation for direct access to uid');
 	var allRoles = [];
 	var allTeams = [];
 	var allRoleNames = [];
@@ -1228,7 +1294,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 	if (!roleIdentifier || roleIdentifier === '' && tz_organisation && tz_organisation.value&& allRoles.length > 0)  roleIdentifier = tz_organisation.value.allRoles[0].name;
 
-	logger4js.debug('find the roleID for the given roleName %s', roleIdentifier);
+	logger4js.trace('find the roleID for the given roleName %s', roleIdentifier);
 
 	if (roleIdentifier && allRoleNames && allRoleNames[roleIdentifier]) roleID = allRoleNames[roleIdentifier].uid || undefined;
 
@@ -1238,7 +1304,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation
-	logger4js.debug('getting roles, which are concerned/connected with roleID in the given organisation %s',  roleID);
+	logger4js.debug('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
 	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
@@ -1266,7 +1332,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);
 
-		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
+		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
 		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
 
 		var intStart = Math.max(vpvStartIndex, tz_startIndex);
@@ -1315,19 +1381,20 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 			return costValues;
 		}
 
-		logger4js.debug('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
+		logger4js.trace('Convert vpv-Hierarchy to direct access for Project Version %s',  vpv._id);
 		var hrchy = convertHierarchy(vpv);
 
+		var isTeam = allRoles[roleID].isTeam;
 
 		// build role/cost - lists with teams
-		logger4js.debug('Build Role / Cost List for Project Version %s',  vpv._id);
-		var rclists = buildRClists(vpv);
+		logger4js.trace('Build Role / Cost or Team List for Project Version %s',  vpv._id);
+		var rclists = buildRClists(vpv, isTeam);
 
 		// build an intersection ?!?!?!
 		var intersectArray = [];
 		var intersectElem = new Object;
 
-		logger4js.debug('Evaluate Teams for Project Version %s',  vpv._id);
+		logger4js.trace('Evaluate Teams for Project Version %s',  vpv._id);
 		for (i = 0; concerningRoles && i< concerningRoles.length; i++) {
 			var actRoleID = concerningRoles[i] && concerningRoles[i].actRole.uid;
 			var teamID = concerningRoles[i] && concerningRoles[i].teamID;
@@ -1343,6 +1410,10 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					for (tID in rclists[actRoleID]) {
 						intersectElem.phases = intersectElem.phases.concat(rclists[actRoleID][tID]);
 					}
+					// remove duplicate phases from intersectElem.phases-Array
+					intersectElem.phases = intersectElem.phases.filter( function (item, index, inputArray ) {
+						return inputArray.indexOf(item) == index;
+					});
 					intersectArray.push(intersectElem);
 				} else {
 					if (rclists[actRoleID][teamID]) {
@@ -1358,20 +1429,20 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 		}
 
 
-		logger4js.debug('Combine Capacity Values for Project Version %s',  vpv._id);
+		logger4js.trace('Combine Capacity Values for Project Version %s',  vpv._id);
 		if (dauer > 0) {
 
 			for (i = 0; intersectArray && i< intersectArray.length; i++) {
 
 				actRoleID = intersectArray[i].role;
-				logger4js.debug('Calculate Intersect %s Role %s', i, actRoleID);
-				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatzIntern : 0;
+				logger4js.trace('Calculate Intersect %s Role %s', i, actRoleID);
+				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 				teamID = intersectArray[i].teamID;
 				var phasesWithActRole = intersectArray[i].phases;
 
 				// calculate the needs of this Role with faktor always 1.0
 
-				logger4js.debug('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
+				logger4js.trace('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
 				for (var j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
 					if (!phase) {
@@ -1379,9 +1450,9 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					}
 					var phasenStart = startIndex + phase.relStart - 1;
 
-					logger4js.debug('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
+					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
-						if (phase.AllRoles[k].RollenTyp == actRoleID) {
+						if ((phase.AllRoles[k].RollenTyp == actRoleID)|| (phase.AllRoles[k].teamID == actRoleID)) {
 							var role = phase.AllRoles[k];
 							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
 							if (role &&  role.Bedarf) {
@@ -1407,7 +1478,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 			// costValues[0] = 0;
 		}
 	}
-	logger4js.debug('Finished getRessourcenBedarf Project Version %s',  vpv._id);
+	logger4js.trace('Finished getRessourcenBedarf Project Version %s',  vpv._id);
 	return costValues;
 }
 
@@ -1424,14 +1495,23 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 		capaValues[i] = capaElem;
 	}
 
+	var concerningUIDs = [];
 
 	// Calculate the Capacities of this Role
 	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
-
 		var actRoleID = concerningRoles[cR].actRole.uid;
-		var faktor = concerningRoles[cR].faktor;
+		var indexUID = concerningUIDs.indexOf(actRoleID);
+		
+		// UIDs should only be added once
+		if ( indexUID >= 0 ) continue;
 
-		var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatzIntern : 0;
+		// collect the UIDs, which were added to the capa
+		concerningUIDs.push(actRoleID);				
+				
+		// for the capa now always the faktor=1, since new skill management
+		var faktor = 1;
+
+		var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 		var capaProRole = allRoles[actRoleID] ? allRoles[actRoleID].kapazitaet : 0;
 		var roleIsExtern = allRoles[actRoleID] ? allRoles[actRoleID].isExternRole : 0;
 
@@ -1443,14 +1523,15 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 				capaValues[mon].internCapa_PT = (capaValues[mon].internCapa_PT || 0) + capaProRole[startIndex + mon + 1] * faktor;
 				capaValues[mon].internCapa = (capaValues[mon].internCapa || 0) + capaProRole[startIndex + mon + 1] * tagessatz * faktor / 1000 ;
 			}
-		}
+		}		
 	}
 	return capaValues;
 }
 
 
-function buildRClists(vpv) {
+function buildRClists(vpv, team) {
 	var rclists = {};
+	var teamlists = {};
 
 	if (vpv){
 		// prepare rclists of this vpv
@@ -1489,11 +1570,40 @@ function buildRClists(vpv) {
 					}
 
 				}
+				// teamlists.addRP
+				if (!teamlists[role.teamID]){
+					var phasesPerTeam = [];
+					var newTeam = {};
+					phasesPerTeam.push(phase.name);
+					newTeam[role.RollenTyp] = phasesPerTeam;
+					teamlists[role.teamID]=newTeam;
+				} else {
+					newTeam = teamlists[role.teamID];
+					if (newTeam[role.RollenTyp]){
+						phasesPerTeam = newTeam[role.RollenTyp];
+						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						if (!(indexPhase >= 0)) {
+							phasesPerTeam.push(phase.name);
+							newTeam[role.RollenTyp] = phasesPerTeam;
+							teamlists[role.teamID] = newTeam;
+						}
+					} else {
+						phasesPerTeam = [];
+						phasesPerTeam.push(phase.name);
+						newTeam[role.RollenTyp] = phasesPerTeam;
+						teamlists[role.teamID]=newTeam;
+					}
+				}
 			}
 		}
 	}
-	return rclists;
+	if ( team ) {
+		return teamlists;
+	} else {
+		return rclists;
+	}
 }
+
 
 
 function getConcerningRoles(allRoles, allTeams, roleID) {
@@ -1502,30 +1612,27 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 	function findConcerningRoles(value, parentRole) {
 		//value is the Id of one subrole
-		var hroleID = value.key;
+		var hroleID = value.key;		
 		crElem = {};
-		crElem.actRole = allRoles[hroleID];
+		crElem.actRole = allRoles[hroleID];		
+		crElem.teamID = -1;
+		crElem.faktor = 1.0;
 
 		if (parentRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
 				var team = crElem.actRole.teamIDs[t];
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
-				var teamValue = parseFloat(team.value.replace(',', '.'));
-				crElem.faktor = teamValue;
-				concerningRoles.push(crElem);
+				crElem.faktor = team.value;
 			}
-		} else {
-			crElem.teamID = -1;
-			crElem.faktor = 1.0;
-			concerningRoles.push(crElem);
+		}		
+		concerningRoles.push(crElem);
 
-			var newParent = crElem.actRole;
-			if (newParent && newParent.subRoleIDs.length > 0){
-				var shroles = newParent.subRoleIDs;
-				for (var sr = 0; shroles && sr < shroles.length; sr++) {
-					findConcerningRoles(shroles[sr], newParent);
-				}
+		var newParent = crElem.actRole;
+		if (newParent && newParent.subRoleIDs.length > 0){
+			var shroles = newParent.subRoleIDs;
+			for (var sr = 0; shroles && sr < shroles.length; sr++) {
+				findConcerningRoles(shroles[sr], newParent);
 			}
 		}
 	}
@@ -1534,7 +1641,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 	if (roleID || roleID != ''){
 		var actRole = allRoles[roleID];
 		crElem = {};
-		crElem.actRole = allRoles[roleID];
+		crElem.actRole = allRoles[roleID];		
 		crElem.teamID = -1;
 		crElem.faktor = 1;
 		concerningRoles.push(crElem);
@@ -1544,36 +1651,6 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
 				findConcerningRoles(subRoles[sr], actRole);
 			}
-		}
-	}
-
-	// eliminate duplicates of the pair roleID|teamID
-	var concerningRolesIndexed = [];
-	for (var dup = 0; dup < concerningRoles.length; dup++) {
-		var crElement = concerningRoles[dup];
-		var key = crElement.actRole.uid + '|' + crElement.teamID;
-		concerningRolesIndexed[key] = crElement;
-	}
-	var isConcerningTeam = true;
-	for (var t=0; t < allTeams.length; t++) {
-		var team = allTeams[t];
-		var teamkey = team.uid + '|' + '-1';
-		if (team &&  team.subRoleIDs.length > 0 && !concerningRolesIndexed[teamkey]) {
-			for ( sr = 0; sr < team.subRoleIDs.length; sr++){
-				key = team.subRoleIDs[sr].key + '|' + '-1';
-				if (!concerningRolesIndexed[key]) {
-					isConcerningTeam = false;
-					break;
-				}
-			}
-		}
-		if (isConcerningTeam) {
-			crElem = {};
-			crElem.actRole = team;
-			crElem.teamID = -1;
-			crElem.faktor = 1;
-			concerningRolesIndexed[teamkey] = crElem;
-			concerningRoles.push(crElem);
 		}
 	}
 	return concerningRoles;
@@ -1739,7 +1816,6 @@ function convertOrganisation(organisation_new) {
 }
 
 function cleanupRestrictedVersion(vpv) {
-
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
@@ -1762,10 +1838,84 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.hierarchy = undefined;
 	vpv.keyMetrics = undefined;
 	vpv.status = undefined;
+}
+function checkUIDs(newOrga, oldOrga) {
+	logger4js.debug('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
+	var result = true;
+	var i = 0;
+	
+	if (!oldOrga || !newOrga) {
+		logger4js.warn('Error: either the new organisation or the old organisation or both are undefined');
+		return false;	
+	}
+	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) {
+		logger4js.warn('Error: more old costs (%s) than new costs (%s) are in the organisation', oldOrga.allCosts.length, newOrga.allCosts.length);
+		result = false;
+	}
+	
+	if ((oldOrga.allRoles.length > newOrga.allRoles.length)){
+		logger4js.warn('Error: more old roles (%s) than new roles (%s) in the organisation', oldOrga.allRoles.length, newOrga.allRoles.length);
+		result = false;
+	} 
 
+	// check all UIDs of roles - they all have to exist in the newOrga as well
+	var allNewRoles = [];
+	for ( i = 0; newOrga && newOrga.allRoles && i < newOrga.allRoles.length; i++) {
+		allNewRoles[newOrga.allRoles[i].uid] = newOrga.allRoles[i];
+	}
+	var resultRoles = true;
+	for ( i = 0; oldOrga &&  oldOrga.allRoles && i < oldOrga.allRoles.length; i++) {
+		var thisRole = oldOrga.allRoles[i];
+		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
+			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
+			resultRoles = resultRoles && false;			
+		}
+	}
+	if (resultRoles) {		
+		logger4js.debug('allRoles (%s) of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
+	}
+
+	// check all UIDs of costs - they all have to exist in the newOrga as well
+	var allNewCosts = [];
+	for ( i = 0;  newOrga.allCosts && i < newOrga.allCosts.length; i++) {
+		allNewCosts[newOrga.allCosts[i].uid] = newOrga.allCosts[i];
+	}
+	var resultCosts = true;
+	for ( i = 0; oldOrga && oldOrga.allCosts && i < oldOrga.allCosts.length; i++) {
+		var thisCost = oldOrga.allCosts[i];
+		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
+			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
+			resultCosts = resultCosts && false;			
+		}
+	}	
+	if ( resultCosts ) {
+		logger4js.debug('allCosts (%s) of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
+	}
+
+	result = result && resultCosts && resultRoles;
+	return result;
 }
 
-
+function verifyOrganisation(newOrga, oldOrga) {
+	// updates newOrga if possible and returns true/false if the orga could be used
+	// newOrga is the pure Orga Value
+	// oldOrga is the full setting including timestamp, vcid, ...
+	logger4js.debug('verify Organisation ', newOrga , oldOrga && oldOrga.name && oldOrga.timestamp && oldOrga.value.validFrom);
+	var result = true;
+	if ( newOrga && oldOrga && oldOrga.value ) {
+		var doldO = validateDate(oldOrga.timestamp,false);
+		var dnewO = validateDate(newOrga.validFrom,false);
+		if ( dnewO < doldO ) {
+			result = false;
+			return result;
+		}
+		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
+		result =  checkUIDs(newOrga, oldOrga.value);
+	}
+	
+	logger4js.debug('Verification of the new organisation:  ', result);
+	return result;
+}
 
 module.exports = {
 	// getAllPersonalKosten: getAllPersonalKosten,
@@ -1777,5 +1927,6 @@ module.exports = {
 	calcCapacities: calcCapacities,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
-	getRessourcenBedarfe: getRessourcenBedarfe
-};
+	getRessourcenBedarfe: getRessourcenBedarfe,
+	verifyOrganisation: verifyOrganisation
+}

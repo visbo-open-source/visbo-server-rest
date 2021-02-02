@@ -20,10 +20,7 @@ var visboPortfolioSchema = new mongoose.Schema({
 	allItems: [{ type: vpfItem, required: true}],
 	sortType: { type: Number, required: false},
 	sortList: [{type: Schema.Types.ObjectId, ref: 'VisboProject'}],
-	deleted: {
-		deletedAt: {type: Date, required: false },
-		byParent: {type: Boolean}
-	}
+	deletedAt: {type: Date, required: false },
 });
 
 // Set Creation and modification date automatically

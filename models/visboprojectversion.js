@@ -19,13 +19,13 @@ var clsBewertung = new Schema({
 
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
-	name: { type: String },
+	// name: { type: String },
 	teamID: {type: Number},
-	farbe: { type: Number },
-	startkapa: { type: Number },
-	tagessatzIntern: { type: Number },
-	Bedarf: [{ type: Number }],
-	isCalculated: { type: Boolean }
+	// farbe: { type: Number },
+	// startkapa: { type: Number },
+	// tagessatzIntern: { type: Number },
+	Bedarf: [{ type: Number }]
+	// isCalculated: { type: Boolean }
 });
 
 var clsKostenart = new Schema({

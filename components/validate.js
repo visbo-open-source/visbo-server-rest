@@ -91,8 +91,35 @@ var validateEmail = function(email, allowEmpty) {
 		logger4js.info('Check Name: Name contains Illegal Characters? %s', email);
 		return false;
 	}
+	var emailPart = email.split('@');
+	if (emailPart.length != 2) {
+		logger4js.info('Check Name: No user/domain separator? %s', email);
+		return false;
+	}
+	if (!emailPart[0].length) {
+		logger4js.info('Check Name: No User address part? %s', email);
+		return false;
+	}
+	if (!emailPart[1].length) {
+		logger4js.info('Check Name: No Domain part? %s', email);
+		return false;
+	}
+	emailPart = emailPart[1].split('.');
+	if (emailPart.length < 2 || emailPart[0].length == 0 || emailPart[1].length == 0) {
+		logger4js.info('Check Name: No correct domain separator ? %s', email);
+		return false;
+	}
 	return true;
 };
+
+function convertNumber(str) {
+	var result = Number(str);
+	if (isNaN(result) && str.indexOf(',') >= 0) {
+		var convert = str.replace(',', '.');
+		result = Number(convert);
+	}
+	return result;
+}
 
 var evaluateLanguage = function(req) {
 	var lang;
@@ -111,5 +138,6 @@ module.exports = {
 	validateEmail: validateEmail,
 	validateDate: validateDate,
 	validateNumber: validateNumber,
-	evaluateLanguage: evaluateLanguage
+	evaluateLanguage: evaluateLanguage,
+	convertNumber: convertNumber
 };

@@ -18,18 +18,20 @@ if (!vcList) {
   var systemvc = vcList[0];
 }
 
+var oldVersion = "";
 if (continueFlag) {
-  var currentVersion = "";
   var setting = db.vcsettings.findOne({vcid: systemvc._id, name: 'DBVersion'});
   if (!setting) {
     print ("System DB Version not set")
-    currentVersion = '2018-01-01T00:00:00'
-    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "SysValue", value: {version: currentVersion}, createdAt: new Date(), updatedAt: new Date()})
+    oldVersion = '2018-01-01T00:00:00'
+    db.vcsettings.insertOne({vcid: systemvc._id, name: 'DBVersion', type: "SysValue", value: {version: oldVersion}, createdAt: new Date(), updatedAt: new Date()})
   } else {
-    currentVersion = setting.value.version;
+    oldVersion = setting.value.version;
   }
-  print("Upgrade DB from Version ", currentVersion)
+  print("Upgrade DB from Version ", oldVersion)
 }
+
+var currentVersion = oldVersion;
 
 dateBlock = "2018-12-01T00:00:00";
 if (continueFlag && currentVersion < dateBlock) {
@@ -738,6 +740,200 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2020-10-15T00:00:00"
+if (currentVersion < dateBlock) {
+  // update the vpfCount in visboprojects for main variant and real variants
+  db.visboprojects.update({vpType:1, vpfCount: {$exists: false}}, {$set: {vpfCount: 0}}, {multi: true})
+
+  // get the real vpfCount by counting the projectversions per vpid and join it with visboproject
+  var vpfList = db.visboportfolios.aggregate(
+    [
+      {$match: {variantName: {$eq: ""}}},
+      {$project: {_id: 1, vpid:1}},
+      {$group:{_id: "$vpid", vpfCountNew: {$sum : 1}}},
+      {$lookup: {
+           from: "visboprojects",
+           localField: "_id",    // field in the vp collection
+           foreignField: "_id",  // field in the items collection
+           as: "vp"
+        }
+     }
+    ]
+  ).toArray();
+  print("Found VPs with Portfolio Lists", vpfList.length)
+  for (var i = 0; i < vpfList.length; i++) {
+    if (vpfList[i].vp.length > 0) {
+      if (vpfList[i].vpfCountNew != vpfList[i].vp[0].vpfCount) {
+        print("Visbo Project Portfolio Count Mismatch:", vpfList[i]._id, vpfList[i].vp[0].name, vpfList[i].vpfCountNew, vpfList[i].vp[0].vpfCount);
+        db.visboprojects.updateOne({_id: vpfList[i]._id}, {$set: {vpfCount: vpfList[i].vpfCountNew}})
+      }
+    } else {
+      print("Visbo Project already destroyed:", vpfList[i]._id, vpfList[i].vpvCountNew)
+    }
+  }
+  print("Visbo Project vpfCount maintenance finished")
+
+  // Create the vpfCount in VP Variant if it does not exist
+
+  // update the variant vpfCount to 0 if it does not exists
+  db.visboprojects.update(
+     { vpType: 1, variant: { $elemMatch: { _id: {$exists: true}, vpfCount: {$exists: false} } } },
+     { $set: { "variant.$[elem].vpfCount" : 0 } },
+     {
+       multi: true,
+       arrayFilters: [ { "elem.vpfCount": { $exists: false } } ]
+     }
+  )
+
+  // check and update the vpfCount of VP Variant by counting the versions for each varian in vpf
+  var vpfList = db.visboportfolios.aggregate(
+    [
+      // { $match: {vpid: ObjectId('5b1fd29c46beb42c5997be7b'), variantName: {$ne: ""}}},
+      { $match: {variantName: {$ne: ""}, deletedAt: {$exists: false}}},
+      { $project: {_id: 1, vpid:1, variantName:1}},
+      { $group:{_id: {vpid: "$vpid", variantName: "$variantName"}, vpfCountNew: {$sum : 1}}},
+      { $lookup: {
+           from: "visboprojects",
+           localField: "_id.vpid",    // field in the orders collection
+           foreignField: "_id",  // field in the items collection
+           as: "vp"
+        }
+     },
+     { $unwind: "$vp" },
+     { $unwind: "$vp.variant" },
+     { $addFields: { vpfCountOrg: "$vp.variant.vpfCount", vpfVariantNameOrg: "$vp.variant.variantName" } },
+     { $project: {_id: 1, vpfCountNew:1, vpfCountOrg:1, vpfVariantNameOrg:1}}
+    ]
+  ).toArray();
+  print("Found Projects Portfolios", vpfList.length)
+  // print (JSON.stringify(vpfList))
+
+  for (var i = 0; i < vpfList.length; i++) {
+    // print("Process Item ", JSON.stringify(vpfList[i]))
+    if (vpfList[i].vpfVariantNameOrg) {
+      var variantNameNew = vpfList[i]._id.variantName;
+      var variantNameOrg = vpfList[i].vpfVariantNameOrg;
+      var vpid = vpfList[i]._id.vpid;
+      var vpfCountNew = vpfList[i].vpfCountNew;
+      var vpfCountOrg = vpfList[i].vpfCountOrg;
+
+      if ( variantNameNew == variantNameOrg) {
+        // print("Visbo Project Variant Match compare Counts:", vpid, variantNameNew, vpfCountNew, vpfCountOrg);
+        if (vpfCountNew != vpfCountOrg) {
+          print("Visbo Project Variant Count Mismatch:", vpid, variantNameNew, vpfCountNew, vpfCountOrg);
+          // update visbo project set the vpfCount in the Variant correct
+          var vp = db.visboprojects.findOne({_id: vpid})
+          if (vp == undefined) {
+            print("Project NOT FOUND ", vpid)
+          } else if (vp.variant == undefined ){
+            print("Project has no VARIANT ", vpid)
+          } else {
+            // find the correct variant
+            for (var j = 0; j< vp.variant.length; j++) {
+              // print("Check Variant ", variantName, vp.variant[j].variantName)
+              if (vp.variant[j].variantName == variantNameNew) {
+                vp.variant[j].vpfCount = vpfCountNew;
+                print ("update Variant ", vpid, variantNameNew, vp.variant[j].vpfCount);
+                // print ("updated VP ", JSON.stringify(vp));
+                // delete vp._id;
+                db.visboprojects.replaceOne({_id: vpid}, vp)
+              }
+            }
+          }
+        }
+      } else {
+        // print("Ignore wrong variant ", vpid, variantNameOrg, variantNameNew)
+      }
+    } else {
+      print("Visbo Project already deleted:", vpfList[i]._id.vpid, vpfList[i].vpfCountNew)
+    }
+    //  db.visbocenters.updateOne({_id: vpList[i].vcid}, {$inc: {vpCount: 1}})
+  }
+  print("Visbo Project Variant vpfCount maintenance finished")
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2020-11-06T00:00:00"
+if (currentVersion < dateBlock) {
+  // convert organisation
+  var vcidlist = db.vcsettings.find({type: 'organisation'}, {vcid:1} ).toArray();
+  var vcids = [];
+  vcidlist.forEach(item => vcids.push(item.vcid));
+  print ("Convert Organisation for VisboCenters: Count: " + vcids.length);
+
+  var query = {vcid: {$in: vcids}, type: 'organisation', 'value.allRoles.isTeamParent': true};
+  var vcorgs = db.vcsettings.find(query, {_id:1, type:1}).toArray();
+  print ("convert isTeamParent for VisboCenter Organisations: Count: " + vcorgs.length);
+  if (vcorgs.length > 0) {
+    // set isTeam Attribute to true for isTeamParent = true
+    db.vcsettings.updateMany(
+        query,
+        {$set: {'value.allRoles.$[elem].isTeam': true}},
+        {arrayFilters: [ { "elem.isTeamParent": { $eq: true } } ] }
+      );
+  }
+
+  var query = {vcid: {$in: vcids}, type: 'organisation'};
+  var vcorgs = db.vcsettings.find(query).toArray();
+  print ("convert tagessatz and subRoleIDs for VisboCenter Organisations: Count: " + vcorgs.length);
+  var updateCount = 0;
+  for (var i=0; i < vcorgs.length; i++) {
+    // print("check vcorgs", vcorgs[i].name, vcorgs[i]._id.toString());
+    var update = false;
+    var allRoles = vcorgs[i] && vcorgs[i].value && vcorgs[i].value.allRoles;
+    for (var j=0; j < allRoles.length; j++) {
+      if (allRoles[j].tagessatzIntern > 0 && allRoles[j].tagessatzIntern != allRoles[j].tagessatz) {
+        // print("modify vcorgs tagessatz", vcorgs[i].name, "Role", allRoles[j].uid);
+        allRoles[j].tagessatz = allRoles[j].tagessatzIntern;
+        update = true;
+      }
+      if (allRoles[j].subRoleIDs && allRoles[j].subRoleIDs.length > 0 ) {
+        // print("verify subRoleIDS", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].subRoleIDs.length);
+        for (var k=0; k < allRoles[j].subRoleIDs.length; k++) {
+          var subRole = allRoles[j].subRoleIDs[k];
+          // print("verify subRole", typeof subRole.key, typeof subRole.value, JSON.stringify(subRole));
+          if (typeof subRole.key == 'string' || typeof subRole.value == 'string') {
+            subRole.key = Number(subRole.key);
+            var str = subRole.value.replace(',', '.');
+            subRole.value = Number(str);
+            // print("update subRole", JSON.stringify(subRole));
+            update = true;
+          }
+        }
+      }
+      if (allRoles[j].teamIDs && allRoles[j].teamIDs.length > 0 ) {
+        // print("verify teamIDs", vcorgs[i].name, "Role", allRoles[j].uid, "Length", allRoles[j].teamIDs.length);
+        for (var k=0; k < allRoles[j].teamIDs.length; k++) {
+          var subTeam = allRoles[j].teamIDs[k];
+          // print("verify subTeam", typeof subTeam.key, typeof subTeam.value, JSON.stringify(subTeam));
+          if (typeof subTeam.key == 'string' || typeof subTeam.value == 'string') {
+            subTeam.key = Number(subTeam.key);
+            var str = subTeam.value.replace(',', '.');
+            subTeam.value = Number(str);
+            print("update subTeam", JSON.stringify(subTeam));
+            update = true;
+          }
+        }
+      }
+    }
+    if (update) {
+      print("update orga", vcorgs[i].name, vcorgs[i]._id.toString());
+      db.vcsettings.replaceOne({_id: vcorgs[i]._id}, vcorgs[i]);
+      updateCount += 1;
+    }
+  }
+
+  print("Finished Fix Change Orga tagessatzIntern, subRoleIDs ", updateCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
@@ -745,3 +941,22 @@ if (currentVersion < dateBlock) {
 //   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
 //   currentVersion = dateBlock
 // }
+
+// Add an System Update Audit Entry
+var auditUpgrade = {};
+auditUpgrade.action = "PUT";
+if (oldVersion != currentVersion) {
+  auditUpgrade.actionInfo = "From " + (oldVersion || '') + " to " + (currentVersion || '');
+} else {
+  auditUpgrade.actionInfo = "Without DB Changes";
+}
+auditUpgrade.actionDescription = "System Upgrade";
+auditUpgrade.user = {"email": "System"};
+auditUpgrade.createdAt = new Date();
+auditUpgrade.updatedAt = new Date();
+auditUpgrade.result = {};
+auditUpgrade.result.time = 0;
+auditUpgrade.result.status = 200;
+
+db.visboaudits.insert(auditUpgrade)
+// print(JSON.stringify(auditUpgrade))

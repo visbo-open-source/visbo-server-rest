@@ -27,7 +27,7 @@ router.route('/')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup VISBO System Log
 	* @apiName GetSysLogs
-	* @apiPermission user must be authenticated and access to System View and ViewLog Permission
+	* @apiPermission Authenticate and System.View and System.ViewLog Permission for the VISBO System
 	* @apiError {number} 401 Not Authenticated, no valid token
 	* @apiError {number} 403 No Permission, user has no View & ViewLog Permission
 	* @apiExample Example usage:
@@ -48,7 +48,7 @@ router.route('/')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 
-		req.auditDescription = 'SysLog (Read)';
+		req.auditDescription = 'SysLog Read';
 		req.auditSysAdmin = true;
 		req.auditTTLMode = 1;
 
@@ -141,7 +141,7 @@ router.route('/')
 		*/
 	// get syslog file
 	.get(function(req, res) {
-		req.auditDescription = 'SysLogs (Read)';
+		req.auditDescription = 'SysLogs Read';
 		req.auditSysAdmin = true;
 
 		logger4js.info('Get Logfile %s/%s ', req.params.folder, req.params.filename);
