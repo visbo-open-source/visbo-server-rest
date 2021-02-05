@@ -33,7 +33,7 @@ router.route('/')
 	* @apiName GetAudit
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get retruns a limited number of audit trails
-	* @apiPermission user must be authenticated and needs to have System Admin Permission
+	* @apiPermission Authenticate and System.View and System.ViewAudit Permission for the VISBO System
 	* @apiParam (Parameter) {Date} [from]  Request Audits with dates >= from Date
 	* @apiParam (Parameter) {Date} [to]  Request Audits with dates <= to Date
 	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
@@ -169,15 +169,14 @@ router.route('/')
 			textCondition.push({'vp.name': expr});
 			textCondition.push({'vpv.name': expr});
 			textCondition.push({'host': expr});
-			textCondition.push({'url': expr});
 			textCondition.push({'action': expr});
 			textCondition.push({'actionInfo': expr});
 			textCondition.push({'actionDescription': expr});
 			textCondition.push({'result.statusText': expr});
 			textCondition.push({'userAgent': expr});
 		}
-		textCondition.push({'vc.vcjson': expr});
-		textCondition.push({'vp.vpjson': expr});
+		// textCondition.push({'vc.vcjson': expr});
+		// textCondition.push({'vp.vpjson': expr});
 		textCondition.push({'url': expr});
 		queryListCondition.push({'$or': textCondition});
 	}

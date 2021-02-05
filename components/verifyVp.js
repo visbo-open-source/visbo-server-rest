@@ -53,11 +53,14 @@ function getAllGroups(req, res, next) {
 		// MS TODO: only if reuqired to show VPs from deleted VCs
 		// query['$or'] = [{groupType: 'VC'}, {deletedByParent: {$exists: checkDeleted}}]
 	} else {
-		if (vcid) query.vcid = vcid;
-		query.groupType = {$in: ['VC', 'VP']};
-		if (vpid) {
-			query.vpids = vpid;
+		if (vcid) {
+			query.vcid = vcid;
 		}
+		// check all VP Groups and non global VC groups
+		if (vpid) {
+			query['$or'] = [{vpids: vpid}, {global: false, groupType: 'VC'}]
+		}
+		query.groupType = {$in: ['VC', 'VP']};
 	}
 
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
@@ -121,7 +124,6 @@ function getVPGroupsOfVC(req, res, next) {
 	if (!req.oneVP || (req.listVCPerm.getPerm(req.oneVP.vcid).vp & constPermVP.View)) {
 		return next();
 	}
-	// MS TODO: fetch the VC/VP groups
 	var query = {'users.userId': userId};	// search for VP groups where user is member
 	query.vcid = req.oneVP.vcid;
 	query.groupType = {$in: ['VC', 'VP']};

@@ -167,7 +167,10 @@ function saveAuditEntry(tokens, req, res, factor) {
 		auditEntry.vpv.name = req.oneVPV.name;
 		auditEntry.vp.name = req.oneVPV.name;
 		if (!auditEntry.actionInfo) {
-			auditEntry.actionInfo = req.oneVPV.timestamp ? req.oneVPV.timestamp.toISOString() : auditEntry.vpv.name;
+			auditEntry.actionInfo = req.oneVPV.timestamp ? req.oneVPV.timestamp.toISOString() : '';
+			if (req.oneVPV && req.oneVPV.variantName) {
+				auditEntry.actionInfo = req.oneVPV.variantName.concat('/', auditEntry.actionInfo);
+			}
 		}
 	}
 	if (req.oneVP) {
@@ -178,7 +181,7 @@ function saveAuditEntry(tokens, req, res, factor) {
 		if (addJSON == 'vp') auditEntry.vp.vpjson = JSON.stringify(req.oneVP);
 		if (addJSON == 'group') auditEntry.vp.vpjson = JSON.stringify(req.oneGroup);
 		// if (addJSON == 'portfolio') auditEntry.vp.vpjson = JSON.stringify(req.oneVPF);
-		if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name;
+		// if (!auditEntry.actionInfo) auditEntry.actionInfo = auditEntry.vp.name;
 	}
 	if (req.oneVC) {
 		auditEntry.vc.vcid = req.oneVC._id;

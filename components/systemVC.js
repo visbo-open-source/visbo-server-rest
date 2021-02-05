@@ -25,8 +25,8 @@ var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 
 // Verify/Create VISBO Center with an initial user
-var createSystemVC = function (body) {
-	logger4js.info('Create System VISBO Center if not existent');
+var createSystemVC = function (body, launchServer) {
+	logger4js.debug('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
 		logger4js.warn('No Body or no users System VISBO Center %s', body);
 		return undefined;
@@ -45,11 +45,11 @@ var createSystemVC = function (body) {
 			vcSystem = vc;
 			// redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
-			initSystemSettings(vcSystem._id.toString());
+			initSystemSettings(launchServer);
 			return vc;
 		}
 		// System VC does not exist create systemVC, default user, default sysadmin group
-		logger4js.debug('Create System VISBO Center ');
+		logger4js.warn('No System VISBO Center, Create a new one');
 		var newVC = new VisboCenter();
 		newVC.name = nameSystemVC;
 		newVC.system = true;
@@ -95,9 +95,13 @@ var getSystemVC = function () {
 	return vcSystem;
 };
 
-var initSystemSettings = function() {
+var initSystemSettings = function(launchServer) {
 	// Get the Default Log Level from DB
-	if (!vcSystem) return;
+	logger4js.info('Check System VC during init setting');
+	if (!vcSystem) {
+		logger4js.warn('No System VC during init setting');
+		return;
+	}
 	var query = {};
 	query.vcid = vcSystem._id;
 	query.type = 'SysConfig';
@@ -125,7 +129,9 @@ var initSystemSettings = function() {
 		}
 		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4);
 		logging.setLogLevelConfig(getSystemVCSetting('DEBUG').value);
-
+		if (launchServer) {
+			launchServer();
+		}
 		logger4js.info('Cache System Setting last Updated %s', lastUpdatedAt.toISOString());
 	});
 };
@@ -185,7 +191,8 @@ var getSystemVCSetting = function (name) {
 		// Set Default Values
 		value = {'VC': 'info', 'VP': 'info', 'VPV': 'info', 'USER':'info', 'OTHER': 'info', 'MAIL': 'info', 'All': 'info'};
 	} else if (name == 'PW Policy') {
-		value = {PWPolicy: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\"\\'\\\\]).{8,}$", Description: "At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."};
+		// value = {PWPolicy: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\"\\'\\\\]).{8,}$", Description: "At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash."};
+		value = {PWPolicy: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])(?!.*[\\\'\\"\\\\]).{8,}$', Description: 'At least 8 characters, at least one character of each type: alpha, capital alpha, number, special. No Quotes and backslash.'};
 	} else if (name == 'UI URL') {
 		// Check Environment and update DB
 		value = {UIUrl: process.env.UI_URL || 'http://localhost:4200'};
@@ -230,11 +237,25 @@ var getSystemUrl = function () {
 	return result;
 };
 
+var getReSTUrl = function () {
+	var vcSetting = getSystemVCSetting('UI URL');
+	var result = vcSetting && vcSetting.value && vcSetting.value.UIUrl;
+	if (!result || result.indexOf('http://localhost') == 0) {
+		result = 'http://localhost:3484';
+	} else {
+		result = result.concat('/api');
+	}
+	logger4js.info('Get VISBO ReST Url: %s', result);
+
+	return result;
+};
+
 module.exports = {
 	createSystemVC: createSystemVC,
 	getSystemVC: getSystemVC,
 	getSystemVCSetting: getSystemVCSetting,
 	getSystemUrl: getSystemUrl,
+	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
 	reloadSystemSetting: reloadSystemSetting
 };

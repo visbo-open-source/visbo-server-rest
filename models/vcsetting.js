@@ -11,6 +11,5 @@ var vcSettingSchema = new mongoose.Schema({
 });
 // Set Creation and modification date automatically
 vcSettingSchema.set('timestamps', true);
-
 // declare a model
 mongoose.model('VCSetting', vcSettingSchema);

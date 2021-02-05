@@ -45,7 +45,7 @@ router.route('/profile')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName GetUserProfile
-	* @apiPermission user must be authenticated
+	* @apiPermission Authenticated
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
 	* @apiExample Example usage:
@@ -79,7 +79,7 @@ router.route('/profile')
 	*/
 // get profile
 	.get(function(req, res) {
-		req.auditDescription = 'Profile (Read)';
+		req.auditDescription = 'User Profile Read';
 		req.auditTTLMode = 1;
 
 		User.findById(req.decoded._id, function(err, user) {
@@ -102,6 +102,7 @@ router.route('/profile')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName UpdateUserProfile
+	* @apiPermission Authenticated
 	* @apiError {number} 400 required fields for profile missing
 	* @apiError {number} 401 user not authenticated
 	* @apiError {number} 500 Internal Server Error
@@ -151,7 +152,7 @@ router.route('/profile')
 	*/
 // Update profile
 	.put(function(req, res) {
-		req.auditDescription = 'Profile (Update)';
+		req.auditDescription = 'User Profile Update';
 
 		logger4js.info('Put/Update user %s', req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {
@@ -205,6 +206,7 @@ router.route('/passwordchange')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiGroup User Profile
 	* @apiName PasswordChange
+	* @apiPermission Authenticated
 	* @apiError {number} 400 old or new password missing
 	* @apiError {number} 409 password mismatch
 	* @apiError {number} 401 user not authenticated
@@ -225,7 +227,7 @@ router.route('/passwordchange')
 	*/
 // Change Password
 	.put(function(req, res) {
-		req.auditDescription = 'Password (Change)';
+		req.auditDescription = 'User Password Change';
 
 		logger4js.info('Put/Update user password %s', req.decoded._id);
 		User.findById(req.decoded._id, function(err, user) {

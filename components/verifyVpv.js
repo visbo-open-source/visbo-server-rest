@@ -149,6 +149,69 @@ function getAllVPVGroups(req, res, next) {
 	});
 }
 
+// Add the VC Groups to check Permission for Organisation
+function getVCGroups(req, res, next) {
+	var userId = req.decoded._id;
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	var startCalc = new Date();
+
+	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity') < 0) {
+		return next();
+	}
+	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
+	var query = {};
+	var checkPerm = constPermVC.View;
+
+	query = {'users.userId': userId};	// search for VC groups where user is member
+	query.deletedByParent = {$exists: false};
+	logger4js.debug('Search for VC Groups vcid %s vpid %s', req.oneVP.vcid, req.oneVP._id);
+
+	if ((req.listVPPerm.getPerm(req.oneVP._id).vc & checkPerm) > 0) {
+		// user has already view permission by a global VC Group for this project
+		return next();
+	}
+	query.vcid = req.oneVP.vcid;
+	query.global = false;										// check only local VC Groups
+	query.groupType = {$in: ['VC']};				// search for VC Groups only the other we have already
+
+	logger4js.debug('Query VGs %s', JSON.stringify(query));
+	var queryVG = VisboGroup.find(query);
+	queryVG.select('name permission vcid vpids groupType');
+	queryVG.lean();
+	queryVG.exec(function (err, listVG) {
+		if (err) {
+			errorHandler(err, res, 'DB: VC Group all find', 'Error getting VISBO Center Groups ');
+			return;
+		}
+		logger4js.debug('Found VGs %d', listVG.length);
+		// Convert the permission to request
+		var listVCPerm = new VisboPermission();
+		for (var i=0; i < listVG.length; i++) {
+			// Check all VPIDs in Group
+			var permGroup = listVG[i];
+			if (permGroup.groupType == 'VC') {
+				listVCPerm.addPerm(permGroup.vcid, permGroup.permission);
+			}
+		}
+		logger4js.trace('VPV Combined Perm List %s Len %s', JSON.stringify(listVCPerm), listVCPerm.length);
+		req.listVCPerm = listVCPerm;
+
+		if ((req.listVCPerm.getPerm(req.oneVP.vcid).vc & checkPerm) == 0) {
+			// user does not have View Permission for the VC
+			logger4js.debug('Can not access the organisation beacause of missing VC View Perm', req.oneVP.vcid);
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No access to Organization'
+			});
+		}
+		var endCalc = new Date();
+		logger4js.debug('Calculate verifyVPV Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
+		return next();
+	});
+}
+
+
 // Get the VPV for the specific vpvid
 function getVPV(req, res, next, vpvid) {
 	var baseUrl = req.url.split('?')[0];
@@ -221,7 +284,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'calc') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
 				return next();
@@ -230,7 +293,7 @@ function getVPV(req, res, next, vpvid) {
 	});
 }
 
-// Generate the Groups where the user is member of and has VP Permission
+// Generate the Portfolio List of VPs and the List of VPs including the Variant
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.originalUrl.split('?')[0];
@@ -334,13 +397,6 @@ function getVCOrgs(req, res, next) {
 			message: 'No VISBO Center or Organization'
 		});
 	}
-	// in case of get Capacity get the organisaion only if the user has enough permission
-	if (req.method == 'GET' && req.listVCPerm && (req.listVCPerm.getPerm(req.oneVCID).vc & (constPermVC.ViewAudit + constPermVC.Modify + constPermVC.ManagePerm)) == 0) {
-		return res.status(403).send({
-			state: 'failure',
-			message: 'No Permission to get organisaion'
-		});
-	}
 	getVCOrganisation(req.oneVCID, req, res, next);
 }
 
@@ -357,7 +413,7 @@ function getVCOrganisation(vcid, req, res, next) {
 	if (req.method == 'POST') {
 		queryVCSetting.select('-value.allRoles.kapazitaet');
 	}
-	queryVCSetting.sort('-timestamp');
+	queryVCSetting.sort('+timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
@@ -565,6 +621,89 @@ function getVPFVPVs(req, res, next) {
 	});
 }
 
+// Get pfv-vpvs of the Portfolio Version related to refDate for capacity calculation
+function getVPFPFVs(req, res, next) {
+	var userId = req.decoded._id;
+
+	logger4js.info('Get Project pfv-Versions of VPF for user %s with query params %O ', userId, req.query);
+	var queryvpv = {};
+	var queryvpvids = {};
+	var nowDate = new Date();
+
+	if (!req.query.pfv) {
+		logger4js.debug('No PFV Calculation ');
+		return next();
+	}
+	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
+		logger4js.warn('Get VPF Capacity mal formed query parameter %O ', req.query);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'Bad Content in Query Parameters'
+		});
+	}
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
+
+	var vpCondition = [];
+	vpCondition.push({'vpid': {$in: req.listVPPerm.getVPIDs(constPermVP.View)}});	// View Permission to the Project
+	vpCondition.push({'vpid': {$in: req.listPortfolioVP}});		// Project of the Portfolio
+	queryvpv['$and'] = vpCondition;
+
+	queryvpv.variantName = 'pfv';
+	if (req.query.refDate){
+		var refDate = new Date(req.query.refDate);
+		queryvpv.timestamp =  {$lt: refDate};
+	} else if (!req.query.refDate) {
+		queryvpv.timestamp = {$lt: nowDate};
+	}
+
+	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
+	var timeMongoStart = new Date();
+	var queryVPV = VisboProjectVersion.find(queryvpv);
+	queryVPV.sort('vpid variantName -timestamp');
+	queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, listVPV) {
+		if (err) {
+			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			return;
+		}
+		var timeMongoEnd = new Date();
+		logger4js.debug('Found %d Project Versions in %s ms ', listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
+		// if latestonly, reduce the list and deliver only the latest version of each project and variant
+		var vpvidsList = [];
+
+		if (listVPV.length > 0) {
+			vpvidsList.push(listVPV[0]._id);
+		}
+		for (let i = 1; i < listVPV.length; i++){
+			//compare current item with previous and ignore if it is the same vpid & variantname
+			logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+				|| listVPV[i].variantName != listVPV[i-1].variantName
+			) {
+				vpvidsList.push(listVPV[i]._id);
+				logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			}
+		}
+		logger4js.debug('Found %d Project Version IDs', vpvidsList.length);
+
+		queryvpvids._id = {$in: vpvidsList};
+		var queryVPV = VisboProjectVersion.find(queryvpvids);
+
+		queryVPV.lean();
+		queryVPV.exec(function (err, listVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				return;
+			}
+			req.listVPVPFV = listVPV;
+			logger4js.debug('Found %d Project PFV-Version for Calculation ', vpvidsList.length);
+			return next();
+		});
+	});
+}
+
 // find a project in an array of a structured projects (name, id)
 var findVPVariantList = function(arrayItem) {
 		// console.log('compare %s %s result %s', JSON.stringify(arrayItem), JSON.stringify(this), arrayItem.vpid.toString() == this.vpid.toString() && arrayItem.variantName == this.variantName);
@@ -661,14 +800,106 @@ function getVCVPVs(req, res, next) {
 	});
 }
 
+// Get vpvs(pfv) of the VC related to refDate for capacity calculation
+function getVCPFVs(req, res, next) {
+	var userId = req.decoded._id;
+
+	logger4js.info('Get Project Versions (PFV) of VC for user %s with query params %O ', userId, req.query);
+	var queryvpv = {};
+	var queryvpvids = {};
+	var nowDate = new Date();
+	var variantName = 'pfv';
+	var vcvpids = [];
+
+	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
+		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'Bad Content in Query Parameters'
+		});
+	}
+	if (req.listVCVP) {
+		req.listVCVP.forEach(function(item) { vcvpids.push(item._id); });
+	}
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false}; // do not show any versions of deleted VPs
+	// collect the VPIDs where the user has View permission to
+	var vpidList = [];
+	var requiredPerm = constPermVP.View;
+	vpidList = req.listVPPerm.getVPIDs(requiredPerm);
+
+	if (req.query.refDate && Date.parse(req.query.refDate)){
+		var refDate = new Date(req.query.refDate);
+		queryvpv.timestamp =  {$lt: refDate};
+	} else if (!req.query.refDate) {
+		queryvpv.timestamp = {$lt: nowDate};
+	}
+	queryvpv.variantName = variantName;
+	// queryvpv.vpid = {$in: vpidList};
+
+	var vpCondition = [];
+	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
+	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
+	queryvpv['$and'] = vpCondition;
+
+	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
+	var timeMongoStart = new Date();
+	var queryVPV = VisboProjectVersion.find(queryvpv);
+	queryVPV.sort('vpid variantName -timestamp');
+	queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, listVPV) {
+		if (err) {
+			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			return;
+		}
+		var timeMongoEnd = new Date();
+		logger4js.debug('Found %d Project Versions in %s ms ', listVPV.length, timeMongoEnd.getTime()-timeMongoStart.getTime());
+		// if latestonly, reduce the list and deliver only the latest version of each project and variant
+		var vpvidsList = [];
+		if (listVPV.length > 0) {
+			vpvidsList.push(listVPV[0]._id);
+		}
+		for (let i = 1; i < listVPV.length; i++){
+			//compare current item with previous and ignore if it is the same vpid & variantname
+			logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
+				|| listVPV[i].variantName != listVPV[i-1].variantName
+			) {
+				vpvidsList.push(listVPV[i]._id);
+				logger4js.trace('compare unequal: Index %d VPIDs equal %s timestamp %s %s ', i, listVPV[i].vpid != listVPV[i-1].vpid, listVPV[i].timestamp, listVPV[i-1].timestamp);
+			}
+		}
+		logger4js.debug('Found %d Project Version IDs', vpvidsList.length);
+
+		queryvpvids._id = {$in: vpvidsList};
+		var queryVPV = VisboProjectVersion.find(queryvpvids);
+
+		queryVPV.lean();
+		queryVPV.exec(function (err, listVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				return;
+			}
+			req.listVPVPFV = listVPV;
+			logger4js.debug('Found %d Project Version for VC Calculation ', vpvidsList.length);
+			return next();
+		});
+	});
+}
+
 module.exports = {
 	getAllVPVGroups: getAllVPVGroups,
+	getVCGroups: getVCGroups,
 	getVPV: getVPV,
 	getPortfolioVPs: getPortfolioVPs,
 	getVCOrgs: getVCOrgs,
 	getVPVpfv: getVPVpfv,
 	getCurrentVPVpfv: getCurrentVPVpfv,
 	getVPFVPVs: getVPFVPVs,
+	getVPFPFVs: getVPFPFVs,
 	getOneVP: getOneVP,
-	getVCVPVs: getVCVPVs
+	getVCVPVs: getVCVPVs,
+	getVCPFVs: getVCPFVs,
+	getVCOrganisation: getVCOrganisation
 };
