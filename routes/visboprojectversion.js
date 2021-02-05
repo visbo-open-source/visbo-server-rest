@@ -427,7 +427,7 @@ router.route('/')
 		var variantName = (req.body.variantName  || '').trim();
 		var variantIndex = -1;
 
-		logger4js.info('Post a new Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
+		logger4js.info('Post a new Project Version for user %s with name %s variant :%s: TS: %s in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, req.body.timestamp, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
 		if (perm.vp & constPermVP.Modify) permCreateVersion = true;

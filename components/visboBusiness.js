@@ -258,7 +258,7 @@ function calcCosts(vpv, pfv, organisations) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCostValuesIndexed;
 }
 
@@ -335,7 +335,7 @@ function calcDeadlines(vpv, pfv, getAll, restriction) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Deadlines duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Deadlines duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allDeadlineValuesIndexed;
 }
 
@@ -382,7 +382,7 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 	}
 
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Deliveries duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Deliveries duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allDeliveryValuesIndexed;
 }
 
@@ -1012,7 +1012,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	}
 
 	var endCalc = new Date();
-	logger4js.info('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
 
 	return keyMetrics;
 }
@@ -1104,7 +1104,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	var startCalc = new Date();
 
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
-		logger4js.info('Calculate Capacities missing vpvs or organisation ');
+		logger4js.debug('Calculate Capacities missing vpvs or organisation ');
 		return allCalcCapaValuesIndexed;
 	}
 
@@ -1195,7 +1195,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCalcCapaValues;
 }
 
@@ -1841,7 +1841,7 @@ function convertOrganisation(organisation_new) {
 	}
 	organisation.value.allRoles = allRoles;
 	var endCalc = new Date();
-	logger4js.info('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return organisation;
 }
 
@@ -1951,7 +1951,24 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// if an orga is delivered all individual roles will be replaced by the parent orga unit
 	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
-	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
+	logger4js.debug('convertVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
+	return oldVPV;
+}
+
+function scaleVPV(oldVPV, newVPV, orga) {
+	// this function converts an oldVPV to a newVPV and returns it to the caller
+	// the function scales the oldVPV to a newVPV, where the new VPV gets new values for startDate, endDate, Budget & Revenue/Erloes
+	// I am not sure if we need the orga here at all as the scaling is mainly a factor between the value from oldVPV to the value of newVPV
+	// and in addition the stretching of the values from old time span (startDate to endDate) to the new time span.
+	logger4js.debug('scaleVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
+	return oldVPV;
+
+}
+
+function resetStatusVPV(oldVPV) {
+	// this function resets all status information inside the VPV.
+	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
+	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
 	return oldVPV;
 }
 
@@ -1967,5 +1984,7 @@ module.exports = {
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
 	verifyOrganisation: verifyOrganisation,
-	convertVPV: convertVPV
+	convertVPV: convertVPV,
+	scaleVPV: scaleVPV,
+	resetStatusVPV, resetStatusVPV
 };
