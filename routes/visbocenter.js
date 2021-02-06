@@ -2647,7 +2647,7 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
-			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
 			req.auditDescription = 'VISBO Center Capacity Read';
 
@@ -2693,6 +2693,22 @@ router.route('/:vcid/group/:groupid')
 				});
 
 			var capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var filteredCapacity = [];
+			var startDate = validate.validateDate(req.query.startDate, false, true);
+			if (!startDate) {
+				startDate = new Date(-8640000000000000);
+			}
+			var endDate = validate.validateDate(req.query.endDate, false, true);
+			if (!endDate) {
+				endDate = new Date(8640000000000000);
+			}
+
+			capacity.forEach(item => {
+					var current = new Date(item.month);
+					if (current.getTime() >= startDate.getTime() && current.getTime() <= endDate.getTime()) {
+						filteredCapacity.push(item);
+					}
+			});
 
 			req.auditInfo = '';
 			return res.status(200).send({
@@ -2707,7 +2723,7 @@ router.route('/:vcid/group/:groupid')
 					vpCount: req.oneVC.vpCount,
 					createdAt: req.oneVC.createdAt,
 					updatedAt: req.oneVC.updatedAt,
-					capacity: capacity
+					capacity: filteredCapacity
 				} ]
 			});
 		});

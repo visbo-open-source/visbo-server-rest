@@ -5,8 +5,10 @@ var constPermVP = Const.constPermVP;
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
+var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
+var verifyVpv = require('./../components/verifyVpv');
 var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = 'VP';
@@ -58,7 +60,7 @@ function getAllGroups(req, res, next) {
 		}
 		// check all VP Groups and non global VC groups
 		if (vpid) {
-			query['$or'] = [{vpids: vpid}, {global: false, groupType: 'VC'}]
+			query['$or'] = [{vpids: vpid}, {global: false, groupType: 'VC'}];
 		}
 		query.groupType = {$in: ['VC', 'VP']};
 	}
@@ -162,7 +164,7 @@ function checkVpfid(req, res, next, vpfid) {
 
 	logger4js.debug('Check Portfolio ID vpfid %s user %s for url %s as SysAdmin %s', vpfid, req.decoded.email, req.url, isSysAdmin);
 	if (!validate.validateObjectId(vpfid, false)) {
-		logger4js.warn('VC Groups Bad Parameter vpid %s', vpfid);
+		logger4js.warn('checkVpdid Bad Parameter vpfid %s', vpfid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Project Portfolio'
@@ -266,10 +268,112 @@ function squeezePortfolio(req, list) {
 	}
 }
 
+function getVPTemplate(req, res, next) {
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+
+	if (req.method != 'POST'|| urlComponent.length > 2 || req.query.vpid == undefined) {
+		return next();
+	}
+	logger4js.debug('Check if we need VP Template', baseUrl, req.query.vpid);
+
+	var vpTemplateID = req.query.vpid;
+	// verify that the vpid is correct
+	if (!validate.validateObjectId(vpTemplateID, false)) {
+		logger4js.warn('create VP Bad Query Parameter vpid %s', vpTemplateID);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VISBO Project Template'
+		});
+	}
+	var query = {};
+	query._id = vpTemplateID;
+	query.vcid = req.body.vcid;
+	query.deletedAt =  {$exists: false};	// not deleted
+	query.vpType = 2; // is a VP Template
+	// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
+	query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
+
+	logger4js.trace('Get Project Query %O', query);
+	var queryVP = VisboProject.findOne(query);
+	queryVP.exec(function (err, oneVP) {
+		if (err) {
+			errorHandler(err, res, 'DB: VP Get VP Template', 'Error getting Project Template');
+			return;
+		}
+		if (!oneVP) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Project Template or no Permission'
+			});
+		}
+		req.oneVPTemplate = oneVP;
+		logger4js.debug('Found Project Template %s Versions %d', oneVP._id, oneVP.vpvCount);
+		if (oneVP.vpvCount > 0) {
+			var query2 = {};
+			query2.vpid = req.oneVPTemplate._id;
+			query2.variantName = '';
+			query2.deletedAt = {$exists: false};
+			var queryVPV = VisboProjectVersion.findOne(query2);
+			queryVPV.sort('-timestamp');
+			// queryVPV.lean();
+			queryVPV.exec(function (err, oneVPV) {
+				if (err) {
+					errorHandler(err, res, 'DB: getVPTemplate find', 'Error getting Project Template Version ');
+					return;
+				}
+				if (!oneVPV) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No valid Project Template Version found'
+					});
+				}
+				logger4js.debug('Found Project Template Version', oneVPV._id);
+				req.oneVPVTemplate = oneVPV;
+				return next();
+			});
+		} else {
+			logger4js.debug('Found Project Template %s but no Versions', oneVP._id);
+			return next();
+		}
+
+	});
+}
+
+// Get the organisations for keyMetrics calculation
+function getVPOrgs(req, res, next) {
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
+
+	let skip = true;
+	if (req.method == 'POST' && baseUrl == '/vp') {	// create VP request
+		if (req.query.vpid) { // with a VP Template that requires keyMetrics calculation
+			skip = false;
+		}
+	}
+	if (skip) {
+		return next();
+	}
+
+	if (!req.body.vcid) {
+		logger4js.warn('No VISBO Center identified');
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No VISBO Center specified'
+		});
+	}
+	verifyVpv.getVCOrganisation(req.body.vcid, req, res, next);
+}
+
+
+
 module.exports = {
 	getAllGroups: getAllGroups,
 	getVPGroupsOfVC: getVPGroupsOfVC,
 	getVP: getVP,
 	checkVpfid: checkVpfid,
-	squeezePortfolio: squeezePortfolio
+	squeezePortfolio: squeezePortfolio,
+	getVPTemplate: getVPTemplate,
+	getVPOrgs: getVPOrgs
 };

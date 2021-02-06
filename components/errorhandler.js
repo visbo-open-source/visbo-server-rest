@@ -6,7 +6,10 @@ var logger4js = log4js.getLogger(logModule);
 // validate a string to prevent XSS
 var handler = function(err, res, logMesage, restMessage) {
 	var error, httpcode;
-	if (err.name == 'ValidationError') {
+	if (!err) {
+		logger4js.mark('Unknown Error: %s ReST error %s err %s', logMesage, restMessage, error);
+		httpcode = 500;
+	} else if (err.name == 'ValidationError') {
 		error = err.message;
 		logger4js.mark('Mongo Validation Error: %s ReST error %s err %O', logMesage, restMessage, error);
 		httpcode = 400;

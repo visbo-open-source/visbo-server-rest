@@ -258,7 +258,7 @@ function calcCosts(vpv, pfv, organisations) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCostValuesIndexed;
 }
 
@@ -335,7 +335,7 @@ function calcDeadlines(vpv, pfv, getAll, restriction) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Deadlines duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Deadlines duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allDeadlineValuesIndexed;
 }
 
@@ -382,7 +382,7 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 	}
 
 	var endCalc = new Date();
-	logger4js.info('Calculate Project Deliveries duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Project Deliveries duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allDeliveryValuesIndexed;
 }
 
@@ -713,6 +713,7 @@ function getDeliverableCompletionMetric(allDeliverables, refDate){
 			deliverableCompletionCurrentActual: 0,
 			deliverableCompletionCurrentTotal: 0
 		};
+	if (!refDate) { refDate = new Date(); }
 
 	var listDeliveries = allDeliverables.getAllDeliveries();
 	for (var element = 0; element < listDeliveries.length; element++) {
@@ -811,6 +812,7 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 		timeCompletionCurrentActual: 0,
 		timeCompletionCurrentTotal: 0
 	};
+	if (!refDate) { refDate = new Date(); }
 
 	var listDeadlines = allDeadlines.getAllDeadlines();
 	for (var element = 0; element < listDeadlines.length; element++) {
@@ -837,6 +839,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		timeDelayFinished: 0,
 		timeDelayUnFinished: 0
 	};
+	if (!refDate) { refDate = new Date(); }
 	var finishedElements = [];
 	var unfinishedElements = [];
 
@@ -873,7 +876,7 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 		}
 		uf++;
 	}
-	
+
 	// sum of finished
 	var wholeDelayFinished = 0;
 	for ( f = 0; f < finishedElements.length; f++) {
@@ -1009,7 +1012,7 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	}
 
 	var endCalc = new Date();
-	logger4js.info('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
 
 	return keyMetrics;
 }
@@ -1101,7 +1104,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	var startCalc = new Date();
 
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
-		logger4js.info('Calculate Capacities missing vpvs or organisation ');
+		logger4js.debug('Calculate Capacities missing vpvs or organisation ');
 		return allCalcCapaValuesIndexed;
 	}
 
@@ -1192,7 +1195,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 		}
 	}
 	var endCalc = new Date();
-	logger4js.info('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCalcCapaValues;
 }
 
@@ -1501,13 +1504,13 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
 		var actRoleID = concerningRoles[cR].actRole.uid;
 		var indexUID = concerningUIDs.indexOf(actRoleID);
-		
+
 		// UIDs should only be added once
 		if ( indexUID >= 0 ) continue;
 
 		// collect the UIDs, which were added to the capa
-		concerningUIDs.push(actRoleID);				
-				
+		concerningUIDs.push(actRoleID);
+
 		// for the capa now always the faktor=1, since new skill management
 		var faktor = 1;
 
@@ -1523,7 +1526,7 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 				capaValues[mon].internCapa_PT = (capaValues[mon].internCapa_PT || 0) + capaProRole[startIndex + mon + 1] * faktor;
 				capaValues[mon].internCapa = (capaValues[mon].internCapa || 0) + capaProRole[startIndex + mon + 1] * tagessatz * faktor / 1000 ;
 			}
-		}		
+		}
 	}
 	return capaValues;
 }
@@ -1612,9 +1615,9 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 	function findConcerningRoles(value, parentRole) {
 		//value is the Id of one subrole
-		var hroleID = value.key;		
+		var hroleID = value.key;
 		crElem = {};
-		crElem.actRole = allRoles[hroleID];		
+		crElem.actRole = allRoles[hroleID];
 		crElem.teamID = -1;
 		crElem.faktor = 1.0;
 
@@ -1625,7 +1628,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 				crElem.teamID = team.key;
 				crElem.faktor = team.value;
 			}
-		}		
+		}
 		concerningRoles.push(crElem);
 
 		var newParent = crElem.actRole;
@@ -1641,7 +1644,7 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 	if (roleID || roleID != ''){
 		var actRole = allRoles[roleID];
 		crElem = {};
-		crElem.actRole = allRoles[roleID];		
+		crElem.actRole = allRoles[roleID];
 		crElem.teamID = -1;
 		crElem.faktor = 1;
 		concerningRoles.push(crElem);
@@ -1811,7 +1814,7 @@ function convertOrganisation(organisation_new) {
 	}
 	organisation.value.allRoles = allRoles;
 	var endCalc = new Date();
-	logger4js.info('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return organisation;
 }
 
@@ -1843,20 +1846,20 @@ function checkUIDs(newOrga, oldOrga) {
 	logger4js.debug('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
 	var result = true;
 	var i = 0;
-	
+
 	if (!oldOrga || !newOrga) {
 		logger4js.warn('Error: either the new organisation or the old organisation or both are undefined');
-		return false;	
+		return false;
 	}
 	if ((oldOrga.allCosts.length > newOrga.allCosts.length)) {
 		logger4js.warn('Error: more old costs (%s) than new costs (%s) are in the organisation', oldOrga.allCosts.length, newOrga.allCosts.length);
 		result = false;
 	}
-	
+
 	if ((oldOrga.allRoles.length > newOrga.allRoles.length)){
 		logger4js.warn('Error: more old roles (%s) than new roles (%s) in the organisation', oldOrga.allRoles.length, newOrga.allRoles.length);
 		result = false;
-	} 
+	}
 
 	// check all UIDs of roles - they all have to exist in the newOrga as well
 	var allNewRoles = [];
@@ -1868,10 +1871,10 @@ function checkUIDs(newOrga, oldOrga) {
 		var thisRole = oldOrga.allRoles[i];
 		if (!(thisRole && allNewRoles && allNewRoles[thisRole.uid] )) {
 			logger4js.warn('Error: Role-UID ( %s - %s) is missing in newOrga', thisRole.uid, thisRole.name);
-			resultRoles = resultRoles && false;			
+			resultRoles = resultRoles && false;
 		}
 	}
-	if (resultRoles) {		
+	if (resultRoles) {
 		logger4js.debug('allRoles (%s) of the oldOrga are included in the newOrga' , newOrga.allRoles.length);
 	}
 
@@ -1885,9 +1888,9 @@ function checkUIDs(newOrga, oldOrga) {
 		var thisCost = oldOrga.allCosts[i];
 		if (!(thisCost && allNewCosts && allNewCosts[thisCost.uid] )) {
 			logger4js.warn('Error: Cost-UID ( %s - %s) is missing in newOrga', thisCost.uid, thisCost.name);
-			resultCosts = resultCosts && false;			
+			resultCosts = resultCosts && false;
 		}
-	}	
+	}
 	if ( resultCosts ) {
 		logger4js.debug('allCosts (%s) of the oldOrga are included in the newOrga' , newOrga.allCosts.length);
 	}
@@ -1912,9 +1915,34 @@ function verifyOrganisation(newOrga, oldOrga) {
 		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
 		result =  checkUIDs(newOrga, oldOrga.value);
 	}
-	
+
 	logger4js.debug('Verification of the new organisation:  ', result);
 	return result;
+}
+
+function convertVPV(oldVPV, oldPFV, orga) {
+	// this function converts an oldVPV to a newVPV and returns it to the caller
+	// if an orga is delivered all individual roles will be replaced by the parent orga unit
+	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
+	logger4js.debug('convertVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
+	return oldVPV;
+}
+
+function scaleVPV(oldVPV, newVPV, orga) {
+	// this function converts an oldVPV to a newVPV and returns it to the caller
+	// the function scales the oldVPV to a newVPV, where the new VPV gets new values for startDate, endDate, Budget & Revenue/Erloes
+	// I am not sure if we need the orga here at all as the scaling is mainly a factor between the value from oldVPV to the value of newVPV
+	// and in addition the stretching of the values from old time span (startDate to endDate) to the new time span.
+	logger4js.debug('scaleVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
+	return oldVPV;
+
+}
+
+function resetStatusVPV(oldVPV) {
+	// this function resets all status information inside the VPV.
+	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
+	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
+	return oldVPV;
 }
 
 module.exports = {
@@ -1928,5 +1956,8 @@ module.exports = {
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
-	verifyOrganisation: verifyOrganisation
-}
+	verifyOrganisation: verifyOrganisation,
+	convertVPV: convertVPV,
+	scaleVPV: scaleVPV,
+	resetStatusVPV, resetStatusVPV
+};
