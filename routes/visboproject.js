@@ -421,9 +421,12 @@ router.route('/')
 	* If no admin is specified for the project the current user is added as Admin.
 	* if no vpType is specified a normal Project (0) is created, for Portfolio use vpType = 1 and for Project Template vpType=2
 	* In case of success it delivers an array of VPs to be uniform to GET, the array contains as one element the created VP.
+	*
 	* @apiHeader {String} access-key User authentication token.
   *
 	* @apiPermission Authenticated and VP.View and VP.Create Permission for the Project.
+	*
+	* @apiParam {String} vpid Create the first Versions based on the VP Template referenced with vpid
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 missing name or VISBO Center ID of Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -437,6 +440,10 @@ router.route('/')
 	*  'description':'Project Description',
 	*  'vcid': 'vc5aaf992',
 	*  'vpType': 0,
+	*  'BAC': 380.5, 									// budget at completion in k€
+	*  'RAC': 400, 										// revenue at completion in k€
+	*  'startDate': '2021-02-08',
+	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
 	* }
 	* @apiSuccessExample {json} Success-Response:
@@ -582,16 +589,16 @@ router.route('/')
 					updateVPCount(req.oneVP.vcid, 1); // async
 					if (req.oneVPVTemplate) {
 						// Transform the VPV
-						var newVPV = helperVpv.initVPV(req.oneVPVTemplate);
-						if (!newVPV) {
+						var templateVPV = helperVpv.initVPV(req.oneVPVTemplate);
+						if (!templateVPV) {
 							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
 							return;
 						}
+						var newVPV = new VisboProjectVersion();
 						newVPV.VorlagenName = req.oneVPVTemplate.name;
 						newVPV.name = req.oneVP.name;
 						newVPV.vpid = req.oneVP._id;
 						newVPV.variantName = 'pfv'; // first Version is the pfv
-						newVPV.status = undefined;
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
 						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -611,6 +618,30 @@ router.route('/')
 						}
 						newVPV.startDate = startDate;
 						newVPV.endDate = endDate;
+						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
+							newVPV.Erloes = req.body.RAC;
+						}
+						newVPV.status = undefined;
+						// calculate scale factor if possible
+						var scaleFactor = 1;
+						var bac = 0;
+						if (req.body.BAC) {
+							bac = validate.validateNumber(req.body.BAC);
+						}
+						if (bac) {
+							// reset the VPV and reset individual user roles to group roles
+							newVPV = visboBusiness.resetStatusVPV(newVPV);
+							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
+							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
+							var costSum = 0;
+							if (costDetails && costDetails.length > 0) {
+								costDetails.forEach(item => {costSum += item.currentCost});
+							}
+							if (costSum) {
+								scaleFactor = costSum / bac;
+							}
+						}
+						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor)
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({

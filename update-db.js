@@ -764,7 +764,7 @@ if (currentVersion < dateBlock) {
   for (var i = 0; i < vpfList.length; i++) {
     if (vpfList[i].vp.length > 0) {
       if (vpfList[i].vpfCountNew != vpfList[i].vp[0].vpfCount) {
-        print("Visbo Project Portfolio Count Mismatch:", vpfList[i]._id, vpfList[i].vp[0].name, vpfList[i].vpfCountNew, vpfList[i].vp[0].vpfCount);
+        print("Visbo Project Portfolio Count Mismatch:", vpfList[i]._id, vpfList[i].vp[0]._id, vpfList[i].vpfCountNew, vpfList[i].vp[0].vpfCount);
         db.visboprojects.updateOne({_id: vpfList[i]._id}, {$set: {vpfCount: vpfList[i].vpfCountNew}})
       }
     } else {
@@ -927,6 +927,23 @@ if (currentVersion < dateBlock) {
   }
 
   print("Finished Fix Change Orga tagessatzIntern, subRoleIDs ", updateCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2021-02-08T00:00:00"
+if (currentVersion < dateBlock) {
+  // Delete uused Properties from vpv
+  // vpv.farbe, vpv.Schrift, vpv.Schriftfarbe, vpv.AllPhases[].farbe
+
+  db.visboprojectversions.updateMany({farbe: {$exists: true}}, {$unset: {farbe: '', Schrift: '', Schriftfarbe: '', volumen: ''}});
+
+  db.visboprojectversions.updateMany({'AllPhases.farbe': {$exists: true}},
+    {$unset: {'AllPhases.$[elem].farbe': ''}},
+    {arrayFilters: [ { "elem.farbe": { $exists: true } } ] }
+  );
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})

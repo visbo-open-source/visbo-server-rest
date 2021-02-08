@@ -1862,7 +1862,6 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.status = undefined;
 	vpv.ampelStatus = undefined;
 	vpv.ampelErlaeuterung = undefined;
-	vpv.volumen = undefined;
 	vpv.complexity = undefined;
 	vpv.AllPhases = undefined;
 	vpv.hierarchy = undefined;
@@ -1955,13 +1954,16 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	return oldVPV;
 }
 
-function scaleVPV(oldVPV, newVPV, orga) {
+function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a newVPV and returns it to the caller
-	// the function scales the oldVPV to a newVPV, where the new VPV gets new values for startDate, endDate, Budget & Revenue/Erloes
-	// I am not sure if we need the orga here at all as the scaling is mainly a factor between the value from oldVPV to the value of newVPV
-	// and in addition the stretching of the values from old time span (startDate to endDate) to the new time span.
-	logger4js.debug('scaleVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
-	return oldVPV;
+	// the function scales the oldVPV that contains start&endDate and Bedarfe
+	// to a newVPV that contains the new start&endDate but the Phases & Costs and Result are all undefined, these have to be filled
+	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
+	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
+
+	newVPV.AllPhases = oldVPV.AllPhases;
+	newVPV.hierarchy = oldVPV.hierarchy;
+	return newVPV;
 
 }
 
