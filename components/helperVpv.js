@@ -8,6 +8,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
+var visboBusiness = require('./../components/visboBusiness');
 
 var logModule = 'VPV';
 var log4js = require('log4js');
@@ -34,6 +35,23 @@ var updateVPVCount = function(vpid, variantName, increment){
 		logger4js.trace('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
 	});
 };
+
+// check if keyMetrics from Client is valid
+function checkValidKeyMetrics(km) {
+	var countKM = 0;
+	if (km) {
+		if (km.costCurrentTotal > 0 && km.costBaseLastTotal > 0) {
+			countKM += 1;
+		}
+		if (km.timeCompletionCurrentTotal > 0 && km.timeCompletionBaseLastTotal > 0) {
+			countKM += 1;
+		}
+		if (km.deliverableCompletionCurrentTotal > 0 && km.deliverableCompletionBaseLastTotal > 0) {
+			countKM += 1;
+		}
+	}
+	return countKM > 0;
+}
 
 function initVPV(vpv) {
 	var newVPV = new VisboProjectVersion();
@@ -99,27 +117,76 @@ function initVPV(vpv) {
 	return newVPV;
 }
 
-function saveVPV(req, res, newVPV) {
-	logger4js.debug('Store VPV for vpid %s/%s ', newVPV._id, newVPV.name);
-	delete newVPV._id;
+function getKeyAttributes(newVPV) {
+	if (!newVPV) return undefined;
+	var keyVPV = new VisboProjectVersion();
+	keyVPV.name = newVPV.name;
+	keyVPV.variantName = newVPV.variantName;
+	keyVPV.VorlagenName = newVPV.VorlagenName;
+	keyVPV._id = newVPV._id;
+	keyVPV.vpid = newVPV.vpid;
+	keyVPV.timestamp = newVPV.timestamp;
+	return keyVPV;
+}
+
+function setKeyAttributes(newVPV, keyVPV) {
+	if (!newVPV) return undefined;
+	if (!keyVPV) return newVPV;
+
+	newVPV.name = keyVPV.name;
+	newVPV.variantName = keyVPV.variantName;
+	newVPV.VorlagenName = keyVPV.VorlagenName;
+	newVPV._id = keyVPV._id;
+	newVPV.vpid = keyVPV.vpid;
+	newVPV.timestamp = keyVPV.timestamp;
+	return newVPV;
+}
+
+function createInitialVersions(req, res, newVPV) {
+	logger4js.debug('Store VPV for vpid %s/%s ', newVPV.vpid.toString(), newVPV.name);
+	var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
+	newVPV.timestamp = new Date();
+	var keyVPV = getKeyAttributes(newVPV);
+	if (orga) {
+		newVPV = visboBusiness.convertVPV(newVPV, undefined, orga);
+	}
+	setKeyAttributes(newVPV, keyVPV);
 	newVPV.save(function(err, oneVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: Create Template VPV Save', 'Error creating Project Version ');
+			errorHandler(err, res, 'DB: Create VP Template VPV(pfv) Save', 'Error creating Project Version ');
 			return;
 		}
-		req.oneVPV = oneVPV;
+		req.visboPFV = oneVPV;
 		// update the version count of the base version or the variant
-		updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-		return res.status(200).send({
-			state: 'success',
-			message: 'Successfully created new Project',
-			vp: [ req.oneVP ]
+		updateVPVCount(req.visboPFV.vpid, req.visboPFV.variantName, 1);
+		// now create a copy of the pfv version as the first version of the project
+		var baseVPV = initVPV(oneVPV);
+		baseVPV.variantName = "";
+		baseVPV.timestamp = new Date();
+		var keyVPV = getKeyAttributes(baseVPV);
+		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, req.visboPFV, req.visboOrganisations);
+		setKeyAttributes(baseVPV, keyVPV);
+		baseVPV.save(function(err, oneVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
+				return;
+			}
+			req.oneVPV = oneVPV;
+			updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Successfully created new Project',
+				vp: [ req.oneVP ]
+			});
 		});
 	});
 }
 
 module.exports = {
 	updateVPVCount: updateVPVCount,
-	saveVPV: saveVPV,
-	initVPV: initVPV
+	createInitialVersions: createInitialVersions,
+	initVPV: initVPV,
+	getKeyAttributes: getKeyAttributes,
+	setKeyAttributes: setKeyAttributes,
+	checkValidKeyMetrics: checkValidKeyMetrics
 };

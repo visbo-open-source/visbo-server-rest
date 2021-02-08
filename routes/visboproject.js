@@ -272,6 +272,8 @@ router.use('/', auth.verifyUser);
 router.use('/', verifyVp.getAllGroups);
 // register the VP middleware to get all Groups of the VP
 router.use('/', verifyVg.getVPGroups);
+// register the VP middleware to get VP Organisations during creation of VP
+router.use('/', verifyVp.getVPOrgs);
 // register the VP middleware to get VP Template during creation of VP
 router.use('/', verifyVp.getVPTemplate);
 // register the VP middleware to check that the user has access to the VP
@@ -588,6 +590,8 @@ router.route('/')
 						newVPV.VorlagenName = req.oneVPVTemplate.name;
 						newVPV.name = req.oneVP.name;
 						newVPV.vpid = req.oneVP._id;
+						newVPV.variantName = 'pfv'; // first Version is the pfv
+						newVPV.status = undefined;
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
 						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -606,11 +610,8 @@ router.route('/')
 							endDate.setTime(startDate.getTime() + diff);
 						}
 						newVPV.startDate = startDate;
-						newVPV.earliestStartDate = startDate;
-						newVPV.latestStartDate = startDate;
-
 						newVPV.endDate = endDate;
-						helperVpv.saveVPV(req, res, newVPV);
+						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({
 							state: 'success',
