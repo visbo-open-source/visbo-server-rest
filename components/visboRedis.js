@@ -10,6 +10,7 @@ var initialised = false;
 var redisClient;
 var currentHost = 'localhost';
 var currentPort = 6379;
+var maxErrorLog = 5;
 
 // Initialise Redis
 function VisboRedisInit(host, port) {
@@ -40,7 +41,11 @@ function VisboRedisInit(host, port) {
 		});
 
 		redisClient.on('error',function() {
-			logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
+
+			if (maxErrorLog > 0) {
+				maxErrorLog -= 1;
+				logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
+			}
 			if (host != 'localhost') throw Error('Error connecting to Redis Server');
 		});
 
