@@ -2100,6 +2100,7 @@ function findRoleIDsAtLevel( level, actOrga ){
 }
 
 function convertVPV(oldVPV, oldPFV, orga) {
+
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// if an orga is delivered all individual roles will be replaced by the parent orga unit
 	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
@@ -2116,8 +2117,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	// check the existence of oldVPV, which will be the base of the newPFV
 	if ( !oldVPV ) {
 		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
-		return undefined;
-	
+		return undefined;	
 	} else {
 		// it exists the oldVPV and at least one organisation
 		const actOrga = convertOrganisation(orga[orga.length-1]);
@@ -2337,9 +2337,10 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	logger4js.debug('delete the deadlines found out');
 	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
 		actDeadline = DeadlineToDelete[dl];
-		if (actDeadline.type === 'Milestone') {
+		if (actDeadline && actDeadline.type === 'Milestone') {
 			newPFV = deleteMSFromVPV(hrchy_vpv, newPFV, actDeadline);
-		} else {
+		} 
+		if (actDeadline && actDeadline.type === 'Phase') {
 			newPFV = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
 		}
 	}
@@ -2347,7 +2348,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 }
 
 function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
-
+	
 	logger4js.debug('Delete one Milestone from Phase of VPV');
 	var elemID = elem.nameID;	
 	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
@@ -2363,7 +2364,7 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 
 	logger4js.debug('Delete one Milestone from hiearchy of VPV');
 
-	// elemID muss aus der Hierarchy.allNodes entfernt werden und aus den childNodeKeys-Array des parents
+	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
 	var hrchy_node = hrchy_vpv[elemID];	
 	if (hrchy_node) {
 		var parentNode = hrchy_node.hryNode.parentNodeKey;
@@ -2391,7 +2392,24 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 
 	return newPFV;
 }
+function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
+	if ( !hrchy_vpv || !newPFV || !elem) {
+		return newPFV;
+	}
+	logger4js.debug('Delete one phase from VPV and if there are milestones in the phase, put them in the phase´s parent');
+	var elemID = elem.nameID;	
+	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
+	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined
+	var parent = getPhaseByID(hrchy_vpv, newPFV, parentID);
+	// look for milestones in the phase, which is to remove
+	if ( phase.Allresults.length > 0 ) {
+		// change the parent of the milestones
+	}
+	// take the needs of the phase an put them into the parentPhase
+	// remove the phase from AllPhases and from hierarchy
 
+	return newPFV;
+}
 
 
 function aggregateRoles(phase, orgalist, anzLevel){
