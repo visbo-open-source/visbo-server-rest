@@ -2972,6 +2972,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
+			var perProject = req.query.perProject == true;
 
 			req.auditDescription = 'Portfolio Capacity Read';
 
@@ -3024,7 +3025,12 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var capacity = undefined;
+			if (perProject) {
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, onlyPT);
+			} else {
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			}
 
 			req.auditInfo = '';
 			return res.status(200).send({
