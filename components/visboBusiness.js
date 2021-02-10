@@ -2354,9 +2354,15 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 	
 	logger4js.debug('Delete one Milestone from Phase of VPV');
-	var elemID = elem.nameID;	
+	var elemID = elem ? elem.nameID : undefined;	
 	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
-	var parentElem = elem.phasePFV;
+	var parentElem = elem ? elem.phasePFV: undefined;
+	
+	// if there is no parent, keep the newPFV as it is
+	if ( !parentElem ) { 
+		return newPFV 
+	};
+
 	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
 	var newResults = [];
 	for ( var ar = 0; parPhase && parPhase.AllResults && ar < parPhase.AllResults.length; ar++) {				
@@ -2365,15 +2371,63 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 		}
 	}
 	parPhase.AllResults = newResults;
+	logger4js.debug('Delete one Milestone from hierarchy of VPV');	
+	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, elemID);
+	return newPFV;
+}
 
-	logger4js.debug('Delete one Milestone from hiearchy of VPV');
+function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
+	if ( !hrchy_vpv || !newPFV || !elem) {
+		return newPFV;
+	}
+	logger4js.debug('Delete the phase %s from VPV and if there are milestones in the phase, put them in the phase´s parent', elem.nameID);
+	var elemID = elem.nameID;	
+	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
+	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined
+	var parent = getPhaseByID(hrchy_vpv, newPFV, parentID);
+	if (!parent) {
+		// there is nothing to do, because elem is the rootphase. this will not be removed ever.
+		return newPFV;
+	}
+
+	// look for milestones in the phase, which is to remove and insert them into the parentPhase
+	if ( phase.AllResults.length > 0 ) {
+		// change the parent of the milestones
+		for (var ms = 0; phase && phase.AllResults && ms < phase.AllResults.length; ms++){			
+			// milestone parent now the parent of the phase
+			parent.AllResults.push(phase.AllResults[ms]);
+			var msElemID = phase.AllResults[ms].name;
+			var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+			newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, msElemID);
+			hrchy_vpv[parentID].hryNode.childNodeKeys.push(msElemID);
+			hrchy_vpv[msElemID].hryNode.parentNodeKey = parentID;			
+		}
+		// delete the milestones in the phase
+		phase.AllResults = [];
+	}
+
+	logger4js.debug("take the needs of the phase an add them into the parentPhase");
+
+	newPFV = moveTheNeeds(newPFV, phase, parent);	
+
+	logger4js.debug("remove the phase %s from hierarchy", elemID);
+	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);	
+
+	return newPFV;
+}	
+
+function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
+
+	logger4js.debug('Delete one elemID from hierarchy of VPV');
 
 	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
 	var hrchy_node = hrchy_vpv[elemID];	
 	if (hrchy_node) {
 		var parentNode = hrchy_node.hryNode.parentNodeKey;
 	}	
-	var origHrchyNodes = newPFV.hierarchy.allNodes;
+	// now in call-parameters : var origHrchyNodes = newPFV.hierarchy.allNodes;
 	var newHryAllNodes = [];
 	// in the allNodes-Array at the beginning there are the phases and then follow the milestones.
 	for (var an = 0; origHrchyNodes && an < origHrchyNodes.length; an++){
@@ -2392,28 +2446,39 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 			newHryAllNodes.push(origHrchyNodes[an]);
 		}
 	}
-	newPFV.hierarchy.allNodes = newHryAllNodes;
-
-	return newPFV;
+	return newHryAllNodes;
 }
-function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
-	if ( !hrchy_vpv || !newPFV || !elem) {
+
+function moveTheNeeds (newPFV, phase, parent) {
+
+	logger4js.debug("Move the needs from phase to its parent");
+
+	logger4js.debug("Check startdates and enddates of the phase and the parent phase")
+	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
+		logger4js.error("parent %s isn't the parent of phase %s", parent.name, phase.name)
 		return newPFV;
 	}
-	logger4js.debug('Delete one phase from VPV and if there are milestones in the phase, put them in the phase´s parent');
-	var elemID = elem.nameID;	
-	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
-	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined
-	var parent = getPhaseByID(hrchy_vpv, newPFV, parentID);
-	// look for milestones in the phase, which is to remove
-	if ( phase.Allresults.length > 0 ) {
-		// change the parent of the milestones
+	for (var ar = 0; phase && phase.AllRoles && ar < phase.AllRoles.length; ar++) {
+		var role = phase.AllRoles[ar];
+		// search the same role in parent
+		var found = false;
+		for (i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
+			if ( parent.AllRoles[i].RollenTyp != role.RollenTyp )  { continue;}
+			logger4js.debug( "move needs of %s in his parent %s", role.RollenTyp, parent.name);
+			var parentNeeds = parent.AllRoles[i].Bedarf;
+			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
+				parentNeeds[n]=parentNeeds[n]+role.Bedarf[n];
+				found = true;
+			}					
+		}
+		if (!found) {
+			// insert the whole role and their needs
+			parent.AllRoles.push(role);
+		}
 	}
-	// take the needs of the phase an put them into the parentPhase
-	// remove the phase from AllPhases and from hierarchy
-
 	return newPFV;
 }
+
 
 
 function aggregateRoles(phase, orgalist, anzLevel){
