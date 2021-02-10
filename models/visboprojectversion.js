@@ -19,19 +19,13 @@ var clsBewertung = new Schema({
 
 var clsRole = new Schema({
 	RollenTyp: { type: Number },
-	// name: { type: String },
 	teamID: {type: Number},
-	// farbe: { type: Number },
-	// startkapa: { type: Number },
-	// tagessatzIntern: { type: Number },
 	Bedarf: [{ type: Number }]
-	// isCalculated: { type: Boolean }
 });
 
 var clsKostenart = new Schema({
 	KostenTyp: { type: Number },
 	name: { type: String },
-	farbe: { type: Number },
 	Bedarf: [{ type: Number }]
 });
 
@@ -75,7 +69,6 @@ var clsPhase = new Schema({
 	startOffsetinDays: { type: Number },
 	dauerInDays: { type: Number },
 	name: { type: String },
-	farbe: { type: Number },
 	shortName: { type: String },
 	originalName: { type: String },
 	appearance: { type: String }
@@ -127,9 +120,6 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	status: { type: String, required: false, maxlength: 256},
 	ampelStatus: { type: Number, required: false},
 	ampelErlaeuterung: { type: String, required: false, maxlength: 4096},
-	farbe: { type: Number, required: false},
-	Schrift: { type: Number, required: false},
-	Schriftfarbe: { type: Number, required: false},
 	VorlagenName: { type: String, required: false, maxlength: 256},
 	Dauer: { type: Number, required: false},
 	AllPhases: [{ type: clsPhase, required: true}],
@@ -139,7 +129,6 @@ var visboProjectVersionSchema = new mongoose.Schema({
 		]
 	},
 	timestamp: { type: Date, required: false},
-	volumen: { type: Number, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
 	businessUnit: { type: String, required: false, maxlength: 256},

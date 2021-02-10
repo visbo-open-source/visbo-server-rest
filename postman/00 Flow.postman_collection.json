@@ -9,228 +9,470 @@
 			"name": "00 Clean Up",
 			"item": [
 				{
-					"name": "00-00 Start Flow",
-					"event": [
+					"name": "00-01 Start",
+					"item": [
 						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Start Flow\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status && jsonData.status.version != undefined).to.eql(true, \"Status Version Missing\");",
-									"    pm.globals.set(\"runnerStart\", (new Date()).toISOString());",
-									"});",
-									"",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{url}}/status",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"status"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "00-01 Login Admin",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"01 Login: Check Login Success\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.globals.set(\"token\", jsonData.token);",
-									"    pm.expect(jsonData.state).to.eql(\"success\");",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
-						},
-						"url": {
-							"raw": "{{url}}/token/user/login",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"token",
-								"user",
-								"login"
-							]
-						},
-						"description": "Successful Login Request  "
-					},
-					"response": []
-				},
-				{
-					"name": "00-03 Get VC for Delete",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"",
-									"pm.test(\"Find VC Testname\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
-									"    var searchName = pm.environment.get(\"VCBaseName\");",
-									"    var list = jsonData.vc;",
-									"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-									"    if (index >= 0) {",
-									"        // console.log(\"Found:\", list[index].name)",
-									"        pm.globals.set(\"DeleteID\", list[index]._id);",
-									"    } else {",
-									"        postman.setNextRequest(\"00-99 Final\");",
-									"    }",
-									"});",
-									"",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							}
-						],
-						"url": {
-							"raw": "{{url}}/vc",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"vc"
-							]
-						},
-						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-					},
-					"response": []
-				},
-				{
-					"name": "00-04 Delete a VC as Admin",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    pm.response.to.have.status(200);",
-									"    postman.setNextRequest(\"00-03 Get VC for Delete\");",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": ""
-						},
-						"url": {
-							"raw": "{{url}}/vc/{{DeleteID}}?sysadmin=1",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"vc",
-								"{{DeleteID}}"
-							],
-							"query": [
+							"name": "00-01-01 Start Flow",
+							"event": [
 								{
-									"key": "sysadmin",
-									"value": "1"
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Start Flow\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status && jsonData.status.version != undefined).to.eql(true, \"Status Version Missing\");",
+											"    pm.globals.set(\"runnerStart\", (new Date()).toISOString());",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
 								}
-							]
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}/status",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"status"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "00-01-02 Login Admin",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"01 Login: Check Login Success\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.globals.set(\"token\", jsonData.token);",
+											"    pm.expect(jsonData.state).to.eql(\"success\");",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
+								},
+								"url": {
+									"raw": "{{url}}/token/user/login",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"token",
+										"user",
+										"login"
+									]
+								},
+								"description": "Successful Login Request  "
+							},
+							"response": []
 						}
-					},
-					"response": []
+					]
 				},
 				{
-					"name": "00-99 Final",
-					"event": [
+					"name": "00-02 Prepare VPV",
+					"item": [
 						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							}
-						],
-						"url": {
-							"raw": "{{url}}/vc",
-							"host": [
-								"{{url}}"
+							"name": "00-02-10 Get VC",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check that VC Testname does exist\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    var index = -1;",
+											"    if (list && list.length >= 0) {",
+											"        var searchName = pm.environment.get(\"VCBaseName\") + '02';",
+											"        index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+											"    }",
+											"    if (index >= 0) {",
+											"        console.log(\"Found:\", list[index].name)",
+											"        pm.globals.set(\"vcID\", list[index]._id);",
+											"    } else {",
+											"        console.log(\"Item not found\", searchName)",
+											"        postman.setNextRequest(\"00-02-99 Final\");",
+											"    }",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
 							],
-							"path": [
-								"vc"
-							]
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
 						},
-						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-					},
-					"response": []
+						{
+							"name": "00-02-12 Create a VP",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Check Created VPID\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.globals.set(\"vpID\", jsonData.vp[0]._id);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var actDate = (new Date()).toISOString();",
+											"var varVPName = pm.environment.get(\"VPBaseName\") + actDate;",
+											"pm.variables.set(\"varVPName\", varVPName);",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{  \n   \"name\":\"{{varVPName}}\",\n   \"vcid\":\"{{vcID}}\",\n   \"description\": \"Description of Project during Creation\",\n   \"kundennummer\": \"All in z1\"\n}"
+								},
+								"url": {
+									"raw": "{{url}}/vp",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vp"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "00-02-20 Initialise VPV",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Store the VPV in environment for later use\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vpv;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"",
+											"    pm.expect(jsonData.vpv).to.be.not.eql(undefined, \"No VPV created\");",
+											"    var vpv = list[0];",
+											"    delete vpv._id;",
+											"    delete vpv.vpid;",
+											"    delete vpv.keyMetrics;",
+											"    delete vpv.updatedAt;",
+											"    delete vpv.createdAt;",
+											"    pm.environment.set(\"vpvTemplate\", JSON.stringify(vpv));",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var startDate = new Date();",
+											"startDate.setDate(1);",
+											"startDate.setHours(0, 0, 0, 0);",
+											"startDate.setMonth(startDate.getMonth() - 9);",
+											"var endDate = new Date(startDate);",
+											"endDate.setMonth(endDate.getMonth() + 15);",
+											"",
+											"pm.globals.set(\"startDate\", startDate.toISOString());",
+											"pm.globals.set(\"endDate\", endDate.toISOString());",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"vpid\": \"{{vpID}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": \"{{endDate}}\",\n  \"earliestStart\": 0,\n  \"earliestStartDate\": \"{{startDate}}\",\n  \"latestStart\": 0,\n  \"latestStartDate\": \"{{startDate}}\",\n  \"hierarchy\": {\n    \"allNodes\": [\n      {\n        \"hryNodeKey\": \"0\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"0§01 Preparation§\",\n            \"0§02 Blueprints§\",\n            \"0§03 Realization§\",\n            \"0§04 Final Preparation / GoLive§\"\n          ],\n          \"elemName\": \".\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§01 Preparation§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§\"\n          ],\n          \"elemName\": \"01 Preparation\",\n          \"origName\": null,\n          \"indexOfElem\": 2,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§02 Blueprints§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0002\"\n          ],\n          \"elemName\": \"02 Blueprints\",\n          \"origName\": null,\n          \"indexOfElem\": 3,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§03 Realization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0003\"\n          ],\n          \"elemName\": \"03 Realization\",\n          \"origName\": null,\n          \"indexOfElem\": 4,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0004\"\n          ],\n          \"elemName\": \"04 Final Preparation / GoLive\",\n          \"origName\": null,\n          \"indexOfElem\": 5,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§01 Preparation§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0002\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§02 Blueprints§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0003\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§03 Realization§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0004\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\n        }\n      }\n    ]\n  },\n  \"customDblFields\": [],\n  \"customStringFields\": [],\n  \"customBoolFields\": [],\n  \"AllPhases\": [\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [],\n      \"AllCosts\": [],\n      \"AllResults\": [],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Jan 01\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"0001-01-01T00:00:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 17,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 517,\n      \"name\": \"0§.§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"\",\n      \"originalName\": \".\",\n      \"appearance\": \"\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            9,\n            3\n          ],\n          \"RollenTyp\": 3,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            5,\n            0.9375\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Kosten-/Nutzen Analyse\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§\",\n          \"verantwortlich\": \"\",\n          \"offset\": 42,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 2,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 44,\n      \"name\": \"0§01 Preparation§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"1\",\n      \"originalName\": \"01 Preparation\",\n      \"appearance\": \"V orange 1\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            5,\n            10,\n            8.75,\n            0\n          ],\n          \"RollenTyp\": 2,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            7,\n            14,\n            14,\n            0.625\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            1,\n            3,\n            1.9375,\n            0\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Click-Prototyp\",\n            \"Machbarkeits-Analyse\",\n            \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0002\",\n          \"verantwortlich\": \"\",\n          \"offset\": 82,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 2,\n      \"relEnde\": 5,\n      \"startOffsetinDays\": 44,\n      \"dauerInDays\": 84,\n      \"name\": \"0§02 Blueprints§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"2\",\n      \"originalName\": \"02 Blueprints\",\n      \"appearance\": \"V orange 2\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            7,\n            9,\n            9,\n            8,\n            8,\n            6.5\n          ],\n          \"RollenTyp\": 2,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            25,\n            35,\n            33,\n            35,\n            33,\n            29\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            13,\n            17,\n            17,\n            17,\n            17,\n            14\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\n            \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0003\",\n          \"verantwortlich\": \"\",\n          \"offset\": 171,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 5,\n      \"relEnde\": 10,\n      \"startOffsetinDays\": 127,\n      \"dauerInDays\": 173,\n      \"name\": \"0§03 Realization§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"3\",\n      \"originalName\": \"03 Realization\",\n      \"appearance\": \"V orange 3\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            1,\n            9,\n            1.875\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            2,\n            37,\n            8.5\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Rollout Plan \",\n            \"Schulungspartner unter Vertrag\",\n            \"Schulungstermine festgelegt\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0004\",\n          \"verantwortlich\": \"\",\n          \"offset\": 42,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 10,\n      \"relEnde\": 12,\n      \"startOffsetinDays\": 300,\n      \"dauerInDays\": 44,\n      \"name\": \"0§04 Final Preparation / GoLive§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"4\",\n      \"originalName\": \"04 Final Preparation / GoLive\",\n      \"appearance\": \"V orange 4\"\n    }\n  ],\n  \"variantDescription\": \"\",\n  \"Risiko\": 2,\n  \"StrategicFit\": 5,\n  \"Erloes\": 380,\n  \"leadPerson\": \"\",\n  \"earliestStart\": 0,\n  \"latestStart\": 0,\n  \"status\": \"beauftragt\",\n  \"ampelStatus\": 0,\n  \"ampelErlaeuterung\": \"\",\n  \"farbe\": 682978,\n  \"Schrift\": 10,\n  \"Schriftfarbe\": 16777215,\n  \"VorlagenName\": \"IM BP\",\n  \"Dauer\": 17,\n  \"volumen\": 0,\n  \"complexity\": 0,\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\n  \"businessUnit\": \"BU1\"\n}"
+								},
+								"url": {
+									"raw": "{{url}}/vpv",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vpv"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "00-02-99 Final",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "00-10 Delete VC",
+					"item": [
+						{
+							"name": "00-10-10 Get VC for Delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Find VC Testname\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
+											"    var searchName = pm.environment.get(\"VCBaseName\");",
+											"    var list = jsonData.vc;",
+											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+											"    if (index >= 0) {",
+											"        // console.log(\"Found:\", list[index].name)",
+											"        pm.globals.set(\"DeleteID\", list[index]._id);",
+											"    } else {",
+											"        postman.setNextRequest(\"00-10-99 Final\");",
+											"    }",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "00-10-20 Delete VC",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    postman.setNextRequest(\"00-10-10 Get VC for Delete\");",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{url}}/vc/{{DeleteID}}?sysadmin=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{DeleteID}}"
+									],
+									"query": [
+										{
+											"key": "sysadmin",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "00-10-99 Final",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						}
+					]
 				}
 			]
 		},
@@ -292,6 +534,60 @@
 						},
 						{
 							"name": "02-01-02 Get VC",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check that VC Testname does not exist\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
+											"    var searchName = pm.environment.get(\"VCBaseName\") + '01';",
+											"    var list = jsonData.vc;",
+											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+											"    if (index >= 0) {",
+											"        console.log(\"Skip Creation, VC exists:\", list[index].name)",
+											"        pm.globals.set(\"vcID\", list[index]._id);",
+											"        postman.setNextRequest(\"02-01-04 Get VC\");",
+											"    } else {",
+											"        console.log(\"VC does not exists:\", searchName)",
+											"    }",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "02-01-02 Get VC Copy",
 							"event": [
 								{
 									"listen": "test",
@@ -6264,7 +6560,7 @@
 											"    var jsonData = pm.response.json();",
 											"    pm.expect(jsonData.vcsetting).not.to.be.eql(undefined, \"No Setting found\");",
 											"    pm.expect(jsonData.vcsetting.length).to.be.eql(1, \"Wrong expected number of Settings\");",
-											"    pm.expect(jsonData.vcsetting[0].name).to.be.eql('Organisation-3M', \"Wrong Organisation selected\");",
+											"    pm.expect(jsonData.vcsetting[0].name).to.be.eql('Organisation-6M', \"Wrong Organisation selected\");",
 											"});",
 											""
 										],
@@ -6275,6 +6571,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+											"var orgaValid = new Date();",
+											"orgaValid.setDate(1);",
+											"orgaValid.setHours(0,0,0,0);",
+											"orgaValid.setMonth(orgaValid.getMonth() - 4);",
+											"pm.variables.set(\"orgaValid\", orgaValid);",
 											""
 										],
 										"type": "text/javascript"
@@ -6294,7 +6595,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&refDate=&groupBy=type",
+									"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&refDate={{orgaValid}}&groupBy=type",
 									"host": [
 										"{{url}}"
 									],
@@ -6310,7 +6611,7 @@
 										},
 										{
 											"key": "refDate",
-											"value": ""
+											"value": "{{orgaValid}}"
 										},
 										{
 											"key": "groupBy",
@@ -6440,7 +6741,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&refDate={{orgaValid}}&refNext=1&groupBy=type",
+									"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&refDate={{orgaValid}}&refNext=1",
 									"host": [
 										"{{url}}"
 									],
@@ -6461,10 +6762,6 @@
 										{
 											"key": "refNext",
 											"value": "1"
-										},
-										{
-											"key": "groupBy",
-											"value": "type"
 										}
 									]
 								}
@@ -19340,8 +19637,8 @@
 											"        // console.log(\"Origin: \" + vpvOriginString);",
 											"        // console.log(\"Result: \" + JSON.stringify(vpvResult));",
 											"    }",
-											"    pm.expect(result1).to.eql(true);",
-											"    pm.expect(result2).to.eql(true);",
+											"    pm.expect(result1).to.eql(true, \"vpvOrigin vs. vpvResult mismatch\");",
+											"    pm.expect(result2).to.eql(true, \"vpvResult vs. vpvOrigin mismatch\");",
 											"});",
 											""
 										],
@@ -22064,334 +22361,6 @@
 		{
 			"name": "06 VPV VC02",
 			"item": [
-				{
-					"name": "06-00 VPV Initialise Environment",
-					"item": [
-						{
-							"name": "06-00-01 Login Admin",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											"pm.test(\"01 Login: Check Login Success\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    pm.globals.set(\"token\", jsonData.token);",
-											"    pm.expect(jsonData.state).to.eql(\"success\");",
-											"});",
-											"",
-											"",
-											""
-										]
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
-								},
-								"url": {
-									"raw": "{{url}}/token/user/login",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"token",
-										"user",
-										"login"
-									]
-								},
-								"description": "Successful Login Request  "
-							},
-							"response": []
-						},
-						{
-							"name": "06-00-02 Get VC",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"",
-											"pm.test(\"Check that VC Testname does not exist\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vc;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VCBaseName\") + '02';",
-											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].name)",
-											"        pm.globals.set(\"vcID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"06-00-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "06-00-03 Get VP of VC",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Check that VP exists or not\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vp;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VPBaseName\");",
-											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].name)",
-											"        pm.globals.set(\"vpID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"06-00-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp?vcid={{vcID}}",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp"
-									],
-									"query": [
-										{
-											"key": "vcid",
-											"value": "{{vcID}}"
-										}
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "06-00-10 Initialise VPV",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Store the VPV in environment for later use\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vpv;",
-											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"",
-											"    pm.expect(jsonData.vpv).to.be.not.eql(undefined, \"No VPV created\");",
-											"    var vpv = list[0];",
-											"    pm.globals.set(\"DeleteID\", vpv._id);",
-											"    delete vpv._id;",
-											"    delete vpv.vpid;",
-											"    delete vpv.keyMetrics;",
-											"    delete vpv.updatedAt;",
-											"    delete vpv.createdAt;",
-											"    pm.environment.set(\"vpvTemplate\", JSON.stringify(vpv));",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"var startDate = new Date();",
-											"startDate.setDate(1);",
-											"startDate.setHours(0, 0, 0, 0);",
-											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 15);",
-											"",
-											"pm.globals.set(\"startDate\", startDate.toISOString());",
-											"pm.globals.set(\"endDate\", endDate.toISOString());",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"vpid\": \"{{vpID}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": \"{{endDate}}\",\n  \"earliestStart\": 0,\n  \"earliestStartDate\": \"{{startDate}}\",\n  \"latestStart\": 0,\n  \"latestStartDate\": \"{{startDate}}\",\n  \"hierarchy\": {\n    \"allNodes\": [\n      {\n        \"hryNodeKey\": \"0\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"0§01 Preparation§\",\n            \"0§02 Blueprints§\",\n            \"0§03 Realization§\",\n            \"0§04 Final Preparation / GoLive§\"\n          ],\n          \"elemName\": \".\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§01 Preparation§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§\"\n          ],\n          \"elemName\": \"01 Preparation\",\n          \"origName\": null,\n          \"indexOfElem\": 2,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§02 Blueprints§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0002\"\n          ],\n          \"elemName\": \"02 Blueprints\",\n          \"origName\": null,\n          \"indexOfElem\": 3,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§03 Realization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0003\"\n          ],\n          \"elemName\": \"03 Realization\",\n          \"origName\": null,\n          \"indexOfElem\": 4,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0004\"\n          ],\n          \"elemName\": \"04 Final Preparation / GoLive\",\n          \"origName\": null,\n          \"indexOfElem\": 5,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§01 Preparation§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0002\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§02 Blueprints§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0003\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§03 Realization§\"\n        }\n      },\n      {\n        \"hryNodeKey\": \"1§Finalization§0004\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\n        }\n      }\n    ]\n  },\n  \"customDblFields\": [],\n  \"customStringFields\": [],\n  \"customBoolFields\": [],\n  \"AllPhases\": [\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [],\n      \"AllCosts\": [],\n      \"AllResults\": [],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Jan 01\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"0001-01-01T00:00:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 17,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 517,\n      \"name\": \"0§.§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"\",\n      \"originalName\": \".\",\n      \"appearance\": \"\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            9,\n            3\n          ],\n          \"RollenTyp\": 3,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            5,\n            0.9375\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Kosten-/Nutzen Analyse\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§\",\n          \"verantwortlich\": \"\",\n          \"offset\": 42,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 2,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 44,\n      \"name\": \"0§01 Preparation§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"1\",\n      \"originalName\": \"01 Preparation\",\n      \"appearance\": \"V orange 1\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            5,\n            10,\n            8.75,\n            0\n          ],\n          \"RollenTyp\": 2,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            7,\n            14,\n            14,\n            0.625\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            1,\n            3,\n            1.9375,\n            0\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Click-Prototyp\",\n            \"Machbarkeits-Analyse\",\n            \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0002\",\n          \"verantwortlich\": \"\",\n          \"offset\": 82,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 2,\n      \"relEnde\": 5,\n      \"startOffsetinDays\": 44,\n      \"dauerInDays\": 84,\n      \"name\": \"0§02 Blueprints§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"2\",\n      \"originalName\": \"02 Blueprints\",\n      \"appearance\": \"V orange 2\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            7,\n            9,\n            9,\n            8,\n            8,\n            6.5\n          ],\n          \"RollenTyp\": 2,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            25,\n            35,\n            33,\n            35,\n            33,\n            29\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            13,\n            17,\n            17,\n            17,\n            17,\n            14\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\n            \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0003\",\n          \"verantwortlich\": \"\",\n          \"offset\": 171,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 5,\n      \"relEnde\": 10,\n      \"startOffsetinDays\": 127,\n      \"dauerInDays\": 173,\n      \"name\": \"0§03 Realization§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"3\",\n      \"originalName\": \"03 Realization\",\n      \"appearance\": \"V orange 3\"\n    },\n    {\n      \"deliverables\": [],\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            1,\n            9,\n            1.875\n          ],\n          \"RollenTyp\": 6,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        },\n        {\n          \"Bedarf\": [\n            2,\n            37,\n            8.5\n          ],\n          \"RollenTyp\": 16,\n          \"teamID\": -1,\n          \"name\": null,\n          \"farbe\": null,\n          \"startkapa\": 0,\n          \"tagessatzIntern\": 0,\n          \"tagessatzExtern\": 0,\n          \"isCalculated\": false\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Rollout Plan \",\n            \"Schulungspartner unter Vertrag\",\n            \"Schulungstermine festgelegt\"\n          ],\n          \"bewertungen\": [\n            {\n              \"key\": \"#Nov 19\",\n              \"bewertung\": {\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0004\",\n          \"verantwortlich\": \"\",\n          \"offset\": 42,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"Fi\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"M Abschluss\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [\n        {\n          \"key\": \"#Nov 19\",\n          \"bewertung\": {\n            \"color\": 0,\n            \"description\": \"\",\n            \"deliverables\": \"\",\n            \"bewerterName\": \"\",\n            \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\n          }\n        }\n      ],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"earliestStart\": -999,\n      \"latestStart\": -999,\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 10,\n      \"relEnde\": 12,\n      \"startOffsetinDays\": 300,\n      \"dauerInDays\": 44,\n      \"name\": \"0§04 Final Preparation / GoLive§\",\n      \"farbe\": 11119017,\n      \"shortName\": \"4\",\n      \"originalName\": \"04 Final Preparation / GoLive\",\n      \"appearance\": \"V orange 4\"\n    }\n  ],\n  \"variantDescription\": \"\",\n  \"Risiko\": 2,\n  \"StrategicFit\": 5,\n  \"Erloes\": 380,\n  \"leadPerson\": \"\",\n  \"earliestStart\": 0,\n  \"latestStart\": 0,\n  \"status\": \"beauftragt\",\n  \"ampelStatus\": 0,\n  \"ampelErlaeuterung\": \"\",\n  \"farbe\": 682978,\n  \"Schrift\": 10,\n  \"Schriftfarbe\": 16777215,\n  \"VorlagenName\": \"IM BP\",\n  \"Dauer\": 17,\n  \"volumen\": 0,\n  \"complexity\": 0,\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\n  \"businessUnit\": \"BU1\"\n}"
-								},
-								"url": {
-									"raw": "{{url}}/vpv",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vpv"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "06-00-20 Delete VPV",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": ""
-								},
-								"url": {
-									"raw": "{{url}}/vpv/{{DeleteID}}",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vpv",
-										"{{DeleteID}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "06-00-99 Final",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						}
-					]
-				},
 				{
 					"name": "06-01 VPV for VC02/VP01 Create",
 					"item": [
@@ -29853,14 +29822,24 @@
 											"        pm.environment.set(\"ProjectCreateCount\", count);",
 											"    }",
 											"    pm.globals.set(\"ProjectCreateCount\", 1);",
-											"    var startDate = new Date();",
-											"    startDate.setMonth(startDate.getMonth() + 1);",
-											"    startDate.setDate(1);",
-											"    startDate.setHours(0, 0, 0, 0);",
-											"    console.log(\"startDate\", startDate.toISOString());",
-											"    pm.globals.set(\"startDate\", startDate.toISOString());",
 											"});",
 											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var startDate = new Date();",
+											"startDate.setDate(1);",
+											"startDate.setHours(0, 0, 0, 0);",
+											"",
+											"pm.globals.set(\"startDate\", startDate.toISOString());",
+											"startDate.setMonth(startDate.getMonth() + 24);",
+											"pm.globals.set(\"endDate\", startDate.toISOString());",
 											""
 										],
 										"type": "text/javascript"
@@ -30019,9 +29998,6 @@
 											"    pm.globals.set(\"vpID\", jsonData.vp[0]._id);",
 											"    var count = pm.globals.get(\"ProjectCreateCount\") + 1;",
 											"    pm.globals.set(\"ProjectCreateCount\", count);",
-											"    var startDate = new Date(pm.globals.get(\"startDate\"));",
-											"    startDate.setMonth(startDate.getMonth() + 1);",
-											"    pm.globals.set(\"startDate\", startDate.toISOString());",
 											"    var ProjectCreateCount = pm.environment.get(\"ProjectCreateCount\")",
 											"    if (!(ProjectCreateCount > 0)) ProjectCreateCount = 5;",
 											"    if (count < ProjectCreateCount) {",
@@ -30037,6 +30013,19 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+											"var startDate = new Date(pm.globals.get(\"startDate\"));",
+											"startDate.setDate(startDate.getDate() + 14);",
+											"pm.globals.set(\"startDate\", startDate.toISOString());",
+											"var endDate = new Date(startDate);",
+											"endDate.setMonth(startDate.getMonth() + 24);",
+											"pm.globals.set(\"endDate\", endDate.toISOString());",
+											"",
+											"var count = pm.globals.get(\"ProjectCreateCount\");",
+											"var faktor = 0.05 * count;",
+											"var bac = 400 * faktor;",
+											"pm.variables.set(\"BAC\", bac);",
+											"pm.variables.set(\"RAC\", bac * 1.11);",
+											"",
 											""
 										],
 										"type": "text/javascript"
@@ -30057,7 +30046,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{  \n   \"name\":\"{{vpActualName}}\",\n   \"description\": \"Created from VP Template\",\n    \"startDate\": \"{{startDate}}\",\n   \"vcid\":\"{{vcID}}\"\n}"
+									"raw": "{  \n   \"name\":\"{{vpActualName}}\",\n   \"description\": \"Created from VP Template\",\n    \"startDate\": \"{{startDate}}\",\n    \"endDate\": \"{{endDate}}\",\n    \"BAC\": {{BAC}},\n    \"RAC\": {{RAC}},\n   \"vcid\":\"{{vcID}}\"\n}"
 								},
 								"url": {
 									"raw": "{{url}}/vp?vpid={{TempID}}",

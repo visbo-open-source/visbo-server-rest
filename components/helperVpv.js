@@ -102,14 +102,10 @@ function initVPV(vpv) {
 	newVPV.status = vpv.status;
 	newVPV.ampelStatus = vpv.ampelStatus;
 	newVPV.ampelErlaeuterung = vpv.ampelErlaeuterung;
-	newVPV.farbe = vpv.farbe;
-	newVPV.Schrift = vpv.Schrift;
-	newVPV.Schriftfarbe = vpv.Schriftfarbe;
 	newVPV.VorlagenName = vpv.VorlagenName;
 	newVPV.Dauer = vpv.Dauer;
 	newVPV.AllPhases = vpv.AllPhases;
 	newVPV.hierarchy = vpv.hierarchy;
-	newVPV.volumen = vpv.volumen;
 	newVPV.complexity = vpv.complexity;
 	newVPV.description = vpv.description;
 	newVPV.businessUnit = vpv.businessUnit;
@@ -144,13 +140,7 @@ function setKeyAttributes(newVPV, keyVPV) {
 
 function createInitialVersions(req, res, newVPV) {
 	logger4js.debug('Store VPV for vpid %s/%s ', newVPV.vpid.toString(), newVPV.name);
-	var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
 	newVPV.timestamp = new Date();
-	var keyVPV = getKeyAttributes(newVPV);
-	if (orga) {
-		newVPV = visboBusiness.convertVPV(newVPV, undefined, orga);
-	}
-	setKeyAttributes(newVPV, keyVPV);
 	newVPV.save(function(err, oneVPV) {
 		if (err) {
 			errorHandler(err, res, 'DB: Create VP Template VPV(pfv) Save', 'Error creating Project Version ');
@@ -163,9 +153,7 @@ function createInitialVersions(req, res, newVPV) {
 		var baseVPV = initVPV(oneVPV);
 		baseVPV.variantName = "";
 		baseVPV.timestamp = new Date();
-		var keyVPV = getKeyAttributes(baseVPV);
 		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, req.visboPFV, req.visboOrganisations);
-		setKeyAttributes(baseVPV, keyVPV);
 		baseVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
