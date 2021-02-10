@@ -1059,6 +1059,8 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 			capa.push({
 				'month': actMonthISO,
 				'roleID' : roleID,
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
 				'roleName' : capaVPV[item].roleName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
@@ -1070,6 +1072,8 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 			capa.push({
 				'month': actMonthISO,
 				'roleID' : roleID,
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
 				'roleName' : capaVPV[item].roleName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
@@ -1179,6 +1183,8 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 				for (i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
+						'currentDate': currentDate.toISOString(),
+						'roleID': roleID,
 						'roleName': roleName,
 						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
 						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
