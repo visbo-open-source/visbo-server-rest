@@ -2039,71 +2039,116 @@ function resetStatusVPV(oldVPV) {
 	// this function resets all status information inside the VPV.
 	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
 	
+	// suggestions is to provide this variable as parameter
+	// it can make a lot of sense to have the same deliverables defined as in the oldVPV
+	// that is the case when a project environment is based on standardized processes where it is agreed that at certain points in time 
+	// certain deliverables are expected.
+	let keepDeliverables = false;
+
 	if (!oldVPV) {
 		return undefined;
 	} 
 
 	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
 
-	oldVPV.Risiko = undefined;
-	oldVPV.StrategicFit = undefined;
+	oldVPV.variantName = "";
+	oldVPV.variantDescription = "";
 
+	oldVPV.Risiko = null;
+	oldVPV.StrategicFit = null;
+
+	// customFields - keep all defined keys, but reset value of string and double Fields 
+	// keep the same value in all boolean field , because either value is as good as the other one
+	// so just make sure vpv contains same number and type of customFields 
+
+	oldVPV.customDblFields.forEach(customfield => {			
+			customfield.dbl = null;
+	});
+
+	oldVPV.customStringFields.forEach(customfield => {
+			customfield.strvalue = "";
+	});	
+
+	oldVPV.customBoolFields.forEach(customfield => {
+		customfield.bool = null;
+	});		  
+
+	oldVPV.erloes = 0;	
+	
 	// no actualData exists: MinDate
 	oldVPV.actualDataUntil = new Date(0);
-	// bsp: lastUpdatedAt = new Date('2000-01-01');
+	
+	oldVPV.leadPerson = "";	
+
+	// earliestStart and latestStart are for providing min/max boundaries in automatic solution findings 	
+	oldVPV.earliestStartDate = oldVPV.startDate;
+	oldVPV.earliestStart = null;
+	
+	oldVPV.latestStartDate = oldVPV.startDate;
+	oldVPV.latestStart = null;
+
+	oldVPV.status = "geplant";
+
+	// 0 = without ampelstatus
+	oldVPV.ampelStatus = 0; 
+	oldVPV.ampelErlaeuterung = "";
+
+	oldVPV.description = "";
+	oldVPV.businessUnit = ""; 	
 
 	// 
-	oldVPV.AllPhases.forEach(phase => {
+
+	const emptyBewertung = { "color": 0, "description":"", "deliverables":"", "bewerterName":"", "datum":"" } ;	
+	let bKey = "#" + new Date().toLocaleString("de-DE");
+	let bItem = {key: bKey, bewertung: emptyBewertung};
+	
+	oldVPV.AllPhases.forEach(phase => {		
+
+		// adress all the contained milestones 
+		phase.AllResults.forEach(result => {
+			
+			result.bewertungen = []; 			
+			result.bewertungen.push(bItem);
+
+			result.verantwortlich="";			
+			result.originalName="";
+
+			if (!keepDeliverables) {
+				result.deliverables = [];
+			};
+			
+			result.percentDone = 0;
+			result.invoice = null;
+			result.penalty = null;
+			
+		});
 		
-		// depends on: we should consider whether or not the deliverables should be reset
-		// it can make a lot of sense to have the same deliverables defined as in the oldVPV
-		// that is the case when a project environment is based on standardized processes where it is agreed that at certain points in time 
-		// certain deliverables are expected.
-		phase.deliverables = []; 		  
+
+		// now reset bewertungen , set the first element of bewertungen
+		phase.AllBewertungen = [];		
+		phase.AllBewertungen.push(bItem);				
+		
+		phase.percentDone = 0;
+
+		phase.invoice = null; 
+		phase.penalty = null; 
+		
+		phase.responsible = "";
+
+		if (!keepDeliverables) {
+			phase.deliverables = [];
+		};		 		  
 
 		phase.ampelStatus = 0;
 		phase.ampelErlaeuterung = "";
 
-		// now set the first element of bewertungen to the same value		
-		phase.AllBewertungen = []; 
-		let emptyBewertung = { "color": 0, "description":"", "deliverables": "", "bewerterName": "", "datum": "" } ;		 
-		phase.AllBewertungen.push(emptyBewertung);
-		
+		phase.earliestStart = null;
+		phase.latestStart = null; 
+		phase.minDauer = null;
+		phase.maxDauer = null; 
 
-		phase.responsible = "";
-		phase.percentDone = 0;
-
-		// OriginalName is the name the element had before it was assigned a standardized/classified name, 
-		// but this should not be transferred into the restVPV
+		// OriginalName is the name the element had before it was assigned a standardized/classified name		
 		phase.originalName = "";
-
-		// customFields - keep all defined keys, but reset value of string and double Fields 
-		// keep the same value in all boolean field , because either value is as good as the other one
-		// so just make sure vpv contains same number and type of customFields 
-
-		vpv.customDblFields.forEach(customfield => {			
-			customfield.strvalue = 0.0;
-		});
-		vpv.customStringFields.forEach(customfield => {
-			customfield.strvalue = "";
-		});
-		  
-
-		// 
-				
-		phase.invoice = null; 
-		phase.penalty = null; 
-		
-		
-		// now adress the milestones 
-		phase.AllResults.forEach(result => {
-			result.deliverables = [];
-			result.bewertungen = []; 
-			let emptyBewertung = { color: 0, description:"", deliverables:"", bewerterName:"", datum:"" } ;		 
-			result.bewertungen.push(emptyBewertung);
-			result.verantwortlich="";
-			result.originalName="";
-		});
 		
 	});
 	
