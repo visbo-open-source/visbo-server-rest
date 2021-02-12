@@ -1089,6 +1089,101 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 	return capa;
 }
 
+function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onlyPT) {
+	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
+		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
+		return [];
+	}
+
+	var capaVPV = [];
+	vpvs.forEach(vpv => {
+		capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+		for (index in capaTempVPV) {
+			var element = capaTempVPV[index];
+			var id = element.currentDate + vpv._id.toString();
+			element.vpid = vpv.vpid;
+			element.name = vpv.name;
+			capaVPV[id] = element;
+		}
+	})
+
+	var capaPFV = [];
+	var item;
+
+	if (pfvs) {
+		// calc the corresponding of the PFVs
+		pfvs.forEach(vpv => {
+			capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+			for (index in capaTempVPV) {
+				var element = capaTempVPV[index];
+				var id = element.currentDate + vpv._id.toString();
+				element.vpid = vpv.vpid;
+				element.name = vpv.name;
+				capaPFV[id] = element;
+			}
+		})
+
+		// insert or update capa values
+		for (item in capaPFV) {
+			if (!capaVPV[item]) {
+				// insert new Value
+				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
+				capaVPV[item] = {};
+				capaVPV[item].vpid = capaPFV[item].vpid;
+				capaVPV[item].name = capaPFV[item].name;
+				capaVPV[item].actualCost_PT = 0;
+				capaVPV[item].plannedCost_PT = 0;
+				capaVPV[item].actualCost = 0;
+				capaVPV[item].actualCost_PT = 0;
+				capaVPV[item].plannedCost = 0;
+				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
+				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
+				capaVPV[item].internCapa = (capaPFV[item].internCapa || 0);
+				capaVPV[item].externCapa = (capaPFV[item].externCapa || 0);
+			}
+			capaVPV[item].baselineCost = (capaPFV[item].actualCost || 0) + (capaPFV[item].plannedCost || 0);
+			capaVPV[item].baselineCost_PT = (capaPFV[item].actualCost_PT || 0) + (capaPFV[item].plannedCost_PT || 0);
+		}
+	}
+
+	var capa = [];
+	for (item in capaVPV) {
+		if (onlyPT) {
+			capa.push({
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
+				'roleName' : capaVPV[item].roleName,
+				'vpid' : capaVPV[item].vpid,
+				'name' : capaVPV[item].name,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		} else {
+			capa.push({
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
+				'roleName' : capaVPV[item].roleName,
+				'vpid' : capaVPV[item].vpid,
+				'name' : capaVPV[item].name,
+				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
+				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
+				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
+				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
+				'actualCost': capaVPV[item].actualCost || 0,
+				'plannedCost': capaVPV[item].plannedCost || 0,
+				'internCapa': capaVPV[item].internCapa || 0,
+				'externCapa': capaVPV[item].externCapa || 0,
+				'baselineCost': capaVPV[item].baselineCost,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT
+			});
+		}
+	}
+	return capa;
+}
+
 function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 
 	var allCalcCapaValues = [];
@@ -2574,11 +2669,12 @@ module.exports = {
 	calcDeliverables: calcDeliverables,
 	calcDeadlines: calcDeadlines,
 	calcCapacities: calcCapacities,
+	calcCapacitiesPerProject: calcCapacitiesPerProject,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertOrganisation: convertOrganisation,
 	getRessourcenBedarfe: getRessourcenBedarfe,
 	verifyOrganisation: verifyOrganisation,
 	convertVPV: convertVPV,
 	scaleVPV: scaleVPV,
-	resetStatusVPV, resetStatusVPV
+	resetStatusVPV: resetStatusVPV
 };
