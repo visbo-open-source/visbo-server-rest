@@ -1,6 +1,6 @@
-
 var logModule = 'VPV';
 var log4js = require('log4js');
+const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
 var logger4js = log4js.getLogger(logModule);
 
@@ -1943,7 +1943,76 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 function resetStatusVPV(oldVPV) {
 	// this function resets all status information inside the VPV.
 	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
+	
+	if (!oldVPV) {
+		return undefined;
+	} 
+
 	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
+
+	oldVPV.Risiko = undefined;
+	oldVPV.StrategicFit = undefined;
+
+	// no actualData exists: MinDate
+	oldVPV.actualDataUntil = new Date(0);
+	// bsp: lastUpdatedAt = new Date('2000-01-01');
+
+	// 
+	oldVPV.AllPhases.forEach(phase => {
+		
+		// depends on: we should consider whether or not the deliverables should be reset
+		// it can make a lot of sense to have the same deliverables defined as in the oldVPV
+		// that is the case when a project environment is based on standardized processes where it is agreed that at certain points in time 
+		// certain deliverables are expected.
+		phase.deliverables = []; 		  
+
+		phase.ampelStatus = 0;
+		phase.ampelErlaeuterung = "";
+
+		// now set the first element of bewertungen to the same value		
+		phase.AllBewertungen = []; 
+		let emptyBewertung = { "color": 0, "description":"", "deliverables": "", "bewerterName": "", "datum": "" } ;		 
+		phase.AllBewertungen.push(emptyBewertung);
+		
+
+		phase.responsible = "";
+		phase.percentDone = 0;
+
+		// OriginalName is the name the element had before it was assigned a standardized/classified name, 
+		// but this should not be transferred into the restVPV
+		phase.originalName = "";
+
+		// customFields - keep all defined keys, but reset value of string and double Fields 
+		// keep the same value in all boolean field , because either value is as good as the other one
+		// so just make sure vpv contains same number and type of customFields 
+
+		vpv.customDblFields.forEach(customfield => {			
+			customfield.strvalue = 0.0;
+		});
+		vpv.customStringFields.forEach(customfield => {
+			customfield.strvalue = "";
+		});
+		  
+
+		// 
+				
+		phase.invoice = null; 
+		phase.penalty = null; 
+		
+		
+		// now adress the milestones 
+		phase.AllResults.forEach(result => {
+			result.deliverables = [];
+			result.bewertungen = []; 
+			let emptyBewertung = { color: 0, description:"", deliverables:"", bewerterName:"", datum:"" } ;		 
+			result.bewertungen.push(emptyBewertung);
+			result.verantwortlich="";
+			result.originalName="";
+		});
+		
+	});
+	
+
 	return oldVPV;
 }
 
