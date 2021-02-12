@@ -594,11 +594,10 @@ router.route('/')
 							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
 							return;
 						}
-						var newVPV = new VisboProjectVersion();
-						newVPV.VorlagenName = req.oneVPVTemplate.name;
-						newVPV.name = req.oneVP.name;
-						newVPV.vpid = req.oneVP._id;
-						newVPV.variantName = 'pfv'; // first Version is the pfv
+						templateVPV.VorlagenName = req.oneVPVTemplate.name;
+						templateVPV.name = req.oneVP.name;
+						templateVPV.vpid = req.oneVP._id;
+						templateVPV.variantName = 'pfv'; // first Version is the pfv
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
 						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -616,12 +615,12 @@ router.route('/')
 							endDate = new Date();
 							endDate.setTime(startDate.getTime() + diff);
 						}
-						newVPV.startDate = startDate;
-						newVPV.endDate = endDate;
+						templateVPV.startDate = startDate;
+						templateVPV.endDate = endDate;
 						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
-							newVPV.Erloes = req.body.RAC;
+							templateVPV.Erloes = req.body.RAC;
 						}
-						newVPV.status = undefined;
+						templateVPV.status = undefined;
 						// calculate scale factor if possible
 						var scaleFactor = 1;
 						var bac = 0;
@@ -630,7 +629,7 @@ router.route('/')
 						}
 						if (bac) {
 							// reset the VPV and reset individual user roles to group roles
-							newVPV = visboBusiness.resetStatusVPV(newVPV);
+							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
 							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
 							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
 							var costSum = 0;
@@ -641,6 +640,7 @@ router.route('/')
 								scaleFactor = costSum / bac;
 							}
 						}
+						var newVPV = helperVpv.initVPV(templateVPV);
 						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor)
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
