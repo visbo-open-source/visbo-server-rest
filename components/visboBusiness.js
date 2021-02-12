@@ -2173,7 +2173,8 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			var phase = oldVPV.AllPhases[i];			
 			
 			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
-			onePhase.AllRoles  = aggregateRoles(phase, orgalist, 1);			
+			onePhase.AllRoles  = 
+			aggregateRoles(phase, orgalist, 1);			
 			
 			var newAllCosts = [];
 			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
@@ -2495,10 +2496,21 @@ function aggregateRoles(phase, orgalist, anzLevel){
 			// oneRole.farbe = role.farbe;
 			// oneRole.startkapa = role.startkapa;
 			// oneRole.tagessatzIntern = role.tagessatzIntern;
-			oneRole.Bedarf = role.Bedarf;
+
+			// Badarf has to be adopted in € according to the defaultDayCost of the role
+			// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole 
+			// and the PT will be calculated in the same relation. 
+			oneRole.Bedarf = [];
+			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
+				var actTagessatz = roleSett.tagessatz;
+				var newTagessatz = orgalist[roleSett.pid].tagessatz;
+				var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
+				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
+			}			
 			// oneRole.isCalculated = role.isCalculated;
 		} else {
 			oneRole.RollenTyp = role.RollenTyp;
+
 			// oneRole.name = role.name;
 			oneRole.teamID = role.teamID;
 			// oneRole.farbe = role.farbe;
@@ -2517,6 +2529,7 @@ function aggregateRoles(phase, orgalist, anzLevel){
 		var sumRole = {};
 		sumRole.RollenTyp = actUID;
 		sumRole.Bedarf = newAllRoles[ir].Bedarf;
+		// check all others role, if they are existing once more. then the bedarf has to be added 
 		for (var newir = ir + 1; newAllRoles && newir < newAllRoles.length; newir++){
 			var newRole = newAllRoles[newir];
 			if (actUID == newRole.RollenTyp) {							
