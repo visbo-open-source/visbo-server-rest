@@ -129,7 +129,7 @@ function getAllOtherCost(costID, vpv, organisation) {
 					var cost = phase.AllCosts[j];
 					var costTyp = cost.KostenTyp;
 					if ((costTyp === costID) || (costID == '')) {
-						// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
+						// logger4js.trace('Calculate Bedarf of Cost %O', cost.Bedarf);
 						if (cost.Bedarf) {
 							var dimension = cost.Bedarf.length;
 							for (var k = phasenStart; k < phasenStart + dimension; k++) {
@@ -1552,7 +1552,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
 						if ((phase.AllRoles[k].RollenTyp == actRoleID)|| (phase.AllRoles[k].teamID == actRoleID)) {
 							var role = phase.AllRoles[k];
-							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
+							// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 							if (role &&  role.Bedarf) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
@@ -2051,8 +2051,8 @@ function resetStatusVPV(oldVPV) {
 
 	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
 
-	oldVPV.variantName = "";
-	oldVPV.variantDescription = "";
+	oldVPV.variantName = '';
+	oldVPV.variantDescription = '';
 
 	oldVPV.Risiko = null;
 	oldVPV.StrategicFit = null;
@@ -2066,7 +2066,7 @@ function resetStatusVPV(oldVPV) {
 	});
 
 	oldVPV.customStringFields.forEach(customfield => {
-			customfield.strvalue = "";
+			customfield.strvalue = '';
 	});	
 
 	oldVPV.customBoolFields.forEach(customfield => {
@@ -2078,7 +2078,7 @@ function resetStatusVPV(oldVPV) {
 	// no actualData exists: MinDate
 	oldVPV.actualDataUntil = new Date(0);
 	
-	oldVPV.leadPerson = "";	
+	oldVPV.leadPerson = '';	
 
 	// earliestStart and latestStart are for providing min/max boundaries in automatic solution findings 	
 	oldVPV.earliestStartDate = oldVPV.startDate;
@@ -2087,19 +2087,19 @@ function resetStatusVPV(oldVPV) {
 	oldVPV.latestStartDate = oldVPV.startDate;
 	oldVPV.latestStart = null;
 
-	oldVPV.status = "geplant";
+	oldVPV.status = 'geplant';
 
 	// 0 = without ampelstatus
 	oldVPV.ampelStatus = 0; 
-	oldVPV.ampelErlaeuterung = "";
+	oldVPV.ampelErlaeuterung = '';
 
-	oldVPV.description = "";
-	oldVPV.businessUnit = ""; 	
+	oldVPV.description = '';
+	oldVPV.businessUnit = ''; 	
 
 	// 
 
-	const emptyBewertung = { "color": 0, "description":"", "deliverables":"", "bewerterName":"", "datum":"" } ;	
-	let bKey = "#" + new Date().toLocaleString("de-DE");
+	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':'' };	
+	let bKey = '#' + new Date().toLocaleString('de-DE');
 	let bItem = {key: bKey, bewertung: emptyBewertung};
 	
 	oldVPV.AllPhases.forEach(phase => {		
@@ -2110,12 +2110,12 @@ function resetStatusVPV(oldVPV) {
 			result.bewertungen = []; 			
 			result.bewertungen.push(bItem);
 
-			result.verantwortlich="";			
-			result.originalName="";
+			result.verantwortlich='';			
+			result.originalName='';
 
 			if (!keepDeliverables) {
 				result.deliverables = [];
-			};
+			}
 			
 			result.percentDone = 0;
 			result.invoice = null;
@@ -2133,14 +2133,14 @@ function resetStatusVPV(oldVPV) {
 		phase.invoice = null; 
 		phase.penalty = null; 
 		
-		phase.responsible = "";
+		phase.responsible = '';
 
 		if (!keepDeliverables) {
 			phase.deliverables = [];
-		};		 		  
+		}		 		  
 
 		phase.ampelStatus = 0;
-		phase.ampelErlaeuterung = "";
+		phase.ampelErlaeuterung = '';
 
 		phase.earliestStart = null;
 		phase.latestStart = null; 
@@ -2148,7 +2148,7 @@ function resetStatusVPV(oldVPV) {
 		phase.maxDauer = null; 
 
 		// OriginalName is the name the element had before it was assigned a standardized/classified name		
-		phase.originalName = "";
+		phase.originalName = '';
 		
 	});
 	
