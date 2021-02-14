@@ -2022,15 +2022,124 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	return oldVPV;
 }
 
+// function calculates the distribution of values in a array 
+function calcPhArValues(arStartDate, arEndDate, arSum) {
+	
+	// check if valid invocation
+	if (typeof arStartDate !== 'object' || typeof arEndDate !== 'object' || typeof arSum !== 'number' ) {
+		return undefined;
+	}
+
+	// make corrections, if dates are switched .. 
+	if (arStartDate > arEndDate) {
+		let tmpDate = arStartDate;
+		arStartDate = arEndDate;
+		arEndDate = tmpDate;
+	}
+
+	let anzDaysPMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; 
+
+	// now do the calculation: determine the number of months covered , then distribute values such that fraction of start-Month and end-Month is taken into account 
+	// i.e 30.5 - 3.7 : may and july may only contain a fraction of the sum, not hjust evenly distributed	 
+	let arResult = [];
+
+	let arIxA = getColumnOfDate(arStartDate);
+	let arIxE = getColumnOfDate(arEndDate);
+
+	let arLength = arIxE - arIxA + 1;
+	
+	let anzDays1 = 0;
+	let anzDaysN = 0;
+	let fraction1 = 0;
+	let fractionX = 0;
+	let fractionN = 0;
+	let sumOfFractions = 1;
+
+	anzDays1 = anzDaysPMonth[arStartDate.getMonth()] - arStartDate.getDate();
+	anzDaysN = arEndDate.getDate;
+	fraction1 = anzDays1 / anzDaysPMonth[arStartDate.getMonth()];
+	fractionN = anzDaysN / anzDaysPMonth[arEndDate.getMonth()];
+
+	switch(arLength) {
+		
+		case arLength==1:
+			arResult.push(arSum);
+			break;
+		
+		case arLength==2 :			
+
+			arResult.push(arSum * fraction1 / (fraction1 + fractionN));
+			arResult.push(arSum * fractionN / (fraction1 + fractionN));
+
+			break;
+
+		case arLength > 2 :
+
+			sumOfFractions = arLength - 2 + fraction1 + fractionN;
+			fractionX = 1 / sumOfFractions; 
+
+			arResult.push(arSum * fraction1 / sumOfFractions);
+
+			var i;
+			for (i = 1; i < arLength - 1; i++) {
+				arResult.push(arSum * fractionX / sumOfFractions);
+			}
+
+			arResult.push(arSum * fractionN / sumOfFractions);
+
+			break;
+
+		default:
+			// should never come into default ...
+
+	}
+
+	return arResult;
+}
+
 function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// the function scales the oldVPV that contains start&endDate and Bedarfe
 	// to a newVPV that contains the new start&endDate but the Phases & Costs and Result are all undefined, these have to be filled
+	// actualData of oldVPV will be considerd, i.e values of newVPV in actualData-Months will be identical to Values in oldVPV, independent of scaleFactor
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
 
-	newVPV.AllPhases = oldVPV.AllPhases;
+	// copy the Attributes of oldVPV to newVPV
+
+	// Hierarchy does not change, so point to the oldVPV hierarchy; still better /  to do : create a copy !?  
 	newVPV.hierarchy = oldVPV.hierarchy;
+
+	// if there already exists actualData then make sure 
+	//  * role- & cost-Values of actualData-Months remain unchanged 
+	//  * projectStart of newVPV and all start- and end-Dates of phases and milestones being in actualData-Months being the same as in oldVPV. 
+	
+	let actualDataExists = (oldVPV.actualDataUntil > oldVPV.startDate);
+	let absIndexKeepValuesUntil = -1;
+
+	if (actualDataExists) {
+		absIndexKeepValuesUntil = getColumnOfDate (oldVPV.actualDataUntil); 
+		
+		// exit, if not allowed 
+		if (diffDays(oldVPV.startDate, newVPV.startDate) !== 0 || newVPV.endDate < oldVPV.actualDataUntil) {
+			return undefined;
+		}		
+	}
+
+	// now it is ensured that dates of newVPV do make sense
+
+	oldVPV.AllPhases.forEach(phase => {	
+
+		phase.AllResults.forEach(result => {
+			
+			
+			
+		});
+
+	});
+	
+	newVPV.AllPhases = oldVPV.AllPhases;
+	
 	return newVPV;
 
 }
@@ -2101,6 +2210,7 @@ function resetStatusVPV(oldVPV) {
 	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':'' };	
 	let bKey = '#' + new Date().toLocaleString('de-DE');
 	let bItem = {key: bKey, bewertung: emptyBewertung};
+	
 	
 	oldVPV.AllPhases.forEach(phase => {		
 
