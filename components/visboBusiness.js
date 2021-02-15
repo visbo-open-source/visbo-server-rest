@@ -1,4 +1,3 @@
-
 var logModule = 'VPV';
 var log4js = require('log4js');
 const { validateDate } = require('./validate');
@@ -1064,7 +1063,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
 				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		} else {
 			capa.push({
@@ -1079,8 +1078,8 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 				'plannedCost': capaVPV[item].plannedCost || 0,
 				'internCapa': capaVPV[item].internCapa || 0,
 				'externCapa': capaVPV[item].externCapa || 0,
-				'baselineCost': capaVPV[item].baselineCost,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost': capaVPV[item].baselineCost || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		}
 	}
@@ -1093,14 +1092,17 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 		return [];
 	}
 
+	// calc the capacity for every project/vpv individual
 	var capaVPV = [];
 	vpvs.forEach(vpv => {
 		capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
 		for (index in capaTempVPV) {
 			var element = capaTempVPV[index];
-			var id = element.currentDate + vpv._id.toString();
+			var id = element.currentDate + vpv.vpid.toString();
 			element.vpid = vpv.vpid;
 			element.name = vpv.name;
+			element.baselineCost = 0;
+			element.baselineCost_PT = 0;
 			capaVPV[id] = element;
 		}
 	})
@@ -1109,19 +1111,19 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 	var item;
 
 	if (pfvs) {
-		// calc the corresponding of the PFVs
+		// calc the capacity of the pfvs
 		pfvs.forEach(vpv => {
 			capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
 			for (index in capaTempVPV) {
 				var element = capaTempVPV[index];
-				var id = element.currentDate + vpv._id.toString();
+				var id = element.currentDate + vpv.vpid.toString();
 				element.vpid = vpv.vpid;
 				element.name = vpv.name;
 				capaPFV[id] = element;
 			}
 		})
 
-		// insert or update capa values
+		// combine vpv & pfv values, insert or update capa values
 		for (item in capaPFV) {
 			if (!capaVPV[item]) {
 				// insert new Value
@@ -1144,12 +1146,44 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 		}
 	}
 
+	// generate the cumulative number per months across all projects
+	for (item in capaVPV) {
+		const currentDate = capaVPV[item].currentDate;
+		if (capaVPV[item].vpid) {
+			if (!capaVPV[currentDate]) {
+				capaVPV[currentDate] = {};
+				capaVPV[currentDate].currentDate = capaVPV[item].currentDate;
+				capaVPV[currentDate].roleID = capaVPV[item].roleID;
+				capaVPV[currentDate].roleName = capaVPV[item].roleName;
+				capaVPV[currentDate].name = 'All';
+				capaVPV[currentDate].actualCost_PT = 0;
+				capaVPV[currentDate].plannedCost_PT = 0;
+				capaVPV[currentDate].actualCost = 0;
+				capaVPV[currentDate].actualCost_PT = 0;
+				capaVPV[currentDate].plannedCost = 0;
+				capaVPV[currentDate].baselineCost = 0;
+				capaVPV[currentDate].baselineCost_PT = 0;
+				capaVPV[currentDate].internCapa_PT = capaVPV[item].internCapa_PT;
+				capaVPV[currentDate].externCapa_PT = capaVPV[item].externCapa_PT;
+				capaVPV[currentDate].internCapa = capaVPV[item].internCapa;
+				capaVPV[currentDate].externCapa = capaVPV[item].externCapa;
+			}
+			capaVPV[currentDate].actualCost_PT += capaVPV[item].actualCost_PT;
+			capaVPV[currentDate].plannedCost_PT += capaVPV[item].plannedCost_PT;
+			capaVPV[currentDate].actualCost += capaVPV[item].actualCost;
+			capaVPV[currentDate].plannedCost += capaVPV[item].plannedCost;
+			capaVPV[currentDate].baselineCost = (capaVPV[currentDate].baselineCost || 0) + capaVPV[item].baselineCost;
+			capaVPV[currentDate].baselineCost_PT = (capaVPV[currentDate].baselineCost_PT || 0) + capaVPV[item].baselineCost_PT;
+		}
+	}
+
+	// generate an array from an index list with holes
 	var capa = [];
 	for (item in capaVPV) {
 		if (onlyPT) {
 			capa.push({
 				'month': capaVPV[item].currentDate,
-				'roleID' : capaVPV[item].roleID.toString(),
+				'roleID' : capaVPV[item].roleID,
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
@@ -1157,12 +1191,12 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
 				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		} else {
 			capa.push({
 				'month': capaVPV[item].currentDate,
-				'roleID' : capaVPV[item].roleID.toString(),
+				'roleID' : capaVPV[item].roleID,
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
@@ -1174,11 +1208,12 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				'plannedCost': capaVPV[item].plannedCost || 0,
 				'internCapa': capaVPV[item].internCapa || 0,
 				'externCapa': capaVPV[item].externCapa || 0,
-				'baselineCost': capaVPV[item].baselineCost,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost': capaVPV[item].baselineCost || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		}
 	}
+	capa.sort(function(a, b) { return (new Date(a.month)).getTime() - (new Date(b.month)).getTime()});
 	return capa;
 }
 
@@ -1274,6 +1309,8 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 				for (i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
+						'currentDate': currentDate.toISOString(),
+						'roleID': roleID,
 						'roleName': roleName,
 						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
 						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
