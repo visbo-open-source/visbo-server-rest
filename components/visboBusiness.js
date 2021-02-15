@@ -2224,7 +2224,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 
 		// keep unchangable attributes
 		newPFV.name = oldVPV.name;
-		newPFV.vpid = oldVPV._id;
+		newPFV.vpid = oldVPV.vpid;
 		newPFV.variantName = 'pfv';
 		if (oldVPV.timestamp && Date.parse(oldVPV.timestamp)) {
 			newPFV.timestamp = new Date(oldVPV.timestamp);
@@ -2268,8 +2268,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			var phase = oldVPV.AllPhases[i];			
 			
 			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
-			onePhase.AllRoles  = 
-			aggregateRoles(phase, orgalist, 1);			
+			onePhase.AllRoles  = aggregateRoles(phase, orgalist, 1);			
 			
 			var newAllCosts = [];
 			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
@@ -2508,7 +2507,15 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 
 	logger4js.debug("remove the phase %s from hierarchy", elemID);
 	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
-	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);	
+	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);
+
+	logger4js.debug("remove the phase %s from AllPhases", elemID);
+	var newPhaseList = [];
+	for (let i = 0; newPFV && newPFV.AllPhases & i < newPFV.AllPhases.length; i++) {
+		if ( newPFV.AllPhases[i].name === elemID ) { continue };
+		newPhaseList.push(newPFV.AllPhases[i]);
+	}
+	newPFV.AllPhases = newPhaseList;
 
 	return newPFV;
 }	
