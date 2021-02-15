@@ -2418,7 +2418,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	
 	var DeadlineToDelete = [];
 	var fittingDeadline = [];
-	logger4js.debug('find the deliverables, which are only in the vpv and should be deleted for a new PFV');
+	logger4js.debug('find the deadlines, which are only in the vpv and should be deleted for a new PFV');
 	for (element = 0; element < listDeadlines.length; element++) {
 		var actDeadline = listDeadlines[element];	
 		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {
@@ -2433,15 +2433,43 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	}
 
 	logger4js.debug('delete the deadlines found out');
+	var remPhaseList=[];		
+	DeadlineToDelete.sort(function(a, b){return b.nameID.localeCompare(a.nameID);});
 	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
 		actDeadline = DeadlineToDelete[dl];
 		if (actDeadline && actDeadline.type === 'Milestone') {
 			newPFV = deleteMSFromVPV(hrchy_vpv, newPFV, actDeadline);
 		} 
 		if (actDeadline && actDeadline.type === 'Phase') {
-			newPFV = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
+			var remPhase = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
+			remPhaseList[actDeadline.nameID]= remPhase;						
 		}
 	}
+	logger4js.debug("remove the phases in remPhaseList AllPhases");
+	var newPhaseList = [];
+
+	for (var j=0; newPFV && newPFV.AllPhases && j < newPFV.AllPhases.length; j++) {
+		if (remPhaseList[newPFV.AllPhases[j].name]){
+			continue;			
+		} else {
+			newPhaseList.push(newPFV.AllPhases[j]);
+		}
+	}
+
+	// remPhaseList.forEach(item => { 
+	// 	if (item.nameID ==newPhaseList.push(item)} );
+	
+	// for (var i = 0; remPhaseList &&  i < remPhaseList.length; i++) {
+	// 	var elemID = remPhaseList[i];
+	// 	if ( actPhase.name === elemID ) { 
+	// 		newPhaseList.push(actPhase);
+	// 	} else {
+	// 		continue;
+	// 	};
+	
+	newPFV.AllPhases = newPhaseList;
+
+	// only take the newPhaseList as AllPhases
 	return newPFV;
 }
 
@@ -2509,15 +2537,8 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
 	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);
 
-	logger4js.debug("remove the phase %s from AllPhases", elemID);
-	var newPhaseList = [];
-	for (let i = 0; newPFV && newPFV.AllPhases & i < newPFV.AllPhases.length; i++) {
-		if ( newPFV.AllPhases[i].name === elemID ) { continue };
-		newPhaseList.push(newPFV.AllPhases[i]);
-	}
-	newPFV.AllPhases = newPhaseList;
-
-	return newPFV;
+	
+	return phase;
 }	
 
 function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
