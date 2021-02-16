@@ -15,7 +15,7 @@ var validateName = function(name, allowEmpty) {
 			return true;
 		}
 	}
-	if (typeof name != "string") {
+	if (typeof name != 'string') {
 		logger4js.debug('Check Name: incorrect Type', name, typeof name);
 		return false;
 	}

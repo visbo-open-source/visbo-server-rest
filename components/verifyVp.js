@@ -343,7 +343,6 @@ function getVPTemplate(req, res, next) {
 // Get the organisations for keyMetrics calculation
 function getVPOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
-	var urlComponent = baseUrl.split('/');
 	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
 
 	let skip = true;

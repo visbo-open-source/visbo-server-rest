@@ -1,26 +1,29 @@
-print("STDERR: Export Type ", exportType);
+/* eslint-disable */
+print('STDERR: Export Type ', exportType);
 
 // VCName='Test-MS-VC02'
 
-VCName='VC_Name_to_Export'
-VPName='^VP_Name_to_Export'
-VCID=''
+// var VCName='Demo Visbo Center';
+// var VPName='';
+var VCName='VC_Name_to_Export';
+var VPName='^VP_Name_to_Export';
+var VCID='';
 
 function annonymise(value) {
-  strAnonymise = /[a-zA-Z]/g
+  var strAnonymise = '/[a-zA-Z]/g';
   var result;
   if (!value || value == '') {
-    result = value
+    result = value;
   } else if (value) {
     result = value.replace(strAnonymise, 'x');
   }
   return result;
 }
 
-exportList = [];
+var exportList = [];
 var vc = db.visbocenters.findOne({name: VCName, deletedAt: {$exists: false}});
 if (vc) {
-  print("STDERR: VC found ", vc.name, vc._id);
+  print('STDERR: VC found ', vc.name, vc._id);
   VCID = vc._id;
   var item = {};
   item.exportType = 'VC';
@@ -50,7 +53,7 @@ vcSettingList.forEach(setting => {
     exportList.push(item);
   }
 })
-print("STDERR: VCSettings found ", vcSettingList.length, 'exported', exportList.length - len);
+print('STDERR: VCSettings found ', vcSettingList.length, 'exported', exportList.length - len);
 
 len = exportList.length;
 vpIDList = [];
@@ -69,7 +72,7 @@ vpList.forEach(vp => {
   item.detail = JSON.stringify(variant);
   exportList.push(item);
 })
-print("STDERR: VPs found ", vpList.length, 'exported', exportList.length - len);
+print('STDERR: VPs found ', vpList.length, 'exported', exportList.length - len);
 
 len = exportList.length;
 var vpvList = db.visboprojectversions.find({vpid: {$in: vpIDList}, deletedAt: {$exists: false}}).sort({timestamp:1}).toArray();
@@ -112,7 +115,7 @@ vpvList.forEach(vpv => {
   });
   vpv.AllPhases.forEach(phase => {
       delete phase._id;
-      if (phase.deliverables && typeof phase.deliverables == "object") {
+      if (phase.deliverables && typeof phase.deliverables == 'object') {
         phase.deliverables.forEach((delivery, index) => {
           if (delivery) phase.deliverables[index] = annonymise(delivery) || 'UNKNOWN'; // not allowed to be empty
         });
@@ -171,6 +174,6 @@ vpvList.forEach(vpv => {
   item.detail = JSON.stringify(vpv);
   exportList.push(item);
 })
-print("STDERR: VPVs found ", vpvList.length, 'exported', exportList.length - len);
+print('STDERR: VPVs found ', vpvList.length, 'exported', exportList.length - len);
 
 print(JSON.stringify(exportList));

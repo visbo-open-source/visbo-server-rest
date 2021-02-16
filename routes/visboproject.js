@@ -634,14 +634,14 @@ router.route('/')
 							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
 							var costSum = 0;
 							if (costDetails && costDetails.length > 0) {
-								costDetails.forEach(item => {costSum += item.currentCost});
+								costDetails.forEach(item => { costSum += item.currentCost; });
 							}
 							if (costSum) {
 								scaleFactor = costSum / bac;
 							}
 						}
 						var newVPV = helperVpv.initVPV(templateVPV);
-						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor)
+						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({

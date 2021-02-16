@@ -1095,8 +1095,8 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 	// calc the capacity for every project/vpv individual
 	var capaVPV = [];
 	vpvs.forEach(vpv => {
-		capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
-		for (index in capaTempVPV) {
+		var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+		for (var index in capaTempVPV) {
 			var element = capaTempVPV[index];
 			var id = element.currentDate + vpv.vpid.toString();
 			element.vpid = vpv.vpid;
@@ -1106,7 +1106,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 			element.baselineCost_PT = 0;
 			capaVPV[id] = element;
 		}
-	})
+	});
 
 	var capaPFV = [];
 	var item;
@@ -1114,8 +1114,8 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 	if (pfvs) {
 		// calc the capacity of the pfvs
 		pfvs.forEach(vpv => {
-			capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
-			for (index in capaTempVPV) {
+			var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+			for (var index in capaTempVPV) {
 				var element = capaTempVPV[index];
 				var id = element.currentDate + vpv.vpid.toString();
 				element.vpid = vpv.vpid;
@@ -1123,7 +1123,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				element.variantName = '';
 				capaPFV[id] = element;
 			}
-		})
+		});
 
 		// combine vpv & pfv values, insert or update capa values
 		for (item in capaPFV) {
@@ -1217,7 +1217,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 			});
 		}
 	}
-	capa.sort(function(a, b) { return (new Date(a.month)).getTime() - (new Date(b.month)).getTime()});
+	capa.sort(function(a, b) { return (new Date(a.month)).getTime() - (new Date(b.month)).getTime(); });
 	return capa;
 }
 
