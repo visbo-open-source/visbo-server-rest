@@ -2101,40 +2101,58 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// the function scales the oldVPV that contains start&endDate and Bedarfe
 	// to a newVPV that contains the new start&endDate but the Phases & Costs and Result are all undefined, these have to be filled
-	// actualData of oldVPV will be considerd, i.e values of newVPV in actualData-Months will be identical to Values in oldVPV, independent of scaleFactor
+	// in this version actualData of oldVPV will not (!) be considerd
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
 
 	// copy the Attributes of oldVPV to newVPV
+	// let myVPV = new vboProjectVersion(newVPV.name, newVPV.variantName, newVPV.startDate, newVPV.endDate, newVPV.erloes, newVPV.businessUnit, newVPV.leadPerson);
 
-	// Hierarchy does not change, so point to the oldVPV hierarchy; still better /  to do : create a copy !?  
+	// Hierarchy does not change, so point to the oldVPV hierarchy; still to do : create a copy !?  
 	newVPV.hierarchy = oldVPV.hierarchy;
 
-	// if there already exists actualData then make sure 
-	//  * role- & cost-Values of actualData-Months remain unchanged 
-	//  * projectStart of newVPV and all start- and end-Dates of phases and milestones being in actualData-Months being the same as in oldVPV. 
 	
-	let actualDataExists = (oldVPV.actualDataUntil > oldVPV.startDate);
-	let absIndexKeepValuesUntil = -1;
-
-	if (actualDataExists) {
-		absIndexKeepValuesUntil = getColumnOfDate (oldVPV.actualDataUntil); 
-		
-		// exit, if not allowed 
-		if (diffDays(oldVPV.startDate, newVPV.startDate) !== 0 || newVPV.endDate < oldVPV.actualDataUntil) {
-			return undefined;
-		}		
+	function sumOF(accumulator, currentValue) {
+		return accumulator + currentValue;
 	}
+	
+	let timeScalingFactor = diffDays(newVPV.startDate, newVPV.endDate) / oldVPV.dauerInDays;
 
-	// now it is ensured that dates of newVPV do make sense
 
 	oldVPV.AllPhases.forEach(phase => {	
 
-		phase.AllResults.forEach(result => {
+		// phase.getStartDate(oldVPV.startDate) , phase.getEndDate(oldVPV.startDate) 
+		phase.startOffsetinDays = Math.round(timeScalingFactor * phase.startOffsetinDays);
+		phase.dauerInDays = Math.round(timeScalingFactor * phase.dauerInDays);
+
+		let newStartDate = newVPV.startdate.setDate(newVPV.startdate.getDate()+phase.startOffsetinDays);
+		let newEndDate = newVPV.startdate.setDate(newVPV.startdate.getDate()+phase.startOffsetinDays+phase.dauerInDays-1);
+		
+
+		phase.AllRoles.forEach(role => {			
 			
-			
+			if (!role.Bedarf && role.Bedarf !== null) {
+				let arSum = role.Bedarf.reduce(sumOF);
+				role.Bedarf = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+			}			
 			
 		});
+
+		phase.AllCosts.forEach(cost => {
+
+			if (!cost.Bedarf && cost.Bedarf !== null) {
+				let arSum = cost.Bedarf.reduce(sumOF);
+				cost.Bedarf = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);	
+			}		
+			
+		});
+		
+		phase.AllResults.forEach(result => {
+
+			result.offset = Math.round(result.offset*timeScalingFactor);
+			
+		});
+		
 
 	});
 	
