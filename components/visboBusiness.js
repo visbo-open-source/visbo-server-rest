@@ -1101,6 +1101,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 			var id = element.currentDate + vpv.vpid.toString();
 			element.vpid = vpv.vpid;
 			element.name = vpv.name;
+			element.variantName = vpv.variantName;
 			element.baselineCost = 0;
 			element.baselineCost_PT = 0;
 			capaVPV[id] = element;
@@ -1119,6 +1120,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				var id = element.currentDate + vpv.vpid.toString();
 				element.vpid = vpv.vpid;
 				element.name = vpv.name;
+				element.variantName = '';
 				capaPFV[id] = element;
 			}
 		})
@@ -1187,6 +1189,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
+				'variantName' : capaVPV[item].variantName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
@@ -1200,6 +1203,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
+				'variantName' : capaVPV[item].variantName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
