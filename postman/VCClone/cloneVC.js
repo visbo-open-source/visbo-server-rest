@@ -1,23 +1,20 @@
 /* eslint-disable */
-print('STDERR: Export Type ', exportType);
 
-// VCName='Test-MS-VC02'
+VCName='InstartGroup';
+// VCName='Test-MS-VC Small';
+VPName='^';
 
-// var VCName='Demo Visbo Center';
-// var VPName='';
-var VCName='VC_Name_to_Export';
-var VPName='^VP_Name_to_Export';
+print('STDERR: Export VC: ', VCName);
+
 var VCID='';
 
 function annonymise(value) {
-  var strAnonymise = '/[a-zA-Z]/g';
-  var result;
+  strAnonymise = /[a-zA-Z]/g;
   if (!value || value == '') {
-    result = value;
+    return value;
   } else if (value) {
-    result = value.replace(strAnonymise, 'x');
+    return value.replace(strAnonymise, 'x');
   }
-  return result;
 }
 
 var exportList = [];
@@ -45,7 +42,7 @@ vcSettingList.forEach(setting => {
   if (setting.type == 'organisation' && setting.value && setting.value.allRoles) {
     // annonymise the user names
     setting.value.allRoles.forEach(orgaUnit => {
-      orgaUnit.name = annonymise(orgaUnit.name);
+      orgaUnit.name = 'U'.concat(orgaUnit.uid, '-', annonymise(orgaUnit.name));
     })
   }
   item.value = JSON.stringify(setting.value);
@@ -57,13 +54,14 @@ print('STDERR: VCSettings found ', vcSettingList.length, 'exported', exportList.
 
 len = exportList.length;
 vpIDList = [];
-var vpList = db.visboprojects.find({vcid: VCID, name: {$regex : VPName}, deletedAt: {$exists: false}, vpType: 0 }).toArray();
+var vpList = db.visboprojects.find({vcid: VCID, name: {$regex : VPName}, deletedAt: {$exists: false} }).toArray();
 vpList.forEach(vp => {
   vpIDList.push(vp._id);
   var item = {};
   item.exportType = 'VP';
   item._id = '' + vp._id;
   item.name = '' + vp._id
+  item.vpType = '' + vp.vpType;
   item.description = annonymise(vp.description);
   if (vp.kundennummer) item.kundennummer = annonymise(vp.kundennummer);
 
@@ -175,5 +173,35 @@ vpvList.forEach(vpv => {
   exportList.push(item);
 })
 print('STDERR: VPVs found ', vpvList.length, 'exported', exportList.length - len);
+
+len = exportList.length;
+var vpfList = db.visboportfolios.find({vpid: {$in: vpIDList}, deletedAt: {$exists: false}}).sort({timestamp:1}).toArray();
+vpfList.forEach(vpf => {
+  var item = {};
+  item.exportType = 'VPF';
+  item._id = '' + vpf._id;
+  item.vpid = '' + vpf.vpid;
+  item.name = '' + vpf.vpid;
+  item.timestamp = vpf.timestamp;
+  // strAnonymise VPF
+  delete vpf.updatedAt;
+  delete vpf.updatedFrom;
+
+  vpf.allItems && vpf.allItems.forEach(item => {
+      delete item._id;
+      item.vpid = '' + item.vpid;
+      item.name = '' + item.vpid;
+      item.reasonToInclude = annonymise(item.reasonToInclude);
+      item.reasonToExclude = annonymise(item.reasonToExclude);
+  });
+  vpf.sortList = [];
+  delete vpf.name; delete vpf._id;
+
+  item.detail = JSON.stringify(vpf);
+  exportList.push(item);
+})
+print('STDERR: VPFs found ', vpfList.length, 'exported', exportList.length - len);
+
+print('STDERR: Exported Total ', exportList.length);
 
 print(JSON.stringify(exportList));
