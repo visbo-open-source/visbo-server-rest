@@ -634,14 +634,14 @@ router.route('/')
 							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
 							var costSum = 0;
 							if (costDetails && costDetails.length > 0) {
-								costDetails.forEach(item => {costSum += item.currentCost});
+								costDetails.forEach(item => { costSum += item.currentCost; });
 							}
 							if (costSum) {
 								scaleFactor = costSum / bac;
 							}
 						}
 						var newVPV = helperVpv.initVPV(templateVPV);
-						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor)
+						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({
@@ -2489,6 +2489,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (!req.body.allItems || req.body.allItems.length == 0) {
+			logger4js.warn('Portfolio List empty', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid Project Items in Portfolio',
@@ -2496,6 +2497,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (req.oneVP.vpType != constVPTypes.portfolio) {
+			logger4js.warn('Project is not a portfolio', req.oneVP._id);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project is not a Portfolio Project',
@@ -2941,6 +2943,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
+		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
 		*
 		* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
 		* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.

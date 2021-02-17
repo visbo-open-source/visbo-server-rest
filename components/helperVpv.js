@@ -151,7 +151,7 @@ function createInitialVersions(req, res, newVPV) {
 		updateVPVCount(req.visboPFV.vpid, req.visboPFV.variantName, 1);
 		// now create a copy of the pfv version as the first version of the project
 		var baseVPV = initVPV(oneVPV);
-		baseVPV.variantName = "";
+		baseVPV.variantName = '';
 		baseVPV.timestamp = new Date();
 		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, req.visboPFV, req.visboOrganisations);
 		baseVPV.save(function(err, oneVPV) {
