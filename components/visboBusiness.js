@@ -1542,7 +1542,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 				// calculate the needs of this Role with faktor always 1.0
 
-				logger4js.trace('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
+				logger4js.trace('Calculate Phases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
 				for (var j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
 					if (!phase) {
@@ -2017,15 +2017,6 @@ function buildOrgaList (orga){
           }
         }
        }
-    //   organisation.forEach(item => this.calcFullPath(item.calcid, organisation));
-    //   organisation.sort(function(a, b) {
-    //     if (a.type != b.type) {
-    //       return a.type - b.type;
-    //     } else {
-    //       return visboCmpString(a.path, b.path);
-    //     }
-	//  });
-	  
 	return organisation;
 }
 
@@ -2131,71 +2122,6 @@ function verifyOrganisation(newOrga, oldOrga) {
 	return result;
 }
 
-function findRoleIDsAtLevel( level, actOrga ){
-	// this function finds all roleIDs which are 'level' levels down (+level) 
-	// from the TopNode or 'level' levels up (-level) from the leaf-Nodes
-	// the result is an array of roleIDs, which will be the summaryRoles for the PFV to create
-	var resultRoleIDs = [];
-	var resultChildren = [];
-	
-	if (!actOrga ) return resultRoleIDs;
-
-	var allRoles = [];
-	var allRoleNames = [];
-	// prepare organisation for direct access to uid and name
-	for (var i = 0; actOrga && actOrga.value && actOrga.value.allRoles && i < actOrga.value.allRoles.length; i++) {
-		allRoles[actOrga.value.allRoles[i].uid] = actOrga.value.allRoles[i];
-		allRoleNames[actOrga.value.allRoles[i].name] = actOrga.value.allRoles[i];
-	}
-
-	var topLevelNodes = buildTopNodes( allRoles );
-	var roleIDsAtLevel = [];
-		
-	if ( level == 0 ) {
-		// toplevelNodes are the RoleIDs wanted
-		var oneSumRole = {};
-
-		function addRole(value) {			
-			const hroleID = value.key;
-			const hrole = allRoles[hroleID];			
-			// leaf.children = [];
-			// leaf.uid = hroleID;
-			// leaf.name = hroleName;
-			// leaf.parent = parent;
-			const children = hrole.subRoleIDs;
-			children.forEach(function(child) {
-			  resultChildren.push(addRole(child));
-			});
-			return hroleID;
-		  }
-	  
-
-		for ( i = 0; topLevelNodes && i < topLevelNodes.length; i++) {
-			
-			oneSumRole.parent = null;
-			oneSumRole.children = [];
-			oneSumRole.uid = topLevelNodes[i].uid;
-			oneSumRole.name = topLevelNodes[i].name;
-			
-			if (topLevelNodes && topLevelNodes[i].subRoleIDs && topLevelNodes[i].subRoleIDs.length > 0) {
-			  const sRoles = topLevelNodes[i].subRoleIDs;
-			  sRoles.forEach(function(sRole) {
-				resultChildren.push(addRole(sRole));
-			  });
-			  oneSumRole.children = resultChildren;
-			}	
-			roleIDsAtLevel[i] = oneSumRole;		
-		}
-
-	}
-	if ( level > 0 ) {
-
-	}
-	if ( level < 0 ) {
-
-	}
-}
-
 function convertVPV(oldVPV, oldPFV, orga) {
 
 	// this function converts an oldVPV to a newVPV and returns it to the caller
@@ -2227,7 +2153,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 				maxTimestamp = orga[i].timestamp;
 			}
 		}
-		const actOrga = convertOrganisation(orga[maxIndex]);
+		var actOrga = convertOrganisation(orga[maxIndex]);
 		const orgalist = buildOrgaList(actOrga);		
 		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
 
@@ -2357,8 +2283,19 @@ function convertVPV(oldVPV, oldPFV, orga) {
 
 		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
 	}	
-
+	// logger4js.debug('check the cost of VPV and newPFV - they have to be equal');	
+	// var allPersCostVPV = getAllPersonalKosten(oldVPV, actOrga);	
+	// var allPersCost = getAllPersonalKosten(newPFV, actOrga);
+	// var result = true;
+	// var sumVPV = 0.0;
+	// var sumPFV = 0.0;
+	// for (var c=0; allPersCost && c < allPersCost.length; c++){
+	// 	result = result && (allPersCost[c] == allPersCostVPV[c]);
+	// 	sumVPV = sumVPV + allPersCostVPV[c];
+	// 	sumPFV = sumPFV + allPersCost[c];
+	// }
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+
 	return newPFV;
 }
 
@@ -2583,7 +2520,7 @@ function moveTheNeeds (newPFV, phase, parent) {
 		// search the same role in parent
 		var found = false;
 		for (i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
-			if ( parent.AllRoles[i].RollenTyp != role.RollenTyp )  { continue;}
+			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue;}
 			logger4js.debug( "move needs of %s in his parent %s", role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
 			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
@@ -2665,14 +2602,9 @@ function aggregateRoles(phase, orgalist, anzLevel){
 				}
 			}
 		}
-		if (!lastNewRoles[actUID]) {			
+		if  ( !(lastNewRoles[actUID] && (lastNewRoles[actUID].teamID == actTeamID)) )  {			
 			lastNewRoles[actUID]=sumRole;
 			resultNewRoles.push(sumRole);
-		} else {
-			if (lastNewRoles[actUID].teamID !== actTeamID) {						
-			lastNewRoles[actUID]=sumRole;
-			resultNewRoles.push(sumRole);
-			}
 		}	
 	}
 	return resultNewRoles;
