@@ -2217,8 +2217,17 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
 		return undefined;	
 	} else {
-		// it exists the oldVPV and at least one organisation
-		const actOrga = convertOrganisation(orga[orga.length-1]);
+		// it exists the oldVPV and at least one organisation	
+		var maxTimestamp = new Date(0);	
+		var maxIndex = 0;
+		for ( var i = 0; orga && i < orga.length; i++) { 
+			var oTimestamp = new Date(orga[i].timestamp);
+			if ( oTimestamp > maxTimestamp) {
+				maxIndex = i;
+				maxTimestamp = orga[i].timestamp;
+			}
+		}
+		const actOrga = convertOrganisation(orga[maxIndex]);
 		const orgalist = buildOrgaList(actOrga);		
 		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
 
@@ -2433,8 +2442,10 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	}
 
 	logger4js.debug('delete the deadlines found out');
-	var remPhaseList=[];		
+	var remPhaseList={};	
+	// sort the list of Deadlines (first the milestones then the phases - alphabethically descending)	
 	DeadlineToDelete.sort(function(a, b){return b.nameID.localeCompare(a.nameID);});
+
 	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
 		actDeadline = DeadlineToDelete[dl];
 		if (actDeadline && actDeadline.type === 'Milestone') {
@@ -2447,7 +2458,6 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	}
 	logger4js.debug("remove the phases in remPhaseList AllPhases");
 	var newPhaseList = [];
-
 	for (var j=0; newPFV && newPFV.AllPhases && j < newPFV.AllPhases.length; j++) {
 		if (remPhaseList[newPFV.AllPhases[j].name]){
 			continue;			
@@ -2455,21 +2465,8 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 			newPhaseList.push(newPFV.AllPhases[j]);
 		}
 	}
-
-	// remPhaseList.forEach(item => { 
-	// 	if (item.nameID ==newPhaseList.push(item)} );
-	
-	// for (var i = 0; remPhaseList &&  i < remPhaseList.length; i++) {
-	// 	var elemID = remPhaseList[i];
-	// 	if ( actPhase.name === elemID ) { 
-	// 		newPhaseList.push(actPhase);
-	// 	} else {
-	// 		continue;
-	// 	};
-	
+	// now cleaned AllPhases
 	newPFV.AllPhases = newPhaseList;
-
-	// only take the newPhaseList as AllPhases
 	return newPFV;
 }
 
@@ -2614,32 +2611,37 @@ function aggregateRoles(phase, orgalist, anzLevel){
 		var roleSett = orgalist[role.RollenTyp];
 		if (roleSett && !roleSett.sumRole) {
 			oneRole.RollenTyp = roleSett.pid;
-			// oneRole.name = roleSett.name;
 			oneRole.teamID = role.teamID;
+			// oneRole.name = roleSett.name;
 			// oneRole.farbe = role.farbe;
 			// oneRole.startkapa = role.startkapa;
 			// oneRole.tagessatzIntern = role.tagessatzIntern;
 
-			// Badarf has to be adopted in € according to the defaultDayCost of the role
-			// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole 
-			// and the PT will be calculated in the same relation. 
-			oneRole.Bedarf = [];
-			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
+			if (( role.teamID === -1 ) || ( !role.teamID)) {				
+				// Badarf has to be adopted in € according to the defaultDayCost of the role
+				// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole 
+				// and the PT will be calculated in the same relation. 
+				oneRole.Bedarf = [];
 				var actTagessatz = roleSett.tagessatz;
 				var newTagessatz = orgalist[roleSett.pid].tagessatz;
 				var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
-				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
-			}			
-			// oneRole.isCalculated = role.isCalculated;
+				for (var ib = 0; role && ib < role.Bedarf.length; ib++) {			
+					oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
+				}
+			} else {
+				// the needs for teams are always calculated with the tagessatz of the team
+
+				oneRole.Bedarf = role.Bedarf;				
+			}	
+
 		} else {
 			oneRole.RollenTyp = role.RollenTyp;
-
-			// oneRole.name = role.name;
 			oneRole.teamID = role.teamID;
+			oneRole.Bedarf = role.Bedarf;
+			// oneRole.name = role.name;
 			// oneRole.farbe = role.farbe;
 			// oneRole.startkapa = role.startkapa;
 			// oneRole.tagessatzIntern = role.tagessatzIntern;
-			oneRole.Bedarf = role.Bedarf;
 			// oneRole.isCalculated = role.isCalculated;
 		}
 		newAllRoles.push(oneRole);	
@@ -2649,22 +2651,29 @@ function aggregateRoles(phase, orgalist, anzLevel){
 	var resultNewRoles = [];
 	for ( var ir = 0; newAllRoles && ir < newAllRoles.length; ir++){
 		var actUID = newAllRoles[ir].RollenTyp;
+		var actTeamID = newAllRoles[ir].teamID;
 		var sumRole = {};
 		sumRole.RollenTyp = actUID;
+		sumRole.teamID = actTeamID;
 		sumRole.Bedarf = newAllRoles[ir].Bedarf;
 		// check all others role, if they are existing once more. then the bedarf has to be added 
 		for (var newir = ir + 1; newAllRoles && newir < newAllRoles.length; newir++){
 			var newRole = newAllRoles[newir];
-			if (actUID == newRole.RollenTyp) {							
+			if ((actUID == newRole.RollenTyp) && (actTeamID == newRole.teamID)) {							
 				for (var m = 0; newRole && m < newRole.Bedarf.length; m++) {
 					sumRole.Bedarf[m] = sumRole.Bedarf[m] + newRole.Bedarf[m];
 				}
 			}
 		}
-		if (!lastNewRoles[actUID]) {
+		if (!lastNewRoles[actUID]) {			
 			lastNewRoles[actUID]=sumRole;
 			resultNewRoles.push(sumRole);
-		}		
+		} else {
+			if (lastNewRoles[actUID].teamID !== actTeamID) {						
+			lastNewRoles[actUID]=sumRole;
+			resultNewRoles.push(sumRole);
+			}
+		}	
 	}
 	return resultNewRoles;
 }
