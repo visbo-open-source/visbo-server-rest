@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 var mongoose = require('mongoose');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
-=======
->>>>>>> ms-development
 var logModule = 'VPV';
 var log4js = require('log4js');
 const { validateDate } = require('./validate');
@@ -1717,7 +1714,7 @@ function buildRClists(vpv, team) {
 				}
 				// teamlists.addRP
 				if (!teamlists[role.teamID]){
-					var phasesPerTeam = [];
+					phasesPerTeam = [];
 					var newTeam = {};
 					phasesPerTeam.push(phase.name);
 					newTeam[role.RollenTyp] = phasesPerTeam;
@@ -1726,7 +1723,7 @@ function buildRClists(vpv, team) {
 					newTeam = teamlists[role.teamID];
 					if (newTeam[role.RollenTyp]){
 						phasesPerTeam = newTeam[role.RollenTyp];
-						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						indexPhase= phasesPerTeam.indexOf(phase.name);
 						if (!(indexPhase >= 0)) {
 							phasesPerTeam.push(phase.name);
 							newTeam[role.RollenTyp] = phasesPerTeam;
@@ -1818,7 +1815,7 @@ function getSummaryRoles(allRoles, roleID) {
 	}
 
 	// all summary roles
-	if ((roleID === undefined || roleID === "") && allRoles) {
+	if ((roleID === undefined || roleID === '') && allRoles) {
 		var i = 0;
 		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
 			var hrole = allRoles[i];
@@ -1966,63 +1963,63 @@ function buildOrgaList (orga){
 	var organisation = [];
 	var organisationItem = {};
 	for (let i = 0; orga.value.allRoles && i < orga.value.allRoles.length; i++) {
-	  const role = orga.value.allRoles[i];
-	  const id = role.uid;
-	  if (!organisation[id]) {
-		organisationItem = {};
-		organisation[id] = organisationItem;
-		organisation[id].uid = id;
-		organisation[id].calcid = id;
-		organisation[id].pid = undefined;
-	  }
-	  organisation[id].name = role.name;
-	  organisation[id].isExternRole = role.isExternRole;
-	  organisation[id].defaultKapa = role.defaultKapa;
-	  organisation[id].tagessatz = role.tagessatzIntern;
-	  organisation[id].employeeNr = role.employeeNr;
-	  organisation[id].defaultDayCapa = role.defaultDayCapa;
-	  if (role.entryDate > "0001-01-01T00:00:00Z") {
-		organisation[id].entryDate = role.entryDate;
-	  }
-	  if (role.exitDate < "2200-11-30T23:00:00Z") {
-		organisation[id].exitDate = role.exitDate;
-	  }
-	  organisation[id].aliases = role.aliases;
-	
-	  // this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
-	  if (role.isTeam) {
-		logger4js.info("Skip Handling of Team Members");
-		organisation[id].type = 2;
-		organisation[id].isTeam = true;
-	  } else {
-		organisation[id].type = 1;
-	  }
-	  // role is a summary role
-	  if (role.subRoleIDs.length > 0) {
-		organisation[id].sumRole = true;
-	  } else {
-		organisation[id].sumRole = false;
-	  }
-	  for (let j = 0; j < role.subRoleIDs.length; j++) {		  
-		const index = Number(role.subRoleIDs[j].key);
-		if (index < 0) {
-			logger4js.error(`Inconsistent Org Structure Role ${id} SubRole ${role.subRoleIDs[j].key}`);
-		  // something wrong with the numbering
-		  break;
+		const role = orga.value.allRoles[i];
+		const id = role.uid;
+		if (!organisation[id]) {
+			organisationItem = {};
+			organisation[id] = organisationItem;
+			organisation[id].uid = id;
+			organisation[id].calcid = id;
+			organisation[id].pid = undefined;
 		}
-		if (!organisation[index]) {
-		  // added by subrole
-		  organisationItem = {};
-		  organisation[index] = organisationItem;
-		  organisation[index].uid = index;
-		  organisation[index].calcid = index;
+		organisation[id].name = role.name;
+		organisation[id].isExternRole = role.isExternRole;
+		organisation[id].defaultKapa = role.defaultKapa;
+		organisation[id].tagessatz = role.tagessatzIntern;
+		organisation[id].employeeNr = role.employeeNr;
+		organisation[id].defaultDayCapa = role.defaultDayCapa;
+		if (role.entryDate > '0001-01-01T00:00:00Z') {
+			organisation[id].entryDate = role.entryDate;
+		}
+		if (role.exitDate < '2200-11-30T23:00:00Z') {
+			organisation[id].exitDate = role.exitDate;
+		}
+		organisation[id].aliases = role.aliases;
+		
+		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
+		if (role.isTeam) {
+			logger4js.info('Skip Handling of Team Members');
+			organisation[id].type = 2;
+			organisation[id].isTeam = true;
 		} else {
-			logger4js.debug(`SubRole already exists ${id} SubRole ${index}`);
+			organisation[id].type = 1;
 		}
-		if (!organisation[index].pid) {
-		  organisation[index].pid = id;
+		// role is a summary role
+		if (role.subRoleIDs.length > 0) {
+			organisation[id].sumRole = true;
+		} else {
+			organisation[id].sumRole = false;
 		}
-	  }
+		for (let j = 0; j < role.subRoleIDs.length; j++) {		  
+			const index = Number(role.subRoleIDs[j].key);
+			if (index < 0) {
+				logger4js.error(`Inconsistent Org Structure Role ${id} SubRole ${role.subRoleIDs[j].key}`);
+				// something wrong with the numbering
+				break;
+			}
+			if (!organisation[index]) {
+				// added by subrole
+				organisationItem = {};
+				organisation[index] = organisationItem;
+				organisation[index].uid = index;
+				organisation[index].calcid = index;
+			} else {
+				logger4js.debug(`SubRole already exists ${id} SubRole ${index}`);
+			}
+			if (!organisation[index].pid) {
+				organisation[index].pid = id;
+			}
+		}
 	}
 	
 
@@ -2243,12 +2240,12 @@ function convertVPV(oldVPV, oldPFV, orga) {
 
 		// newPFV.AllPhases have to be created new ones	and the ressources will be aggregated to sumRoles	
 		var newpfvAllPhases = [];
-		for (var i = 0; oldVPV && oldVPV.AllPhases && i < oldVPV.AllPhases.length ; i++){
+		for ( i = 0; oldVPV && oldVPV.AllPhases && i < oldVPV.AllPhases.length ; i++){
 			var onePhase = {};
 			var phase = oldVPV.AllPhases[i];			
 			
 			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
-			onePhase.AllRoles  = aggregateRoles(phase, orgalist, 1);			
+			onePhase.AllRoles  = aggregateRoles(phase, orgalist);			
 			
 			var newAllCosts = [];
 			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
@@ -2289,7 +2286,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			onePhase.AllBewertungen = phase.AllBewertungen;					
 		
 			var newdeliverables = [];
-			for (var id = 0;  phase && phase.deliverables && id < phase.deliverables.length; id++){				
+			for ( id = 0;  phase && phase.deliverables && id < phase.deliverables.length; id++){				
 				newdeliverables.push(phase.deliverables[id]);
 			}
 			onePhase.deliverables = newdeliverables;
@@ -2318,7 +2315,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV.AllPhases = newpfvAllPhases;	
 	}
 
-	logger4js.debug('newPFV now with aggregated resources')
+	logger4js.debug('newPFV now with aggregated resources');
 		
 	if ( oldVPV && oldPFV  ) {
 		// oldVPV is to be squeezed to the deadlines and deliveries of the oldPFV
@@ -2361,7 +2358,7 @@ function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 		var DelivToDelete = [];
 		var fittingDeliv = [];
 		logger4js.debug('find the deliverables, which are only in the vpv and should be deleted for a new PFV');
-		for (element = 0; element < listDeliveries.length; element++) {
+		for (var element = 0; element < listDeliveries.length; element++) {
 			var actDeliv = listDeliveries[element];	
 			if ( allPFVDeliverables && allPFVDeliverables.allDeliverables && !allPFVDeliverables.allDeliverables[actDeliv.description] ) {
 				DelivToDelete.push(actDeliv);
@@ -2410,7 +2407,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	var DeadlineToDelete = [];
 	var fittingDeadline = [];
 	logger4js.debug('find the deadlines, which are only in the vpv and should be deleted for a new PFV');
-	for (element = 0; element < listDeadlines.length; element++) {
+	for (var element = 0; element < listDeadlines.length; element++) {
 		var actDeadline = listDeadlines[element];	
 		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {
 			// // change nameID "0" to nameID "0§.§"
@@ -2438,7 +2435,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 			remPhaseList[actDeadline.nameID]= remPhase;						
 		}
 	}
-	logger4js.debug("remove the phases in remPhaseList AllPhases");
+	logger4js.debug('remove the phases in remPhaseList AllPhases');
 	var newPhaseList = [];
 	for (var j=0; newPFV && newPFV.AllPhases && j < newPFV.AllPhases.length; j++) {
 		if (remPhaseList[newPFV.AllPhases[j].name]){
@@ -2461,8 +2458,8 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 	
 	// if there is no parent, keep the newPFV as it is
 	if ( !parentElem ) { 
-		return newPFV 
-	};
+		return newPFV;
+	}
 
 	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
 	var newResults = [];
@@ -2485,7 +2482,7 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 	logger4js.debug('Delete the phase %s from VPV and if there are milestones in the phase, put them in the phase´s parent', elem.nameID);
 	var elemID = elem.nameID;	
 	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
-	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined
+	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined;
 	var parent = getPhaseByID(hrchy_vpv, newPFV, parentID);
 	if (!parent) {
 		// there is nothing to do, because elem is the rootphase. this will not be removed ever.
@@ -2508,12 +2505,12 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 		phase.AllResults = [];
 	}
 
-	logger4js.debug("take the needs of the phase an add them into the parentPhase");
+	logger4js.debug('take the needs of the phase an add them into the parentPhase');
 
 	newPFV = moveTheNeeds(newPFV, phase, parent);	
 
-	logger4js.debug("remove the phase %s from hierarchy", elemID);
-	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+	logger4js.debug('remove the phase %s from hierarchy', elemID);
+	vpvHrchyNodes = newPFV.hierarchy.allNodes;
 	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);
 
 	
@@ -2539,7 +2536,7 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 
 			for ( var ch = 0; relevantPhaseChildren && ch < relevantPhaseChildren.length; ch++){
 				if (relevantPhaseChildren[ch] != elemID) {
-					newChildNodeKeys.push(relevantPhaseChildren[ch])
+					newChildNodeKeys.push(relevantPhaseChildren[ch]);
 				}
 			}
 			origHrchyNodes[an].hryNode.childNodeKeys = newChildNodeKeys;
@@ -2553,20 +2550,20 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 
 function moveTheNeeds (newPFV, phase, parent) {
 
-	logger4js.debug("Move the needs from phase to its parent");
+	logger4js.debug('Move the needs from phase to its parent');
 
-	logger4js.debug("Check startdates and enddates of the phase and the parent phase")
+	logger4js.debug('Check startdates and enddates of the phase and the parent phase');
 	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
-		logger4js.error("parent %s isn't the parent of phase %s", parent.name, phase.name)
+		logger4js.error('parent %s isn not the parent of phase %s', parent.name, phase.name);
 		return newPFV;
 	}
 	for (var ar = 0; phase && phase.AllRoles && ar < phase.AllRoles.length; ar++) {
 		var role = phase.AllRoles[ar];
 		// search the same role in parent
 		var found = false;
-		for (i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
+		for (var i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
 			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue;}
-			logger4js.debug( "move needs of %s in his parent %s", role.RollenTyp, parent.name);
+			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
 			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
 				parentNeeds[n]=parentNeeds[n]+role.Bedarf[n];
@@ -2583,7 +2580,7 @@ function moveTheNeeds (newPFV, phase, parent) {
 
 
 
-function aggregateRoles(phase, orgalist, anzLevel){
+function aggregateRoles(phase, orgalist){
 	
 	var newAllRoles = [];
 	for ( var ir = 0; phase && phase.AllRoles && ir < phase.AllRoles.length; ir++){
@@ -2631,7 +2628,7 @@ function aggregateRoles(phase, orgalist, anzLevel){
 
 	var lastNewRoles = [];	
 	var resultNewRoles = [];
-	for ( var ir = 0; newAllRoles && ir < newAllRoles.length; ir++){
+	for ( ir = 0; newAllRoles && ir < newAllRoles.length; ir++){
 		var actUID = newAllRoles[ir].RollenTyp;
 		var actTeamID = newAllRoles[ir].teamID;
 		var sumRole = {};
