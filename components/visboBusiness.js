@@ -2067,7 +2067,6 @@ function cleanupRestrictedVersion(vpv) {
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
-	vpv.customBoolFields = undefined;
 	vpv.Risiko = undefined;
 	vpv.StrategicFit = undefined;
 	vpv.actualDataUntil = undefined;
