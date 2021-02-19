@@ -519,6 +519,14 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
+				if (req.visboPFV) {
+					newVPV.status = req.visboPFV.status;
+					newVPV.businessUnit = req.visboPFV.businessUnit;
+					newVPV.Erloes = req.visboPFV.Erloes;
+					newVPV.Risiko = req.visboPFV.Risiko;
+					newVPV.StrategicFit = req.visboPFV.StrategicFit;
+					newVPV.businessUnit = req.visboPFV.businessUnit;
+				}
 
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
 				if (!obj || Object.keys(obj).length < 1) {
@@ -928,6 +936,10 @@ router.route('/:vpvid/copy')
 		if (req.body.variantName || req.body.variantName == '') {
 			variantName = req.body.variantName;
 		}
+		var timestamp;
+		if (req.body.timestamp) {
+			timestamp = validate.validateDate(req.body.timestamp, true, true);
+		}
 		if (variantName != '') {
 			// check that the Variant exists
 			if (req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
@@ -959,6 +971,14 @@ router.route('/:vpvid/copy')
 		}
 		// change variantName if defined in body
 		newVPV.variantName = variantName;
+		newVPV.timestamp = timestamp;
+		if (req.visboPFV) {
+			newVPV.status = req.visboPFV.status;
+			newVPV.businessUnit = req.visboPFV.businessUnit;
+			newVPV.Erloes = req.visboPFV.Erloes;
+			newVPV.Risiko = req.visboPFV.Risiko;
+			newVPV.StrategicFit = req.visboPFV.StrategicFit;
+		}
 
 		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
 		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
@@ -969,9 +989,8 @@ router.route('/:vpvid/copy')
 
 		if (newVPV.variantName != 'pfv') {
 			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
-		}
-		if (!newVPV.keyMetrics && req.body.keyMetrics) {
-			newVPV.keyMetrics = req.body.keyMetrics;
+		} else {
+			delete newVPV.keyMetrics;
 		}
 		helperVpv.setKeyAttributes(newVPV, keyVPV);
 

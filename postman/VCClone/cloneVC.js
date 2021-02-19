@@ -107,10 +107,6 @@ vpvList.forEach(vpv => {
     customfield.strkey = annonymise(customfield.strkey);
     customfield.strvalue = annonymise(customfield.strvalue);
   });
-  vpv.customBoolFields.forEach(customfield => {
-    delete customfield._id;
-    customfield.strkey = annonymise(customfield.strkey);
-  });
   vpv.AllPhases.forEach(phase => {
       delete phase._id;
       if (phase.deliverables && typeof phase.deliverables == 'object') {
