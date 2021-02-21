@@ -34,6 +34,16 @@ function getDateEndOfPreviousMonth(dd) {
     return inputDate;
   }
 
+// returns the end of the current month
+function getDateEndOfCurrentMonth(dd) {
+	let inputDate = new Date(dd);
+	// set to first day in month  
+	inputDate.setDate(1); // adding 31 days makes sure to definitely land in next month  
+	let myDate = getDateEndOfPreviousMonth(addDays(inputDate, 31));
+    return myDate;
+  }
+
+
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
 	var costValues = [];
@@ -2046,131 +2056,325 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	let arIxA = getColumnOfDate(arStartDate);
 	let arIxE = getColumnOfDate(arEndDate);
 
+	let totalNrOfDays = diffDays(arEndDate, arStartDate) + 1; 
+
 	let arLength = arIxE - arIxA + 1;
 	
 	let anzDays1 = 0;
 	let anzDaysN = 0;
+	
 	let fraction1 = 0;
 	let fractionX = 0;
 	let fractionN = 0;
-	let sumOfFractions = 1;
-
-	anzDays1 = anzDaysPMonth[arStartDate.getMonth()] - arStartDate.getDate();
-	anzDaysN = arEndDate.getDate;
-	fraction1 = anzDays1 / anzDaysPMonth[arStartDate.getMonth()];
-	fractionN = anzDaysN / anzDaysPMonth[arEndDate.getMonth()];
+	
+	anzDays1 = anzDaysPMonth[arStartDate.getMonth()] - arStartDate.getDate() + 1;
+	anzDaysN = arEndDate.getDate();
+	
+	fraction1 = anzDays1 / totalNrOfDays;
+	if (arLength > 2) {
+		fractionX = ((1/(arLength-2)) * (totalNrOfDays-(anzDays1 + anzDaysN)))/totalNrOfDays;
+	}
+	fractionN = anzDaysN / totalNrOfDays;
 
 	switch(arLength) {
 		
-		case arLength==1:
+		case 1:
 			arResult.push(arSum);
 			break;
 		
-		case arLength==2 :			
+		case 2:			
 
-			arResult.push(arSum * fraction1 / (fraction1 + fractionN));
-			arResult.push(arSum * fractionN / (fraction1 + fractionN));
+			arResult.push(arSum * fraction1);
+			arResult.push(arSum * fractionN);
 
 			break;
 
-		case arLength > 2 :
+		default:	
 
-			sumOfFractions = arLength - 2 + fraction1 + fractionN;
-			fractionX = 1 / sumOfFractions; 
-
-			arResult.push(arSum * fraction1 / sumOfFractions);
+			arResult.push(arSum * fraction1);
 
 			var i;
 			for (i = 1; i < arLength - 1; i++) {
-				arResult.push(arSum * fractionX / sumOfFractions);
+				arResult.push(arSum * fractionX);
 			}
 
-			arResult.push(arSum * fractionN / sumOfFractions);
-
-			break;
-
-		default:
-			// should never come into default ...
-
+			arResult.push(arSum * fractionN);			
 	}
+
+	// let chckSum = arResult.reduce(sumOF);
 
 	return arResult;
 }
 
+function calcNewBedarfe(newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
+	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
+	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged 
+	// only values starting with separatorIndex are changed according scaleFactor
+	
+
+	let ar1 = undefined; 
+	let ar2 = oldArray;
+	let resultArray = [];
+
+	if (separatorIndex && separatorIndex > 0) {
+
+		// ar1 now holds the actualData, which should not be changed 
+		ar1 = oldArray.slice(1,separatorIndex + 1);
+
+		// ar2 holds the part of the array which is in the future, starting with separatorIndex 
+		ar2 = oldArray.slice(separatorIndex + 1);
+	} 
+
+	let arSum = ar2.reduce(sumOF);
+
+	// calculate the new future-value array ...
+	ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+				
+	// if necessary, combine actual data and new future values 
+	if (separatorIndex && separatorIndex > 0) {
+		resultArray = ar1.concat(ar2);
+	} else {
+		resultArray = ar2;
+	}
+
+	return resultArray;
+}
+
+function isValidVPV(myVPV) {
+	// function checks whether consistency criterias of a vpv are fulfilled 
+
+	let isOK = true;
+	let criterias = [];
+
+	// validity Criterias
+	// C0: is Dauer eq. Number of covered months of the project ?  
+	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ? 
+	// C2: does no Phase is having a start-Date earlier than project startdate? 
+	// C3: does no Phase is having a end-Date later than project endDate ?
+	// C4: is no Milestone-Date earlier than phase start and later than phase endDate? 
+	// C5: are array lengths of each role identical to relEnde-relStart + 1 of the phase ? 
+	// C6: is each value in a role array >= 0 ? 
+	// C7: are array lengths of each cost identical to relEnde-relstart + 1 of the phase ?
+	// C8: is each value in a cost array >= 0 ?
+	// C9: is strategic Fit either undefined or having a numeric value >= 0 and <= 10 
+	// C10: is Risiko either undefined or having a numeric value >= 0 and <= 10
+	// C11: is number of milestones / phases in hierarchy eq. to number of phases/milestones when traversed in the list?
+	// C12: is each name of a phase / milestone listed in the hierarchy?
+
+	if (!myVPV) {
+		return false;
+	}
+
+	// C0: is Dauer eq. Number of covered months of the project ?
+	let criteria = (myVPV.Dauer = getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1);
+	criterias.push(criteria);
+
+
+
+	return isOK;
+}
+
+function sumOF(accumulator, currentValue) {
+	return accumulator + currentValue;
+}
+
 function scaleVPV(oldVPV, newVPV, scaleFactor) {
-	// this function converts an oldVPV to a newVPV and returns it to the caller
-	// the function scales the oldVPV that contains start&endDate and Bedarfe
-	// to a newVPV that contains the new start&endDate but the Phases & Costs and Result are all undefined, these have to be filled
-	// in this version actualData of oldVPV will not (!) be considerd
+	// this function converts an oldVPV to a modified oldVPV and returns it to the caller
+	// the function scales the oldVPV (valid vpv) that contains old start & endDate and Bedarfe
+	// the newVPV contains nothing but the new start & endDate (not necessarily a valid vpv) 
+	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor 
+	// 
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
-
-	// copy the Attributes of oldVPV to newVPV
-	// let myVPV = new vboProjectVersion(newVPV.name, newVPV.variantName, newVPV.startDate, newVPV.endDate, newVPV.erloes, newVPV.businessUnit, newVPV.leadPerson);
-
-	// Hierarchy does not change, so point to the oldVPV hierarchy; still to do : create a copy !?  
-	newVPV.hierarchy = oldVPV.hierarchy;
-
 	
-	function sumOF(accumulator, currentValue) {
-		return accumulator + currentValue;
+	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
+	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed 
+	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged  
+	let scaleFromDate = undefined; 
+	let scaleFromDateColumn = -1;	
+	
+	if (scaleFromDate) {
+		scaleFromDateColumn = getColumnOfDate(scaleFromDate);
+
+		// in this case this must be true: oldVPV.StartDate = newVPV.StartDate .. otherwise Exit
+		if (oldVPV.startDate !== newVPV.startDate) {
+			return undefined;
+		}
 	}
+
+	let oldDauerInDays = diffDays(oldVPV.endDate, oldVPV.startDate) + 1;
+	let newDauerInDays = diffDays(newVPV.endDate, newVPV.startDate) + 1;
+
 	
-	let timeScalingFactor = diffDays(newVPV.startDate, newVPV.endDate) / oldVPV.dauerInDays;
+
+	// a phase starting and ending on the same day has duration 1, a phase ending one day after the start has duration 2, and so on
+	if (oldDauerInDays == 0 || newDauerInDays <= 0 ) {
+		return undefined;
+	}
+
+	// oldVPV is being changed and returned ...
+	// Hierarchy does not change, so just reference the oldVPV hierarchy  
+	// newVPV.hierarchy = oldVPV.hierarchy;
+	
+	// copy attributes of oldVPV to newVPV
+	// still to do
+	// newVPV.name = oldVPV.name;
+	// newVPV.variantName = oldVPV.variantName;
+	
+
+	let timeScalingFactor = newDauerInDays / oldDauerInDays;
 
 
 	oldVPV.AllPhases.forEach(phase => {	
 
-		// phase.getStartDate(oldVPV.startDate) , phase.getEndDate(oldVPV.startDate) 
-		phase.startOffsetinDays = Math.round(timeScalingFactor * phase.startOffsetinDays);
-		phase.dauerInDays = Math.round(timeScalingFactor * phase.dauerInDays);
+		// if not scaleFromDate, no special handling necessary
+	
+		// if scaleFromDate , then 
+		// check: dont do anything if phase is completely in Past , i.e timeFrame before scaleFromDate 
+		// check: if oldPhase and newPhase are both completely in future and
+		// check: if oldPhase is in future 
 
-		let newStartDate = newVPV.startdate.setDate(newVPV.startdate.getDate()+phase.startOffsetinDays);
-		let newEndDate = newVPV.startdate.setDate(newVPV.startdate.getDate()+phase.startOffsetinDays+phase.dauerInDays-1);
 		
+		let oldPhStartDate =  getPhStartDate(oldVPV, phase);	
+		let oldPhEndDate = getPhEndDate(oldVPV, phase);
+		
+		let separatorIndex = -1;
+		let oldPhaseStartColumn = getColumnOfDate(oldPhStartDate);
+		let oldPhaseEndColumn = getColumnOfDate(oldPhEndDate);
+				
+		if (oldPhaseStartColumn < scaleFromDateColumn && scaleFromDateColumn <= oldPhaseEndColumn ) {				
+			// separatorIndex is needed when calling calcNewBedarfe to ensure that actualData remains unchanged 
+			separatorIndex = scaleFromDateColumn - oldPhaseStartColumn;
+		}
 
+		
+		let newOffsetInDays = Math.round(timeScalingFactor * phase.startOffsetinDays);
+		let newDauerInDays = Math.round(timeScalingFactor * phase.dauerInDays);
+
+		// 
+		let newPhStartDate =  addDays(newVPV.startDate, newOffsetInDays);
+		let newPhEndDate = addDays(newPhStartDate, newDauerInDays - 1);
+		
+			
+		// find out whether newOffsetInDays and newDauerInDays are valid or need to be changed ..
+		// this check is only necessary in case there was provided a scaleFromDate
+		if (scaleFromDate) {
+
+			// save the dates - because oldVPVP.Phase is changed over the courese 
+			let oldOffsetInDays = phase.startOffsetinDays;
+			let oldDauerInDays = phase.dauerInDays;
+
+			// do the checkings and necessary adjustments for newOffsetInDays with regard to scaleFromDate
+			if (oldPhaseStartColumn < scaleFromDateColumn) {
+				
+				// not allowed to change a start in the Past resp. before scaleFromDate
+				newOffsetInDays = oldOffsetInDays;				
+				
+				// if oldEndDate is before then leave old phase completely unchanged ..
+				if (oldPhEndDate < scaleFromDate) {
+					newDauerInDays = oldDauerInDays;
+				} else {
+					newPhStartDate = addDays(newVPV.startDate, newOffsetInDays);
+					newPhEndDate = addDays(newPhStartDate, newDauerInDays);
+					// will the ne phaseEnd land before scaleFromDate? 
+					if (newPhEndDate < scaleFromDate) {
+						// adjust dauerInDays so that newPhEndDate is the last Day of the month of scaleFromDate
+						// here 
+						// this is very important : otherwise there would be no array Element left to hold the new values 
+						let betterPhEndDate = getDateEndOfCurrentMonth(scaleFromDate);
+						let difference = diffDays(betterPhEndDate, newPhEndDate);
+						newDauerInDays = newDauerInDays + difference;
+					}
+				}
+			} else {
+				// old Phase Start is after scaleFromDate , where is the new phase Start? 
+				if (newPhStartDate < scaleFromDate) {
+					// adjust offsetinDays so that newPhStartDate = scaleFromDate
+					let betterPhStartDate = scaleFromDate;
+					let difference = diffDays(betterPhStartDate, newPhStartDate);
+					newOffsetInDays = newOffsetInDays + difference;
+				}
+			}
+			
+		}
+		
+		// now it has been checked that values are valid 
+		phase.startOffsetinDays = newOffsetInDays;
+		phase.dauerInDays = newDauerInDays;
+
+		// calculate, because in case when scaleFromDate has been provided, values may have changed 
+		newPhStartDate = getPhStartDate(newVPV, phase);
+		newPhEndDate = getPhEndDate(newVPV, phase); 
+
+		// for sake of consistency
+		phase.relStart = getColumnOfDate(newPhStartDate) - getColumnOfDate(newVPV.startDate) + 1;
+		phase.relEnde = getColumnOfDate(newPhEndDate) - getColumnOfDate(newVPV.startDate) + 1;
+
+		
+		// now - do calculate the new values ..
+		// each role, each cost will have the same length for the 'Bedarf" array 
+		//
 		phase.AllRoles.forEach(role => {			
 			
-			if (!role.Bedarf && role.Bedarf !== null) {
-				let arSum = role.Bedarf.reduce(sumOF);
-				role.Bedarf = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
-			}			
-			
+			if (role.Bedarf && role.Bedarf !== null) {
+				role.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
+			}
+
 		});
+
 
 		phase.AllCosts.forEach(cost => {
 
-			if (!cost.Bedarf && cost.Bedarf !== null) {
-				let arSum = cost.Bedarf.reduce(sumOF);
-				cost.Bedarf = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);	
-			}		
+			if (cost.Bedarf && cost.Bedarf !== null) {
+				cost.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 
+			}
 			
 		});
 		
 		phase.AllResults.forEach(result => {
 
-			result.offset = Math.round(result.offset*timeScalingFactor);
+			let newMsOffset = Math.round(result.offset*timeScalingFactor);
+
+			if (scaleFromDate) {
+				
+				let newMsDate = addDays(newPhStartDate, newMsOffset);
+				if (newMsDate < scaleFromDate) {
+					let betterMsDate = scaleFromDate;
+					let difference = diffDays(betterMsDate, newMsDate);
+					newMsOffset = newMsOffset + difference;
+				}
+			}			
+
+			result.offset = newMsOffset;
 			
 		});
 		
 
 	});
 	
-	newVPV.AllPhases = oldVPV.AllPhases;
+	oldVPV.startDate = newVPV.startDate;
+	oldVPV.endDate = newVPV.endDate;
 	
-	return newVPV;
+	return oldVPV;
 
 }
 
 function resetStatusVPV(oldVPV) {
 	// this function resets all status information inside the VPV.
 	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
-	
+	// Use-Case 1 : aus template projekt-vpv machen 
+	// Use-Case 2: aus projekt-vpv eine pfv machen
 	// suggestions is to provide this variable as parameter
 	// it can make a lot of sense to have the same deliverables defined as in the oldVPV
 	// that is the case when a project environment is based on standardized processes where it is agreed that at certain points in time 
 	// certain deliverables are expected.
-	let keepDeliverables = false;
+	
+	// may be provided as parameter later on, for now Deliverables are kept unchanged
+	let keepDeliverables = true;
+
+	// maybe provided as parameter later on, 
+	// for now it is assumed that a pfv is created from a vpv  
+	let useCase = 2; 
 
 	if (!oldVPV) {
 		return undefined;
@@ -2178,58 +2382,34 @@ function resetStatusVPV(oldVPV) {
 
 	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
 
-	oldVPV.variantName = '';
-	oldVPV.variantDescription = '';
-
-	oldVPV.Risiko = null;
-	oldVPV.StrategicFit = null;
 
 	// customFields - keep all defined keys, but reset value of string and double Fields 
 	// keep the same value in all boolean field , because either value is as good as the other one
 	// so just make sure vpv contains same number and type of customFields 
 
-	oldVPV.customDblFields.forEach(customfield => {			
-			customfield.dbl = null;
-	});
 
-	oldVPV.customStringFields.forEach(customfield => {
+	if (useCase == 1) {
+
+		oldVPV.customDblFields.forEach(customfield => {			
+			customfield.dbl = undefined;
+		});
+
+		oldVPV.customStringFields.forEach(customfield => {
 			customfield.strvalue = '';
-	});	
+		});	
 
-	oldVPV.customBoolFields.forEach(customfield => {
-		customfield.bool = null;
-	});		  
-
-	oldVPV.erloes = 0;	
+	}	
 	
-	// no actualData exists: MinDate
-	oldVPV.actualDataUntil = new Date(0);
-	
-	oldVPV.leadPerson = '';	
-
-	// earliestStart and latestStart are for providing min/max boundaries in automatic solution findings 	
-	oldVPV.earliestStartDate = oldVPV.startDate;
-	oldVPV.earliestStart = null;
-	
-	oldVPV.latestStartDate = oldVPV.startDate;
-	oldVPV.latestStart = null;
-
-	oldVPV.status = 'geplant';
-
 	// 0 = without ampelstatus
 	oldVPV.ampelStatus = 0; 
-	oldVPV.ampelErlaeuterung = '';
-
-	oldVPV.description = '';
-	oldVPV.businessUnit = ''; 	
+	oldVPV.ampelErlaeuterung = '';	
 
 	// 
 
 	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':'' };	
 	let bKey = '#' + new Date().toLocaleString('de-DE');
 	let bItem = {key: bKey, bewertung: emptyBewertung};
-	
-	
+		
 	oldVPV.AllPhases.forEach(phase => {		
 
 		// adress all the contained milestones 
@@ -2239,15 +2419,19 @@ function resetStatusVPV(oldVPV) {
 			result.bewertungen.push(bItem);
 
 			result.verantwortlich='';			
-			result.originalName='';
-
+			
 			if (!keepDeliverables) {
 				result.deliverables = [];
 			}
+
+			if (useCase == 1) {
+				result.invoice = undefined;
+				result.penalty = undefined;
+
+				result.originalName = '';
+			} 
 			
-			result.percentDone = 0;
-			result.invoice = null;
-			result.penalty = null;
+			result.percentDone = 0;			
 			
 		});
 		
@@ -2258,9 +2442,14 @@ function resetStatusVPV(oldVPV) {
 		
 		phase.percentDone = 0;
 
-		phase.invoice = null; 
-		phase.penalty = null; 
-		
+		// if a pfv is created from a vpv , the invoices and penalties need to be unchanged
+		if (useCase == 1 ) {
+			phase.invoice = undefined; 
+			phase.penalty = undefined; 
+
+			phase.originalName = '';
+		} 
+				
 		phase.responsible = '';
 
 		if (!keepDeliverables) {
@@ -2269,14 +2458,6 @@ function resetStatusVPV(oldVPV) {
 
 		phase.ampelStatus = 0;
 		phase.ampelErlaeuterung = '';
-
-		phase.earliestStart = null;
-		phase.latestStart = null; 
-		phase.minDauer = null;
-		phase.maxDauer = null; 
-
-		// OriginalName is the name the element had before it was assigned a standardized/classified name		
-		phase.originalName = '';
 		
 	});
 	
