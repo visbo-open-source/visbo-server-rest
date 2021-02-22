@@ -594,11 +594,10 @@ router.route('/')
 							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
 							return;
 						}
-						var newVPV = new VisboProjectVersion();
-						newVPV.VorlagenName = req.oneVPVTemplate.name;
-						newVPV.name = req.oneVP.name;
-						newVPV.vpid = req.oneVP._id;
-						newVPV.variantName = 'pfv'; // first Version is the pfv
+						templateVPV.VorlagenName = req.oneVPVTemplate.name;
+						templateVPV.name = req.oneVP.name;
+						templateVPV.vpid = req.oneVP._id;
+						templateVPV.variantName = 'pfv'; // first Version is the pfv
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
 						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -616,12 +615,12 @@ router.route('/')
 							endDate = new Date();
 							endDate.setTime(startDate.getTime() + diff);
 						}
-						newVPV.startDate = startDate;
-						newVPV.endDate = endDate;
+						templateVPV.startDate = startDate;
+						templateVPV.endDate = endDate;
 						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
-							newVPV.Erloes = req.body.RAC;
+							templateVPV.Erloes = req.body.RAC;
 						}
-						newVPV.status = undefined;
+						templateVPV.status = undefined;
 						// calculate scale factor if possible
 						var scaleFactor = 1;
 						var bac = 0;
@@ -630,18 +629,19 @@ router.route('/')
 						}
 						if (bac) {
 							// reset the VPV and reset individual user roles to group roles
-							newVPV = visboBusiness.resetStatusVPV(newVPV);
+							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
 							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
 							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
 							var costSum = 0;
 							if (costDetails && costDetails.length > 0) {
-								costDetails.forEach(item => {costSum += item.currentCost});
+								costDetails.forEach(item => { costSum += item.currentCost; });
 							}
 							if (costSum) {
 								scaleFactor = costSum / bac;
 							}
 						}
-						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor)
+						var newVPV = helperVpv.initVPV(templateVPV);
+						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({
@@ -2489,6 +2489,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (!req.body.allItems || req.body.allItems.length == 0) {
+			logger4js.warn('Portfolio List empty', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid Project Items in Portfolio',
@@ -2496,6 +2497,7 @@ router.route('/:vpid/portfolio')
 			});
 		}
 		if (req.oneVP.vpType != constVPTypes.portfolio) {
+			logger4js.warn('Project is not a portfolio', req.oneVP._id);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project is not a Portfolio Project',
@@ -2941,6 +2943,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
+		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
 		*
 		* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
 		* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
@@ -2972,6 +2975,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
+			var perProject = req.query.perProject == true;
 
 			req.auditDescription = 'Portfolio Capacity Read';
 
@@ -3024,7 +3028,12 @@ router.route('/:vpid/portfolio/:vpfid')
 			}
 
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			var capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var capacity = undefined;
+			if (perProject) {
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, onlyPT);
+			} else {
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			}
 
 			req.auditInfo = '';
 			return res.status(200).send({
