@@ -507,6 +507,7 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
+				helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
@@ -939,6 +940,8 @@ router.route('/:vpvid/copy')
 		var timestamp;
 		if (req.body.timestamp) {
 			timestamp = validate.validateDate(req.body.timestamp, true, true);
+		} else {
+			timestamp = new Date();
 		}
 		if (variantName != '') {
 			// check that the Variant exists
