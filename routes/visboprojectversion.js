@@ -507,6 +507,7 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
+				helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
