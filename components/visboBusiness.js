@@ -2107,33 +2107,52 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	return arResult;
 }
 
-function calcNewBedarfe(newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
+function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
 	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
 	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged 
 	// only values starting with separatorIndex are changed according scaleFactor
+	// if similarCharacteristics then the distributionof values over the various months is maintained 
 	
 
 	let ar1 = undefined; 
 	let ar2 = oldArray;
 	let resultArray = [];
 
+	// if number of covered months are equal and day of start and day of end are almost equal, i.e +/-2 days then 
+	// consider it similar characteristic 
+	// example: oldPhase 6.3 - 17.5 and newPhase 4.6 - 19.8 are considered similarCharacteristics
+	let sameLengthInMonths =  ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newEndDate) - getColumnOfDate(newStartDate)));
+	let similar1 = ((Math.abs((oldPhStartDate.getDate() - newStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newEndDate.getDate())) <=2));
+	let similar2 = ((Math.abs((oldPhStartDate.getDate() - newStartDate.getDate())) <=4) && (true));
+
+	let similarCharacteristics = ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newEndDate) - getColumnOfDate(newStartDate))) &&
+								((Math.abs((oldPhStartDate.getDate() - newStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newEndDate.getDate())) <=2));
+
+
 	if (separatorIndex && separatorIndex > 0) {
 
 		// ar1 now holds the actualData, which should not be changed 
-		ar1 = oldArray.slice(1,separatorIndex + 1);
+		ar1 = oldArray.slice(0,separatorIndex);
 
 		// ar2 holds the part of the array which is in the future, starting with separatorIndex 
-		ar2 = oldArray.slice(separatorIndex + 1);
+		ar2 = oldArray.slice(separatorIndex);
 	} 
 
-	let arSum = ar2.reduce(sumOF);
+	if (similarCharacteristics) {
+		ar2 = ar2.map(x => x * scaleFactor);
 
-	// calculate the new future-value array ...
-	ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+	} else {
+		let arSum = ar2.reduce(sumOF);
+
+		// calculate the new future-value array ...
+		ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+	}
+	
 				
 	// if necessary, combine actual data and new future values 
 	if (separatorIndex && separatorIndex > 0) {
 		resultArray = ar1.concat(ar2);
+
 	} else {
 		resultArray = ar2;
 	}
@@ -2403,7 +2422,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		phase.AllRoles.forEach(role => {			
 			
 			if (role.Bedarf && role.Bedarf !== null) {
-				role.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
+				role.Bedarf = calcNewBedarfe(oldPhStartDate, oldPhEndDate, 
+											newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
 			}
 
 		});
@@ -2412,7 +2432,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		phase.AllCosts.forEach(cost => {
 
 			if (cost.Bedarf && cost.Bedarf !== null) {
-				cost.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 
+				cost.Bedarf = calcNewBedarfe(oldPhStartDate, oldPhEndDate, 
+					newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 	
 			}
 			
 		});
