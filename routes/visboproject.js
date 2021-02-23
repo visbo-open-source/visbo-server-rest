@@ -594,10 +594,13 @@ router.route('/')
 							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
 							return;
 						}
-						templateVPV.VorlagenName = req.oneVPVTemplate.name;
-						templateVPV.name = req.oneVP.name;
-						templateVPV.vpid = req.oneVP._id;
-						templateVPV.variantName = 'pfv'; // first Version is the pfv
+
+						// calculate scale factor if possible
+						var scaleFactor = 1;
+						var bac = 0;
+						if (req.body.BAC) {
+							bac = validate.validateNumber(req.body.BAC);
+						}
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
 						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -615,33 +618,38 @@ router.route('/')
 							endDate = new Date();
 							endDate.setTime(startDate.getTime() + diff);
 						}
-						templateVPV.startDate = startDate;
-						templateVPV.endDate = endDate;
-						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
-							templateVPV.Erloes = req.body.RAC;
-						}
-						templateVPV.status = undefined;
-						// calculate scale factor if possible
-						var scaleFactor = 1;
-						var bac = 0;
-						if (req.body.BAC) {
-							bac = validate.validateNumber(req.body.BAC);
-						}
+						// reset the VPV and reset individual user roles to group roles
+						templateVPV = visboBusiness.resetStatusVPV(templateVPV);
+						templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
 						if (bac) {
-							// reset the VPV and reset individual user roles to group roles
-							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
-							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
 							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
 							var costSum = 0;
 							if (costDetails && costDetails.length > 0) {
 								costDetails.forEach(item => { costSum += item.currentCost; });
 							}
 							if (costSum) {
-								scaleFactor = costSum / bac;
+								scaleFactor = bac / costSum;
 							}
 						}
 						var newVPV = helperVpv.initVPV(templateVPV);
+						newVPV.VorlagenName = req.oneVPVTemplate.name;
+						newVPV.name = req.oneVP.name;
+						newVPV.vpid = req.oneVP._id;
+						newVPV.variantName = 'pfv'; // first Version is the pfv
+						newVPV.startDate = startDate;
+						newVPV.endDate = endDate;
+						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
+							newVPV.Erloes = req.body.RAC;
+						}
+						newVPV.status = undefined;
+
 						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
+						if (!newVPV) {
+							return res.status(400).send({
+								state: 'failure',
+								message: 'Project Version not consistent'
+							});
+						}
 						helperVpv.createInitialVersions(req, res, newVPV);
 					} else {
 						return res.status(200).send({
