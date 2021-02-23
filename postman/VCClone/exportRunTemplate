@@ -2,7 +2,7 @@
 server='mongodb+srv://USER:PASSWORD@visbo01-3p7ni.mongodb.net/visboProduction?retryWrites=true'
 
 file="exportJSON.json"
-tmpFile="tmp".$file
-mongo --quiet --eval 'var exportType="VC"' $server cloneVC.js | tee $tmpFile | egrep "^>|^STDERR"
+tmpFile=$TMPDIR"tmp".$file
+mongo --quiet $server cloneVC.js | tee $tmpFile | egrep "^>|^STDERR"
 egrep -v "^>|^STDERR" $tmpFile > $file
 rm -f $tmpFile

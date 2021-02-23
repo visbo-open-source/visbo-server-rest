@@ -164,7 +164,7 @@ function checkVpfid(req, res, next, vpfid) {
 
 	logger4js.debug('Check Portfolio ID vpfid %s user %s for url %s as SysAdmin %s', vpfid, req.decoded.email, req.url, isSysAdmin);
 	if (!validate.validateObjectId(vpfid, false)) {
-		logger4js.warn('checkVpdid Bad Parameter vpfid %s', vpfid);
+		logger4js.warn('checkVpfid Bad Parameter vpfid %s', vpfid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Project Portfolio'
@@ -343,7 +343,6 @@ function getVPTemplate(req, res, next) {
 // Get the organisations for keyMetrics calculation
 function getVPOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
-	var urlComponent = baseUrl.split('/');
 	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
 
 	let skip = true;
