@@ -2149,7 +2149,7 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	return arResult;
 }
 
-function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
+function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDate, oldArray, scaleFactor, separatorIndex) {
 	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
 	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged 
 	// only values starting with separatorIndex are changed according scaleFactor
@@ -2163,11 +2163,11 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newStartDate, newEndDate, 
 	// if number of covered months are equal and day of start and day of end are almost equal, i.e +/-2 days then 
 	// consider it similar characteristic 
 	// example: oldPhase 6.3 - 17.5 and newPhase 4.6 - 19.8 are considered similarCharacteristics
-	let sameLengthInMonths =  ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newEndDate) - getColumnOfDate(newStartDate)));
-	let similar1 = ((Math.abs((oldPhStartDate.getDate() - newStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newEndDate.getDate())) <=2));
-	let similar2 = ((Math.abs((oldPhStartDate.getDate() - newStartDate.getDate())) <=4) && (Math.abs((diffDays(newEndDate, newStartDate) - diffDays(oldPhEndDate, oldPhStartDate)))<=2));
+	let sameLengthInMonths =  ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newPhEndDate) - getColumnOfDate(newPhStartDate)));
+	let similar1 = ((Math.abs((oldPhStartDate.getDate() - newPhStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newPhEndDate.getDate())) <=2));
+	let similar2 = ((Math.abs((oldPhStartDate.getDate() - newPhStartDate.getDate())) <=4) && (Math.abs((diffDays(newPhEndDate, newPhStartDate) - diffDays(oldPhEndDate, oldPhStartDate)))<=2));
 
-	let similarCharacteristics = sameLengthInMonths && similar1 && similar2;
+	let similarCharacteristics = sameLengthInMonths && (similar1 || similar2);
 
 
 	if (separatorIndex && separatorIndex > 0) {
@@ -2186,7 +2186,7 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newStartDate, newEndDate, 
 		let arSum = ar2.reduce(sumOF);
 
 		// calculate the new future-value array ...
-		ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+		ar2 = calcPhArValues(newPhStartDate, newPhEndDate, arSum*scaleFactor);
 	}
 	
 				
@@ -2419,7 +2419,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed 
 	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged  	
 	//let scaleFromDate = new Date(2021, 7, 1);
-	
+
 	let scaleFromDate = undefined;  
 	let scaleFromDateColumn = -1;	
 	
