@@ -2217,7 +2217,9 @@ function isValidVPV(myVPV) {
 	// C9: is strategic Fit either undefined or having a numeric value >= 0 and <= 10 
 	// C10: is Risiko either undefined or having a numeric value >= 0 and <= 10
 	// C11: is number of milestones / phases in hierarchy eq. to number of phases/milestones when traversed in the list?
-	// C12: is each name of a phase / milestone listed in the hierarchy?
+	// C12: is each name of a phase / milestone listed in the hierarchy - and are indices in hierarchyNode consistent with AllPhases / AllResults ?
+	// C13: are indices given in the  hierarchy referencing phases / milestones in their AllPhases / AllResults Array correctly ? 
+	
 
 	let myHrchy = convertHierarchy(myVPV);	
 
@@ -2239,9 +2241,11 @@ function isValidVPV(myVPV) {
 		logger4js.debug('isValidVPV: C0: project months vs duration', myVPV.Dauer, myVPV.startDate, myVPV.endDate);
 	}
 	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ? 
-	let c1 = (myVPV.AllPhases && myVPV.AllPhases[0] && 
-				myVPV.AllPhases[0].name == rootPhaseName && 
+	let c1 = false;
+	if (myVPV.AllPhases && myVPV.AllPhases[0]) {
+		c1 = (myVPV.AllPhases[0].name == rootPhaseName && 
 				myVPV.AllPhases[0].dauerInDays == projectDurationInDays);
+	} 
 	
 	if (!c1) {
 		logger4js.debug('isValidVPV: C1: rootPhase does not exist', myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].name, 
@@ -2267,11 +2271,28 @@ function isValidVPV(myVPV) {
 	}
 	
 	let c12 = true; 
+	let c13 = true;
 	let anzPlanElements = 0;
+	let phaseIX = 0;
 
 	myVPV.AllPhases.forEach(phase => {
 
+		phaseIX = phaseIX + 1;
 		anzPlanElements = anzPlanElements + 1; 
+
+		// check existence and validity in hierarchy  	
+		let nodeItem = undefined; 
+		if (phaseIX == 1) {
+			nodeItem = myHrchy['0'].hryNode;
+		} else {
+			nodeItem = myHrchy[phase.name].hryNode;
+		}
+		
+		let c13tmp = (nodeItem && nodeItem.indexOfElem == phaseIX);
+		c13 = c13 && c13tmp;
+		if (!c13tmp) {
+			logger4js.debug('isValidVPV: C13: Index of Phase does not match with hierarchy information', phase.name, phaseIX);
+		}
 
 		c2 = c2 && (phase.startOffsetinDays >= 0);
 		if (!(phase.startOffsetinDays >= 0)) {
@@ -2314,9 +2335,21 @@ function isValidVPV(myVPV) {
 			}
 		});
 
+		let mileStoneIX = 0; 
 		phase.AllResults.forEach(result => {
 
+			mileStoneIX = mileStoneIX + 1; 
 			anzPlanElements = anzPlanElements + 1; 
+
+			// C13: check existence and validity in hierarchy  	
+			let nodeItem = myHrchy[result.name].hryNode;			
+			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
+
+			c13 = c13 && c13tmp;
+			if (!c13tmp) {
+				logger4js.debug('isValidVPV: C13: Index of Milestone does not match with hierarchy information', phase.name, phaseIX);
+			}
+
 
 			let c4tmp = (result.offset && result.offset >= 0 && 
 						(phase.startOffsetinDays + result.offset) <= projectDurationInDays && 
@@ -2354,7 +2387,7 @@ function isValidVPV(myVPV) {
 						myVPV.hierarchy && myVPV.hierarchy.allNodes && myVPV.hierarchy.allNodes.length, anzPlanElements);
 	}
 	
-	criterias.push(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12);
+	criterias.push(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13);
 
 	// now High-Level protocolling the single criterias
 	if (!c0) {
@@ -2395,6 +2428,10 @@ function isValidVPV(myVPV) {
 	}
 	if (!c12) {
 		logger4js.warn('isValidVPV: C12: not each name of a phase / milestone is listed in the hierarchy');
+	}
+
+	if (!c13) {
+		logger4js.warn('isValidVPV: C13: not each name of a phase / milestone is listed in the hierarchy');
 	}
 	
 	// now returns true , if all criterias are fulfilled, false if at least one criteria is not fulfilled 
