@@ -1,7 +1,8 @@
-
 var logModule = 'VPV';
 var log4js = require('log4js');
+const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
+const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
 
 var refMonth = undefined;
@@ -33,6 +34,16 @@ function getDateEndOfPreviousMonth(dd) {
     inputDate.setDate(inputDate.getDate() - numDays);
     return inputDate;
   }
+
+// returns the end of the current month
+function getDateEndOfCurrentMonth(dd) {
+	let inputDate = new Date(dd);
+	// set to first day in month  
+	inputDate.setDate(1); // adding 31 days makes sure to definitely land in next month  
+	let myDate = getDateEndOfPreviousMonth(addDays(inputDate, 31));
+    return myDate;
+  }
+
 
 // calculate cost of personal for the requested project per month
 function getAllPersonalKosten(vpv, organisation) {
@@ -129,7 +140,7 @@ function getAllOtherCost(costID, vpv, organisation) {
 					var cost = phase.AllCosts[j];
 					var costTyp = cost.KostenTyp;
 					if ((costTyp === costID) || (costID == '')) {
-						// logger4js.trace("Calculate Bedarf of Cost %O", cost.Bedarf);
+						// logger4js.trace('Calculate Bedarf of Cost %O', cost.Bedarf);
 						if (cost.Bedarf) {
 							var dimension = cost.Bedarf.length;
 							for (var k = phasenStart; k < phasenStart + dimension; k++) {
@@ -1064,7 +1075,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
 				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		} else {
 			capa.push({
@@ -1079,8 +1090,8 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 				'plannedCost': capaVPV[item].plannedCost || 0,
 				'internCapa': capaVPV[item].internCapa || 0,
 				'externCapa': capaVPV[item].externCapa || 0,
-				'baselineCost': capaVPV[item].baselineCost,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost': capaVPV[item].baselineCost || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		}
 	}
@@ -1093,35 +1104,40 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 		return [];
 	}
 
+	// calc the capacity for every project/vpv individual
 	var capaVPV = [];
 	vpvs.forEach(vpv => {
-		capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
-		for (index in capaTempVPV) {
+		var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+		for (var index in capaTempVPV) {
 			var element = capaTempVPV[index];
-			var id = element.currentDate + vpv._id.toString();
+			var id = element.currentDate + vpv.vpid.toString();
 			element.vpid = vpv.vpid;
 			element.name = vpv.name;
+			element.variantName = vpv.variantName;
+			element.baselineCost = 0;
+			element.baselineCost_PT = 0;
 			capaVPV[id] = element;
 		}
-	})
+	});
 
 	var capaPFV = [];
 	var item;
 
 	if (pfvs) {
-		// calc the corresponding of the PFVs
+		// calc the capacity of the pfvs
 		pfvs.forEach(vpv => {
-			capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
-			for (index in capaTempVPV) {
+			var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations, false);
+			for (var index in capaTempVPV) {
 				var element = capaTempVPV[index];
-				var id = element.currentDate + vpv._id.toString();
+				var id = element.currentDate + vpv.vpid.toString();
 				element.vpid = vpv.vpid;
 				element.name = vpv.name;
+				element.variantName = '';
 				capaPFV[id] = element;
 			}
-		})
+		});
 
-		// insert or update capa values
+		// combine vpv & pfv values, insert or update capa values
 		for (item in capaPFV) {
 			if (!capaVPV[item]) {
 				// insert new Value
@@ -1144,28 +1160,62 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 		}
 	}
 
+	// generate the cumulative number per months across all projects
+	for (item in capaVPV) {
+		const currentDate = capaVPV[item].currentDate;
+		if (capaVPV[item].vpid) {
+			if (!capaVPV[currentDate]) {
+				capaVPV[currentDate] = {};
+				capaVPV[currentDate].currentDate = capaVPV[item].currentDate;
+				capaVPV[currentDate].roleID = capaVPV[item].roleID;
+				capaVPV[currentDate].roleName = capaVPV[item].roleName;
+				capaVPV[currentDate].name = 'All';
+				capaVPV[currentDate].actualCost_PT = 0;
+				capaVPV[currentDate].plannedCost_PT = 0;
+				capaVPV[currentDate].actualCost = 0;
+				capaVPV[currentDate].actualCost_PT = 0;
+				capaVPV[currentDate].plannedCost = 0;
+				capaVPV[currentDate].baselineCost = 0;
+				capaVPV[currentDate].baselineCost_PT = 0;
+				capaVPV[currentDate].internCapa_PT = capaVPV[item].internCapa_PT;
+				capaVPV[currentDate].externCapa_PT = capaVPV[item].externCapa_PT;
+				capaVPV[currentDate].internCapa = capaVPV[item].internCapa;
+				capaVPV[currentDate].externCapa = capaVPV[item].externCapa;
+			}
+			capaVPV[currentDate].actualCost_PT += capaVPV[item].actualCost_PT;
+			capaVPV[currentDate].plannedCost_PT += capaVPV[item].plannedCost_PT;
+			capaVPV[currentDate].actualCost += capaVPV[item].actualCost;
+			capaVPV[currentDate].plannedCost += capaVPV[item].plannedCost;
+			capaVPV[currentDate].baselineCost = (capaVPV[currentDate].baselineCost || 0) + capaVPV[item].baselineCost;
+			capaVPV[currentDate].baselineCost_PT = (capaVPV[currentDate].baselineCost_PT || 0) + capaVPV[item].baselineCost_PT;
+		}
+	}
+
+	// generate an array from an index list with holes
 	var capa = [];
 	for (item in capaVPV) {
 		if (onlyPT) {
 			capa.push({
 				'month': capaVPV[item].currentDate,
-				'roleID' : capaVPV[item].roleID.toString(),
+				'roleID' : capaVPV[item].roleID,
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
+				'variantName' : capaVPV[item].variantName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
 				'externCapa_PT' : capaVPV[item].externCapa_PT || 0,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		} else {
 			capa.push({
 				'month': capaVPV[item].currentDate,
-				'roleID' : capaVPV[item].roleID.toString(),
+				'roleID' : capaVPV[item].roleID,
 				'roleName' : capaVPV[item].roleName,
 				'vpid' : capaVPV[item].vpid,
 				'name' : capaVPV[item].name,
+				'variantName' : capaVPV[item].variantName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
 				'internCapa_PT': capaVPV[item].internCapa_PT || 0,
@@ -1174,11 +1224,12 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				'plannedCost': capaVPV[item].plannedCost || 0,
 				'internCapa': capaVPV[item].internCapa || 0,
 				'externCapa': capaVPV[item].externCapa || 0,
-				'baselineCost': capaVPV[item].baselineCost,
-				'baselineCost_PT': capaVPV[item].baselineCost_PT
+				'baselineCost': capaVPV[item].baselineCost || 0,
+				'baselineCost_PT': capaVPV[item].baselineCost_PT || 0
 			});
 		}
 	}
+	capa.sort(function(a, b) { return (new Date(a.month)).getTime() - (new Date(b.month)).getTime(); });
 	return capa;
 }
 
@@ -1274,6 +1325,8 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 				for (i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
+						'currentDate': currentDate.toISOString(),
+						'roleID': roleID,
 						'roleName': roleName,
 						'actualCost_PT': monthlyNeeds[i + tzStartIndex].actCost_PT || 0,
 						'plannedCost_PT': monthlyNeeds[i + tzStartIndex].plannedCost_PT || 0 ,
@@ -1402,7 +1455,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation
-	logger4js.debug('getting roles, which are concerned/connected with roleID in the given organisation %s',  roleID);
+	logger4js.debug('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
 	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
@@ -1484,7 +1537,6 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 		var isTeam = allRoles[roleID].isTeam;
 
-
 		// build role/cost - lists with teams
 		logger4js.trace('Build Role / Cost or Team List for Project Version %s',  vpv._id);
 		var rclists = buildRClists(vpv, isTeam);
@@ -1553,7 +1605,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
 						if ((phase.AllRoles[k].RollenTyp == actRoleID)|| (phase.AllRoles[k].teamID == actRoleID)) {
 							var role = phase.AllRoles[k];
-							// logger4js.trace("Calculate Bedarf of Role %O", role.Bedarf);
+							// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 							if (role &&  role.Bedarf) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
@@ -1594,12 +1646,19 @@ function getCapaValues(startIndex, dauer, concerningRoles, allRoles) {
 		capaValues[i] = capaElem;
 	}
 
+	var concerningUIDs = [];
 
 	// Calculate the Capacities of this Role
 	for (var cR = 0; concerningRoles && cR < concerningRoles.length; cR++){
-
 		var actRoleID = concerningRoles[cR].actRole.uid;
-		//var faktor = concerningRoles[cR].faktor;
+		var indexUID = concerningUIDs.indexOf(actRoleID);
+
+		// UIDs should only be added once
+		if ( indexUID >= 0 ) continue;
+
+		// collect the UIDs, which were added to the capa
+		concerningUIDs.push(actRoleID);
+
 		// for the capa now always the faktor=1, since new skill management
 		var faktor = 1;
 
@@ -1662,31 +1721,30 @@ function buildRClists(vpv, team) {
 					}
 
 				}
-					// teamlists.addRP
-					if (!teamlists[role.teamID]){
-						var phasesPerTeam = [];
-						var newTeam = {};
+				// teamlists.addRP
+				if (!teamlists[role.teamID]){
+					var phasesPerTeam = [];
+					var newTeam = {};
+					phasesPerTeam.push(phase.name);
+					newTeam[role.RollenTyp] = phasesPerTeam;
+					teamlists[role.teamID]=newTeam;
+				} else {
+					newTeam = teamlists[role.teamID];
+					if (newTeam[role.RollenTyp]){
+						phasesPerTeam = newTeam[role.RollenTyp];
+						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						if (!(indexPhase >= 0)) {
+							phasesPerTeam.push(phase.name);
+							newTeam[role.RollenTyp] = phasesPerTeam;
+							teamlists[role.teamID] = newTeam;
+						}
+					} else {
+						phasesPerTeam = [];
 						phasesPerTeam.push(phase.name);
 						newTeam[role.RollenTyp] = phasesPerTeam;
 						teamlists[role.teamID]=newTeam;
-					} else {
-						newTeam = teamlists[role.teamID];
-						if (newTeam[role.RollenTyp]){
-							phasesPerTeam = newTeam[role.RollenTyp];
-							var indexPhase= phasesPerTeam.indexOf(phase.name);
-							if (!(indexPhase >= 0)) {
-								phasesPerTeam.push(phase.name);
-								newTeam[role.RollenTyp] = phasesPerTeam;
-								teamlists[role.teamID] = newTeam;
-							}
-						} else {
-							phasesPerTeam = [];
-							phasesPerTeam.push(phase.name);
-							newTeam[role.RollenTyp] = phasesPerTeam;
-							teamlists[role.teamID]=newTeam;
-						}
-
 					}
+				}
 			}
 		}
 	}
@@ -1708,6 +1766,8 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 		var hroleID = value.key;
 		crElem = {};
 		crElem.actRole = allRoles[hroleID];
+		crElem.teamID = -1;
+		crElem.faktor = 1.0;
 
 		if (parentRole.isTeam){
 			for (var t = 0 ; t < crElem.actRole.teamIDs.length; t++) {
@@ -1715,19 +1775,15 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
 				crElem.faktor = team.value;
-				concerningRoles.push(crElem);
 			}
-		} else {
-			crElem.teamID = -1;
-			crElem.faktor = 1.0;
-			concerningRoles.push(crElem);
+		}
+		concerningRoles.push(crElem);
 
-			var newParent = crElem.actRole;
-			if (newParent && newParent.subRoleIDs.length > 0){
-				var shroles = newParent.subRoleIDs;
-				for (var sr = 0; shroles && sr < shroles.length; sr++) {
-					findConcerningRoles(shroles[sr], newParent);
-				}
+		var newParent = crElem.actRole;
+		if (newParent && newParent.subRoleIDs.length > 0){
+			var shroles = newParent.subRoleIDs;
+			for (var sr = 0; shroles && sr < shroles.length; sr++) {
+				findConcerningRoles(shroles[sr], newParent);
 			}
 		}
 	}
@@ -1746,36 +1802,6 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
 				findConcerningRoles(subRoles[sr], actRole);
 			}
-		}
-	}
-
-	// eliminate duplicates of the pair roleID|teamID
-	var concerningRolesIndexed = [];
-	for (var dup = 0; dup < concerningRoles.length; dup++) {
-		var crElement = concerningRoles[dup];
-		var key = crElement.actRole.uid + '|' + crElement.teamID;
-		concerningRolesIndexed[key] = crElement;
-	}
-	var isConcerningTeam = true;
-	for (var t=0; t < allTeams.length; t++) {
-		var team = allTeams[t];
-		var teamkey = team.uid + '|' + '-1';
-		if (team &&  team.subRoleIDs.length > 0 && !concerningRolesIndexed[teamkey]) {
-			for ( sr = 0; sr < team.subRoleIDs.length; sr++){
-				key = team.subRoleIDs[sr].key + '|' + '-1';
-				if (!concerningRolesIndexed[key]) {
-					isConcerningTeam = false;
-					break;
-				}
-			}
-		}
-		if (isConcerningTeam) {
-			crElem = {};
-			crElem.actRole = team;
-			crElem.teamID = -1;
-			crElem.faktor = 1;
-			concerningRolesIndexed[teamkey] = crElem;
-			concerningRoles.push(crElem);
 		}
 	}
 	return concerningRoles;
@@ -1944,7 +1970,6 @@ function cleanupRestrictedVersion(vpv) {
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
 	vpv.customStringFields = undefined;
-	vpv.customBoolFields = undefined;
 	vpv.Risiko = undefined;
 	vpv.StrategicFit = undefined;
 	vpv.actualDataUntil = undefined;
@@ -2049,23 +2074,527 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	return oldVPV;
 }
 
+// function calculates the distribution of values in a array 
+function calcPhArValues(arStartDate, arEndDate, arSum) {
+	
+	// check if valid invocation
+	if (typeof arStartDate !== 'object' || typeof arEndDate !== 'object' || typeof arSum !== 'number' ) {
+		return undefined;
+	}
+
+	// make corrections, if dates are switched .. 
+	if (arStartDate > arEndDate) {
+		let tmpDate = arStartDate;
+		arStartDate = arEndDate;
+		arEndDate = tmpDate;
+	}
+
+	let anzDaysPMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; 
+
+	// now do the calculation: determine the number of months covered , then distribute values such that fraction of start-Month and end-Month is taken into account 
+	// i.e 30.5 - 3.7 : may and july may only contain a fraction of the sum, not hjust evenly distributed	 
+	let arResult = [];
+
+	let arIxA = getColumnOfDate(arStartDate);
+	let arIxE = getColumnOfDate(arEndDate);
+
+	let totalNrOfDays = diffDays(arEndDate, arStartDate) + 1; 
+
+	let arLength = arIxE - arIxA + 1;
+	
+	let anzDays1 = 0;
+	let anzDaysN = 0;
+	
+	let fraction1 = 0;
+	let fractionX = 0;
+	let fractionN = 0;
+	
+	anzDays1 = anzDaysPMonth[arStartDate.getMonth()] - arStartDate.getDate() + 1;
+	anzDaysN = arEndDate.getDate();
+	
+	fraction1 = anzDays1 / totalNrOfDays;
+	if (arLength > 2) {
+		fractionX = ((1/(arLength-2)) * (totalNrOfDays-(anzDays1 + anzDaysN)))/totalNrOfDays;
+	}
+	fractionN = anzDaysN / totalNrOfDays;
+
+	switch(arLength) {
+		
+		case 1:
+			arResult.push(arSum);
+			break;
+		
+		case 2:			
+
+			arResult.push(arSum * fraction1);
+			arResult.push(arSum * fractionN);
+
+			break;
+
+		default:	
+
+			arResult.push(arSum * fraction1);
+
+			var i;
+			for (i = 1; i < arLength - 1; i++) {
+				arResult.push(arSum * fractionX);
+			}
+
+			arResult.push(arSum * fractionN);			
+	}
+
+	// let chckSum = arResult.reduce(sumOF);
+
+	return arResult;
+}
+
+function calcNewBedarfe(newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
+	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
+	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged 
+	// only values starting with separatorIndex are changed according scaleFactor
+	
+
+	let ar1 = undefined; 
+	let ar2 = oldArray;
+	let resultArray = [];
+
+	if (separatorIndex && separatorIndex > 0) {
+
+		// ar1 now holds the actualData, which should not be changed 
+		ar1 = oldArray.slice(1,separatorIndex + 1);
+
+		// ar2 holds the part of the array which is in the future, starting with separatorIndex 
+		ar2 = oldArray.slice(separatorIndex + 1);
+	} 
+
+	let arSum = ar2.reduce(sumOF);
+
+	// calculate the new future-value array ...
+	ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+				
+	// if necessary, combine actual data and new future values 
+	if (separatorIndex && separatorIndex > 0) {
+		resultArray = ar1.concat(ar2);
+	} else {
+		resultArray = ar2;
+	}
+
+	return resultArray;
+}
+
+function isValidVPV(myVPV) {
+	// function checks whether consistency criterias of a vpv are fulfilled 	
+
+	// validity Criterias
+	// C0: is Dauer eq. Number of covered months of the project, i.e checks consistency between VPV.startDate, VPV.endDate and Dauer ?  
+	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ? 
+	// C2: does no Phase is having a start-Date earlier than project startdate? 
+	// C3: does no Phase is having a end-Date later than project endDate ?
+	// C4: is no Milestone-Date earlier than phase start and not later than phase endDate? 
+	// C5: are array lengths of each role identical to relEnde-relStart + 1 of the phase ? 
+	// C6: is each value in a role array >= 0 ? 
+	// C7: are array lengths of each cost identical to relEnde-relstart + 1 of the phase ?
+	// C8: is each value in a cost array >= 0 ?
+	// C9: is strategic Fit either undefined or having a numeric value >= 0 and <= 10 
+	// C10: is Risiko either undefined or having a numeric value >= 0 and <= 10
+	// C11: is number of milestones / phases in hierarchy eq. to number of phases/milestones when traversed in the list?
+	// C12: is each name of a phase / milestone listed in the hierarchy?
+
+	let myHrchy = convertHierarchy(myVPV);
+
+	if (!myVPV || !myVPV.startDate || !myVPV.endDate || !myVPV.AllPhases || !myHrchy) {
+		return false;
+	}
+
+	// criterias is a array of boolean values, indicating which validity criterias are fulfilled / not fulfilled
+	let criterias = [];
+	
+	let projectDurationInDays = diffDays(myVPV.endDate, myVPV.startDate) + 1;
+
+	// C0: is Dauer eq. Number of covered months of the project ?
+	let c0 = (myVPV.Dauer && myVPV.startDate && myVPV.endDate && myVPV.Dauer == (getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1));
+	
+
+	// C1: 
+	let c1 = (myVPV.AllPhases && myVPV.AllPhases[0] && 
+				myVPV.AllPhases[0].name == rootPhaseName && 
+				myVPV.AllPhases[0].dauerInDays == projectDurationInDays);
+	
+
+	let c2 = true; 
+	let c3 = true;
+	let c4 = true;
+	let c5 = true;
+	let c6 = true;
+	let c7 = true;
+	let c8 = true;
+	let c9 = !myVPV.StrategicFit || (myVPV.StrategicFit >= 0 && myVPV.StrategicFit <= 10);
+	let c10 = !myVPV.Risiko || (myVPV.Risiko && myVPV.Risiko >= 0 && myVPV.Risiko <= 10);
+
+	
+	let c12 = true; 
+	let anzPlanElements = 0;
+
+	myVPV.AllPhases.forEach(phase => {
+
+		anzPlanElements = anzPlanElements + 1; 
+
+		c2 = c2 && (phase.startOffsetinDays >= 0);
+		c3 = c3 && ((phase.startOffsetinDays + phase.dauerInDays ) <= projectDurationInDays); 
+
+		let phLength = phase.relEnde - phase.relStart + 1;
+
+		phase.AllRoles.forEach(role => {
+			c5 = c5 && (role.Bedarf && (role.Bedarf.length == phLength));
+			// checks whether all elements of an array are >= 0 
+			c6 = c6 && (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+		});
+
+		phase.AllCosts.forEach(cost => {
+			c7 = c7 && (cost.Bedarf && (cost.Bedarf.length == phLength));
+			// checks whether all elements of an array are >= 0 
+			c8 = c8 && (cost.Bedarf && cost.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+		});
+
+		phase.AllResults.forEach(result => {
+
+			anzPlanElements = anzPlanElements + 1; 
+
+			c4 = c4 && (result.offset && result.offset >= 0 && 
+						(phase.startOffsetinDays + result.offset) <= projectDurationInDays && 
+						(result.offset <= phase.dauerInDays)); 
+
+			
+			c12 = c12 && !(myHrchy[result.name] === undefined);
+
+		});
+
+		if (!(phase.name == rootPhaseName)) {
+			// check auf rootPhaseName ist bereits in c1 abgeprüft , in myHrchy there is no 
+			c12 = c12 && !(myHrchy[phase.name] === undefined);
+		}
+		
+		
+	});
+
+	let c11 = myHrchy && (myVPV.hierarchy && myVPV.hierarchy.allNodes && (myVPV.hierarchy.allNodes.length == anzPlanElements));
+	
+	criterias.push(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12);
+	
+	// now returns true , if all criterias are fulfilled, false if at least one criteria is not fulfilled 
+	return criterias.reduce((accumulator, currentValue) => accumulator && currentValue);
+
+}
+
+function sumOF(accumulator, currentValue) {
+	return accumulator + currentValue;
+}
+
 function scaleVPV(oldVPV, newVPV, scaleFactor) {
-	// this function converts an oldVPV to a newVPV and returns it to the caller
-	// the function scales the oldVPV that contains start&endDate and Bedarfe
-	// to a newVPV that contains the new start&endDate but the Phases & Costs and Result are all undefined, these have to be filled
+	// this function converts an oldVPV to a modified oldVPV and returns it to the caller
+	// the function scales the oldVPV (valid vpv) that contains old start & endDate and Bedarfe
+	// the newVPV contains nothing but the new start & endDate (not necessarily a valid vpv) 
+	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor 
+	// 
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
+	
+	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
+	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed 
+	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged  
+	let scaleFromDate = undefined; 
+	let scaleFromDateColumn = -1;	
+	
+	
 
-	newVPV.AllPhases = oldVPV.AllPhases;
-	newVPV.hierarchy = oldVPV.hierarchy;
-	return newVPV;
+	if (!isValidVPV(oldVPV)) {
+
+		// normal action necessary: 
+		// return undefined;
+
+		// temporary correction ! for the sake of testing only .. 
+		// if this is because inconsistency between projectStartDate, projectEnd Date, Dauer and AllPhases[0], then try to correct it here for the sake of testing - 
+		// but this auto correction need to be eliminated again before going into production ...  		
+		
+		oldVPV.endDate = addDays(oldVPV.startDate, oldVPV.AllPhases[0].dauerInDays-1);
+		oldVPV.Dauer = getColumnOfDate(oldVPV.endDate) - getColumnOfDate(oldVPV.startDate) + 1;
+
+		if (!isValidVPV(oldVPV)) {
+			// if correction did'nt help ... 
+			return undefined;
+		}
+		
+	}
+
+	// if a scaleFromDate has been provided: startDates have to be the same ... 
+	// use case preserve actualData : in this case a project must noct start later or earlier - 
+	// this would make all actualData information Nonsense. 
+	if (scaleFromDate) {
+		scaleFromDateColumn = getColumnOfDate(scaleFromDate);
+
+		// in this case this must be true: oldVPV.StartDate = newVPV.StartDate .. otherwise Exit
+		if (oldVPV.startDate !== newVPV.startDate) {
+			return undefined;
+		}
+	}
+
+
+	let oldDauerInDays = diffDays(oldVPV.endDate, oldVPV.startDate) + 1;
+	let newDauerInDays = diffDays(newVPV.endDate, newVPV.startDate) + 1;
+
+	
+
+	// a phase starting and ending on the same day has duration 1, a phase ending one day after the start has duration 2, and so on
+	if (oldDauerInDays == 0 || newDauerInDays <= 0 ) {
+		return undefined;
+	}	
+
+	let timeScalingFactor = newDauerInDays / oldDauerInDays;
+
+
+	oldVPV.AllPhases.forEach(phase => {	
+
+		// if not scaleFromDate, no special handling necessary
+	
+		// if scaleFromDate , then 
+		// check: dont do anything if phase is completely in Past , i.e timeFrame before scaleFromDate 
+		// check: if oldPhase and newPhase are both completely in future and
+		// check: if oldPhase is in future 
+
+		
+		let oldPhStartDate =  getPhStartDate(oldVPV, phase);	
+		let oldPhEndDate = getPhEndDate(oldVPV, phase);
+		
+		let separatorIndex = -1;
+		let oldPhaseStartColumn = getColumnOfDate(oldPhStartDate);
+		let oldPhaseEndColumn = getColumnOfDate(oldPhEndDate);
+				
+		if (oldPhaseStartColumn < scaleFromDateColumn && scaleFromDateColumn <= oldPhaseEndColumn ) {				
+			// separatorIndex is needed when calling calcNewBedarfe to ensure that actualData remains unchanged 
+			separatorIndex = scaleFromDateColumn - oldPhaseStartColumn;
+		}
+
+		
+		let newOffsetInDays = Math.round(timeScalingFactor * phase.startOffsetinDays);
+		let newDauerInDays = Math.round(timeScalingFactor * phase.dauerInDays);
+
+		// 
+		let newPhStartDate =  addDays(newVPV.startDate, newOffsetInDays);
+		let newPhEndDate = addDays(newPhStartDate, newDauerInDays - 1);
+		
+			
+		// find out whether newOffsetInDays and newDauerInDays are valid or need to be changed ..
+		// this check is only necessary in case there was provided a scaleFromDate
+		if (scaleFromDate) {
+
+			// save the dates - because oldVPVP.Phase is changed over the courese 
+			let oldOffsetInDays = phase.startOffsetinDays;
+			let oldDauerInDays = phase.dauerInDays;
+
+			// do the checkings and necessary adjustments for newOffsetInDays with regard to scaleFromDate
+			if (oldPhaseStartColumn < scaleFromDateColumn) {
+				
+				// not allowed to change a start in the Past resp. before scaleFromDate
+				newOffsetInDays = oldOffsetInDays;				
+				
+				// if oldEndDate is before then leave old phase completely unchanged ..
+				if (oldPhEndDate < scaleFromDate) {
+					newDauerInDays = oldDauerInDays;
+				} else {
+					newPhStartDate = addDays(newVPV.startDate, newOffsetInDays);
+					newPhEndDate = addDays(newPhStartDate, newDauerInDays);
+					// will the ne phaseEnd land before scaleFromDate? 
+					if (newPhEndDate < scaleFromDate) {
+						// adjust dauerInDays so that newPhEndDate is the last Day of the month of scaleFromDate
+						// here 
+						// this is very important : otherwise there would be no array Element left to hold the new values 
+						let betterPhEndDate = getDateEndOfCurrentMonth(scaleFromDate);
+						let difference = diffDays(betterPhEndDate, newPhEndDate);
+						newDauerInDays = newDauerInDays + difference;
+					}
+				}
+			} else {
+				// old Phase Start is after scaleFromDate , where is the new phase Start? 
+				if (newPhStartDate < scaleFromDate) {
+					// adjust offsetinDays so that newPhStartDate = scaleFromDate
+					let betterPhStartDate = scaleFromDate;
+					let difference = diffDays(betterPhStartDate, newPhStartDate);
+					newOffsetInDays = newOffsetInDays + difference;
+				}
+			}
+			
+		}
+		
+		// now it has been checked that values are valid 
+		phase.startOffsetinDays = newOffsetInDays;
+		phase.dauerInDays = newDauerInDays;
+
+		// calculate, because in case when scaleFromDate has been provided, values may have changed 
+		newPhStartDate = getPhStartDate(newVPV, phase);
+		newPhEndDate = getPhEndDate(newVPV, phase); 
+
+		// for sake of consistency
+		phase.relStart = getColumnOfDate(newPhStartDate) - getColumnOfDate(newVPV.startDate) + 1;
+		phase.relEnde = getColumnOfDate(newPhEndDate) - getColumnOfDate(newVPV.startDate) + 1;
+
+		
+		// now - do calculate the new values ..
+		// each role, each cost will have the same length for the 'Bedarf" array 
+		//
+		phase.AllRoles.forEach(role => {			
+			
+			if (role.Bedarf && role.Bedarf !== null) {
+				role.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
+			}
+
+		});
+
+
+		phase.AllCosts.forEach(cost => {
+
+			if (cost.Bedarf && cost.Bedarf !== null) {
+				cost.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 
+			}
+			
+		});
+		
+		phase.AllResults.forEach(result => {
+
+			let newMsOffset = Math.round(result.offset*timeScalingFactor);
+
+			if (scaleFromDate) {
+				
+				let newMsDate = addDays(newPhStartDate, newMsOffset);
+				if (newMsDate < scaleFromDate) {
+					let betterMsDate = scaleFromDate;
+					let difference = diffDays(betterMsDate, newMsDate);
+					newMsOffset = newMsOffset + difference;
+				}
+			}			
+
+			result.offset = newMsOffset;
+			
+		});
+		
+
+	});
+	
+	oldVPV.startDate = newVPV.startDate;
+	oldVPV.endDate = newVPV.endDate;
+	oldVPV.Dauer = getColumnOfDate(oldVPV.endDate) - getColumnOfDate(oldVPV.startDate) + 1;
+	
+	if (isValidVPV(oldVPV)) {
+		return oldVPV;
+	} else {
+		return undefined;
+	}
+	
 
 }
 
 function resetStatusVPV(oldVPV) {
 	// this function resets all status information inside the VPV.
 	// this applies to trafficlight & explanation, status, %done, bewertungen, ...
+	// Use-Case 1 : aus template projekt-vpv machen 
+	// Use-Case 2: aus projekt-vpv eine pfv machen
+	// suggestions is to provide this variable as parameter
+	// it can make a lot of sense to have the same deliverables defined as in the oldVPV
+	// that is the case when a project environment is based on standardized processes where it is agreed that at certain points in time 
+	// certain deliverables are expected.
+	
+	// may be provided as parameter later on, for now Deliverables are kept unchanged
+	let keepDeliverables = true;
+
+	// maybe provided as parameter later on, 
+	// for now it is assumed that a pfv is created from a vpv  
+	let useCase = 2; 
+
+	if (!oldVPV) {
+		return undefined;
+	} 
+
 	logger4js.debug('resetStatusVPV:  ', oldVPV._id);
+
+
+	// customFields - keep all defined keys, but reset value of string and double Fields 
+	// keep the same value in all boolean field , because either value is as good as the other one
+	// so just make sure vpv contains same number and type of customFields 
+
+
+	if (useCase == 1) {
+
+		oldVPV.customDblFields.forEach(customfield => {			
+			customfield.dbl = undefined;
+		});
+
+		oldVPV.customStringFields.forEach(customfield => {
+			customfield.strvalue = '';
+		});	
+
+	}	
+	
+	// 0 = without ampelstatus
+	oldVPV.ampelStatus = 0; 
+	oldVPV.ampelErlaeuterung = '';	
+
+	// 
+
+	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':'' };	
+	let bKey = '#' + new Date().toLocaleString('de-DE');
+	let bItem = {key: bKey, bewertung: emptyBewertung};
+		
+	oldVPV.AllPhases.forEach(phase => {		
+
+		// adress all the contained milestones 
+		phase.AllResults.forEach(result => {
+			
+			result.bewertungen = []; 			
+			result.bewertungen.push(bItem);
+
+			result.verantwortlich='';			
+			
+			if (!keepDeliverables) {
+				result.deliverables = [];
+			}
+
+			if (useCase == 1) {
+				result.invoice = undefined;
+				result.penalty = undefined;
+
+				result.originalName = '';
+			} 
+			
+			result.percentDone = 0;			
+			
+		});
+		
+
+		// now reset bewertungen , set the first element of bewertungen
+		phase.AllBewertungen = [];		
+		phase.AllBewertungen.push(bItem);				
+		
+		phase.percentDone = 0;
+
+		// if a pfv is created from a vpv , the invoices and penalties need to be unchanged
+		if (useCase == 1 ) {
+			phase.invoice = undefined; 
+			phase.penalty = undefined; 
+
+			phase.originalName = '';
+		} 
+				
+		phase.responsible = '';
+
+		if (!keepDeliverables) {
+			phase.deliverables = [];
+		}		 		  
+
+		phase.ampelStatus = 0;
+		phase.ampelErlaeuterung = '';
+		
+	});
+	
+
 	return oldVPV;
 }
 

@@ -89,7 +89,6 @@ function initVPV(vpv) {
 	newVPV.StrategicFit = vpv.StrategicFit;
 	newVPV.customDblFields = vpv.customDblFields;
 	newVPV.customStringFields = vpv.customStringFields;
-	newVPV.customBoolFields = vpv.customBoolFields;
 	newVPV.actualDataUntil = vpv.actualDataUntil;
 	newVPV.Erloes = vpv.Erloes;
 	newVPV.leadPerson = vpv.leadPerson;
@@ -111,6 +110,28 @@ function initVPV(vpv) {
 	newVPV.businessUnit = vpv.businessUnit;
 
 	return newVPV;
+}
+
+function cleanupVPV(vpv) {
+	if (!vpv) {
+		return;
+	}
+	if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
+	if (vpv.earliestStart == -999) { vpv.earliestStart = undefined;; }
+	if (vpv.AllPhases) {
+		vpv.AllPhases.forEach(phase => {
+			if (phase.latestStart == -999) { phase.latestStart = undefined;; }
+			if (phase.earliestStart == -999) { phase.earliestStart = undefined;; }
+			if (phase.invoice && phase.invoice.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
+			if (phase.penalty && phase.penalty.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
+			if (phase.AllResults) {
+				phase.AllResults.forEach(result => {
+					if (result.invoice && result.invoice.Key == 0 && result.invoice.Value == 0) { result.invoice = undefined; }
+					if (result.penalty && result.penalty.Key.indexOf('9999-12-31') == 0 && result.penalty.Value == 0) { result.penalty = undefined; }
+				})
+			}
+		})
+	}
 }
 
 function getKeyAttributes(newVPV) {
@@ -151,7 +172,7 @@ function createInitialVersions(req, res, newVPV) {
 		updateVPVCount(req.visboPFV.vpid, req.visboPFV.variantName, 1);
 		// now create a copy of the pfv version as the first version of the project
 		var baseVPV = initVPV(oneVPV);
-		baseVPV.variantName = "";
+		baseVPV.variantName = '';
 		baseVPV.timestamp = new Date();
 		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, req.visboPFV, req.visboOrganisations);
 		baseVPV.save(function(err, oneVPV) {
@@ -174,6 +195,7 @@ module.exports = {
 	updateVPVCount: updateVPVCount,
 	createInitialVersions: createInitialVersions,
 	initVPV: initVPV,
+	cleanupVPV: cleanupVPV,
 	getKeyAttributes: getKeyAttributes,
 	setKeyAttributes: setKeyAttributes,
 	checkValidKeyMetrics: checkValidKeyMetrics
