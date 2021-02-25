@@ -2333,10 +2333,13 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the oldPFV');
 		
 		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
-
 		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
-	}	
-	// logger4js.debug('check the cost of VPV and newPFV - they have to be equal');	
+		newPFV = createIndices(newPFV);
+				
+		// var correct = isValidVPV(newPFV);
+	}
+
+	logger4js.debug('check the cost of VPV and newPFV - they have to be equal');	
 	// var allPersCostVPV = getAllPersonalKosten(oldVPV, actOrga);	
 	// var allPersCost = getAllPersonalKosten(newPFV, actOrga);
 	// var result = true;
@@ -2402,8 +2405,6 @@ function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 
 function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 
-	// var rootKey = '0';
-	// var rootphaseID = '0§.§';
 	
 	logger4js.debug('adapt all deadlines of the newPFV to the oldPFV');
 	var hrchy_pfv = convertHierarchy(oldPFV);
@@ -2420,11 +2421,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	logger4js.debug('find the deadlines, which are only in the vpv and should be deleted for a new PFV');
 	for (var element = 0; element < listDeadlines.length; element++) {
 		var actDeadline = listDeadlines[element];	
-		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {
-			// // change nameID "0" to nameID "0§.§"
-			// if (actDeadline.nameID === rootKey){
-			// 	actDeadline.nameId = rootphaseID;
-			// }
+		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {			
 			DeadlineToDelete.push(actDeadline);
 		} else {
 			fittingDeadline.push(actDeadline);
@@ -2457,6 +2454,42 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	}
 	// now cleaned AllPhases
 	newPFV.AllPhases = newPhaseList;
+	return newPFV;
+}
+
+
+function createIndices(newPFV) {
+
+	logger4js.debug('Create the needed property "indexOfElem" in the hierarchy for all phases and milestones');
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
+
+	if (!newPFV){
+		return newPFV;
+	}
+	var indexHrchy = [];
+	indexHrchy = convertHierarchy(newPFV);
+	for (var i = 0; newPFV && newPFV.AllPhases && newPFV.AllPhases[i] && i < newPFV.AllPhases.length; i++) {
+		var phase = newPFV.AllPhases[i];
+		if (phase) {
+			// special treatment of rootphase
+			if (phase.name === rootphaseID){
+				phaseName = rootKey;
+			} else {
+				phaseName = phase.name;
+			}		
+			indexHrchy[phaseName].hryNode.indexOfElem = i + 1;
+			for (var j = 0; phase.AllResults && j < phase.AllResults.length; j++){
+				indexHrchy[phase.AllResults[j].name].hryNode.indexOfElem = j + 1;
+			}
+		}
+	}
+		
+	var allNodes = newPFV.hierarchy.allNodes;
+	for (i = 0; allNodes && i < allNodes.length; i++) {
+		allNodes[i].hryNode.indexOfElem = indexHrchy[allNodes[i].hryNodeKey].hryNode.indexOfElem;
+	}
+	newPFV.hierarchy.allNodes = allNodes;
 	return newPFV;
 }
 
@@ -2529,6 +2562,8 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 }	
 
 function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
 
 	logger4js.debug('Delete one elemID from hierarchy of VPV');
 
@@ -2536,6 +2571,9 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 	var hrchy_node = hrchy_vpv[elemID];	
 	if (hrchy_node) {
 		var parentNode = hrchy_node.hryNode.parentNodeKey;
+		if (parentNode === rootphaseID){
+			parentNode = rootKey;
+		}
 	}	
 	// now in call-parameters : var origHrchyNodes = newPFV.hierarchy.allNodes;
 	var newHryAllNodes = [];
@@ -2573,7 +2611,7 @@ function moveTheNeeds (newPFV, phase, parent) {
 		// search the same role in parent
 		var found = false;
 		for (var i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
-			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue;}
+			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue; }
 			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
 			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
@@ -2583,13 +2621,22 @@ function moveTheNeeds (newPFV, phase, parent) {
 		}
 		if (!found) {
 			// insert the whole role and their needs
-			parent.AllRoles.push(role);
+			var parentNeeds = [];
+			for ( var p = parent.relStart-1; p < phase.relStart - parent.relStart; p++){
+				parentNeeds.push(0);
+			}
+			for ( var n = 0; n < role.Bedarf.length; n++){
+				parentNeeds.push(role.Bedarf[n]);				
+			}	
+			for ( var p = phase.relStart - parent.relStart + role.Bedarf.length; p < parent.relEnde; p++){
+				parentNeeds.push(0);
+			}	
+			role.Bedarf = parentNeeds;
+			parent.AllRoles.push(role);	
 		}
 	}
 	return newPFV;
 }
-
-
 
 function aggregateRoles(phase, orgalist){
 	
