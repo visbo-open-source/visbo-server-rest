@@ -2122,6 +2122,7 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	switch(arLength) {
 		
 		case 1:
+			
 			arResult.push(arSum);
 			break;
 		
