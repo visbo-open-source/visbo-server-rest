@@ -30,7 +30,17 @@ run the command
 wait for it to be completed. It usually takes a minute or less to complete.<br>
 It will download all the dependencies.<br><br>
 
-<b>4. Now run the command</b>
+<b>4. Configure the environment .env</b>
+
+	Configure .env file for mongo access and log file folder.
+	For the .env Content, check the env-empty file to see how it should look like and adopt the content to your mongo server with username&password and also for the log folder. For localdev we use the folder logging inside the ReST Server, needs to be created but gets not transfered to git.
+
+<b>5. Install redis server</b>
+
+		the ReST Server needs the redis server for caching specific entries like log settings or systemVC id. Install it and start it before ReST Server is started
+
+		
+<b>6. Now run the command</b>
 
 	npm start
 or,
