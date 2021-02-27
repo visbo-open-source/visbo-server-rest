@@ -1,0 +1,8 @@
+# server='mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboDevelopment?retryWrites=true'
+server='mongodb+srv://USER:PASSWORD@visbo01-3p7ni.mongodb.net/visboProduction?retryWrites=true'
+
+file="exportJSON.json"
+tmpFile=$TMPDIR"tmp".$file
+mongo --quiet $server cloneVC.js | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > $file
+rm -f $tmpFile

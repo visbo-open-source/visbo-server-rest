@@ -2616,6 +2616,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion-uid, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
+		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
 		*
 		* @apiPermission Authenticated and VC.View and VC.Modify or VC.ViewAudit for the VISBO Center.
 		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has VP.View Permission and VP.ViewAudit or VP.Modify permission.
@@ -2647,7 +2648,9 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
-			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			var perProject = req.query.perProject == true;
+
+			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
 			req.auditDescription = 'VISBO Center Capacity Read';
 
@@ -2692,7 +2695,29 @@ router.route('/:vcid/group/:groupid')
 					}
 				});
 
-			var capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var capacity = undefined;
+			if (perProject) {
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, req.visboOrganisations, onlyPT);
+			} else {
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			}
+
+			var filteredCapacity = [];
+			var startDate = validate.validateDate(req.query.startDate, false, true);
+			if (!startDate) {
+				startDate = new Date(-8640000000000000);
+			}
+			var endDate = validate.validateDate(req.query.endDate, false, true);
+			if (!endDate) {
+				endDate = new Date(8640000000000000);
+			}
+
+			capacity.forEach(item => {
+					var current = new Date(item.month);
+					if (current.getTime() >= startDate.getTime() && current.getTime() <= endDate.getTime()) {
+						filteredCapacity.push(item);
+					}
+			});
 
 			req.auditInfo = '';
 			return res.status(200).send({
@@ -2707,7 +2732,7 @@ router.route('/:vcid/group/:groupid')
 					vpCount: req.oneVC.vpCount,
 					createdAt: req.oneVC.createdAt,
 					updatedAt: req.oneVC.updatedAt,
-					capacity: capacity
+					capacity: filteredCapacity
 				} ]
 			});
 		});
