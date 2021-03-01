@@ -1067,12 +1067,10 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 
 	var capa = [];
 	for (item in capaVPV) {
-		const actMonthISO = item.substr(0, 24);
-		const roleID = item.substr(25);
 		if (onlyPT) {
 			capa.push({
-				'month': actMonthISO,
-				'roleID' : roleID,
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
 				'roleName' : capaVPV[item].roleName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
@@ -1082,8 +1080,8 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 			});
 		} else {
 			capa.push({
-				'month': actMonthISO,
-				'roleID' : roleID,
+				'month': capaVPV[item].currentDate,
+				'roleID' : capaVPV[item].roleID.toString(),
 				'roleName' : capaVPV[item].roleName,
 				'actualCost_PT': capaVPV[item].actualCost_PT || 0,
 				'plannedCost_PT': capaVPV[item].plannedCost_PT || 0,
