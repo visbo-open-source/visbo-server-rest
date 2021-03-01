@@ -98,16 +98,16 @@ vpvList.forEach(vpv => {
       }
     })
   }
-  vpv.customDblFields.forEach(customfield => {
+  vpv.customDblFields && vpv.customDblFields.forEach(customfield => {
     delete customfield._id;
     customfield.strkey = annonymise(customfield.strkey);
   });
-  vpv.customStringFields.forEach(customfield => {
+  vpv.customStringFields && vpv.customStringFields.forEach(customfield => {
     delete customfield._id;
     customfield.strkey = annonymise(customfield.strkey);
     customfield.strvalue = annonymise(customfield.strvalue);
   });
-  vpv.AllPhases.forEach(phase => {
+  vpv.AllPhases && vpv.AllPhases.forEach(phase => {
       delete phase._id;
       if (phase.deliverables && typeof phase.deliverables == 'object') {
         phase.deliverables.forEach((delivery, index) => {
