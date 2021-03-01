@@ -2196,7 +2196,8 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
 		return undefined;	
 	} else {
-		// it exists the oldVPV and at least one organisation	
+		// it exists the oldVPV and at least one organisation
+		// find the newest organisation - maxIndex	
 		var maxTimestamp = new Date(0);	
 		var maxIndex = 0;
 		for ( var i = 0; orga && i < orga.length; i++) { 
