@@ -2079,6 +2079,7 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	
 	// check if valid invocation
 	if (typeof arStartDate !== 'object' || typeof arEndDate !== 'object' || typeof arSum !== 'number' ) {
+		logger4js.warn('calcPhArValues:  typeof startDate: ', typeof arStartDate, 'typeof arEndDate: ', typeof arEndDate, 'typeof arSum: ', typeof arSum);
 		return undefined;
 	}
 
@@ -2121,6 +2122,7 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	switch(arLength) {
 		
 		case 1:
+			
 			arResult.push(arSum);
 			break;
 		
@@ -2148,33 +2150,51 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	return arResult;
 }
 
-function calcNewBedarfe(newStartDate, newEndDate, oldArray, scaleFactor, separatorIndex) {
+function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDate, oldArray, scaleFactor, separatorIndex) {
 	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
 	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged 
 	// only values starting with separatorIndex are changed according scaleFactor
+	// if similarCharacteristics then the distributionof values over the various months is maintained 
 	
 
 	let ar1 = undefined; 
 	let ar2 = oldArray;
 	let resultArray = [];
 
+	// if number of covered months are equal and day of start and day of end are almost equal, i.e +/-2 days then 
+	// consider it similar characteristic 
+	// example: oldPhase 6.3 - 17.5 and newPhase 4.6 - 19.8 are considered similarCharacteristics
+	let sameLengthInMonths =  ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newPhEndDate) - getColumnOfDate(newPhStartDate)));
+	let similar1 = ((Math.abs((oldPhStartDate.getDate() - newPhStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newPhEndDate.getDate())) <=2));
+	let similar2 = ((Math.abs((oldPhStartDate.getDate() - newPhStartDate.getDate())) <=4) && (Math.abs((diffDays(newPhEndDate, newPhStartDate) - diffDays(oldPhEndDate, oldPhStartDate)))<=2));
+
+	let similarCharacteristics = sameLengthInMonths && (similar1 || similar2);
+
+
 	if (separatorIndex && separatorIndex > 0) {
 
 		// ar1 now holds the actualData, which should not be changed 
-		ar1 = oldArray.slice(1,separatorIndex + 1);
+		ar1 = oldArray.slice(0,separatorIndex);
 
 		// ar2 holds the part of the array which is in the future, starting with separatorIndex 
-		ar2 = oldArray.slice(separatorIndex + 1);
+		ar2 = oldArray.slice(separatorIndex);
 	} 
 
-	let arSum = ar2.reduce(sumOF);
+	if (similarCharacteristics) {
+		ar2 = ar2.map(x => x * scaleFactor);
 
-	// calculate the new future-value array ...
-	ar2 = calcPhArValues(newStartDate, newEndDate, arSum*scaleFactor);
+	} else {
+		let arSum = ar2.reduce(sumOF);
+
+		// calculate the new future-value array ...
+		ar2 = calcPhArValues(newPhStartDate, newPhEndDate, arSum*scaleFactor);
+	}
+	
 				
 	// if necessary, combine actual data and new future values 
 	if (separatorIndex && separatorIndex > 0) {
 		resultArray = ar1.concat(ar2);
+
 	} else {
 		resultArray = ar2;
 	}
@@ -2198,11 +2218,15 @@ function isValidVPV(myVPV) {
 	// C9: is strategic Fit either undefined or having a numeric value >= 0 and <= 10 
 	// C10: is Risiko either undefined or having a numeric value >= 0 and <= 10
 	// C11: is number of milestones / phases in hierarchy eq. to number of phases/milestones when traversed in the list?
-	// C12: is each name of a phase / milestone listed in the hierarchy?
+	// C12: is each name of a phase / milestone listed in the hierarchy - and are indices in hierarchyNode consistent with AllPhases / AllResults ?
+	// C13: are indices given in the  hierarchy referencing phases / milestones in their AllPhases / AllResults Array correctly ? 
+	
 
-	let myHrchy = convertHierarchy(myVPV);
+	let myHrchy = convertHierarchy(myVPV);	
 
-	if (!myVPV || !myVPV.startDate || !myVPV.endDate || !myVPV.AllPhases || !myHrchy) {
+	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.AllPhases && myHrchy)) {
+		logger4js.warn('isValidVPV:  !myVPV: ', myVPV != undefined, myVPV && myVPV.startDate != undefined, 
+						myVPV && myVPV.endDate != undefined, myVPV && myVPV.AllPhases != undefined, myHrchy != undefined );
 		return false;
 	}
 
@@ -2212,14 +2236,22 @@ function isValidVPV(myVPV) {
 	let projectDurationInDays = diffDays(myVPV.endDate, myVPV.startDate) + 1;
 
 	// C0: is Dauer eq. Number of covered months of the project ?
-	let c0 = (myVPV.Dauer && myVPV.startDate && myVPV.endDate && myVPV.Dauer == (getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1));
-	
+	let c0 = (myVPV.Dauer && myVPV.startDate && myVPV.endDate && myVPV.Dauer == (getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1));	
 
-	// C1: 
-	let c1 = (myVPV.AllPhases && myVPV.AllPhases[0] && 
-				myVPV.AllPhases[0].name == rootPhaseName && 
+	if (!c0) {
+		logger4js.debug('isValidVPV: C0: project months vs duration', myVPV.Dauer, myVPV.startDate, myVPV.endDate);
+	}
+	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ? 
+	let c1 = false;
+	if (myVPV.AllPhases && myVPV.AllPhases[0]) {
+		c1 = (myVPV.AllPhases[0].name == rootPhaseName && 
 				myVPV.AllPhases[0].dauerInDays == projectDurationInDays);
+	} 
 	
+	if (!c1) {
+		logger4js.debug('isValidVPV: C1: rootPhase does not exist', myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].name, 
+		myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].dauerInDays, projectDurationInDays);
+	}
 
 	let c2 = true; 
 	let c3 = true;
@@ -2229,57 +2261,179 @@ function isValidVPV(myVPV) {
 	let c7 = true;
 	let c8 = true;
 	let c9 = !myVPV.StrategicFit || (myVPV.StrategicFit >= 0 && myVPV.StrategicFit <= 10);
-	let c10 = !myVPV.Risiko || (myVPV.Risiko && myVPV.Risiko >= 0 && myVPV.Risiko <= 10);
+	
+	if (!c9) {
+		logger4js.debug('isValidVPV: C9: strategic fit', myVPV.StrategicFit);
+	}
 
+	let c10 = !myVPV.Risiko || (myVPV.Risiko && myVPV.Risiko >= 0 && myVPV.Risiko <= 10);
+	if (!c10) {
+		logger4js.debug('isValidVPV: C10: Risiko', myVPV.Risiko);
+	}
 	
 	let c12 = true; 
+	let c13 = true;
 	let anzPlanElements = 0;
+	let phaseIX = 0;
 
 	myVPV.AllPhases.forEach(phase => {
 
+		phaseIX = phaseIX + 1;
 		anzPlanElements = anzPlanElements + 1; 
 
+		// check existence and validity in hierarchy  	
+		let nodeItem = undefined; 
+		if (phaseIX == 1) {
+			nodeItem = myHrchy['0'].hryNode;
+		} else {
+			nodeItem = myHrchy[phase.name].hryNode;
+		}
+		
+		let c13tmp = (nodeItem && nodeItem.indexOfElem == phaseIX);
+		c13 = c13 && c13tmp;
+		if (!c13tmp) {
+			logger4js.debug('isValidVPV: C13: Index of Phase does not match with hierarchy information', phase.name, phaseIX);
+		}
+
 		c2 = c2 && (phase.startOffsetinDays >= 0);
+		if (!(phase.startOffsetinDays >= 0)) {
+			logger4js.debug('isValidVPV: C2: Phase-Start Offset', phase.name, phase.startOffsetinDays);
+		}
+
 		c3 = c3 && ((phase.startOffsetinDays + phase.dauerInDays ) <= projectDurationInDays); 
+		if (!((phase.startOffsetinDays + phase.dauerInDays ) <= projectDurationInDays)) {
+			logger4js.debug('isValidVPV: C3: Phase-Start Offset', phase.name, phase.startOffsetinDays + phase.dauerInDays, projectDurationInDays);
+		}
 
 		let phLength = phase.relEnde - phase.relStart + 1;
 
 		phase.AllRoles.forEach(role => {
-			c5 = c5 && (role.Bedarf && (role.Bedarf.length == phLength));
+			let c5tmp = (role.Bedarf && (role.Bedarf.length == phLength));
+			c5 = c5 && c5tmp;
+			if (!c5tmp) {
+				logger4js.debug('isValidVPV: C5: Role Array', role.uid, role.Bedarf.length, phLength);
+			}
+
 			// checks whether all elements of an array are >= 0 
-			c6 = c6 && (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+			let c6tmp = (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+			c6 = c6 && c6tmp;
+			if (!c6tmp) {
+				logger4js.debug('isValidVPV: C6: Role Array with negative values ', role.uid);
+			}
 		});
 
 		phase.AllCosts.forEach(cost => {
-			c7 = c7 && (cost.Bedarf && (cost.Bedarf.length == phLength));
+			let c7tmp = (cost.Bedarf && (cost.Bedarf.length == phLength));
+			c7 = c7 && c7tmp;
+			if (!c7tmp) {
+				logger4js.debug('isValidVPV: C7: Cost Array', cost.uid, cost.Bedarf.length, phLength);
+			}
 			// checks whether all elements of an array are >= 0 
-			c8 = c8 && (cost.Bedarf && cost.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+			let c8tmp = (cost.Bedarf && cost.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+			c8 = c8 && c8tmp;
+			if (!c8tmp) {
+				logger4js.debug('isValidVPV: C8: Cost Array with negative values ', cost.uid);
+			}
 		});
 
+		let mileStoneIX = 0; 
 		phase.AllResults.forEach(result => {
 
+			mileStoneIX = mileStoneIX + 1; 
 			anzPlanElements = anzPlanElements + 1; 
 
-			c4 = c4 && (result.offset && result.offset >= 0 && 
-						(phase.startOffsetinDays + result.offset) <= projectDurationInDays && 
-						(result.offset <= phase.dauerInDays)); 
+			// C13: check existence and validity in hierarchy  	
+			let nodeItem = myHrchy[result.name].hryNode;			
+			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
 
+			c13 = c13 && c13tmp;
+			if (!c13tmp) {
+				logger4js.debug('isValidVPV: C13: Index of Milestone does not match with hierarchy information', phase.name, phaseIX);
+			}
+
+
+			let c4tmp = (result.offset && result.offset >= 0 && 
+						(phase.startOffsetinDays + result.offset) <= projectDurationInDays && 
+						(result.offset <= phase.dauerInDays));
 			
-			c12 = c12 && !(myHrchy[result.name] === undefined);
+			c4 = c4 && c4tmp; 
+			if (!c4tmp) {
+				logger4js.debug('isValidVPV: C4: Milestone not within phase limits: ', result.name, ' in ', phase.name);
+			}
+
+			let c12tmp = !(myHrchy[result.name] === undefined);
+			c12 = c12 && c12tmp;
+			if (!c12tmp) {
+				logger4js.debug('isValidVPV: C12: Milestone not in hierarchy: ', result.name);
+			}
+			// c12 = c12 && !(myHrchy[result.name] === undefined);
 
 		});
 
 		if (!(phase.name == rootPhaseName)) {
 			// check auf rootPhaseName ist bereits in c1 abgeprüft , in myHrchy there is no 
-			c12 = c12 && !(myHrchy[phase.name] === undefined);
+			let c12tmp = !(myHrchy[phase.name] === undefined);
+			c12 = c12 && c12tmp;
+			if (!c12tmp) {
+				logger4js.debug('isValidVPV: C12: Phase not in hierarchy: ', phase.name);
+			}
 		}
 		
 		
 	});
-
-	let c11 = myHrchy && (myVPV.hierarchy && myVPV.hierarchy.allNodes && (myVPV.hierarchy.allNodes.length == anzPlanElements));
 	
-	criterias.push(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12);
+	let c11 = myHrchy && (myVPV.hierarchy && myVPV.hierarchy.allNodes && (myVPV.hierarchy.allNodes.length == anzPlanElements));
+	if (!c11) {
+		logger4js.debug('isValidVPV: C11: Number of hierarchy elements does not match number of plan-Elements', 
+						myVPV.hierarchy && myVPV.hierarchy.allNodes && myVPV.hierarchy.allNodes.length, anzPlanElements);
+	}
+	
+	criterias.push(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13);
+
+	// now High-Level protocolling the single criterias
+	if (!c0) {
+		logger4js.warn('isValidVPV: C0: Dauer is not eq. to Number of covered months of the project');
+	}
+	if (!c1) {
+		logger4js.warn('isValidVPV: C1: rootPhase = "0§.§" does not exist or start-Date and endDate of project and rootPhase are not identical ');
+	}
+	if (!c2) {
+		logger4js.warn('isValidVPV: C2: at least one Phase is having a start-Date earlier than project startdate');
+	}
+	if (!c3) {
+		logger4js.warn('isValidVPV: C3: at least one Phase is having a end-Date later than project endDate');
+	}
+	if (!c4) {
+		logger4js.warn('isValidVPV: C4: at least one Milestone-Date is earlier than phase start or later than phase endDate');
+	}
+	if (!c5) {
+		logger4js.warn('isValidVPV: C5: array lengths of at least one role is not identical to relEnde-relStart + 1 of the phase');
+	}
+	if (!c6) {
+		logger4js.warn('isValidVPV: C6: at least one value in a role array is < 0 ');
+	}
+	if (!c7) {
+		logger4js.warn('isValidVPV: C7: array lengths of at least one cost is not identical to relEnde-relStart + 1 of the phase');
+	}
+	if (!c8) {
+		logger4js.warn('isValidVPV: C8: at least one value in a cost array is < 0');
+	}
+	if (!c9) {
+		logger4js.warn('isValidVPV: C9: strategic Fit is either undefined or having a numeric value < 0 or > 10');
+	}
+	if (!c10) {
+		logger4js.warn('isValidVPV: C10: Risiko is either undefined or having a numeric value < 0 or > 10');
+	}
+	if (!c11) {
+		logger4js.warn('isValidVPV: C11: number of milestones / phases in hierarchy is not eq. to number of phases/milestones when traversed in the list');
+	}
+	if (!c12) {
+		logger4js.warn('isValidVPV: C12: not each name of a phase / milestone is listed in the hierarchy');
+	}
+
+	if (!c13) {
+		logger4js.warn('isValidVPV: C13: not each name of a phase / milestone is listed in the hierarchy');
+	}
 	
 	// now returns true , if all criterias are fulfilled, false if at least one criteria is not fulfilled 
 	return criterias.reduce((accumulator, currentValue) => accumulator && currentValue);
@@ -2297,55 +2451,56 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor 
 	// 
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
-	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', oldVPV._id, 'scaleFactor', scaleFactor);
+	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', newVPV._id, 'scaleFactor', scaleFactor);
 	
 	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
 	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed 
-	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged  
-	let scaleFromDate = undefined; 
+	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged  	
+	//let scaleFromDate = new Date(2021, 7, 1);
+
+	let scaleFromDate = undefined;  
 	let scaleFromDateColumn = -1;	
 	
 	
 
 	if (!isValidVPV(oldVPV)) {
-
-		// normal action necessary: 
-		// return undefined;
-
-		// temporary correction ! for the sake of testing only .. 
-		// if this is because inconsistency between projectStartDate, projectEnd Date, Dauer and AllPhases[0], then try to correct it here for the sake of testing - 
-		// but this auto correction need to be eliminated again before going into production ...  		
-		
-		oldVPV.endDate = addDays(oldVPV.startDate, oldVPV.AllPhases[0].dauerInDays-1);
-		oldVPV.Dauer = getColumnOfDate(oldVPV.endDate) - getColumnOfDate(oldVPV.startDate) + 1;
-
-		if (!isValidVPV(oldVPV)) {
-			// if correction did'nt help ... 
-			return undefined;
-		}
-		
+		return undefined;		
 	}
 
 	// if a scaleFromDate has been provided: startDates have to be the same ... 
-	// use case preserve actualData : in this case a project must noct start later or earlier - 
+	// use case preserve actualData : in this case a project must not start later or earlier - 
 	// this would make all actualData information Nonsense. 
 	if (scaleFromDate) {
 		scaleFromDateColumn = getColumnOfDate(scaleFromDate);
 
 		// in this case this must be true: oldVPV.StartDate = newVPV.StartDate .. otherwise Exit
-		if (oldVPV.startDate !== newVPV.startDate) {
+		if (diffDays(oldVPV.startDate, newVPV.startDate) != 0) {
+			logger4js.warn('scaleVPV: when scaleFromDate is given start-Dates of oldVPV and newVPV need to be identical ', oldVPV.startDate, 'vs. newVPV:', newVPV.startDate);
 			return undefined;
 		}
-	}
 
+		// check whether anything needs to be done 
+		if (scaleFromDate < oldVPV.startDate) {
+			// same as if scaleFromDate === undefined
+			scaleFromDate = undefined; 
+			scaleFromDateColumn = -1;
+		} 
+
+		// check whether nothing should be scaled 
+		if (scaleFromDate > oldVPV.endDate) {
+			logger4js.warn('scaleVPV: when scaleFromDate is after endDate of Project ', oldVPV.endDate, 'vs. scale Fom Date:', scaleFromDate);
+			return undefined;
+		}
+
+	}
 
 	let oldDauerInDays = diffDays(oldVPV.endDate, oldVPV.startDate) + 1;
 	let newDauerInDays = diffDays(newVPV.endDate, newVPV.startDate) + 1;
 
-	
 
 	// a phase starting and ending on the same day has duration 1, a phase ending one day after the start has duration 2, and so on
 	if (oldDauerInDays == 0 || newDauerInDays <= 0 ) {
+		logger4js.warn('scaleVPV: oldDauerInDays = 0 or newDauerInDays = 0  ', oldDauerInDays, 'vs. duration newVPV:', newDauerInDays);
 		return undefined;
 	}	
 
@@ -2358,9 +2513,11 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	
 		// if scaleFromDate , then 
 		// check: dont do anything if phase is completely in Past , i.e timeFrame before scaleFromDate 
-		// check: if oldPhase and newPhase are both completely in future and
-		// check: if oldPhase is in future 
+		// check: check: if oldStart in Past: don't change oldStart, check where newEnd will be  if oldPhase and newPhase are both completely in future and
+		// check: if oldPhase and newPhase is in future then perform as if no scaleFromDate 
 
+		// somethingToDo gets false, when ScaleFromDate is given and phase in consideration is completey before scaleFromDate
+		let somethingToDo = true;
 		
 		let oldPhStartDate =  getPhStartDate(oldVPV, phase);	
 		let oldPhEndDate = getPhEndDate(oldVPV, phase);
@@ -2400,13 +2557,14 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 				// if oldEndDate is before then leave old phase completely unchanged ..
 				if (oldPhEndDate < scaleFromDate) {
 					newDauerInDays = oldDauerInDays;
+					somethingToDo = false;
 				} else {
 					newPhStartDate = addDays(newVPV.startDate, newOffsetInDays);
-					newPhEndDate = addDays(newPhStartDate, newDauerInDays);
+					newPhEndDate = addDays(newPhStartDate, newDauerInDays - 1);
 					// will the ne phaseEnd land before scaleFromDate? 
 					if (newPhEndDate < scaleFromDate) {
 						// adjust dauerInDays so that newPhEndDate is the last Day of the month of scaleFromDate
-						// here 
+						// 
 						// this is very important : otherwise there would be no array Element left to hold the new values 
 						let betterPhEndDate = getDateEndOfCurrentMonth(scaleFromDate);
 						let difference = diffDays(betterPhEndDate, newPhEndDate);
@@ -2424,67 +2582,73 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			}
 			
 		}
+
+		if (somethingToDo == true) {
+					
+			// now it has been checked that values are valid 
+			phase.startOffsetinDays = newOffsetInDays;
+			phase.dauerInDays = newDauerInDays;
+
+			// calculate, because in case when scaleFromDate has been provided, values may have changed 
+			newPhStartDate = getPhStartDate(newVPV, phase);
+			newPhEndDate = getPhEndDate(newVPV, phase); 
+
+			// for sake of consistency
+			phase.relStart = getColumnOfDate(newPhStartDate) - getColumnOfDate(newVPV.startDate) + 1;
+			phase.relEnde = getColumnOfDate(newPhEndDate) - getColumnOfDate(newVPV.startDate) + 1;
+
 		
-		// now it has been checked that values are valid 
-		phase.startOffsetinDays = newOffsetInDays;
-		phase.dauerInDays = newDauerInDays;
-
-		// calculate, because in case when scaleFromDate has been provided, values may have changed 
-		newPhStartDate = getPhStartDate(newVPV, phase);
-		newPhEndDate = getPhEndDate(newVPV, phase); 
-
-		// for sake of consistency
-		phase.relStart = getColumnOfDate(newPhStartDate) - getColumnOfDate(newVPV.startDate) + 1;
-		phase.relEnde = getColumnOfDate(newPhEndDate) - getColumnOfDate(newVPV.startDate) + 1;
-
-		
-		// now - do calculate the new values ..
-		// each role, each cost will have the same length for the 'Bedarf" array 
-		//
-		phase.AllRoles.forEach(role => {			
+			// now - do calculate the new values ..
+			// each role, each cost will have the same length for the 'Bedarf" array 
+			// provide oldDates and newDates so that method can find out, whether or not the 'characteristic of distribution' should be preserved		
+			phase.AllRoles.forEach(role => {			
 			
-			if (role.Bedarf && role.Bedarf !== null) {
-				role.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
-			}
-
-		});
-
-
-		phase.AllCosts.forEach(cost => {
-
-			if (cost.Bedarf && cost.Bedarf !== null) {
-				cost.Bedarf = calcNewBedarfe(newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 
-			}
-			
-		});
-		
-		phase.AllResults.forEach(result => {
-
-			let newMsOffset = Math.round(result.offset*timeScalingFactor);
-
-			if (scaleFromDate) {
-				
-				let newMsDate = addDays(newPhStartDate, newMsOffset);
-				if (newMsDate < scaleFromDate) {
-					let betterMsDate = scaleFromDate;
-					let difference = diffDays(betterMsDate, newMsDate);
-					newMsOffset = newMsOffset + difference;
+				if (role.Bedarf && role.Bedarf !== null) {
+					role.Bedarf = calcNewBedarfe(oldPhStartDate, oldPhEndDate, 
+											newPhStartDate, newPhEndDate, role.Bedarf, scaleFactor, separatorIndex); 				
 				}
-			}			
 
-			result.offset = newMsOffset;
+			});
+
+
+			phase.AllCosts.forEach(cost => {
+
+				if (cost.Bedarf && cost.Bedarf !== null) {
+					cost.Bedarf = calcNewBedarfe(oldPhStartDate, oldPhEndDate, 
+						newPhStartDate, newPhEndDate, cost.Bedarf, scaleFactor, separatorIndex); 	
+				}
 			
-		});
+			});
 		
+			phase.AllResults.forEach(result => {
+
+				let newMsOffset = Math.round(result.offset*timeScalingFactor);
+
+				if (scaleFromDate) {
+				
+					let newMsDate = addDays(newPhStartDate, newMsOffset);
+					if (newMsDate < scaleFromDate) {
+						let betterMsDate = scaleFromDate;
+						let difference = diffDays(betterMsDate, newMsDate);
+						newMsOffset = newMsOffset + difference;
+					}
+				}			
+
+				result.offset = newMsOffset;
+			
+			});
+		
+		}
+
 
 	});
+
+	// now copy by reference to allPhases of oldVPV 
+	newVPV.AllPhases = oldVPV.AllPhases;	
+	newVPV.Dauer = getColumnOfDate(newVPV.endDate) - getColumnOfDate(newVPV.startDate) + 1;
 	
-	oldVPV.startDate = newVPV.startDate;
-	oldVPV.endDate = newVPV.endDate;
-	oldVPV.Dauer = getColumnOfDate(oldVPV.endDate) - getColumnOfDate(oldVPV.startDate) + 1;
-	
-	if (isValidVPV(oldVPV)) {
-		return oldVPV;
+	if (isValidVPV(newVPV)) {
+		return newVPV;
 	} else {
 		return undefined;
 	}
