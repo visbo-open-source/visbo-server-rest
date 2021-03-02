@@ -940,6 +940,8 @@ router.route('/:vpvid/copy')
 		var timestamp;
 		if (req.body.timestamp) {
 			timestamp = validate.validateDate(req.body.timestamp, true, true);
+		} else {
+			timestamp = new Date();
 		}
 		if (variantName != '') {
 			// check that the Variant exists
