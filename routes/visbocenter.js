@@ -1911,9 +1911,9 @@ router.route('/:vcid/group/:groupid')
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext) {
-				queryVCSetting.sort('type name userId +timestamp');
+				queryVCSetting.sort({timestamp: 1});
 			} else {
-				queryVCSetting.sort('type name userId -timestamp');
+				queryVCSetting.sort({timestamp: -1});
 			}
 			if (req.query.shortList) {
 				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
@@ -1928,14 +1928,6 @@ router.route('/:vcid/group/:groupid')
 					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 					return;
 				}
-				for (let i = 0; i < listVCSetting.length; i++){
-					// Remove Password Information
-					if (listVCSetting[i].type == 'SysConfig' && listVCSetting[i].name == 'SMTP'
-					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
-						listVCSetting[i].value.auth.pass = '';
-						break;
-					}
-				}
 				if (listVCSetting.length > 1 && latestOnly){
 					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
@@ -1943,7 +1935,7 @@ router.route('/:vcid/group/:groupid')
 						//compare current item with previous and ignore if it is the same type, name, userId
 						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
 						if (listVCSetting[i].type != listVCSetting[i-1].type
-						|| listVCSetting[i].name != listVCSetting[i-1].name
+						// || listVCSetting[i].name != listVCSetting[i-1].name
 						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
 							listVCSettingfiltered.push(listVCSetting[i]);
 							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
