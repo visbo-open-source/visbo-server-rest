@@ -1033,12 +1033,13 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 		for (item in capaPFV) {
 			if (!capaVPV[item]) {
 				// insert new Value
-				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
 				capaVPV[item] = {};
+				capaVPV[item].currentDate = capaPFV[item].currentDate;
+				capaVPV[item].roleID = capaPFV[item].roleID;
+				capaVPV[item].roleName = capaPFV[item].roleName
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
-				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost = 0;
 				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
 				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
@@ -1130,11 +1131,13 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
 				capaVPV[item] = {};
 				capaVPV[item].vpid = capaPFV[item].vpid;
-				capaVPV[item].name = capaPFV[item].name;
+				capaVPV[item].name = capaPFV[item].name;				
+				capaVPV[item].currentDate = capaPFV[item].currentDate;
+				capaVPV[item].roleID = capaPFV[item].roleID;
+				capaVPV[item].roleName = capaPFV[item].roleName
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
-				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost = 0;
 				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
 				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
@@ -1429,7 +1432,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		}
 	}
 
-	if (!roleIdentifier || roleIdentifier === '' && tz_organisation && tz_organisation.value&& allRoles.length > 0)  roleIdentifier = tz_organisation.value.allRoles[0].name;
+	if (!roleIdentifier || roleIdentifier === '' && tz_organisation && tz_organisation.value&& allRoles.length > 0)  roleID = tz_organisation.value.allRoles[0].uid;
 
 	logger4js.trace('find the roleID for the given roleName %s', roleIdentifier);
 
