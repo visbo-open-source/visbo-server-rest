@@ -1,3 +1,6 @@
+var mongoose = require('mongoose');
+var VisboProjectVersion = mongoose.model('VisboProjectVersion');
+
 var logModule = 'VPV';
 var log4js = require('log4js');
 const { toNamespacedPath } = require('path');
@@ -1045,12 +1048,13 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 		for (item in capaPFV) {
 			if (!capaVPV[item]) {
 				// insert new Value
-				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
 				capaVPV[item] = {};
+				capaVPV[item].currentDate = capaPFV[item].currentDate;
+				capaVPV[item].roleID = capaPFV[item].roleID;
+				capaVPV[item].roleName = capaPFV[item].roleName
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
-				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost = 0;
 				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
 				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
@@ -1142,11 +1146,13 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
 				capaVPV[item] = {};
 				capaVPV[item].vpid = capaPFV[item].vpid;
-				capaVPV[item].name = capaPFV[item].name;
+				capaVPV[item].name = capaPFV[item].name;				
+				capaVPV[item].currentDate = capaPFV[item].currentDate;
+				capaVPV[item].roleID = capaPFV[item].roleID;
+				capaVPV[item].roleName = capaPFV[item].roleName
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
-				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost = 0;
 				capaVPV[item].internCapa_PT = (capaPFV[item].internCapa_PT || 0);
 				capaVPV[item].externCapa_PT = (capaPFV[item].externCapa_PT || 0);
@@ -1441,7 +1447,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		}
 	}
 
-	if (!roleIdentifier || roleIdentifier === '' && tz_organisation && tz_organisation.value&& allRoles.length > 0)  roleIdentifier = tz_organisation.value.allRoles[0].name;
+	if (!roleIdentifier || roleIdentifier === '' && tz_organisation && tz_organisation.value&& allRoles.length > 0)  roleID = tz_organisation.value.allRoles[0].uid;
 
 	logger4js.trace('find the roleID for the given roleName %s', roleIdentifier);
 
@@ -1591,7 +1597,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 				// calculate the needs of this Role with faktor always 1.0
 
-				logger4js.trace('Calculate Pases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
+				logger4js.trace('Calculate Phases with ActRole %s Phases %s', actRoleID, phasesWithActRole && phasesWithActRole.length);
 				for (var j= 0; phasesWithActRole && j < phasesWithActRole.length; j++) {
 					var phase = getPhaseByID(hrchy, vpv, phasesWithActRole[j]);
 					if (!phase) {
@@ -1721,7 +1727,7 @@ function buildRClists(vpv, team) {
 				}
 				// teamlists.addRP
 				if (!teamlists[role.teamID]){
-					var phasesPerTeam = [];
+					phasesPerTeam = [];
 					var newTeam = {};
 					phasesPerTeam.push(phase.name);
 					newTeam[role.RollenTyp] = phasesPerTeam;
@@ -1730,7 +1736,7 @@ function buildRClists(vpv, team) {
 					newTeam = teamlists[role.teamID];
 					if (newTeam[role.RollenTyp]){
 						phasesPerTeam = newTeam[role.RollenTyp];
-						var indexPhase= phasesPerTeam.indexOf(phase.name);
+						indexPhase= phasesPerTeam.indexOf(phase.name);
 						if (!(indexPhase >= 0)) {
 							phasesPerTeam.push(phase.name);
 							newTeam[role.RollenTyp] = phasesPerTeam;
@@ -1807,87 +1813,88 @@ function getConcerningRoles(allRoles, allTeams, roleID) {
 
 
 // find summary Roles
-// function getSummaryRoles(allRoles, roleID) {
-// 	var summaryRoles = [];
-//
-// 	function findSummaryRoles(value) {
-// 		//value is the Id of one subrole
-// 		var hroleID = value.key;
-// 		var hrole = allRoles[hroleID];
-// 		if (hrole.subRoleIDs.length > 0){
-// 			summaryRoles[hroleID] = hrole;
-// 			var shroles = hrole.subRoleIDs;
-// 			shroles.forEach(findSummaryRoles);
-// 		}
-// 	}
-//
-// 	// all summary roles
-// 	if (roleID === undefined && allRoles) {
-// 		var i = 0;
-// 		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
-// 			var hrole = allRoles[i];
-// 			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
-// 		}
-// 		return summaryRoles;
-// 	}
-//
-// 	// only summary roles that are children of the role roleID
-// 	if (roleID && allRoles){
-// 		var role = allRoles[roleID];
-// 		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
-// 			var subRoles = role.subRoleIDs;
-// 			if (subRoles.length > 0 ){
-// 				summaryRoles[role.uid] = role;
-// 				subRoles.forEach(findSummaryRoles);
-// 			}
-//
-// 		}
-// 		return summaryRoles;
-// 	}
-// }
+function getSummaryRoles(allRoles, roleID) {
+	var summaryRoles = [];
 
-// function getParentOfRole (roleID, allRoles, sumRoles) {
-// 	var parentRole = undefined;
-// 	if (allRoles[roleID]) {
-//
-// 		var notFound = true;
-// 		for (var k=0; sumRoles && k < sumRoles.length;k++){
-// 			// check only roles, which are not isTeam or isTeamParent
-// 			var hrole = sumRoles[k];
-// 			if (hrole)	{
-// 				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){
-// 					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
-// 						parentRole = hrole;
-// 						notFound = false;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return parentRole;
-// }
+	function findSummaryRoles(value) {
+		//value is the Id of one subrole
+		var hroleID = value.key;
+		var hrole = allRoles[hroleID];
+		if (hrole.subRoleIDs.length > 0){
+			summaryRoles[hroleID] = hrole;
+			var shroles = hrole.subRoleIDs;
+			shroles.forEach(findSummaryRoles);
+		}
+	}
 
-// function buildTopNodes(allRoles) {
-// 	var topLevelNodes = [];
-// 	var topLevel = [];
-// 	var i = 1;
+	// all summary roles
+	if ((roleID === undefined || roleID === '') && allRoles) {
+		var i = 0;
+		for (i=0; allRoles &&  i <= allRoles.length; i++ ){
+			var hrole = allRoles[i];
+			if (hrole && hrole.subRoleIDs.length > 0 ) summaryRoles[allRoles[i].uid] = allRoles[i];
+		}
+		return summaryRoles;
+	}
 
-// 	// find all summaryRoles
-// 	var sumRoles = getSummaryRoles(allRoles, '');
+	// only summary roles that are children of the role roleID
+	if (roleID && allRoles){
+		var role = allRoles[roleID];
+		if (role.subRoleIDs && role.subRoleIDs.length > 0) {
+			var subRoles = role.subRoleIDs;
+			if (subRoles.length > 0 ){
+				summaryRoles[role.uid] = role;
+				subRoles.forEach(findSummaryRoles);
+			}
 
-// 	while (i <= allRoles.length){
-// 		var currentRole = allRoles[i];
-// 		if (currentRole) {
-// 			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
-// 			if (!parent && !topLevel[currentRole.uid]) {
-// 				topLevel[currentRole.uid] = currentRole;
-// 				topLevelNodes.push(currentRole);
-// 			}
-// 		}
-// 		i++;
-// 	}
-// 	return topLevelNodes;
-// }
+		}
+		return summaryRoles;
+	}	
+	return summaryRoles;
+}
+
+function getParentOfRole (roleID, allRoles, sumRoles) {
+	var parentRole = undefined;
+	if (allRoles[roleID]) {
+
+		var notFound = true;
+		for (var k=0; sumRoles && k < sumRoles.length;k++){
+			// check only roles, which are not isTeam or isTeamParent
+			var hrole = sumRoles[k];
+			if (hrole)	{
+				for( var i = 0; notFound && hrole && hrole.subRoleIDs && i < hrole.subRoleIDs.length; i++ ){
+					if ( hrole.subRoleIDs[i] && hrole.subRoleIDs[i].key == roleID) {
+						parentRole = hrole;
+						notFound = false;
+					}
+				}
+			}
+		}
+	}
+	return parentRole;
+}
+
+function buildTopNodes(allRoles) {
+	var topLevelNodes = [];
+	var topLevel = [];
+	var i = 1;
+
+	// find all summaryRoles
+	var sumRoles = getSummaryRoles(allRoles, '');
+
+	while (i <= allRoles.length){
+		var currentRole = allRoles[i];
+		if (currentRole) {
+			var parent = getParentOfRole(currentRole.uid, allRoles, sumRoles);
+			if (!parent && !topLevel[currentRole.uid]) {
+				topLevel[currentRole.uid] = currentRole;
+				topLevelNodes.push(currentRole);
+			}
+		}
+		i++;
+	}
+	return topLevelNodes;
+}
 
 // function getTeamOfSummaryRole(allTeams, allRoles){
 // 	var virtuals = undefined;
@@ -1962,7 +1969,112 @@ function convertOrganisation(organisation_new) {
 	var endCalc = new Date();
 	logger4js.debug('Convert Organisation duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return organisation;
+
+
 }
+function buildOrgaList (orga){
+	var organisation = [];
+	var organisationItem = {};
+	for (let i = 0; orga.value.allRoles && i < orga.value.allRoles.length; i++) {
+		const role = orga.value.allRoles[i];
+		const id = role.uid;
+		if (!organisation[id]) {
+			organisationItem = {};
+			organisation[id] = organisationItem;
+			organisation[id].uid = id;
+			organisation[id].calcid = id;
+			organisation[id].pid = undefined;
+		}
+		organisation[id].name = role.name;
+		organisation[id].isExternRole = role.isExternRole;
+		organisation[id].defaultKapa = role.defaultKapa;
+		organisation[id].tagessatz = role.tagessatzIntern;
+		organisation[id].employeeNr = role.employeeNr;
+		organisation[id].defaultDayCapa = role.defaultDayCapa;
+		if (role.entryDate > '0001-01-01T00:00:00Z') {
+			organisation[id].entryDate = role.entryDate;
+		}
+		if (role.exitDate < '2200-11-30T23:00:00Z') {
+			organisation[id].exitDate = role.exitDate;
+		}
+		organisation[id].aliases = role.aliases;
+		
+		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
+		if (role.isTeam) {
+			logger4js.info('Skip Handling of Team Members');
+			organisation[id].type = 2;
+			organisation[id].isTeam = true;
+		} else {
+			organisation[id].type = 1;
+		}
+		// role is a summary role
+		if (role.subRoleIDs.length > 0) {
+			organisation[id].sumRole = true;
+		} else {
+			organisation[id].sumRole = false;
+		}
+		for (let j = 0; j < role.subRoleIDs.length; j++) {		  
+			const index = Number(role.subRoleIDs[j].key);
+			if (index < 0) {
+				logger4js.error(`Inconsistent Org Structure Role ${id} SubRole ${role.subRoleIDs[j].key}`);
+				// something wrong with the numbering
+				break;
+			}
+			if (!organisation[index]) {
+				// added by subrole
+				organisationItem = {};
+				organisation[index] = organisationItem;
+				organisation[index].uid = index;
+				organisation[index].calcid = index;
+			} else {
+				logger4js.debug(`SubRole already exists ${id} SubRole ${index}`);
+			}
+			if (!organisation[index].pid) {
+				organisation[index].pid = id;
+			}
+		}
+	}
+	
+
+      // build team members Information by duplicating users with their percentage
+      let maxid = 0;
+      orga.value.allRoles.forEach(element => { if (element.uid > maxid) maxid = element.uid; } );
+      logger4js.info(`MaxID ${maxid}`);
+      for (let i = 0; i < orga.value.allRoles.length; i++) {
+        const role = orga.value.allRoles[i];
+        if (role.isTeam && role.subRoleIDs && role.subRoleIDs.length > 0) {
+          for (let j = 0; j < role.subRoleIDs.length; j++) {
+            const index = role.subRoleIDs[j].key;
+            if (!organisation[index] || organisation[index].isTeam) {
+              // nothing to do
+              continue;
+            }
+            const userRole = organisation[index];
+            // now it is a user, add a new entry
+			maxid += 1;
+			organisationItem = {};
+            organisation[maxid] = organisationItem;
+            organisation[maxid].uid = index;
+            organisation[maxid].calcid = maxid;
+            organisation[maxid].type = 2;
+            organisation[maxid].pid = role.uid;
+            organisation[maxid].name = userRole.name;
+            organisation[maxid].parent = role.name;
+            if (userRole.employeeNr) { organisation[maxid].employeeNr = userRole.employeeNr; }
+            if (userRole.isExternRole) { organisation[maxid].isExternRole = userRole.isExternRole; }
+            if (userRole.defaultDayCapa >= 0) { organisation[maxid].defaultDayCapa = userRole.defaultDayCapa; }
+            if (userRole.defaultKapa >= 0) { organisation[maxid].defaultKapa = userRole.defaultKapa; }
+            if (userRole.tagessatz >= 0) { organisation[maxid].tagessatz = userRole.tagessatz; }
+            if (userRole.entryDate) { organisation[maxid].entryDate = userRole.entryDate; }
+            if (userRole.exitDate) { organisation[maxid].exitDate = userRole.exitDate; }
+            if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
+            organisation[maxid].percent = Number(role.subRoleIDs[j].value) || 0;
+          }
+        }
+       }
+	return organisation;
+}
+
 
 function cleanupRestrictedVersion(vpv) {
 	if (!vpv) return;
@@ -2065,11 +2177,539 @@ function verifyOrganisation(newOrga, oldOrga) {
 }
 
 function convertVPV(oldVPV, oldPFV, orga) {
+
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// if an orga is delivered all individual roles will be replaced by the parent orga unit
 	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
-	logger4js.debug('convertVPV:  ', oldVPV._id, 'oldPFV', oldPFV != undefined, 'orga', orga != undefined);
-	return oldVPV;
+
+	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
+
+	var newPFV = new VisboProjectVersion();
+
+	// check the existence of the orga
+	if ( !orga || orga.length < 1 ) {
+		logger4js.debug('creation of new PFV is going wrong because of no valid orga');
+		return undefined;
+	}
+
+	// check the existence of oldVPV, which will be the base of the newPFV
+	if ( !oldVPV ) {
+		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
+		return undefined;	
+	} else {
+		// it exists the oldVPV and at least one organisation
+		// find the newest organisation - maxIndex	
+		var maxTimestamp = new Date(0);	
+		var maxIndex = 0;
+		for ( var i = 0; orga && i < orga.length; i++) { 
+			var oTimestamp = new Date(orga[i].timestamp);
+			if ( oTimestamp > maxTimestamp) {
+				maxIndex = i;
+				maxTimestamp = orga[i].timestamp;
+			}
+		}
+		var actOrga = convertOrganisation(orga[maxIndex]);
+		const orgalist = buildOrgaList(actOrga);		
+		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
+
+		// keep unchangable attributes
+		newPFV.name = oldVPV.name;
+		newPFV.vpid = oldVPV.vpid;
+		newPFV.variantName = 'pfv';
+		if (oldVPV.timestamp && Date.parse(oldVPV.timestamp)) {
+			newPFV.timestamp = new Date(oldVPV.timestamp);
+		} else {
+			newPFV.timestamp = new Date();
+		}
+		// copy all attributes
+		newPFV.variantDescription = oldVPV.variantDescription;
+		newPFV.Risiko = oldVPV.Risiko;
+		newPFV.StrategicFit = oldVPV.StrategicFit;
+		newPFV.customDblFields = oldVPV.customDblFields;
+		newPFV.customStringFields = oldVPV.customStringFields;
+		newPFV.customBoolFields = oldVPV.customBoolFields;
+		// ? newPFV.actualDataUntil = oneVPV.actualDataUntil;
+		newPFV.Erloes = oldVPV.Erloes;
+		newPFV.leadPerson = oldVPV.leadPerson;
+		newPFV.startDate = oldVPV.startDate;
+		newPFV.endDate = oldVPV.endDate;
+		newPFV.earliestStart = oldVPV.earliestStart;
+		newPFV.earliestStartDate = oldVPV.earliestStartDate;
+		newPFV.latestStart = oldVPV.latestStart;
+		newPFV.latestStartDate = oldVPV.latestStartDate;
+		newPFV.status = oldVPV.status;
+		newPFV.ampelStatus = oldVPV.ampelStatus;
+		newPFV.ampelErlaeuterung = oldVPV.ampelErlaeuterung;
+		newPFV.farbe = oldVPV.farbe;
+		newPFV.Schrift = oldVPV.Schrift;
+		newPFV.Schriftfarbe = oldVPV.Schriftfarbe;
+		newPFV.VorlagenName = oldVPV.VorlagenName;
+		newPFV.Dauer = oldVPV.Dauer;
+		newPFV.hierarchy = oldVPV.hierarchy;
+		newPFV.volumen = oldVPV.volumen;
+		newPFV.complexity = oldVPV.complexity;
+		newPFV.description = oldVPV.description;
+		newPFV.businessUnit = oldVPV.businessUnit;
+
+		// newPFV.AllPhases have to be created new ones	and the ressources will be aggregated to sumRoles	
+		var newpfvAllPhases = [];
+		for ( i = 0; oldVPV && oldVPV.AllPhases && i < oldVPV.AllPhases.length ; i++){
+			var onePhase = {};
+			var phase = oldVPV.AllPhases[i];			
+			
+			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
+			onePhase.AllRoles  = aggregateRoles(phase, orgalist);			
+			
+			var newAllCosts = [];
+			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
+				var oneCost = {};
+				oneCost.KostenTyp = phase.AllCosts[ic].KostenTyp;
+				oneCost.name = phase.AllCosts[ic].name;
+				oneCost.farbe = phase.AllCosts[ic].farbe;
+				oneCost.Bedarf = phase.AllCosts[ic].Bedarf;
+				newAllCosts.push(oneCost);
+			}
+			onePhase.AllCosts = newAllCosts;
+
+			var newAllResults = [];
+			for ( var ires = 0; phase && phase.AllResults && ires < phase.AllResults.length; ires++){
+				var oneResult = {};
+				var milestone = phase.AllResults[ires];
+				oneResult.bewertungen = milestone.bewertungen ;
+				oneResult.name = milestone.name ;
+				oneResult.verantwortlich = milestone.verantwortlich ;
+				oneResult.offset = milestone.offset ;
+				oneResult.alternativeColor = milestone.alternativeColor ;
+				oneResult.shortName = milestone.shortName ;
+				oneResult.originalName = milestone.originalName;
+				oneResult.appearance = milestone.appearance ;				
+				oneResult.percentDone = milestone.percentDone ;
+				oneResult.invoice = milestone.invoice ;
+				oneResult.penalty = milestone.penalty ;
+				var newmsdeliverables = [];
+				for (var id = 0;  milestone && milestone.deliverables && id < milestone.deliverables.length; id++){
+					newmsdeliverables.push(milestone.deliverables[id]);
+				} 
+				oneResult.deliverables = newmsdeliverables;
+				newAllResults.push(oneResult);
+			}
+			onePhase.AllResults = newAllResults; 
+
+			// AllBewertungen keep as they are
+			onePhase.AllBewertungen = phase.AllBewertungen;					
+		
+			var newdeliverables = [];
+			for ( id = 0;  phase && phase.deliverables && id < phase.deliverables.length; id++){				
+				newdeliverables.push(phase.deliverables[id]);
+			}
+			onePhase.deliverables = newdeliverables;
+
+			onePhase.percentDone= phase.percentDone;
+			onePhase.invoice= phase.invoice;
+			onePhase.penalty= phase.penalty;
+			onePhase.responsible= phase.responsible;
+			onePhase.ampelStatus= phase.ampelStatus;
+			onePhase.ampelErlaeuterung= phase.ampelErlaeuterung;
+			onePhase.earliestStart= phase.earliestStart;
+			onePhase.latestStart= phase.latestStart;
+			onePhase.minDauer= phase.minDauer;
+			onePhase.maxDauer= phase.maxDauer;
+			onePhase.relStart= phase.relStart;
+			onePhase.relEnde= phase.relEnde;
+			onePhase.startOffsetinDays= phase.startOffsetinDays;
+			onePhase.dauerInDays= phase.dauerInDays;
+			onePhase.name= phase.name;
+			onePhase.farbe= phase.farbe;
+			onePhase.shortName= phase.shortName;
+			onePhase.originalName= phase.originalName;
+			onePhase.appearance= phase.appearance;
+			newpfvAllPhases.push(onePhase);
+		}
+		newPFV.AllPhases = newpfvAllPhases;	
+	}
+
+	logger4js.debug('newPFV now with aggregated resources');
+		
+	if ( oldVPV && oldPFV  ) {
+		// oldVPV is to be squeezed to the deadlines and deliveries of the oldPFV
+		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the oldPFV');
+		
+		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
+		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
+		newPFV = createIndices(newPFV);
+				
+		// var correct = isValidVPV(newPFV);
+	}
+
+	logger4js.debug('check the cost of VPV and newPFV - they have to be equal');	
+	// var allPersCostVPV = getAllPersonalKosten(oldVPV, actOrga);	
+	// var allPersCost = getAllPersonalKosten(newPFV, actOrga);
+	// var result = true;
+	// var sumVPV = 0.0;
+	// var sumPFV = 0.0;
+	// for (var c=0; allPersCost && c < allPersCost.length; c++){
+	// 	result = result && (allPersCost[c] == allPersCostVPV[c]);
+	// 	sumVPV = sumVPV + allPersCostVPV[c];
+	// 	sumPFV = sumPFV + allPersCost[c];
+	// }
+	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+
+	return newPFV;
+}
+
+function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
+	
+	logger4js.debug('adapt all deliverables of the newPFV to the oldPFV');
+	
+	if (oldVPV && oldPFV && newPFV){
+		logger4js.debug('look for the deliverables of  existing pfv');
+		var hrchy_pfv = convertHierarchy(oldPFV);
+		var allPFVDeliverables = getAllDeliverables(oldPFV, hrchy_pfv, undefined);		
+		
+		logger4js.debug('look for the deliverables of actual vpv');
+		var hrchy_vpv = convertHierarchy(oldVPV);
+		var allnewDeliverables = getAllDeliverables(oldVPV, hrchy_vpv, undefined);
+		var listDeliveries = allnewDeliverables.getAllDeliveries();
+
+		var DelivToDelete = [];
+		var fittingDeliv = [];
+		logger4js.debug('find the deliverables, which are only in the vpv and should be deleted for a new PFV');
+		for (var element = 0; element < listDeliveries.length; element++) {
+			var actDeliv = listDeliveries[element];	
+			if ( allPFVDeliverables && allPFVDeliverables.allDeliverables && !allPFVDeliverables.allDeliverables[actDeliv.description] ) {
+				DelivToDelete.push(actDeliv);
+			} else {
+				fittingDeliv.push(actDeliv);
+			}
+		}
+		logger4js.debug('delete the deliverables found out');
+		for ( var del = 0; del < DelivToDelete.length; del++) {
+			actDeliv = DelivToDelete[del];
+			var newDelivs = [];
+			var elemID = actDeliv.nameID;
+			var relevElem = {};
+			if (elemIdIsMilestone(elemID)) {
+				relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
+			} else {
+				relevElem = getPhaseByID(hrchy_vpv, newPFV,elemID);
+			}
+			for (var i = 0; relevElem && relevElem.deliverables && i < relevElem.deliverables.length; i++){
+				if (relevElem.deliverables[i] != actDeliv.description) {
+					newDelivs.push(relevElem.deliverables[i]);
+				}	
+			}			
+			relevElem.deliverables = newDelivs;
+		}
+	}
+	return newPFV;
+}
+
+
+function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
+
+	
+	logger4js.debug('adapt all deadlines of the newPFV to the oldPFV');
+	var hrchy_pfv = convertHierarchy(oldPFV);
+	// look for the deadlines of pfv (take all)
+	var allPFVDeadlines = getDeadlines(oldPFV, hrchy_pfv, undefined);
+	
+	var hrchy_vpv = convertHierarchy(oldVPV);
+	// change the deadlines of the oldVPV			
+	var allnewDeadlines = getDeadlines(newPFV, hrchy_vpv, undefined);
+	var listDeadlines = allnewDeadlines.getAllDeadlines();
+	
+	var DeadlineToDelete = [];
+	var fittingDeadline = [];
+	logger4js.debug('find the deadlines, which are only in the vpv and should be deleted for a new PFV');
+	for (var element = 0; element < listDeadlines.length; element++) {
+		var actDeadline = listDeadlines[element];	
+		if ( allPFVDeadlines && allPFVDeadlines.allDeadlines && !allPFVDeadlines.allDeadlines[actDeadline.nameID] ) {			
+			DeadlineToDelete.push(actDeadline);
+		} else {
+			fittingDeadline.push(actDeadline);
+		}
+	}
+
+	logger4js.debug('delete the deadlines found out');
+	var remPhaseList={};	
+	// sort the list of Deadlines (first the milestones then the phases - alphabethically descending)	
+	DeadlineToDelete.sort(function(a, b){return b.nameID.localeCompare(a.nameID);});
+
+	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
+		actDeadline = DeadlineToDelete[dl];
+		if (actDeadline && actDeadline.type === 'Milestone') {
+			newPFV = deleteMSFromVPV(hrchy_vpv, newPFV, actDeadline);
+		} 
+		if (actDeadline && actDeadline.type === 'Phase') {
+			var remPhase = deletePhaseFromVPV(hrchy_vpv, newPFV, actDeadline);
+			remPhaseList[actDeadline.nameID]= remPhase;						
+		}
+	}
+	logger4js.debug('remove the phases in remPhaseList AllPhases');
+	var newPhaseList = [];
+	for (var j=0; newPFV && newPFV.AllPhases && j < newPFV.AllPhases.length; j++) {
+		if (remPhaseList[newPFV.AllPhases[j].name]){
+			continue;			
+		} else {
+			newPhaseList.push(newPFV.AllPhases[j]);
+		}
+	}
+	// now cleaned AllPhases
+	newPFV.AllPhases = newPhaseList;
+	return newPFV;
+}
+
+
+function createIndices(newPFV) {
+
+	logger4js.debug('Create the needed property "indexOfElem" in the hierarchy for all phases and milestones');
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
+
+	if (!newPFV){
+		return newPFV;
+	}
+	var indexHrchy = [];
+	indexHrchy = convertHierarchy(newPFV);
+	for (var i = 0; newPFV && newPFV.AllPhases && newPFV.AllPhases[i] && i < newPFV.AllPhases.length; i++) {
+		var phase = newPFV.AllPhases[i];
+		if (phase) {
+			// special treatment of rootphase
+			if (phase.name === rootphaseID){
+				phaseName = rootKey;
+			} else {
+				phaseName = phase.name;
+			}		
+			indexHrchy[phaseName].hryNode.indexOfElem = i + 1;
+			for (var j = 0; phase.AllResults && j < phase.AllResults.length; j++){
+				indexHrchy[phase.AllResults[j].name].hryNode.indexOfElem = j + 1;
+			}
+		}
+	}
+		
+	var allNodes = newPFV.hierarchy.allNodes;
+	for (i = 0; allNodes && i < allNodes.length; i++) {
+		allNodes[i].hryNode.indexOfElem = indexHrchy[allNodes[i].hryNodeKey].hryNode.indexOfElem;
+	}
+	newPFV.hierarchy.allNodes = allNodes;
+	return newPFV;
+}
+
+function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
+	
+	logger4js.debug('Delete one Milestone from Phase of VPV');
+	var elemID = elem ? elem.nameID : undefined;	
+	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
+	var parentElem = elem ? elem.phasePFV: undefined;
+	
+	// if there is no parent, keep the newPFV as it is
+	if ( !parentElem ) { 
+		return newPFV;
+	}
+
+	var parPhase = getPhaseByID(hrchy_vpv, newPFV, parentElem);
+	var newResults = [];
+	for ( var ar = 0; parPhase && parPhase.AllResults && ar < parPhase.AllResults.length; ar++) {				
+		if (parPhase.AllResults[ar].name != elemID) {
+			newResults.push(parPhase.AllResults[ar]);
+		}
+	}
+	parPhase.AllResults = newResults;
+	logger4js.debug('Delete one Milestone from hierarchy of VPV');	
+	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, elemID);
+	return newPFV;
+}
+
+function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
+	if ( !hrchy_vpv || !newPFV || !elem) {
+		return newPFV;
+	}
+	logger4js.debug('Delete the phase %s from VPV and if there are milestones in the phase, put them in the phase´s parent', elem.nameID);
+	var elemID = elem.nameID;	
+	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
+	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined;
+	var parent = getPhaseByID(hrchy_vpv, newPFV, parentID);
+	if (!parent) {
+		// there is nothing to do, because elem is the rootphase. this will not be removed ever.
+		return newPFV;
+	}
+
+	// look for milestones in the phase, which is to remove and insert them into the parentPhase
+	if ( phase.AllResults.length > 0 ) {
+		// change the parent of the milestones
+		for (var ms = 0; phase && phase.AllResults && ms < phase.AllResults.length; ms++){			
+			// milestone parent now the parent of the phase
+			parent.AllResults.push(phase.AllResults[ms]);
+			var msElemID = phase.AllResults[ms].name;
+			var vpvHrchyNodes = newPFV.hierarchy.allNodes;
+			newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, msElemID);
+			hrchy_vpv[parentID].hryNode.childNodeKeys.push(msElemID);
+			hrchy_vpv[msElemID].hryNode.parentNodeKey = parentID;			
+		}
+		// delete the milestones in the phase
+		phase.AllResults = [];
+	}
+
+	logger4js.debug('take the needs of the phase an add them into the parentPhase');
+
+	newPFV = moveTheNeeds(newPFV, phase, parent);	
+
+	logger4js.debug('remove the phase %s from hierarchy', elemID);
+	vpvHrchyNodes = newPFV.hierarchy.allNodes;
+	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes,elemID);
+
+	
+	return phase;
+}	
+
+function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
+	var rootKey = '0';
+	var rootphaseID = '0§.§';
+
+	logger4js.debug('Delete one elemID from hierarchy of VPV');
+
+	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
+	var hrchy_node = hrchy_vpv[elemID];	
+	if (hrchy_node) {
+		var parentNode = hrchy_node.hryNode.parentNodeKey;
+		if (parentNode === rootphaseID){
+			parentNode = rootKey;
+		}
+	}	
+	// now in call-parameters : var origHrchyNodes = newPFV.hierarchy.allNodes;
+	var newHryAllNodes = [];
+	// in the allNodes-Array at the beginning there are the phases and then follow the milestones.
+	for (var an = 0; origHrchyNodes && an < origHrchyNodes.length; an++){
+		if (origHrchyNodes[an].hryNodeKey === parentNode) {
+			var relevantPhaseChildren = origHrchyNodes[an].hryNode.childNodeKeys;
+			var newChildNodeKeys = [];
+
+			for ( var ch = 0; relevantPhaseChildren && ch < relevantPhaseChildren.length; ch++){
+				if (relevantPhaseChildren[ch] != elemID) {
+					newChildNodeKeys.push(relevantPhaseChildren[ch]);
+				}
+			}
+			origHrchyNodes[an].hryNode.childNodeKeys = newChildNodeKeys;
+		}
+		if (origHrchyNodes[an].hryNodeKey != elemID) {
+			newHryAllNodes.push(origHrchyNodes[an]);
+		}
+	}
+	return newHryAllNodes;
+}
+
+function moveTheNeeds (newPFV, phase, parent) {
+
+	logger4js.debug('Move the needs from phase to its parent');
+
+	logger4js.debug('Check startdates and enddates of the phase and the parent phase');
+	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
+		logger4js.error('parent %s isn not the parent of phase %s', parent.name, phase.name);
+		return newPFV;
+	}
+	for (var ar = 0; phase && phase.AllRoles && ar < phase.AllRoles.length; ar++) {
+		var role = phase.AllRoles[ar];
+		// search the same role in parent
+		var found = false;
+		for (var i = 0; parent && parent.AllRoles && i < parent.AllRoles.length; i++) {
+			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue; }
+			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
+			var parentNeeds = parent.AllRoles[i].Bedarf;
+			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
+				parentNeeds[n]=parentNeeds[n]+role.Bedarf[n];
+				found = true;
+			}					
+		}
+		if (!found) {
+			// insert the whole role and their needs
+			var parentNeeds = [];
+			for ( var p = parent.relStart-1; p < phase.relStart - parent.relStart; p++){
+				parentNeeds.push(0);
+			}
+			for ( var n = 0; n < role.Bedarf.length; n++){
+				parentNeeds.push(role.Bedarf[n]);				
+			}	
+			for ( var p = phase.relStart - parent.relStart + role.Bedarf.length; p < parent.relEnde; p++){
+				parentNeeds.push(0);
+			}	
+			role.Bedarf = parentNeeds;
+			parent.AllRoles.push(role);	
+		}
+	}
+	return newPFV;
+}
+
+function aggregateRoles(phase, orgalist){
+	
+	var newAllRoles = [];
+	for ( var ir = 0; phase && phase.AllRoles && ir < phase.AllRoles.length; ir++){
+		var oneRole = {};
+		var role = phase.AllRoles[ir];
+		// Step one: replace the role with its parent with uid = pid, if role is a person
+		var roleSett = orgalist[role.RollenTyp];
+		if (roleSett && !roleSett.sumRole) {
+			oneRole.RollenTyp = roleSett.pid;
+			oneRole.teamID = role.teamID;
+			// oneRole.name = roleSett.name;
+			// oneRole.farbe = role.farbe;
+			// oneRole.startkapa = role.startkapa;
+			// oneRole.tagessatzIntern = role.tagessatzIntern;
+
+			if (( role.teamID === -1 ) || ( !role.teamID)) {				
+				// Badarf has to be adopted in € according to the defaultDayCost of the role
+				// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole 
+				// and the PT will be calculated in the same relation. 
+				oneRole.Bedarf = [];
+				var actTagessatz = roleSett.tagessatz;
+				var newTagessatz = orgalist[roleSett.pid].tagessatz;
+				var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
+				for (var ib = 0; role && ib < role.Bedarf.length; ib++) {			
+					oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
+				}
+			} else {
+				// the needs for teams are always calculated with the tagessatz of the team
+
+				oneRole.Bedarf = role.Bedarf;				
+			}	
+
+		} else {
+			oneRole.RollenTyp = role.RollenTyp;
+			oneRole.teamID = role.teamID;
+			oneRole.Bedarf = role.Bedarf;
+			// oneRole.name = role.name;
+			// oneRole.farbe = role.farbe;
+			// oneRole.startkapa = role.startkapa;
+			// oneRole.tagessatzIntern = role.tagessatzIntern;
+			// oneRole.isCalculated = role.isCalculated;
+		}
+		newAllRoles.push(oneRole);	
+	}
+
+	var lastNewRoles = [];	
+	var resultNewRoles = [];
+	for ( ir = 0; newAllRoles && ir < newAllRoles.length; ir++){
+		var actUID = newAllRoles[ir].RollenTyp;
+		var actTeamID = newAllRoles[ir].teamID;
+		var sumRole = {};
+		sumRole.RollenTyp = actUID;
+		sumRole.teamID = actTeamID;
+		sumRole.Bedarf = newAllRoles[ir].Bedarf;
+		// check all others role, if they are existing once more. then the bedarf has to be added 
+		for (var newir = ir + 1; newAllRoles && newir < newAllRoles.length; newir++){
+			var newRole = newAllRoles[newir];
+			if ((actUID == newRole.RollenTyp) && (actTeamID == newRole.teamID)) {							
+				for (var m = 0; newRole && m < newRole.Bedarf.length; m++) {
+					sumRole.Bedarf[m] = sumRole.Bedarf[m] + newRole.Bedarf[m];
+				}
+			}
+		}
+		if  ( !(lastNewRoles[actUID] && (lastNewRoles[actUID].teamID == actTeamID)) )  {			
+			lastNewRoles[actUID]=sumRole;
+			resultNewRoles.push(sumRole);
+		}	
+	}
+	return resultNewRoles;
 }
 
 // function calculates the distribution of values in a array 
