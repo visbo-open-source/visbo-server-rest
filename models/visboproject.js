@@ -23,6 +23,7 @@ var lockSchema = new Schema({
 
 var variantSchema = new Schema({
 	variantName: { type: String, required: true, maxlength: 256 },
+	description: { type: String, required: false, maxlength: 4096 },
 	email: { type: String, required: false, maxlength: 256 },
 	createdAt: { type: Date, reuqired: true },
 	vpvCount: { type: Number, reuqired: true },

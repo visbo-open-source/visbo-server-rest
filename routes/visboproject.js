@@ -2115,9 +2115,10 @@ router.route('/:vpid/variant')
 
 		var variantList = req.oneVP.variant;
 		var variantName = (req.body.variantName || '').trim();
+		var variantDescription = (req.body.description || '').trim();
 
-		if (!validateName(variantName, false)) {
-			logger4js.info('POST Project Variant contains illegal strings body %O', req.body);
+		if (!validateName(variantName, false) || !validateName(variantDescription, true)) {
+			logger4js.info('POST Project Variant Name / Description contains illegal strings body %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project Variant Body contains invalid strings'
@@ -2145,6 +2146,7 @@ router.route('/:vpid/variant')
 		var newVariant = new Variant;
 		newVariant.email = useremail;
 		newVariant.variantName = variantName;
+		newVariant.description = variantDescription;
 		newVariant.createdAt = new Date();
 		newVariant.vpvCount = 0;
 		if (req.oneVP.vpType == 1) {
