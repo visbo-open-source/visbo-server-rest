@@ -2887,7 +2887,7 @@ function isValidVPV(myVPV) {
 
 	let myHrchy = convertHierarchy(myVPV);	
 
-	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.AllPhases && myHrchy)) {
+	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.AllPhases && myHrchy.length > 0)) {
 		logger4js.warn('isValidVPV:  !myVPV: ', myVPV != undefined, myVPV && myVPV.startDate != undefined, 
 						myVPV && myVPV.endDate != undefined, myVPV && myVPV.AllPhases != undefined, myHrchy != undefined );
 		return false;
@@ -2946,7 +2946,7 @@ function isValidVPV(myVPV) {
 
 		// check existence and validity in hierarchy  	
 		let nodeItem = undefined; 
-		if (phaseIX == 1) {
+		if ( phaseIX == 1) {
 			nodeItem = myHrchy['0'].hryNode;
 		} else {
 			nodeItem = myHrchy[phase.name].hryNode;
@@ -3439,6 +3439,7 @@ module.exports = {
 	getRessourcenBedarfe: getRessourcenBedarfe,
 	verifyOrganisation: verifyOrganisation,
 	convertVPV: convertVPV,
+	isValidVPV: isValidVPV,
 	scaleVPV: scaleVPV,
 	resetStatusVPV: resetStatusVPV
 };
