@@ -1,0 +1,237 @@
+{
+	"info": {
+		"_postman_id": "8fa53e69-5c49-43e8-bd8f-89800b572539",
+		"name": "98 Clean UP Destroy Deleted VCs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "98-01 Login Admin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"01 Login: Check Login Success\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.globals.set(\"token\", jsonData.token);",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});",
+							"",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/token/user/login",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"token",
+						"user",
+						"login"
+					]
+				},
+				"description": "Successful Login Request  "
+			},
+			"response": []
+		},
+		{
+			"name": "98-03 Get VC for Delete",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code Check\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"",
+							"pm.test(\"Find VC Testname\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    var list = jsonData.vc;",
+							"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
+							"    var searchName = pm.environment.get(\"VCBaseName\");",
+							"    var listItems = [];",
+							"    list = list.filter(item => item.name.indexOf(searchName) >= 0);",
+							"    list.forEach(item => listItems.push(item._id));",
+							"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+							"    console.log(\"List Items:\", listItems.length);",
+							"    if (listItems.length == 0) {",
+							"        postman.setNextRequest(\"98-99 Final\");",
+							"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
+							"    }",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "access-key",
+						"value": "{{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/vc?deleted=1&sysadmin=1",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"vc"
+					],
+					"query": [
+						{
+							"key": "deleted",
+							"value": "1"
+						},
+						{
+							"key": "sysadmin",
+							"value": "1"
+						}
+					]
+				},
+				"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+			},
+			"response": []
+		},
+		{
+			"name": "98-04 Delete VC",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code Check\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+							"var DeleteID;",
+							"pm.expect(listItems.length).to.be.above(0, \"No more Versions to delete\");",
+							"DeleteID = listItems[0];",
+							"listItems.shift();",
+							"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+							"pm.globals.set(\"DeleteID\", DeleteID);",
+							"console.log(\"Remaining VCs\", listItems.length);",
+							"if (listItems.length > 0) {",
+							"    postman.setNextRequest(\"98-04 Delete VC\");",
+							"}",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "access-key",
+						"value": "{{token}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{url}}/vc/{{DeleteID}}?deleted=1&sysadmin=1",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"vc",
+						"{{DeleteID}}"
+					],
+					"query": [
+						{
+							"key": "deleted",
+							"value": "1"
+						},
+						{
+							"key": "sysadmin",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "98-99 Final",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test(\"Status code Check\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "access-key",
+						"value": "{{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/vc",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"vc"
+					]
+				},
+				"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+			},
+			"response": []
+		}
+	]
+}
