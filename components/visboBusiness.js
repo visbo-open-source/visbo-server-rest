@@ -2363,7 +2363,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
 		newPFV = createIndices(newPFV);
 
-		// var correct = isValidVPV(newPFV);
+		var correct = isValidVPV(newPFV);
 	}
 
 	logger4js.debug('check the cost of VPV and newPFV - they have to be equal');
@@ -2505,10 +2505,18 @@ function createIndices(newPFV) {
 			} else {
 				phaseName = phase.name;
 			}
-			indexHrchy[phaseName].hryNode.indexOfElem = i + 1;
-			for (var j = 0; phase.AllResults && j < phase.AllResults.length; j++){
-				indexHrchy[phase.AllResults[j].name].hryNode.indexOfElem = j + 1;
-			}
+			if (indexHrchy[phaseName]) {
+				indexHrchy[phaseName].hryNode.indexOfElem = i + 1;
+				for (var j = 0; phase.AllResults && j < phase.AllResults.length; j++){
+					if (indexHrchy[phase.AllResults[j].name]) {
+						indexHrchy[phase.AllResults[j].name].hryNode.indexOfElem = j + 1;
+					} else {
+						logger4js.warn('phaseName %s is not included in the hierarchy of newVPV', phase.AllResults[j].name)
+					}
+				}
+			} else {
+				logger4js.warn('phaseName %s is not included in the hierarchy of newVPV', phaseName)
+			}			
 		}
 	}
 
