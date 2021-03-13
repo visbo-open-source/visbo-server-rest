@@ -883,11 +883,11 @@ router.route('/:vpvid/copy')
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
 		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
-		*
-		* @apiParam {Boolean} squeezeOrga If true, squeezes the role assignments to a group role instead of having assignments to individuals
-		* @apiParam {Boolean} squeezeToPFV If true, squeezes Phases/Deadlines/Deliveries to the ones that were defined in the related pfv version
+		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is redced to the previous PFV
 		*
  		* @apiHeader {String} access-key User authentication token.
+		*
+		* @apiParam {number} scaleFactor scale "bedarf" related to the scaleFactor, but only values after actualDataUntil
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -898,7 +898,10 @@ router.route('/:vpvid/copy')
 		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z',
-		*  'variantName': 'pfv'
+		*  'variantName': 'pfv',
+		*  'startDate': '2021-03-01T00:00:00.000Z',
+		*  'endDate': '2022-03-01T00:00:00.000Z',
+		*  'Erloes': 750.500
 		* }
 		* @apiSuccessExample {json} Success-Response:
 		*     HTTP/1.1 200 OK
@@ -994,27 +997,60 @@ router.route('/:vpvid/copy')
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
 		}
 
-		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
-		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
-		if (orga || pfv) {
-			newVPV = visboBusiness.convertVPV(req.oneVPV, pfv, orga);
-		}
-
-		if (newVPV.variantName != 'pfv') {
-			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
-		} else {
+		if (variantName == 'pfv') {
+			newVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
 			delete newVPV.keyMetrics;
 		}
+		// check if we have to do scaling
+		var scale = 0;
+		var scaleVPV = helperVpv.initVPV(newVPV);
+		if (req.body.startDate) {
+			scale = 1;
+			scaleVPV.startDate = validate.validateDate(req.body.startDate, false, true);
+		} else {
+			scaleVPV.startDate = newVPV.startDate;
+		}
+		if (req.body.endDate) {
+			scale = 1;
+			scaleVPV.endDate = validate.validateDate(req.body.endDate, false, true);
+		} else {
+			scaleVPV.endDate = newVPV.endDate;
+		}
+		if (req.body.Erloes) {
+			scale = 1;
+			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
+		}
+		if (req.body.Erloes) {
+			scale = 1;
+			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
+		}
+		if (req.body.Erloes) {
+			scale = 1;
+			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
+		}
+		if (req.query.scaleFactor) {
+			scale = validate.validateNumber(req.query.scaleFactor) || 1;
+		}
+
+		// first version just move start & end Date without scaling
+		if (scale) {
+			newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+		}
+
+		if (variantName != 'pfv') {
+			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
+		}
+
 		helperVpv.setKeyAttributes(newVPV, keyVPV);
 
-		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
+		logger4js.debug('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
 			}
-			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
+			logger4js.debug('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
 			helperVpv.updateVPVCount(req.oneVPV.vpid, oneVPV.variantName, 1);
