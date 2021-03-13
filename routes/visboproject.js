@@ -598,8 +598,8 @@ router.route('/')
 						// calculate scale factor if possible
 						var scaleFactor = 1;
 						var bac = 0;
-						if (req.body.BAC) {
-							bac = validate.validateNumber(req.body.BAC);
+						if (req.body.bac) {
+							bac = validate.validateNumber(req.body.bac);
 						}
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
@@ -638,8 +638,8 @@ router.route('/')
 						newVPV.variantName = 'pfv'; // first Version is the pfv
 						newVPV.startDate = startDate;
 						newVPV.endDate = endDate;
-						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
-							newVPV.Erloes = req.body.RAC;
+						if (req.body.rac && validate.validateNumber(req.body.rac)) {
+							newVPV.Erloes = req.body.rac;
 						}
 						newVPV.status = undefined;
 
@@ -2115,9 +2115,10 @@ router.route('/:vpid/variant')
 
 		var variantList = req.oneVP.variant;
 		var variantName = (req.body.variantName || '').trim();
+		var variantDescription = (req.body.description || '').trim();
 
-		if (!validateName(variantName, false)) {
-			logger4js.info('POST Project Variant contains illegal strings body %O', req.body);
+		if (!validateName(variantName, false) || !validateName(variantDescription, true)) {
+			logger4js.info('POST Project Variant Name / Description contains illegal strings body %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project Variant Body contains invalid strings'
@@ -2145,6 +2146,7 @@ router.route('/:vpid/variant')
 		var newVariant = new Variant;
 		newVariant.email = useremail;
 		newVariant.variantName = variantName;
+		newVariant.description = variantDescription;
 		newVariant.createdAt = new Date();
 		newVariant.vpvCount = 0;
 		if (req.oneVP.vpType == 1) {

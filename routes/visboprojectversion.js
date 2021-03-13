@@ -540,6 +540,17 @@ router.route('/')
 				}
 
 				logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);
+				
+				// check if newVPV is a valid VPV
+				var validVPV = visboBusiness.isValidVPV(newVPV);				
+				if (!validVPV) {
+					logger4js.info('POST Project Version - inconsistent VPV - %O', newVPV);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Project Version is an inconsitent VPV'
+					});
+				}
+
 				newVPV.save(function(err, oneVPV) {
 					if (err) {
 						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
@@ -884,7 +895,7 @@ router.route('/:vpvid/copy')
 		* @apiError {number} 403 No Permission to Create Project Version
 		*
 	  * @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
+		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z',
 		*  'variantName': 'pfv'
@@ -987,7 +998,7 @@ router.route('/:vpvid/copy')
 		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (orga || pfv) {
-			newVPV = visboBusiness.convertVPV(newVPV, pfv, orga);
+			newVPV = visboBusiness.convertVPV(req.oneVPV, pfv, orga);
 		}
 
 		if (newVPV.variantName != 'pfv') {
@@ -997,16 +1008,16 @@ router.route('/:vpvid/copy')
 		}
 		helperVpv.setKeyAttributes(newVPV, keyVPV);
 
-		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.varianName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
+		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
 			}
-			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.varianName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
+			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
-			helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, 1);
+			helperVpv.updateVPVCount(req.oneVPV.vpid, oneVPV.variantName, 1);
 
 			return res.status(200).send({
 				state: 'success',
@@ -1031,7 +1042,7 @@ router.route('/:vpvid/capacity')
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
-		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
+		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all direct childs of roleID
 		*
 		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
 		* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
