@@ -598,8 +598,8 @@ router.route('/')
 						// calculate scale factor if possible
 						var scaleFactor = 1;
 						var bac = 0;
-						if (req.body.bac) {
-							bac = validate.validateNumber(req.body.bac);
+						if (req.body.BAC) {
+							bac = validate.validateNumber(req.body.BAC);
 						}
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
@@ -638,8 +638,8 @@ router.route('/')
 						newVPV.variantName = 'pfv'; // first Version is the pfv
 						newVPV.startDate = startDate;
 						newVPV.endDate = endDate;
-						if (req.body.rac && validate.validateNumber(req.body.rac)) {
-							newVPV.Erloes = req.body.rac;
+						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
+							newVPV.Erloes = req.body.RAC;
 						}
 						newVPV.status = undefined;
 
