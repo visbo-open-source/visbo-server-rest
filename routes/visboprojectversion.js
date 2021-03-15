@@ -1025,6 +1025,13 @@ router.route('/:vpvid/copy')
 		// first version just move start & end Date without scaling
 		if (scale) {
 			newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+			if (!newVPV) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Visbo Project Version inconsistent',
+					perm: perm
+				});
+			}
 		}
 
 		if (variantName != 'pfv') {

@@ -564,7 +564,7 @@ function getVPFVPVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVPFVPVs', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -665,7 +665,7 @@ function getVPFPFVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVPFPFVs Find', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -760,7 +760,7 @@ function getVCVPVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVCVPVs Find', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -850,7 +850,7 @@ function getVCPFVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVCPFVs Find', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
