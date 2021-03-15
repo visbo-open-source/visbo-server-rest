@@ -788,7 +788,9 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 						allDeadlines.updateDeadline(currentNodeID,
 							{
 								nameID: currentNodeID, fullPathVPV: nameBC, type: 'Milestone',
-								name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0
+								name: name, phaseVPV: phaseName, endDateVPV: endDate, percentDone: (milestone && milestone.percentDone) || 0,
+								trafficlight: (milestone &&  milestone.bewertungen &&  milestone.bewertungen.length > 0 && milestone.bewertungen[0].bewertung && milestone.bewertungen[0].bewertung.color),
+								trafficlightDesc: (milestone &&  milestone.bewertungen &&  milestone.bewertungen.length > 0 && milestone.bewertungen[0].bewertung && milestone.bewertungen[0].bewertung.description)
 							},
 							insertAll
 						);
