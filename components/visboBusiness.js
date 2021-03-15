@@ -2878,12 +2878,13 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDa
 	return resultArray;
 }
 
+
 function ensureValidVPV(myVPV) {
 	// function checks whether consistency criterias of a vpv are fulfilled respectively can be healed without harm
 	//
-	// if bruteForceHealing is set to true, then array lengths/values of roles / costs are healed as well: sumOfValues remains the same, but there is a new distribution of values over time!		// 
-	// currently: bruteForceHealing is set to true. we should discuss whether we provide that as an (optional) parameter or whether we treat it as the standard way 
-	// Exception: bruteForceHealing is automatically set to false, if actualDataUntil > VPV.StartDate
+	// if enforceHealing is set to true, then array lengths/values of roles / costs are healed as well: sumOfValues remains the same, but there is a new distribution of values over time!		// 
+	// currently: enforceHealing is set to true. we should discuss whether we provide that as an (optional) parameter or whether we treat it as the standard way 
+	// Exception: enforceHealing is automatically set to false, if actualDataUntil > VPV.StartDate
 	//
 	// 
 	// Violation handling: 
@@ -2897,13 +2898,15 @@ function ensureValidVPV(myVPV) {
 	// C1 (can be healed)  : does rootPhase = '0§.§' exist and are startDate and endDate of project and rootPhase identical ?
 	// C2 (stop criterium) : does no Phase is having a start-Date earlier than project startdate ?
 	// C3 (stop criterium) : does no Phase is having a end-Date later than project endDate ?
+	// C3 (can be healed, enforceHealing=true) 
 	// C4 (stop criterium) : is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
+	// C4 (can be healed, enforceHealing=true) : 
 	// before C5 check (can be healed): are relStart and relEnde corresponding to phaseStartDate and phaseEndDate?
-	// C5 (stop criterium, bruteForceHealing=false) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?
-	// C5 (can be healed, bruteForceHealing=true)
+	// C5 (stop criterium) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?
+	// C5 (can be healed, enforceHealing=true)
 	// C6 (stop criterium) : is each value in a role array >= 0 ?
-	// C7 (stop criterium, bruteForceHealing=false) : are array lengths of each cost identical to relEnde-relstart + 1 of the phase ?
-	// C7 (can be healed, bruteForceHealing=true)
+	// C7 (stop criterium) : are array lengths of each cost identical to relEnde-relstart + 1 of the phase ?
+	// C7 (can be healed, enforceHealing=true)
 	// C8 (stop criterium) : is each value in a cost array >= 0 ?
 	// C9 (can be healed)  : is strategicFit either undefined or having a numeric value >= 0 and <= 10?
 	// C10 (can be healed) : is Risiko either undefined or having a numeric value >= 0 and <= 10 ?
@@ -2912,10 +2915,11 @@ function ensureValidVPV(myVPV) {
 	// C13 (stop criterium): are indices given in the hierarchy referencing phases / milestones in their AllPhases / AllResults Array correctly, 
 	// C13 .. continued    : i.e: are indices in hierarchyNode consistent with relative position of elements in AllPhases / AllResults ?
 
-	// if bruteForceHealing is set to true, then violations of c5: array Lengths/Values of roles , c7: array lengths/values of costs are healed
+	// if enforceHealing is set to true, then violations regarding offsets, array lengths of roles , of costs are healed
 	// sumOfValues remains the same, but value distribution is of course different	
-	let bruteForceHealing = true; 
-	let startOfCalendar = new Date ('2015-01-01');
+	let enforceHealing = true; 
+	let startOfCalendar = new Date ('2015-01-01');	
+
 
 	// check on minimum requirements: existence of myVPV, name, startDate, endDate	
 	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.name && myVPV.name != '')) {
@@ -2949,7 +2953,7 @@ function ensureValidVPV(myVPV) {
 
 	// if actualData exists: set bruteForceHealing to false , because this would possibly change actualData values
 	if (myVPV.actualDataUntil) {
-		bruteForceHealing = (bruteForceHealing && (myVPV.actualDataUntil < myVPV.startDate));
+		enforceHealing = (enforceHealing && (myVPV.actualDataUntil < myVPV.startDate));
 	}
 
 	// variable criterias is a array of boolean values, indicating which validity criterias are fulfilled / not fulfilled
@@ -2959,6 +2963,8 @@ function ensureValidVPV(myVPV) {
 
 	let projectDurationInDays = diffDays(myVPV.endDate, myVPV.startDate) + 1;
 
+	// 
+	// Criterium
 	// C0: is Dauer eq. Number of covered months of the project ?
 	let c0 = (myVPV.Dauer && myVPV.Dauer == (getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1));
 
@@ -2972,6 +2978,8 @@ function ensureValidVPV(myVPV) {
 		c0 = true;
 	}
 
+	// 
+	// Criterium 
 	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ?
 	let c1 = false;
 
@@ -3003,7 +3011,6 @@ function ensureValidVPV(myVPV) {
 			originalName: '', 
 			appearance: ''			
 		};
-
 		
 		myVPV.AllPhases = [];
 		myVPV.AllPhases.push(phObject); 
@@ -3033,12 +3040,23 @@ function ensureValidVPV(myVPV) {
 				myVPV.AllPhases[0].dauerInDays == projectDurationInDays);
 	}
 
+	// used for enforceHealing, when it comes to modify phase offsets, durations and milestone offsets
+	let timeScalingCorrectionFactor = 1.0;
 
 	if (!c1) {
 		// heal it: 
 		// pre-condition is now granted: existence of AllPhases[0]
 		myVPV.AllPhases[0].name = rootPhaseName;
+
+		if ((myVPV.AllPhases[0].dauerInDays != projectDurationInDays) && enforceHealing) {
+
+			if (myVPV.AllPhases[0].dauerInDays > 0) {
+				timeScalingCorrectionFactor = projectDurationInDays / myVPV.AllPhases[0].dauerInDays;
+			}
+
+		} 
 		myVPV.AllPhases[0].dauerInDays = projectDurationInDays;
+		
 
 		logger4js.warn('ensureValidVPV healed C1: rootPhase did not correspond to project duration or name requirements (vpvId/name/dauerinDays)', 
 						myVPV._id, 
@@ -3055,6 +3073,8 @@ function ensureValidVPV(myVPV) {
 	let c7 = true;
 	let c8 = true;
 
+	// 
+	// Criterium 
 	let c9 = !myVPV.StrategicFit || (myVPV.StrategicFit >= 0 && myVPV.StrategicFit <= 10);
 	if (!c9) {
 		// heal it: if a value exists, but is <0 or > 10 then set it to 0
@@ -3068,6 +3088,8 @@ function ensureValidVPV(myVPV) {
 		c9 = true;
 	}
 
+	// 
+	// Criterium 
 	let c10 = !myVPV.Risiko || (myVPV.Risiko && myVPV.Risiko >= 0 && myVPV.Risiko <= 10);
 	if (!c10) {
 		// heal it: if a value exists, but is <0 or >10 then set it to 0
@@ -3088,7 +3110,8 @@ function ensureValidVPV(myVPV) {
 	let anzPlanElements = 0;
 	let phaseIX = 0;
 
-
+	// 
+	// Criterium 
 	// to play it safe, it is again checked that myVPV.hierarchy exists and has a length of at least 1
 	// otherwise c11 is set to false: is number of phase/milestone elements eq. to number of hierarchy entries 	
 	c11 = (myVPV.hierarchy && myVPV.hierarchy.allNodes && myVPV.hierarchy.allNodes.length > 0 );
@@ -3099,6 +3122,7 @@ function ensureValidVPV(myVPV) {
 		return false;
 	} 
 
+	// now convert to indexed hierarchy for all subsequent checks 
 	let myHrchy = convertHierarchy(myVPV);
 
 	myVPV.AllPhases.forEach(phase => {
@@ -3120,17 +3144,37 @@ function ensureValidVPV(myVPV) {
 			myVPV._id, phase.name, phaseIX);
 		}
 	
+		// 
+		// Criterium 
 		c2 = c2 && (phase.startOffsetinDays >= 0);
 		if (!(phase.startOffsetinDays >= 0)) {
 			logger4js.warn('ensureValidVPV severe violation C2: Phase-Start Offset (vpvId/phase-Name/startOffset)', 
 			myVPV._id, phase.name, phase.startOffsetinDays);
 		}
+
+		// now check whether there need to be a correction in offset and duration 
+		if (enforceHealing && (timeScalingCorrectionFactor != 1.0) && phase.startOffsetinDays && phase.dauerInDays) {
+
+			// heal it , trunc just to avoid that becaue of rounding phase ends after project ...
+			let newOffset = Math.trunc(phase.startOffsetinDays * timeScalingCorrectionFactor);
+			let newDauer = Math.trunc(phase.dauerInDays * timeScalingCorrectionFactor);
+
+			logger4js.warn('ensureValidVPV enf-healed C3: Phase-End (vpvId/phase-Name/old start-Offset/old duration/new startoffset/new duration)', 
+							myVPV._id, phase.name, phase.startOffsetinDays, phase.dauerInDays, newOffset, newDauer);
+			
+			phase.startOffsetinDays = newOffset;
+			phase.dauerInDays = newDauer;
+		} 
 	
-		let c3tmp = ((phase.startOffsetinDays + phase.dauerInDays ) <= projectDurationInDays);
+		// 
+		// Criterium 
+		let c3tmp = (phase.startOffsetinDays !== undefined && phase.dauerInDays !== undefined && (phase.startOffsetinDays + phase.dauerInDays  <= projectDurationInDays));
 		c3 = c3 && c3tmp;
 		if (!c3tmp) {
-			logger4js.warn('ensureValidVPV severe violation C3: Phase-End (vpvId/phase-Name/Offset EndDate/project End Offset)', 
-			myVPV._id, phase.name, phase.startOffsetinDays + phase.dauerInDays, projectDurationInDays);
+
+			logger4js.warn('ensureValidVPV severe violation C3: Phase-End (vpvId/phase-Name/Offset/Duration/project Duration)', 
+							myVPV._id, phase.name, phase.startOffsetinDays, phase.dauerInDays, projectDurationInDays);
+
 		}
 	
 		// now check here whether relEnde and relStart fit to phStartDate and phEndDate, if not correct relStart and relEnde 
@@ -3159,7 +3203,7 @@ function ensureValidVPV(myVPV) {
 			let c5tmp = (role.Bedarf && (role.Bedarf.length == phLength));			
 			if (!c5tmp) {
 	
-				if (bruteForceHealing) {
+				if (enforceHealing) {
 
 					let beforeSum = 0;	
 					if (role.Bedarf && role.Bedarf !== null && role.Bedarf.reduce(sumOF) > 0 ) {
@@ -3173,11 +3217,11 @@ function ensureValidVPV(myVPV) {
 
 					let afterSum = 	role.Bedarf.reduce(sumOF);
 					if (Math.round(Math.abs(beforeSum - afterSum)*1000)/1000 != 0) {
-						logger4js.warn('ensureValidVPV healing calculation failed C5: Role Array length (vpvId/roleId/beforeSum/aftersum)', 
+						logger4js.warn('ensureValidVPV enf-healing calculation failed C5: Role Array length (vpvId/roleId/beforeSum/aftersum)', 
 						myVPV._id, role.RollenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV healed C5: Role Array length (vpvId/roleId/new arLength/new phLength)', 
+						logger4js.warn('ensureValidVPV enf-healed C5: Role Array length (vpvId/roleId/new arLength/new phLength)', 
 						myVPV._id, role.RollenTyp, role.Bedarf.length, phLength);
 
 						c5tmp = true;
@@ -3191,7 +3235,8 @@ function ensureValidVPV(myVPV) {
 				c5 = c5 && c5tmp;				
 			}
 							
-	
+			// 
+			// Criterium 
 			// checks whether all elements of an array are >= 0
 			let c6tmp = (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
 			c6 = c6 && c6tmp;
@@ -3202,11 +3247,14 @@ function ensureValidVPV(myVPV) {
 		});
 	
 		phase.AllCosts.forEach(cost => {
+
+			// 
+			// Criterium 
 			let c7tmp = (cost.Bedarf && (cost.Bedarf.length == phLength));
 			
 			if (!c7tmp) {
 	
-				if (bruteForceHealing) {
+				if (enforceHealing) {
 
 					let beforeSum = 0;	
 					// if (role.Bedarf && role.Bedarf !== null && role.Bedarf.reduce(sumOF) > 0 ) {
@@ -3221,11 +3269,11 @@ function ensureValidVPV(myVPV) {
 
 					let afterSum = 	cost.Bedarf.reduce(sumOF);
 					if (Math.round(Math.abs(beforeSum - afterSum)*1000)/1000 != 0) {
-						logger4js.warn('ensureValidVPV healing calculation failed C7: Cost Array length (vpvId/costId/beforeSum/aftersum', 
+						logger4js.warn('ensureValidVPV enf-healing calculation failed C7: Cost Array length (vpvId/costId/beforeSum/aftersum', 
 						myVPV._id, cost.KostenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV healed C7: Cost Array length (vpvId/costId/new arLength/new phLength)', 
+						logger4js.warn('ensureValidVPV enf-healed C7: Cost Array length (vpvId/costId/new arLength/new phLength)', 
 						myVPV._id, cost.KostenTyp, cost.Bedarf.length, phLength);
 						c7tmp = true;
 					}
@@ -3238,6 +3286,8 @@ function ensureValidVPV(myVPV) {
 				c7 = c7 && c7tmp;
 			}			
 	
+			// 
+			// Criterium 
 			// checks whether all elements of an array are >= 0
 			let c8tmp = (cost.Bedarf && cost.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
 			c8 = c8 && c8tmp;
@@ -3253,19 +3303,34 @@ function ensureValidVPV(myVPV) {
 			mileStoneIX = mileStoneIX + 1;
 			anzPlanElements = anzPlanElements + 1;
 	
+			// 
+			// Criterium 
 			// C13: check existence and validity in hierarchy
 			let nodeItem = myHrchy[result.name].hryNode;
 			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
 	
 			c13 = c13 && c13tmp;
+			
 			if (!c13tmp) {
 				logger4js.warn('ensureValidVPV severe violation C13: Index of Milestone does not match with hierarchy information (vpvId/phase-Name/phase-Index)', 
 				myVPV._id, phase.name, phaseIX);
 			}
+
+			if (enforceHealing && (timeScalingCorrectionFactor != 1.0) && result.offset && result.offset >= 0) {
+
+				// heal it , trunc just to avoid that because of rounding results ends after project/phase ...
+				let newOffset = Math.trunc(result.offset * timeScalingCorrectionFactor);				
 	
+				logger4js.warn('ensureValidVPV enf-healed C4: Milestone Offet (vpvId/milestone-Name/old Offset/new Offset)', 
+								myVPV._id, result.name, result.offset, newOffset);
+				
+				result.offset = newOffset; 
+			} 
 	
+			// 
+			// Criterium 
 			let c4tmp = (result.offset && result.offset >= 0 &&
-						(phase.startOffsetinDays + result.offset) <= projectDurationInDays &&
+						(phase.startOffsetinDays + result.offset <= projectDurationInDays) &&
 						(result.offset <= phase.dauerInDays));
 	
 			c4 = c4 && c4tmp;
@@ -3274,6 +3339,8 @@ function ensureValidVPV(myVPV) {
 				myVPV._id, result.name, ' in ', phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays);
 			}
 	
+			// 
+			// Criterium c12
 			let c12tmp = !(myHrchy[result.name] === undefined);
 			c12 = c12 && c12tmp;
 			if (!c12tmp) {
@@ -3284,7 +3351,10 @@ function ensureValidVPV(myVPV) {
 		});
 	
 		if (!(phase.name == rootPhaseName)) {
-			// check auf rootPhaseName ist bereits in c1 abgeprüft , in myHrchy there is no
+			// check auf rootPhaseName ist bereits in c1 abgeprüft ..
+
+			// 
+			// Criterium 
 			let c12tmp = !(myHrchy[phase.name] === undefined);
 			c12 = c12 && c12tmp;
 			if (!c12tmp) {
@@ -3293,11 +3363,10 @@ function ensureValidVPV(myVPV) {
 		}
 	
 	
-	});
-	
+	});	
 
-	// now convert intern VPV hierarchy to indexed hierarchy for all the subsequent checks 
-
+	// 
+	// Criterium 
 	c11 = (myHrchy && (myVPV.hierarchy && myVPV.hierarchy.allNodes && (myVPV.hierarchy.allNodes.length == anzPlanElements)));
 	if (!c11) {
 		logger4js.warn('ensureValidVPV severe violation C11: Number of hierarchy elements does not match number of plan-Elements (vpvId/nr Elements in hierarchy/ nr Elements in List)',
@@ -3402,9 +3471,9 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			separatorIndex = scaleFromDateColumn - oldPhaseStartColumn;
 		}
 
-
-		let newOffsetInDays = Math.round(timeScalingFactor * phase.startOffsetinDays);
-		let newDauerInDays = Math.round(timeScalingFactor * phase.dauerInDays);
+		// make sure that because of rounding it does not go beyond  
+		let newOffsetInDays = Math.trunc(timeScalingFactor * phase.startOffsetinDays);
+		let newDauerInDays = Math.trunc(timeScalingFactor * phase.dauerInDays);
 
 		//
 		let newPhStartDate =  addDays(newVPV.startDate, newOffsetInDays);
@@ -3493,7 +3562,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 			phase.AllResults.forEach(result => {
 
-				let newMsOffset = Math.round(result.offset*timeScalingFactor);
+				let newMsOffset = Math.trunc(result.offset*timeScalingFactor);
 
 				if (scaleFromDate) {
 
