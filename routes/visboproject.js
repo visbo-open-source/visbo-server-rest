@@ -440,8 +440,8 @@ router.route('/')
 	*  'description':'Project Description',
 	*  'vcid': 'vc5aaf992',
 	*  'vpType': 0,
-	*  'BAC': 380.5, 									// budget at completion in k€
-	*  'RAC': 400, 										// revenue at completion in k€
+	*  'bac': 380.5, 									// budget at completion in k€
+	*  'rac': 400, 										// revenue at completion in k€
 	*  'startDate': '2021-02-08',
 	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
@@ -598,8 +598,8 @@ router.route('/')
 						// calculate scale factor if possible
 						var scaleFactor = 1;
 						var bac = 0;
-						if (req.body.BAC) {
-							bac = validate.validateNumber(req.body.BAC);
+						if (req.body.bac) {
+							bac = validate.validateNumber(req.body.bac);
 						}
 						// Transform Start & End Date & Budget
 						var startDate = new Date();
@@ -638,8 +638,8 @@ router.route('/')
 						newVPV.variantName = 'pfv'; // first Version is the pfv
 						newVPV.startDate = startDate;
 						newVPV.endDate = endDate;
-						if (req.body.RAC && validate.validateNumber(req.body.RAC)) {
-							newVPV.Erloes = req.body.RAC;
+						if (req.body.rac && validate.validateNumber(req.body.rac)) {
+							newVPV.Erloes = req.body.rac;
 						}
 						newVPV.status = undefined;
 
