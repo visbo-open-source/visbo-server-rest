@@ -760,7 +760,7 @@ function getVCVPVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc getVCVPVs Find', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVCVPVs Find', 'Error getting VISBO Project Versions:');
 			return;
 		}
 		var timeMongoEnd = new Date();
