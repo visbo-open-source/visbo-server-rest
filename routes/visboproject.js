@@ -440,8 +440,8 @@ router.route('/')
 	*  'description':'Project Description',
 	*  'vcid': 'vc5aaf992',
 	*  'vpType': 0,
-	*  'BAC': 380.5, 									// budget at completion in k€
-	*  'RAC': 400, 										// revenue at completion in k€
+	*  'bac': 380.5, 									// budget at completion in k€
+	*  'rac': 400, 										// revenue at completion in k€
 	*  'startDate': '2021-02-08',
 	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
