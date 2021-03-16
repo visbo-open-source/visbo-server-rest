@@ -542,12 +542,12 @@ router.route('/')
 				logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);
 				
 				// check if newVPV is a valid VPV
-				var validVPV = visboBusiness.isValidVPV(newVPV);				
+				var validVPV = visboBusiness.ensureValidVPV(newVPV);				
 				if (!validVPV) {
 					logger4js.info('POST Project Version - inconsistent VPV - %O', newVPV);
 					return res.status(400).send({
 						state: 'failure',
-						message: 'Project Version is an inconsitent VPV'
+						message: 'Project Version is an inconsistent VPV'
 					});
 				}
 
