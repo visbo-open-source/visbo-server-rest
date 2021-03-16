@@ -3133,9 +3133,9 @@ function ensureValidVPV(myVPV) {
 		// check existence and validity in hierarchy  	
 		let nodeItem = undefined; 
 		if ( phaseIX == 1) {
-			nodeItem = myHrchy['0'].hryNode;
+			nodeItem = myHrchy['0'] ? myHrchy['0'].hryNode : undefined;
 		} else {
-			nodeItem = myHrchy[phase.name].hryNode;
+			nodeItem = myHrchy[phase.name] ? myHrchy[phase.name].hryNode : undefined;
 		}
 		let c13tmp = (nodeItem && nodeItem.indexOfElem == phaseIX);
 		c13 = c13 && c13tmp;
@@ -3306,7 +3306,8 @@ function ensureValidVPV(myVPV) {
 			// 
 			// Criterium 
 			// C13: check existence and validity in hierarchy
-			let nodeItem = myHrchy[result.name].hryNode;
+
+			let nodeItem =  myHrchy[result.name] ? myHrchy[result.name].hryNode : undefined; 
 			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
 	
 			c13 = c13 && c13tmp;
