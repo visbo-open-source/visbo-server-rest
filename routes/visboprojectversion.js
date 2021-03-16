@@ -872,11 +872,12 @@ router.route('/:vpvid/copy')
 		* @apiDescription Post copies an existing version to a new Version with new timestamp and new calculated keyMetrics.
 		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
+		*
 		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is redced to the previous PFV
 		*
  		* @apiHeader {String} access-key User authentication token.
 		*
-		* @apiParam {number} scaleFactor scale "bedarf" related to the scaleFactor, but only values after actualDataUntil
+		* @apiParam {number} scaleFactor scale "bedarf" related to the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -890,6 +891,7 @@ router.route('/:vpvid/copy')
 		*  'variantName': 'pfv',
 		*  'startDate': '2021-03-01T00:00:00.000Z',
 		*  'endDate': '2022-03-01T00:00:00.000Z',
+		*  'actualDataUntil': '2021-04-01T00:00:00.000Z',
 		*  'Erloes': 750.500
 		* }
 		* @apiSuccessExample {json} Success-Response:
@@ -941,6 +943,15 @@ router.route('/:vpvid/copy')
 			variantName = req.body.variantName;
 		}
 		var timestamp;
+		if (!validate.validateDate(req.body.timestamp, true)
+		|| !validate.validateDate(req.body.startDate, true)
+		|| !validate.validateDate(req.body.endDate, true)
+		|| !validate.validateDate(req.body.actualDataUntil, true)) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Illegal Dates in body'
+			});
+		}
 		if (req.body.timestamp) {
 			timestamp = validate.validateDate(req.body.timestamp, true, true);
 		} else {
@@ -1006,17 +1017,9 @@ router.route('/:vpvid/copy')
 		} else {
 			scaleVPV.endDate = newVPV.endDate;
 		}
-		if (req.body.Erloes) {
+		if (req.body.actualDataUntil) {
 			scale = 1;
-			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
-		}
-		if (req.body.Erloes) {
-			scale = 1;
-			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
-		}
-		if (req.body.Erloes) {
-			scale = 1;
-			scaleVPV.Erloes = validate.validateNumber(req.body.Erloes);
+			scaleVPV.endDate = validate.validateDate(req.body.actualDataUntil, false, true);
 		}
 		if (req.query.scaleFactor) {
 			scale = validate.validateNumber(req.query.scaleFactor) || 1;
@@ -1025,6 +1028,13 @@ router.route('/:vpvid/copy')
 		// first version just move start & end Date without scaling
 		if (scale) {
 			newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+			if (!newVPV) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Visbo Project Version inconsistent',
+					perm: perm
+				});
+			}
 		}
 
 		if (variantName != 'pfv') {
