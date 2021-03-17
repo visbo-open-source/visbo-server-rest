@@ -1042,24 +1042,71 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, onlyPT) {
+function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisations, hierarchy, onlyPT) {
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// conversion of the all given organisations
-	var organisations_new = [];
-	organisations.forEach( orga => {
-		organisations_new.push(convertOrganisation(orga))
-	});
+	// // conversion of the all given organisations
+	// var organisations_new = [];
+	// organisations.forEach( orga => {
+	// 	organisations_new.push(convertOrganisation(orga))
+	// });
 
-	var capaVPV = calcCapacityVPVs(vpvs, roleIdentifier, organisations_new, hierarchy);
+	if (!startDate) { 
+		startDate = new Date();
+		startDate.setMonth(startDate.getMonth() - 4);
+		startDate.setDate(1);
+		startDate.setHours(0, 0, 0, 0);		
+	}
+	startDate = new Date(startDate);
+	var startIndex = getColumnOfDate(startDate);
+
+	if (!endDate) { 
+		endDate = new Date();
+		endDate.setMonth(endDate.getMonth() + 9);
+		endDate.setDate(1);
+		endDate.setHours(0, 0, 0, 0);	
+	}	
+	endDate = new Date(endDate);
+	var endIndex = getColumnOfDate(endDate);	
+	
+	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
+	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	var timeZones = splitInTimeZones(organisations, startDate, endDate);
+	timeZones.forEach( tz => {
+		let newOrga = convertOrganisation(tz.orga);
+		tz.orga = newOrga;
+	})
+
+	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+	var newvpvs = [];
+	for ( i = 0; vpvs && i < vpvs.length; i++) {
+		var vpv = vpvs[i];
+		var vpvStartIndex = getColumnOfDate(vpv.startDate);
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		if (vpvEndIndex < startIndex) continue;
+		if (vpvStartIndex > endIndex) continue;
+		newvpvs.push(vpv);
+	}
+
+	var capaVPV = calcCapacityVPVs(newvpvs, roleIdentifier, startDate, endDate, timeZones, hierarchy);
 	var capaPFV = [];
 	var item;
 
 	if (pfvs) {
+		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+		var newpfvs = [];
+		for ( i = 0; pfvs && i < pfvs.length; i++) {
+			var vpv = pfvs[i];
+			var vpvStartIndex = getColumnOfDate(vpv.startDate);
+			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			if (vpvEndIndex < startIndex) continue;
+			if (vpvStartIndex > endIndex) continue;
+			newpfvs.push(vpv);
+		}			
 		// calc the corresponding of the PFVs
-		capaPFV = calcCapacityVPVs(pfvs, roleIdentifier, organisations_new, hierarchy);
+		capaPFV = calcCapacityVPVs(newpfvs, roleIdentifier, startDate, endDate, timeZones, hierarchy);
 		// insert or update capa values
 		for (item in capaPFV) {
 			if (!capaVPV[item]) {
@@ -1116,21 +1163,58 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, organisations, hierarchy, on
 	return capa;
 }
 
-function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onlyPT) {
+function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate, organisations, onlyPT) {
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// conversion of the all given organisations
-	var organisations_new = [];
-	organisations.forEach( orga => {
-		organisations_new.push(convertOrganisation(orga))
-	});
+	// // conversion of the all given organisations
+	// var organisations_new = [];
+	// organisations.forEach( orga => {
+	// 	organisations_new.push(convertOrganisation(orga))
+	// });
+
+	if (!startDate) { 
+		startDate = new Date();
+		startDate.setMonth(startDate.getMonth() - 4);
+		startDate.setDate(1);
+		startDate.setHours(0, 0, 0, 0);		
+	}
+	startDate = new Date(startDate);
+	var startIndex = getColumnOfDate(startDate);
+
+	if (!endDate) { 
+		endDate = new Date();
+		endDate.setMonth(endDate.getMonth() + 9);
+		endDate.setDate(1);
+		endDate.setHours(0, 0, 0, 0);	
+	}	
+	endDate = new Date(endDate);
+	var endIndex = getColumnOfDate(endDate);	
+	
+	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
+	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	var timeZones = splitInTimeZones(organisations, startDate, endDate);
+	timeZones.forEach( tz => {
+		let newOrga = convertOrganisation(tz.orga);
+		tz.orga = newOrga;
+	})
+
+	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+	var newvpvs = [];
+	for ( i = 0; vpvs && i < vpvs.length; i++) {
+		var vpv = vpvs[i];
+		var vpvStartIndex = getColumnOfDate(vpv.startDate);
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		if (vpvEndIndex < startIndex) continue;
+		if (vpvStartIndex > endIndex) continue;
+		newvpvs.push(vpv);
+	}
 
 	// calc the capacity for every project/vpv individual
 	var capaVPV = [];
-	vpvs.forEach(vpv => {
-		var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations_new, false);
+	newvpvs.forEach(vpv => {
+		var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, startDate, endDate, timeZones, false);
 		for (var index in capaTempVPV) {
 			var element = capaTempVPV[index];
 			var id = element.currentDate + vpv.vpid.toString();
@@ -1145,11 +1229,22 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 
 	var capaPFV = [];
 	var item;
-
+	
 	if (pfvs) {
+		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+		var newpfvs = [];
+		for ( i = 0; pfvs && i < pfvs.length; i++) {
+			var vpv = pfvs[i];
+			var vpvStartIndex = getColumnOfDate(vpv.startDate);
+			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			if (vpvEndIndex < startIndex) continue;
+			if (vpvStartIndex > endIndex) continue;
+			newpfvs.push(vpv);
+		}
+	
 		// calc the capacity of the pfvs
-		pfvs.forEach(vpv => {
-			var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, organisations_new, false);
+		newpfvs.forEach(vpv => {
+			var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, startDate, endDate, timeZones, false);
 			for (var index in capaTempVPV) {
 				var element = capaTempVPV[index];
 				var id = element.currentDate + vpv.vpid.toString();
@@ -1257,40 +1352,52 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, organisations, onl
 	return capa;
 }
 
-function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
+function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, hierarchy) {
 
 	var allCalcCapaValues = [];
 	var allCalcCapaValuesIndexed = [];
 
 	var roleID = '';
-	var dateMinValue = -8640000000000000;
-	var dateMaxValue = 8640000000000000;
-	var calcC_startIndex = Infinity;
-	var calcC_endIndex = 0;
-	var calcC_startDate = new Date(dateMaxValue);
-	var calcC_endDate = new Date(dateMinValue);
-	var calcC_dauer = 0;
+	// var dateMinValue = -8640000000000000;
+	// var dateMaxValue = 8640000000000000;
+	// var calcC_startIndex = Infinity;
+	// var calcC_endIndex = 0;
+	// var calcC_startDate = new Date(dateMaxValue);
+	// var calcC_endDate = new Date(dateMinValue);
+	// var calcC_dauer = 0;
 
+	// var startCalc = new Date();
+
+	// if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
+	// 	logger4js.debug('Calculate Capacities missing vpvs or organisation ');
+	// 	return allCalcCapaValuesIndexed;
+	// }
+
+	// // get startIndex and endIndex and dauer of the several vpvs
+	// for (var i = 0; i < vpvs.length; i++) {
+	// 	var vpv = vpvs[i];
+	// 	if (!vpv) {
+	// 		// skip the version
+	// 		continue;
+	// 	}
+	// 	calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
+	// 	calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
+	// 	calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
+	// 	calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
+	//  calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	// }
+
+	//ur: optimize
+	
+	// startCalc is defined for time-measuring
 	var startCalc = new Date();
 
-	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
-		logger4js.debug('Calculate Capacities missing vpvs or organisation ');
-		return allCalcCapaValuesIndexed;
-	}
-
-	// get startIndex and endIndex and dauer of the several vpvs
-	for (var i = 0; i < vpvs.length; i++) {
-		var vpv = vpvs[i];
-		if (!vpv) {
-			// skip the version
-			continue;
-		}
-		calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
-		calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
-		calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
-		calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
-		calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
-	}
+	var calcC_startDate = new Date(startDate);
+	var calcC_startIndex = getColumnOfDate(calcC_startDate);
+	var calcC_endDate = new Date(endDate);
+	var calcC_endIndex = getColumnOfDate(calcC_endDate);
+	calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	
 
 	var currentDate = new Date(calcC_startDate);
 	logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
@@ -1301,10 +1408,10 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	if (vpvs.length <= 0 || calcC_dauer <= 0 ) {
 		return 	allCalcCapaValuesIndexed;
 	}
-
-	// divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
-	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
-	var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
+// ur:17.03.2021
+	// // divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
+	// logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	// var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
 
 	var roleIDs = [];
 	var allRoles = (timeZones && timeZones[timeZones.length - 1] && timeZones[timeZones.length - 1].orga
@@ -1507,7 +1614,7 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 	for ( i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
-
+		
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);
 
@@ -3135,9 +3242,9 @@ function ensureValidVPV(myVPV) {
 		// check existence and validity in hierarchy  	
 		let nodeItem = undefined; 
 		if ( phaseIX == 1) {
-			nodeItem = myHrchy['0'].hryNode;
+			nodeItem = myHrchy['0'] ? myHrchy['0'].hryNode : undefined;
 		} else {
-			nodeItem = myHrchy[phase.name].hryNode;
+			nodeItem = myHrchy[phase.name] ? myHrchy[phase.name].hryNode : undefined;
 		}
 		let c13tmp = (nodeItem && nodeItem.indexOfElem == phaseIX);
 		c13 = c13 && c13tmp;
@@ -3308,7 +3415,7 @@ function ensureValidVPV(myVPV) {
 			// 
 			// Criterium 
 			// C13: check existence and validity in hierarchy
-			let nodeItem = myHrchy[result.name].hryNode;
+			let nodeItem = myHrchy[result.name] ? myHrchy[result.name].hryNode : undefined ;
 			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
 	
 			c13 = c13 && c13tmp;
