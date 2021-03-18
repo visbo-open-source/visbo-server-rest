@@ -430,12 +430,19 @@ router.route('/')
 		logger4js.info('Post a new Project Version for user %s with name %s variant :%s: TS: %s in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, req.body.timestamp, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
-		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
-		if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') permCreateVersion = true;
+		if (variantName == 'pfv') {
+			if ((perm.vp & constPermVP.Modify) && (perm.vc & constPermVC.Modify)) {
+				permCreateVersion = true;
+			}
+		} else if (perm.vp & constPermVP.Modify) {
+			permCreateVersion = true;
+		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
+			permCreateVersion = true;
+		}
 		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to Create the specific Version',
+				message: 'No Permission to Create the specific Variant',
 				perm: perm
 			});
 		}
@@ -465,8 +472,18 @@ router.route('/')
 						message: 'Project variant does not exist',
 						vp: [req.oneVP]
 					});
+				} else if (!(perm.vp & constPermVP.Modify)) {
+					// check if the user owns the variant
+					variant = req.oneVP.variant[variantIndex];
+					if (useremail != variant.email) {
+						return res.status(409).send({
+							state: 'failure',
+							message: 'Project variant does not belong to user',
+							vp: [req.oneVP]
+						});
+					}
 				}
-			}
+ 			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
@@ -873,10 +890,11 @@ router.route('/:vpvid/copy')
 		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
 		*
-		* @apiParam {Boolean} squeezeOrga If true, squeezes the role assignments to a group role instead of having assignments to individuals
-		* @apiParam {Boolean} squeezeToPFV If true, squeezes Phases/Deadlines/Deliveries to the ones that were defined in the related pfv version
+		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is redced to the previous PFV
 		*
  		* @apiHeader {String} access-key User authentication token.
+		*
+		* @apiParam {number} scaleFactor scale "bedarf" related to the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -887,7 +905,11 @@ router.route('/:vpvid/copy')
 		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z',
-		*  'variantName': 'pfv'
+		*  'variantName': 'pfv',
+		*  'startDate': '2021-03-01T00:00:00.000Z',
+		*  'endDate': '2022-03-01T00:00:00.000Z',
+		*  'actualDataUntil': '2021-04-01T00:00:00.000Z',
+		*  'Erloes': 750.500
 		* }
 		* @apiSuccessExample {json} Success-Response:
 		*     HTTP/1.1 200 OK
@@ -929,6 +951,7 @@ router.route('/:vpvid/copy')
 // POST/Copy a Project Version with a new TimeStamp and a new calculation for keyMetrics
 	.post(function(req, res) {
 		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
 		req.auditDescription = 'Project Versions Copy';
 
@@ -938,6 +961,15 @@ router.route('/:vpvid/copy')
 			variantName = req.body.variantName;
 		}
 		var timestamp;
+		if (!validate.validateDate(req.body.timestamp, true)
+		|| !validate.validateDate(req.body.startDate, true)
+		|| !validate.validateDate(req.body.endDate, true)
+		|| !validate.validateDate(req.body.actualDataUntil, true)) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Illegal Dates in body'
+			});
+		}
 		if (req.body.timestamp) {
 			timestamp = validate.validateDate(req.body.timestamp, true, true);
 		} else {
@@ -958,8 +990,18 @@ router.route('/:vpvid/copy')
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
-		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
-		if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') permCreateVersion = true;
+		if (variantName == 'pfv') {
+			if ((perm.vp & constPermVP.Modify) && (perm.vc & constPermVC.Modify)) {
+				permCreateVersion = true;
+			}
+		} else if (perm.vp & constPermVP.Modify) {
+			permCreateVersion = true;
+		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
+			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName)
+			if (variant && variant.email == useremail) {
+				permCreateVersion = true;
+			}
+		}
 		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
@@ -983,27 +1025,64 @@ router.route('/:vpvid/copy')
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
 		}
 
-		var orga = req.query.squeezeOrga ? req.visboOrganisations : undefined;
-		var pfv = req.query.squeezeToPFV ? req.visboPFV : undefined;
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
-		if (orga || pfv) {
-			newVPV = visboBusiness.convertVPV(req.oneVPV, pfv, orga);
-		}
-
-		if (newVPV.variantName != 'pfv') {
-			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
-		} else {
+		if (variantName == 'pfv') {
+			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
+			if (!tmpVPV) {
+				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisations ? req.visboOrganisations.length : 0);
+			} else {
+				newVPV = tmpVPV;
+			}
 			delete newVPV.keyMetrics;
 		}
+		// check if we have to do scaling
+		var scale = 0;
+		var scaleVPV = helperVpv.initVPV(newVPV);
+		if (req.body.startDate) {
+			scale = 1;
+			scaleVPV.startDate = validate.validateDate(req.body.startDate, false, true);
+		} else {
+			scaleVPV.startDate = newVPV.startDate;
+		}
+		if (req.body.endDate) {
+			scale = 1;
+			scaleVPV.endDate = validate.validateDate(req.body.endDate, false, true);
+		} else {
+			scaleVPV.endDate = newVPV.endDate;
+		}
+		if (req.body.actualDataUntil) {
+			scale = 1;
+			scaleVPV.actualDataUntil = validate.validateDate(req.body.actualDataUntil, false, true);
+		}
+		if (req.query.scaleFactor) {
+			scale = validate.validateNumber(req.query.scaleFactor) || 1;
+		}
+
+		// first version just move start & end Date without scaling
+		if (scale) {
+			newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+			if (!newVPV) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Visbo Project Version inconsistent',
+					perm: perm
+				});
+			}
+		}
+
+		if (variantName != 'pfv') {
+			newVPV.keyMetrics = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
+		}
+
 		helperVpv.setKeyAttributes(newVPV, keyVPV);
 
-		logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
+		logger4js.debug('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', newVPV._id, newVPV.variantName, newVPV.vpid, newVPV.AllPhases && newVPV.AllPhases.length);
 		newVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
 			}
-			logger4js.warn('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
+			logger4js.debug('Create ProjectVersion %s Variant %s in Project %s AllPhases %d', oneVPV._id, oneVPV.variantName, oneVPV.vpid, oneVPV.AllPhases && oneVPV.AllPhases.length);
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
 			helperVpv.updateVPVCount(req.oneVPV.vpid, oneVPV.variantName, 1);

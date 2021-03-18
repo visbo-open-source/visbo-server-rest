@@ -440,8 +440,8 @@ router.route('/')
 	*  'description':'Project Description',
 	*  'vcid': 'vc5aaf992',
 	*  'vpType': 0,
-	*  'BAC': 380.5, 									// budget at completion in k€
-	*  'RAC': 400, 										// revenue at completion in k€
+	*  'bac': 380.5, 									// budget at completion in k€
+	*  'rac': 400, 										// revenue at completion in k€
 	*  'startDate': '2021-02-08',
 	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
@@ -2172,6 +2172,83 @@ router.route('/:vpid/variant')
 router.route('/:vpid/variant/:vid')
 
 /**
+	* @api {put} /vp/:vpid/variant/:vid Update a Variant
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Project Properties
+	* @apiName UpdateVISBOProjectVariant
+	* @apiDescription Updates the description of a Variant.
+	* The user needs to either own the Variant or has Modify Permission in the Project
+	* @apiHeader {String} access-key User authentication token.
+	*
+	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to update the Project
+	* @apiError {number} 409 Variant does not exists
+	* @apiError {number} 423 Variant is locked by another user
+	*
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vp/vp5aada025/variant/variant5aada
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Updated Project Variant',
+	*   'vp': [vpList]
+	* }
+	*/
+// Update Project Variant
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var variantId = req.params.vid;
+		var lockResult;
+
+		req.auditDescription = 'Project Variant Update';
+		req.auditInfo = variantId;
+
+		logger4js.info('Update Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
+
+		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString());
+		if (variantIndex < 0) {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'Variant does not exists',
+				vp: [req.oneVP]
+			});
+		}
+		var variantName = req.oneVP.variant[variantIndex].variantName;
+		req.auditInfo = variantName;
+		//variant belongs to a different user and curr. user is not an Admin
+		if (req.oneVP.variant[variantIndex].email != useremail && !(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to update Variant',
+				vp: [req.oneVP]
+			});
+		}
+		lockResult = lockVP.lockStatus(req.oneVP, useremail, variantName);
+		if (lockResult.locked) {
+			return res.status(423).send({
+				state: 'failure',
+				message: 'Project Variant locked',
+				vp: [req.oneVP]
+			});
+		}
+		req.oneVP.variant[variantIndex].description = (req.body.description || '').trim();
+		req.oneVP.save(function(err) {
+			if (err) {
+				errorHandler(err, res, 'DB: Update VP Variant', 'Error updating Project Variant');
+				return;
+			}
+			return res.status(200).send({
+				state: 'success',
+				message: 'Updated Project Variant',
+				variant: [req.oneVP.variant[variantIndex]]
+			});
+		});
+	})
+
+/**
 	* @api {delete} /vp/:vpid/variant/:vid Delete a Variant
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Properties
@@ -2180,9 +2257,9 @@ router.route('/:vpid/variant/:vid')
 	* The user needs to either own the Variant or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and VP.View and optional VP.Modify Permission for the Project.
+	* @apiPermission Authenticated and VP.View and optional VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Lock the Project
+	* @apiError {number} 403 No Permission to delete the Project
 	* @apiError {number} 409 Variant does not exists or still contains Versions
 	* @apiError {number} 423 Variant is locked by another user
 	*
@@ -2683,8 +2760,8 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName UpdateVISBOPortfolio
-	* @apiDescription Put updates a specific Portfolio Version used for undelete
-	* the system checks if the user has Delete permission to the Project.
+	* @apiDescription Put updates a specific Portfolio Version can also be used for undelete
+	* the system checks if the user has VP.Modify permission to the Project and in case of Undelete the user needs to have the VP.Delete Permission.
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
 	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
@@ -2766,6 +2843,13 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No permission to change Portfolio List'
+				});
+			}
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)
+			&& !((req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant) && variantName != '')) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to modify the Portfolio List!'
 				});
 			}
 

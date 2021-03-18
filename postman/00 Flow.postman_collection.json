@@ -245,15 +245,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"var startDate = new Date();",
-											"startDate.setDate(1);",
-											"startDate.setHours(0, 0, 0, 0);",
-											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 17);",
-											"",
-											"pm.globals.set(\"startDate\", startDate.toISOString());",
-											"pm.globals.set(\"endDate\", endDate.toISOString());",
 											""
 										],
 										"type": "text/javascript"
@@ -11198,7 +11189,7 @@
 											"endDate.setTime(endDate.getTime() + diffTime );",
 											"",
 											"vpv.variantName = 'pfv';",
-											"vpv.vpid = pm.globals.get(\"vpID\");",
+											"vpv.vpid = pm.globals.get(\"TempID\");",
 											"vpv.timestamp = timestamp;",
 											"vpv.actualDataUntil = actualDataUntil;",
 											"vpv.startDate = startDate;",
@@ -11269,13 +11260,10 @@
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											"",
 											"var startDate = new Date();",
-											"startDate.setDate(15);",
+											"startDate.setDate(1);",
 											"startDate.setHours(0, 0, 0, 0);",
 											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
 											"",
-											"var duration = ((new Date(vpv.endDate)).getTime() - (new Date(vpv.startDate)).getTime());",
-											"// console.log(\"Project duration\", duration / 1000 / 60 / 60 / 24, duration / 1000 / 60 / 60 / 24 / 30)",
 											"var oldStartDate = new Date(vpv.startDate);",
 											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
 											"var endDate = new Date(vpv.endDate);",
@@ -22769,6 +22757,7 @@
 											"    var user = pm.environment.get(\"UserAdmin\");",
 											"    var variantName = pm.environment.get(\"VPVariant\");",
 											"    pm.expect(variant.variantName).to.eql(variantName);",
+											"    pm.expect(variant.description).to.eql(variantName + ' Description');",
 											"    pm.expect(variant.email).to.eql(user);",
 											"    pm.expect(variant.vpvCount).to.eql(0);",
 											"});",
@@ -22802,7 +22791,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{  \n   \"variantName\":\"{{VPVariant}}\"\n}"
+									"raw": "{  \n   \"variantName\":\"{{VPVariant}}\",\n   \"description\": \"{{VPVariant}} Description\"\n}"
 								},
 								"url": {
 									"raw": "{{url}}/vp/{{vpID}}/variant",
@@ -22813,6 +22802,75 @@
 										"vp",
 										"{{vpID}}",
 										"variant"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "06-01-06b Change Variant Description",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check Created Variant\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var variant = jsonData.variant[0];",
+											"    var user = pm.environment.get(\"UserAdmin\");",
+											"    var variantName = pm.environment.get(\"VPVariant\");",
+											"    pm.expect(variant.variantName).to.eql(variantName);",
+											"    pm.expect(variant.description).to.eql(variantName + ' Description Changed');",
+											"    pm.expect(variant.email).to.eql(user);",
+											"    pm.expect(variant.vpvCount).to.eql(0);",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{  \n   \"description\": \"{{VPVariant}} Description Changed\"\n}"
+								},
+								"url": {
+									"raw": "{{url}}/vp/{{vpID}}/variant/{{TempID}}",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vp",
+										"{{vpID}}",
+										"variant",
+										"{{TempID}}"
 									]
 								}
 							},
@@ -22981,8 +23039,12 @@
 											"startDate.setDate(1);",
 											"startDate.setHours(0, 0, 0, 0);",
 											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 15);",
+											"",
+											"var oldStartDate = new Date(vpv.startDate);",
+											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
+											"var endDate = new Date(vpv.endDate);",
+											"endDate.setTime(endDate.getTime() + diffTime );",
+											"",
 											"var actualDataUntil = new Date(timestamp);",
 											"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
 											"actualDataUntil.setDate(0);",
@@ -23360,6 +23422,16 @@
 											"var vpv = JSON.parse(pm.environment.get(\"vpvTemplate\"));",
 											"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
 											"",
+											"var startDate = new Date();",
+											"startDate.setDate(1);",
+											"startDate.setHours(0, 0, 0, 0);",
+											"startDate.setMonth(startDate.getMonth() - 9);",
+											"",
+											"var oldStartDate = new Date(vpv.startDate);",
+											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
+											"var endDate = new Date(vpv.endDate);",
+											"endDate.setTime(endDate.getTime() + diffTime );",
+											"",
 											"// console.log(\"Start Calculating VPV \");",
 											"var ts = pm.globals.get(\"timestamp\");",
 											"console.log(\"Start Calculating VPV \" + ts);",
@@ -23374,6 +23446,12 @@
 											"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
 											"actualDataUntil.setDate(0);",
 											"actualDataUntil.setHours(23, 59, 59, 0);",
+											"",
+											"",
+											"vpv.startDate = startDate;",
+											"vpv.endDate = endDate;",
+											"vpv.actualDataUntil = actualDataUntil;",
+											"vpv.timestamp = timestamp;",
 											"",
 											"var change = 1.1;",
 											"var diff = Math.round(((new Date()).getTime() - timestamp.getTime())/1000/3600/24/30);",
@@ -23403,12 +23481,6 @@
 											"  vpv.ampelErlaeuterung = \"alles ok\";",
 											"}",
 											"",
-											"var endDate = new Date(vpv.endDate);",
-											"var diff = 40;",
-											"diff = diff * change - diff;",
-											"endDate.setDate(endDate.getDate() + diff);",
-											"vpv.endDate = endDate;",
-											"",
 											"// modify COST Values",
 											"var text = '';",
 											"if (vpv.AllPhases) {",
@@ -23435,7 +23507,6 @@
 											"}",
 											"",
 											"// Modify Delivery percentDone",
-											"var startDate = new Date(pm.globals.get(\"startDate\"));",
 											"var offsetRangeInDays = (timestamp.getTime() - startDate.getTime()) / 1000 / 3600 / 24 / 2;",
 											"// console.log(\"offSetRange \" + offsetRangeInDays);",
 											"",
@@ -23645,8 +23716,12 @@
 											"startDate.setDate(1);",
 											"startDate.setHours(0, 0, 0, 0);",
 											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 15);",
+											"",
+											"var oldStartDate = new Date(vpv.startDate);",
+											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
+											"var endDate = new Date(vpv.endDate);",
+											"endDate.setTime(endDate.getTime() + diffTime );",
+											"",
 											"var actualDataUntil = new Date(timestamp);",
 											"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
 											"actualDataUntil.setDate(0);",
@@ -25322,14 +25397,19 @@
 											"var startDate = new Date();",
 											"startDate.setDate(1);",
 											"startDate.setHours(10, 0, 0, 0);",
-											"startDate.setMonth(startDate.getMonth() - 16);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 18);",
+											"startDate.setMonth(startDate.getMonth() - 5);",
+											"",
+											"var oldStartDate = new Date(vpv.startDate);",
+											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
+											"var endDate = new Date(vpv.endDate);",
+											"endDate.setTime(endDate.getTime() + diffTime );",
+											"",
 											"pm.globals.set(\"startDate\", startDate.toISOString());",
 											"pm.globals.set(\"endDate\", endDate.toISOString());",
 											"",
 											"vpv.variantName = 'pfv';",
 											"vpv.status = 'beauftragt';",
+											"vpv.businessUnit = 'BU2'",
 											"vpv.vpid = pm.globals.get(\"vpID\");",
 											"vpv.timestamp = timestamp;",
 											"vpv.startDate = startDate;",
@@ -25378,7 +25458,7 @@
 									"script": {
 										"exec": [
 											"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
-											"timestamp.setDate(timestamp.getDate() + 1);",
+											"timestamp.setDate(timestamp.getDate() + 14);",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											""
 										],
@@ -25447,7 +25527,7 @@
 							"response": []
 						},
 						{
-							"name": "06-03-12 Create a VPV with Changes",
+							"name": "06-03-12 Create a VPV scaleVPV",
 							"event": [
 								{
 									"listen": "prerequest",
@@ -25459,96 +25539,19 @@
 											"// console.log(\"Start Calculating VPV \");",
 											"var ts = pm.globals.get(\"timestamp\");",
 											"var timestamp = new Date(ts);",
-											"console.log(\"Start Calculating VPV \", ts, timestamp);",
-											"timestamp.setDate(timestamp.getDate() + 1);",
+											"timestamp.setDate(timestamp.getDate() + 14);",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
-											"console.log(\"Timestamp:\", timestamp.toISOString());",
-											"",
-											"var actualDataUntil = new Date(timestamp.toISOString());",
-											"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
-											"actualDataUntil.setDate(0);",
-											"actualDataUntil.setHours(23, 59, 59, 0);",
-											"",
-											"var change = 0.95;",
-											"",
-											"console.log(\"Calculating VPV: for \", timestamp.toISOString(), \"change\", change);",
-											"",
-											"vpv.vpid = pm.globals.get(\"vpID\");",
-											"vpv.timestamp = timestamp;",
-											"vpv.actualDataUntil = actualDataUntil;",
-											"vpv.updatedAt = undefined;",
-											"vpv.createdAt = undefined;",
-											"",
-											"vpv.ampelStatus = \"3\";",
-											"vpv.ampelErlaeuterung = \"in der Realisierungs-Phase sind unerwartete Test-Schwierigkeiten aufgetreten. Die Realisierungs-Phase muss verlängert werden und es mussten zusätzliche Ressourcenhinzugezogen werden. Es ist noch nicht abzusehen, ob wir den neuen Schluss-Termin für die Realisierung halten können. \";",
 											"",
 											"var endDate = new Date(vpv.endDate);",
-											"var diff = 40;",
-											"diff = diff * change - diff;",
-											"endDate.setDate(endDate.getDate() + diff);",
-											"vpv.endDate = endDate;",
+											"endDate.setDate(endDate.getDate() + 45);",
 											"",
-											"// modify COST Values",
-											"var text = '';",
-											"if (vpv.AllPhases) {",
-											"    text = vpv.AllPhases.length || 'Undefined';",
-											"    // console.log(\"Phases \" + text);",
-											"    for (var i = 0; i < vpv.AllPhases.length; i++) {",
-											"        var roles = vpv.AllPhases[i].AllRoles;",
-											"        if (roles) {",
-											"            text = roles.length || 'Undefined';",
-											"            // console.log(\"Roles \" + text);",
-											"            for (var j=0; j < roles.length; j++) {",
-											"                var bedarf = roles[j] && roles[j].Bedarf;",
-											"                if (bedarf) {",
-											"                    text = bedarf.length || 'Undefined';",
-											"                    // console.log(\"Bedarf \" + text);",
-											"                    for (var k=0; k < bedarf.length; k++ ) {",
-											"                        // console.log(\"Role \" + roles[j]._id + \" Bedarf \" + k + \" Value \" + bedarf[k]);",
-											"                        bedarf[k] *= change;",
-											"                    }",
-											"                }",
-											"            }",
-											"        }",
-											"    }",
-											"}",
+											"var copyBody = {};",
+											"copyBody.timestamp = timestamp;",
+											"copyBody.variantName = \"\";",
+											"copyBody.endDate = endDate;",
+											"copyBody.Erloes = vpv.Erloes * 0.9;",
 											"",
-											"// Modify Delivery percentDone",
-											"var startDate = new Date(pm.globals.get(\"startDate\"));",
-											"var offsetRangeInDays = (timestamp.getTime() - startDate.getTime()) / 1000 / 3600 / 24 / 2;",
-											"// console.log(\"offSetRange \" + offsetRangeInDays);",
-											"",
-											"var text = '';",
-											"if (vpv.AllPhases) {",
-											"    text = vpv.AllPhases.length || 'Undefined';",
-											"    // console.log(\"Phases \" + text);",
-											"    for (var i = 0; i < vpv.AllPhases.length; i++) {",
-											"        var results = vpv.AllPhases[i].AllResults;",
-											"        if (results) {",
-											"            text = results.length || 'Undefined';",
-											"            // console.log(\"Results \" + text);",
-											"            for (var j=0; j < results.length; j++) {",
-											"                var endInDays = (vpv.AllPhases[i].startOffsetinDays || 0) + (results[j].offset || 0) - 1;",
-											"                // console.log(\"Modify Results \" + JSON.stringify(vpv.AllPhases[i].AllResults[j]));",
-											"                if (endInDays <= offsetRangeInDays) {",
-											"                  // set the results to 100%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 1;",
-											"                } else if (endInDays <= offsetRangeInDays * 2) {",
-											"                  // set the results to 75%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0.75;",
-											"                } else if (endInDays <= offsetRangeInDays * 3) {",
-											"                  // set the results to 50%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0.5;",
-											"                } else {",
-											"                  // set the results to 0%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0;",
-											"                }",
-											"            }",
-											"        }",
-											"    }",
-											"}",
-											"",
-											"pm.variables.set(\"vpvTemp\", JSON.stringify(vpv));",
+											"pm.variables.set(\"vpvTemp\", JSON.stringify(copyBody));",
 											"// console.log(\"End Calculating VPV \");",
 											""
 										],
@@ -25588,12 +25591,20 @@
 									"raw": "{{vpvTemp}}"
 								},
 								"url": {
-									"raw": "{{url}}/vpv",
+									"raw": "{{url}}/vpv/{{vpvID}}/copy?scaleFactor=0.9",
 									"host": [
 										"{{url}}"
 									],
 									"path": [
-										"vpv"
+										"vpv",
+										"{{vpvID}}",
+										"copy"
+									],
+									"query": [
+										{
+											"key": "scaleFactor",
+											"value": "0.9"
+										}
 									]
 								}
 							},
@@ -25670,14 +25681,14 @@
 							"response": []
 						},
 						{
-							"name": "06-03-14 Create a VPV with Copy",
+							"name": "06-03-14 Create a VPV scaleVPV",
 							"event": [
 								{
 									"listen": "prerequest",
 									"script": {
 										"exec": [
 											"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
-											"timestamp.setDate(timestamp.getDate() + 1);",
+											"timestamp.setDate(timestamp.getDate() + 14);",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											""
 										],
@@ -25703,8 +25714,8 @@
 											"    var keyMetricsNew = vpv.keyMetrics;",
 											"    console.log(\"KM New\", JSON.stringify(keyMetricsNew));",
 											"",
-											"    pm.expect(keyMetricsNew.costCurrentTotal).to.be.eql(keyMetricsNew.costBaseLastTotal, \"costCurrentTotal mismatch\");",
-											"    pm.expect(keyMetricsNew.costCurrentActual).to.be.eql(keyMetricsNew.costBaseLastActual, \"costCurrentActual mismatch\");",
+											"    // pm.expect(keyMetricsNew.costCurrentTotal).to.be.eql(keyMetricsNew.costBaseLastTotal, \"costCurrentTotal mismatch\");",
+											"    // pm.expect(keyMetricsNew.costCurrentActual).to.be.eql(keyMetricsNew.costBaseLastActual, \"costCurrentActual mismatch\");",
 											"    pm.globals.set(\"vpvID\", vpv._id);",
 											"    delete vpv._id;",
 											"    delete vpv.timestamp;",
@@ -25732,7 +25743,7 @@
 									"raw": "{\n\t\"timestamp\": \"{{timestamp}}\",\n    \"variantName\": \"\"\n}"
 								},
 								"url": {
-									"raw": "{{url}}/vpv/{{vpvID}}/copy",
+									"raw": "{{url}}/vpv/{{vpvID}}/copy?scaleFactor=1.5",
 									"host": [
 										"{{url}}"
 									],
@@ -25740,13 +25751,19 @@
 										"vpv",
 										"{{vpvID}}",
 										"copy"
+									],
+									"query": [
+										{
+											"key": "scaleFactor",
+											"value": "1.5"
+										}
 									]
 								}
 							},
 							"response": []
 						},
 						{
-							"name": "06-03-40 Create a VPV Variant",
+							"name": "06-03-40 Create a VPV scaleVPV",
 							"event": [
 								{
 									"listen": "test",
@@ -25791,110 +25808,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"var vpv = JSON.parse(pm.globals.get(\"vpv\"));",
-											"pm.expect(vpv != undefined).to.be.eql(true, \"vpv in globals missing\");",
 											"",
 											"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
-											"timestamp.setDate(timestamp.getDate() + 1);",
+											"timestamp.setDate(timestamp.getDate() + 14);",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											"",
-											"var actualDataUntil = new Date(timestamp.toISOString());",
-											"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
-											"actualDataUntil.setDate(0);",
-											"actualDataUntil.setHours(23, 59, 59, 0);",
-											"pm.globals.set(\"actualDataUntil\", actualDataUntil.toISOString());",
-											"",
-											"vpv.variantName = pm.environment.get(\"VPVariant\");",
-											"vpv.vpid = pm.globals.get(\"vpID\");",
-											"vpv.timestamp = undefined;",
-											"vpv.actualDataUntil = actualDataUntil;",
-											"",
-											"var change = 1.1;",
-											"console.log(\"Calculating VPV: for \", timestamp.toISOString(), \" change\", change);",
-											"",
-											"vpv.vpid = pm.globals.get(\"vpID\");",
-											"vpv.timestamp = timestamp;",
-											"vpv.actualDataUntil = actualDataUntil;",
-											"vpv.updatedAt = undefined;",
-											"vpv.createdAt = undefined;",
-											"if (change > 1) {",
-											"  vpv.ampelStatus = \"3\";",
-											"  vpv.ampelErlaeuterung = \"in der Realisierungs-Phase sind unerwartete Test-Schwierigkeiten aufgetreten. Die Realisierungs-Phase muss verlängert werden und es mussten zusätzliche Ressourcenhinzugezogen werden. Es ist noch nicht abzusehen, ob wir den neuen Schluss-Termin für die Realisierung halten können. \";",
-											"} else if (change >= 0.9) {",
-											"  vpv.ampelStatus = \"2\";",
-											"  vpv.ampelErlaeuterung = \"trotz Schwierigkeiten, es könnte klappen\";",
-											"} else {",
-											"  vpv.ampelStatus = \"1\";",
-											"  vpv.ampelErlaeuterung = \"alles ok\";",
-											"}",
-											"",
-											"var endDate = new Date(vpv.endDate);",
-											"var diff = 40;",
-											"diff = diff * change - diff;",
-											"endDate.setDate(endDate.getDate() + diff);",
-											"vpv.endDate = endDate;",
-											"",
-											"// modify COST Values",
-											"var text = '';",
-											"if (vpv.AllPhases) {",
-											"    text = vpv.AllPhases.length || 'Undefined';",
-											"    // console.log(\"Phases \" + text);",
-											"    for (var i = 0; i < vpv.AllPhases.length; i++) {",
-											"        var roles = vpv.AllPhases[i].AllRoles;",
-											"        if (roles) {",
-											"            text = roles.length || 'Undefined';",
-											"            // console.log(\"Roles \" + text);",
-											"            for (var j=0; j < roles.length; j++) {",
-											"                var bedarf = roles[j] && roles[j].Bedarf;",
-											"                if (bedarf) {",
-											"                    text = bedarf.length || 'Undefined';",
-											"                    // console.log(\"Bedarf \" + text);",
-											"                    for (var k=0; k < bedarf.length; k++ ) {",
-											"                        // console.log(\"Role \" + roles[j]._id + \" Bedarf \" + k + \" Value \" + bedarf[k]);",
-											"                        bedarf[k] *= change;",
-											"                    }",
-											"                }",
-											"            }",
-											"        }",
-											"    }",
-											"}",
-											"",
-											"// Modify Delivery percentDone",
-											"var startDate = new Date(pm.globals.get(\"startDate\"));",
-											"var offsetRangeInDays = (timestamp.getTime() - startDate.getTime()) / 1000 / 3600 / 24 / 2;",
-											"// console.log(\"offSetRange \" + offsetRangeInDays);",
-											"",
-											"var text = '';",
-											"if (vpv.AllPhases) {",
-											"    text = vpv.AllPhases.length || 'Undefined';",
-											"    // console.log(\"Phases \" + text);",
-											"    for (var i = 0; i < vpv.AllPhases.length; i++) {",
-											"        var results = vpv.AllPhases[i].AllResults;",
-											"        if (results) {",
-											"            text = results.length || 'Undefined';",
-											"            // console.log(\"Results \" + text);",
-											"            for (var j=0; j < results.length; j++) {",
-											"                var endInDays = (vpv.AllPhases[i].startOffsetinDays || 0) + (results[j].offset || 0) - 1;",
-											"                // console.log(\"Modify Results \" + JSON.stringify(vpv.AllPhases[i].AllResults[j]));",
-											"                if (endInDays <= offsetRangeInDays) {",
-											"                  // set the results to 100%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 1;",
-											"                } else if (endInDays <= offsetRangeInDays * 2) {",
-											"                  // set the results to 75%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0.75;",
-											"                } else if (endInDays <= offsetRangeInDays * 3) {",
-											"                  // set the results to 50%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0.5;",
-											"                } else {",
-											"                  // set the results to 0%",
-											"                  vpv.AllPhases[i].AllResults[j].percentDone = 0;",
-											"                }",
-											"            }",
-											"        }",
-											"    }",
-											"}",
-											"",
-											"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
 											""
 										],
 										"type": "text/javascript"
@@ -25915,15 +25833,23 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{{vpvTemp}}"
+									"raw": "{\n\t\"timestamp\": \"{{timestamp}}\",\n    \"variantName\": \"{{VPVariant}}\"\n}"
 								},
 								"url": {
-									"raw": "{{url}}/vpv",
+									"raw": "{{url}}/vpv/{{vpvID}}/copy?scaleFactor=0.7",
 									"host": [
 										"{{url}}"
 									],
 									"path": [
-										"vpv"
+										"vpv",
+										"{{vpvID}}",
+										"copy"
+									],
+									"query": [
+										{
+											"key": "scaleFactor",
+											"value": "0.7"
+										}
 									]
 								}
 							},
@@ -25943,9 +25869,7 @@
 											"    var listItems = [];",
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"    var vpv = list[0];",
-											"    delete vpv._id;",
-											"    delete vpv.timestamp;",
-											"    pm.globals.set(\"vpv\", JSON.stringify(list[0]))",
+											"    pm.globals.set(\"vpvID\", vpv._id);",
 											"});",
 											"",
 											"    "
@@ -25994,8 +25918,20 @@
 							"response": []
 						},
 						{
-							"name": "06-03-51 Create VPV PFV with Changes",
+							"name": "06-03-51 Create a PFV scaleVPV",
 							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
+											"timestamp.setDate(timestamp.getDate() + 14);",
+											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
 								{
 									"listen": "test",
 									"script": {
@@ -26004,49 +25940,15 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Check the PFV Result\", function () {",
+											"pm.test(\"Check the VPV Result\", function () {",
 											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vpv;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"",
-											"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, 'NO Version Created');",
-											"    var pfv = jsonData.vpv[0];",
-											"    pm.expect(pfv.keyMetrics).to.be.eql(undefined, \"KeyMetrics found in PFV\");",
-											"    pm.expect(pfv.status).to.be.eql(\"10\", \"status was not set correct\");",
-											"    pm.expect(pfv.businessUnit).to.be.eql(\"10\", \"businessUnit was not set correct\");",
-											"    pm.expect(pfv.Risiko).to.be.eql(10, \"Risiko was not set correct\");",
-											"    pm.expect(pfv.StrategicFit).to.be.eql(10, \"StrategicFit was not set correct\");",
-											"    pm.expect(pfv.Erloes).to.be.eql(10, \"Erloes was not set correct\");",
-											"    pm.globals.set(\"vpvID\", pfv._id);",
-											"    delete pfv._id;",
-											"    delete pfv.updatedAt",
-											"    pm.globals.set(\"vpv\", JSON.stringify(pfv));",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"var vpv = JSON.parse(pm.globals.get(\"vpv\"));",
-											"pm.expect(vpv && vpv.createdAt != undefined).to.be.eql(true, \"vpv in globals missing\");",
+											"    var vpv = list[0];",
+											"    pm.expect(vpv.variantName).to.be.eql(\"pfv\", \"Incorrect Variant Created\");",
 											"",
-											"var strTimestamp = pm.globals.get(\"timestamp\");",
-											"console.log('Timestamp:', strTimestamp)",
-											"var timestamp = new Date(strTimestamp);",
-											"timestamp.setMonth(timestamp.getMonth() + 1);",
-											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
-											"",
-											"vpv.timestamp = timestamp",
-											"vpv.status = '10';",
-											"vpv.businessUnit = '10';",
-											"vpv.Risiko = 10;",
-											"vpv.StrategicFit = 10;",
-											"vpv.Erloes = 10;",
-											"",
-											"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
-											""
+											"});"
 										],
 										"type": "text/javascript"
 									}
@@ -26066,15 +25968,23 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{{vpvTemp}}"
+									"raw": "{\n\t\"timestamp\": \"{{timestamp}}\"\n}"
 								},
 								"url": {
-									"raw": "{{url}}/vpv",
+									"raw": "{{url}}/vpv/{{vpvID}}/copy?scaleFactor=1.1",
 									"host": [
 										"{{url}}"
 									],
 									"path": [
-										"vpv"
+										"vpv",
+										"{{vpvID}}",
+										"copy"
+									],
+									"query": [
+										{
+											"key": "scaleFactor",
+											"value": "1.1"
+										}
 									]
 								}
 							},
@@ -26145,7 +26055,7 @@
 									"script": {
 										"exec": [
 											"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
-											"timestamp.setDate(timestamp.getDate() + 1);",
+											"timestamp.setDate(timestamp.getDate() + 14);",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											""
 										],
@@ -26171,12 +26081,12 @@
 											"    var keyMetricsNew = vpv.keyMetrics;",
 											"    console.log(\"KM New\", JSON.stringify(keyMetricsNew));",
 											"",
-											"    pm.expect(keyMetricsNew.costCurrentTotal).to.be.eql(keyMetricsNew.costBaseLastTotal, \"costCurrentTotal mismatch\");",
-											"    pm.expect(keyMetricsNew.costCurrentActual).to.be.eql(keyMetricsNew.costBaseLastActual, \"costCurrentActual mismatch\");",
+											"    // pm.expect(keyMetricsNew.costCurrentTotal).to.be.eql(keyMetricsNew.costBaseLastTotal, \"costCurrentTotal mismatch\");",
+											"    // pm.expect(keyMetricsNew.costCurrentActual).to.be.eql(keyMetricsNew.costBaseLastActual, \"costCurrentActual mismatch\");",
 											"    pm.globals.set(\"vpvID\", vpv._id);",
 											"",
 											"    pm.expect(vpv.status).to.be.eql(\"10\", \"status was not set correct\");",
-											"    pm.expect(vpv.businessUnit).to.be.eql(\"10\", \"businessUnit was not set correct\");",
+											"    pm.expect(vpv.businessUnit.substr(-2)).to.be.eql(\"10\", \"businessUnit was not set correct\");",
 											"    pm.expect(vpv.Risiko).to.be.eql(10, \"Risiko was not set correct\");",
 											"    pm.expect(vpv.StrategicFit).to.be.eql(10, \"StrategicFit was not set correct\");",
 											"    pm.expect(vpv.Erloes).to.be.eql(10, \"Erloes was not set correct\");",
@@ -27799,6 +27709,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+											"var vpv = JSON.parse(pm.environment.get(\"vpvTemplate\"));",
+											"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
+											"",
 											"var timestamp = new Date();",
 											"timestamp.setMonth(timestamp.getMonth(timestamp)-6);",
 											"timestamp.setDate(1);",
@@ -27807,13 +27720,17 @@
 											"startDate.setDate(1);",
 											"startDate.setHours(0, 0, 0, 0);",
 											"startDate.setMonth(startDate.getMonth() - 9);",
-											"var endDate = new Date(startDate);",
-											"endDate.setMonth(endDate.getMonth() + 18);",
+											"",
+											"var oldStartDate = new Date(vpv.startDate);",
+											"var diffTime = (startDate.getTime() - oldStartDate.getTime());",
+											"var endDate = new Date(vpv.endDate);",
+											"endDate.setTime(endDate.getTime() + diffTime );",
 											"",
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											"pm.globals.set(\"startDate\", startDate.toISOString());",
 											"pm.globals.set(\"endDate\", endDate.toISOString());",
-											""
+											"",
+											"pm.variables.set('vpvTemp', JSON.stringify(vpv));"
 										],
 										"type": "text/javascript"
 									}
@@ -27833,7 +27750,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n\t\"vpid\": \"{{vpID}}\",\r\n\t\"timestamp\": \"{{timestamp}}\",\r\n    \"actualDataUntil\": \"{{actualDataUntil}}\",\r\n    \"startDate\": \"{{startDate}}\",\r\n    \"endDate\": \"{{endDate}}\",\r\n\t\"variantName\": \"pfv\",\r\n\t\"hierarchy\": {\r\n\t        \"allNodes\": [\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d95\",\r\n\t            \"hryNodeKey\": \"0\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"0§01 Preparation§\",\r\n\t                \"0§02 Blueprints§\",\r\n\t                \"0§03 Realization§\",\r\n\t                \"0§04 Final Preparation / GoLive§\",\r\n\t                \"0§05 GoLive Support§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d96\",\r\n\t              \"elemName\": \".\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d93\",\r\n\t            \"hryNodeKey\": \"0§01 Preparation§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"0§Release 1§\",\r\n\t                \"0§Release 2§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d94\",\r\n\t              \"elemName\": \"01 Preparation\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 2,\r\n\t              \"parentNodeKey\": \"0§.§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d91\",\r\n\t            \"hryNodeKey\": \"0§02 Blueprints§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"0§Release 3§\",\r\n\t                \"1§Finalization§0002\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d92\",\r\n\t              \"elemName\": \"02 Blueprints\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 5,\r\n\t              \"parentNodeKey\": \"0§.§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d8f\",\r\n\t            \"hryNodeKey\": \"0§03 Realization§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Finalization§0003\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d90\",\r\n\t              \"elemName\": \"03 Realization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 8,\r\n\t              \"parentNodeKey\": \"0§.§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d8d\",\r\n\t            \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Finalization§0004\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d8e\",\r\n\t              \"elemName\": \"04 Final Preparation / GoLive\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 9,\r\n\t              \"parentNodeKey\": \"0§.§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d8b\",\r\n\t            \"hryNodeKey\": \"0§05 GoLive Support§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Finalization§0005\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d8c\",\r\n\t              \"elemName\": \"05 GoLive Support\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 10,\r\n\t              \"parentNodeKey\": \"0§.§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d89\",\r\n\t            \"hryNodeKey\": \"0§Release 1§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Sprint 1§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d8a\",\r\n\t              \"elemName\": \"Release 1\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 3,\r\n\t              \"parentNodeKey\": \"0§01 Preparation§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d87\",\r\n\t            \"hryNodeKey\": \"0§Release 2§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Sprint 2§\",\r\n\t                \"1§Finalization§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d88\",\r\n\t              \"elemName\": \"Release 2\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 4,\r\n\t              \"parentNodeKey\": \"0§01 Preparation§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d85\",\r\n\t            \"hryNodeKey\": \"0§Release 3§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Sprint 3§\",\r\n\t                \"0§Release 4§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d86\",\r\n\t              \"elemName\": \"Release 3\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 6,\r\n\t              \"parentNodeKey\": \"0§02 Blueprints§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d83\",\r\n\t            \"hryNodeKey\": \"0§Release 4§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [\r\n\t                \"1§Sprint 4§\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d84\",\r\n\t              \"elemName\": \"Release 4\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 7,\r\n\t              \"parentNodeKey\": \"0§Release 3§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d81\",\r\n\t            \"hryNodeKey\": \"1§Finalization§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d82\",\r\n\t              \"elemName\": \"Finalization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 2,\r\n\t              \"parentNodeKey\": \"0§Release 2§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d7f\",\r\n\t            \"hryNodeKey\": \"1§Finalization§0002\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d80\",\r\n\t              \"elemName\": \"Finalization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§02 Blueprints§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d7d\",\r\n\t            \"hryNodeKey\": \"1§Finalization§0003\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d7e\",\r\n\t              \"elemName\": \"Finalization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§03 Realization§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d7b\",\r\n\t            \"hryNodeKey\": \"1§Finalization§0004\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d7c\",\r\n\t              \"elemName\": \"Finalization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d79\",\r\n\t            \"hryNodeKey\": \"1§Finalization§0005\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d7a\",\r\n\t              \"elemName\": \"Finalization\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§05 GoLive Support§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d77\",\r\n\t            \"hryNodeKey\": \"1§Sprint 1§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d78\",\r\n\t              \"elemName\": \"Sprint 1\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§Release 1§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d75\",\r\n\t            \"hryNodeKey\": \"1§Sprint 2§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d76\",\r\n\t              \"elemName\": \"Sprint 2\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§Release 2§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d73\",\r\n\t            \"hryNodeKey\": \"1§Sprint 3§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d74\",\r\n\t              \"elemName\": \"Sprint 3\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§Release 3§\"\r\n\t            }\r\n\t          },\r\n\t          {\r\n\t            \"_id\": \"5e8f2915c6f0603f68bb5d71\",\r\n\t            \"hryNodeKey\": \"1§Sprint 4§\",\r\n\t            \"hryNode\": {\r\n\t              \"childNodeKeys\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d72\",\r\n\t              \"elemName\": \"Sprint 4\",\r\n\t              \"origName\": null,\r\n\t              \"indexOfElem\": 1,\r\n\t              \"parentNodeKey\": \"0§Release 4§\"\r\n\t            }\r\n\t          }\r\n\t        ]\r\n\t      },\r\n\t\"_id\": \"\",\r\n\t\"customDblFields\": [],\r\n\t\"customStringFields\": [],\r\n\t\"customBoolFields\": [],\r\n\t\"AllPhases\": [\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d70\",\r\n\t          \"AllRoles\": [],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 1,\r\n\t          \"ampelErlaeuterung\": \"in der Realisierungs-Phase sind unerwartete Test-Schwierigkeiten aufgetreten. Die Realisierungs-Phase muss verlängert werden und es mussten zusätzliche Ressourcenhinzugezogen werden. Es ist noch nicht abzusehen, ob wir den neuen Schluss-Termin für die Realisierung halten können. \",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 1,\r\n\t          \"relEnde\": 18,\r\n\t          \"startOffsetinDays\": 0,\r\n\t          \"dauerInDays\": 548,\r\n\t          \"name\": \"0§.§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"\",\r\n\t          \"originalName\": \".\",\r\n\t          \"appearance\": \"\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d6d\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                7.618049999999999,\r\n\t                2.43354375\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d6f\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                4.23225,\r\n\t                0.793546875\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d6e\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 1,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 0,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 1,\r\n\t          \"relEnde\": 2,\r\n\t          \"startOffsetinDays\": 0,\r\n\t          \"dauerInDays\": 44,\r\n\t          \"name\": \"0§01 Preparation§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"1\",\r\n\t          \"originalName\": \"01 Preparation\",\r\n\t          \"appearance\": \"V orange 1\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [\r\n\t            \"klare Definition des Ziels\"\r\n\t          ],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d67\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                6,\r\n\t                6\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d69\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                6,\r\n\t                6\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d68\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d6a\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d6b\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d6c\",\r\n\t                    \"color\": 3,\r\n\t                    \"description\": \"\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Sprint 1§\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 42,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"\",\r\n\t              \"originalName\": \"Sprint 1\",\r\n\t              \"appearance\": \"Meilenstein Default\",\r\n\t              \"percentDone\": 0.5\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0.9,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 2,\r\n\t          \"ampelErlaeuterung\": \"Externe Stellungsnahme fehlt\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 1,\r\n\t          \"relEnde\": 2,\r\n\t          \"startOffsetinDays\": 0,\r\n\t          \"dauerInDays\": 44,\r\n\t          \"name\": \"0§Release 1§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"R1\",\r\n\t          \"originalName\": \"Release 1\",\r\n\t          \"appearance\": \"V blau 1\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [\r\n\t            \"erste Schritte im Paper festgehalten\"\r\n\t          ],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d5e\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                4,\r\n\t                4\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d60\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                4.23225,\r\n\t                4\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d5f\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d64\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d65\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d66\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Sprint 2§\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 11,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"\",\r\n\t              \"originalName\": \"Sprint 2\",\r\n\t              \"appearance\": \"Meilenstein Default\",\r\n\t              \"percentDone\": 1\r\n\t            },\r\n\t            {\r\n\t              \"deliverables\": [\r\n\t                \"Kosten-/Nutzen Analyse\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d61\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d62\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d63\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"abgeschlossen: alle Lieferumfänge / Ziele erfüllt\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Finalization§\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 13,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"Fi\",\r\n\t              \"originalName\": \"Finalization\",\r\n\t              \"appearance\": \"M Abschluss\",\r\n\t              \"percentDone\": 1\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0.5,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 2,\r\n\t          \"ampelErlaeuterung\": \"es fehlen noch Infos\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 1,\r\n\t          \"relEnde\": 2,\r\n\t          \"startOffsetinDays\": 29,\r\n\t          \"dauerInDays\": 15,\r\n\t          \"name\": \"0§Release 2§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"R2\",\r\n\t          \"originalName\": \"Release 2\",\r\n\t          \"appearance\": \"V blau 2\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d5a\",\r\n\t          \"AllRoles\": [],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [\r\n\t                \"Click-Prototyp\",\r\n\t                \"Machbarkeits-Analyse\",\r\n\t                \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d5b\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d5c\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d5d\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"abgeschlossen: alle Lieferumfänge / Ziele erfüllt\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Finalization§0002\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 82,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"Fi\",\r\n\t              \"originalName\": \"Finalization\",\r\n\t              \"appearance\": \"M Abschluss\",\r\n\t              \"percentDone\": 1\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 1,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 0,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 2,\r\n\t          \"relEnde\": 5,\r\n\t          \"startOffsetinDays\": 44,\r\n\t          \"dauerInDays\": 84,\r\n\t          \"name\": \"0§02 Blueprints§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"2\",\r\n\t          \"originalName\": \"02 Blueprints\",\r\n\t          \"appearance\": \"V orange 2\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [\r\n\t            \"Definition der Auslieferuns-schritte\"\r\n\t          ],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d53\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                4.23225,\r\n\t                8.4645\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d56\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                5.92515,\r\n\t                11.8503\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d55\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0.84645,\r\n\t                2.53935\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d54\",\r\n\t              \"RollenTyp\": 16,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d57\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d58\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d59\",\r\n\t                    \"color\": 2,\r\n\t                    \"description\": \"\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Sprint 3§\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 47,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"\",\r\n\t              \"originalName\": \"Sprint 3\",\r\n\t              \"appearance\": \"Meilenstein Default\",\r\n\t              \"percentDone\": 0.8\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 1,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 1,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 2,\r\n\t          \"relEnde\": 3,\r\n\t          \"startOffsetinDays\": 44,\r\n\t          \"dauerInDays\": 48,\r\n\t          \"name\": \"0§Release 3§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"R3\",\r\n\t          \"originalName\": \"Release 3\",\r\n\t          \"appearance\": \"V blau 3\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [\r\n\t            \"Anzahl Auslieferungsschritte festgelegt\"\r\n\t          ],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d4d\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                7.406437499999999,\r\n\t                0\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d4f\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                11.8503,\r\n\t                0.52903125\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d4e\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d50\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d51\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d52\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Sprint 4§\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 30,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"\",\r\n\t              \"originalName\": \"Sprint 4\",\r\n\t              \"appearance\": \"Meilenstein Default\",\r\n\t              \"percentDone\": 0.8\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 1,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 1,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 3,\r\n\t          \"relEnde\": 4,\r\n\t          \"startOffsetinDays\": 91,\r\n\t          \"dauerInDays\": 31,\r\n\t          \"name\": \"0§Release 4§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"R4\",\r\n\t          \"originalName\": \"Release 4\",\r\n\t          \"appearance\": \"V blau 4\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d41\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                5.92515,\r\n\t                7.618049999999999,\r\n\t                7.618049999999999,\r\n\t                6.7716,\r\n\t                0,\r\n\t                1.6929,\r\n\t                1.6929\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d49\",\r\n\t              \"RollenTyp\": 2,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                21.161250000000002,\r\n\t                29.625749999999996,\r\n\t                27.932850000000002,\r\n\t                29.625749999999996,\r\n\t                6.7716,\r\n\t                5.92515,\r\n\t                5.92515\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d48\",\r\n\t              \"RollenTyp\": 6,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                11.003850000000001,\r\n\t                14.389650000000001,\r\n\t                14.389650000000001,\r\n\t                14.389650000000001,\r\n\t                0,\r\n\t                0,\r\n\t                0\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d47\",\r\n\t              \"RollenTyp\": 16,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                6.7716,\r\n\t                6.348375,\r\n\t                6.348375\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d46\",\r\n\t              \"RollenTyp\": 4,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                8.4645,\r\n\t                9.31095,\r\n\t                8.4645\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d45\",\r\n\t              \"RollenTyp\": 14,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                8.4645,\r\n\t                15.236099999999998,\r\n\t                15.236099999999998\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d44\",\r\n\t              \"RollenTyp\": 11,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                8.4645,\r\n\t                8.4645,\r\n\t                8.4645\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d43\",\r\n\t              \"RollenTyp\": 18,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                0,\r\n\t                5.92515,\r\n\t                3.3858,\r\n\t                3.3858\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d42\",\r\n\t              \"RollenTyp\": 21,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [\r\n\t                \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\r\n\t                \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d4a\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d4b\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d4c\",\r\n\t                    \"color\": 2,\r\n\t                    \"description\": \"es sind unerwartete Test-Schwierigkeiten aufgetreten. Die Realisierungs-Phase muss verlängert werden. Es ist noch nicht abzusehen, ob wir den neuen Termin halten können. \",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Finalization§0003\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 201,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"Fi\",\r\n\t              \"originalName\": \"Finalization\",\r\n\t              \"appearance\": \"M Abschluss\",\r\n\t              \"percentDone\": 0.5\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0.8,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 0,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 5,\r\n\t          \"relEnde\": 11,\r\n\t          \"startOffsetinDays\": 127,\r\n\t          \"dauerInDays\": 202,\r\n\t          \"name\": \"0§03 Realization§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"3\",\r\n\t          \"originalName\": \"03 Realization\",\r\n\t          \"appearance\": \"V orange 3\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d3b\",\r\n\t          \"AllRoles\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                1.6929,\r\n\t                12.69675,\r\n\t                7.194825000000001\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d3d\",\r\n\t              \"RollenTyp\": 16,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            },\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                0.84645,\r\n\t                7.618049999999999,\r\n\t                1.6929\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d3c\",\r\n\t              \"RollenTyp\": 10,\r\n\t              \"teamID\": -1,\r\n\t              \"name\": null,\r\n\t              \"farbe\": null,\r\n\t              \"startkapa\": 0,\r\n\t              \"tagessatzIntern\": 0,\r\n\t              \"tagessatzExtern\": 0,\r\n\t              \"isCalculated\": false\r\n\t            }\r\n\t          ],\r\n\t          \"AllCosts\": [],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [\r\n\t                \"Rollout Plan \",\r\n\t                \"Schulungspartner unter Vertrag\",\r\n\t                \"Schulungstermine festgelegt\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d3e\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d3f\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d40\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"Forecast für Termin / Qualität aktuell grün\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Finalization§0004\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 45,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"Fi\",\r\n\t              \"originalName\": \"Finalization\",\r\n\t              \"appearance\": \"M Abschluss\",\r\n\t              \"percentDone\": 0.5\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 0,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 11,\r\n\t          \"relEnde\": 13,\r\n\t          \"startOffsetinDays\": 329,\r\n\t          \"dauerInDays\": 46,\r\n\t          \"name\": \"0§04 Final Preparation / GoLive§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"4\",\r\n\t          \"originalName\": \"04 Final Preparation / GoLive\",\r\n\t          \"appearance\": \"V orange 4\"\r\n\t        },\r\n\t        {\r\n\t          \"deliverables\": [],\r\n\t          \"_id\": \"5e8f2915c6f0603f68bb5d36\",\r\n\t          \"AllRoles\": [],\r\n\t          \"AllCosts\": [\r\n\t            {\r\n\t              \"Bedarf\": [\r\n\t                3,\r\n\t                4,\r\n\t                3,\r\n\t                4,\r\n\t                3,\r\n\t                3\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d37\",\r\n\t              \"KostenTyp\": 1,\r\n\t              \"name\": \"Lizenzkosten\",\r\n\t              \"farbe\": 682978\r\n\t            }\r\n\t          ],\r\n\t          \"AllResults\": [\r\n\t            {\r\n\t              \"deliverables\": [\r\n\t                \"Nutzenbewertungs-Dokument\"\r\n\t              ],\r\n\t              \"_id\": \"5e8f2915c6f0603f68bb5d38\",\r\n\t              \"bewertungen\": [\r\n\t                {\r\n\t                  \"_id\": \"5e8f2915c6f0603f68bb5d39\",\r\n\t                  \"key\": \"#Apr 20\",\r\n\t                  \"bewertung\": {\r\n\t                    \"_id\": \"5e8f2915c6f0603f68bb5d3a\",\r\n\t                    \"color\": 1,\r\n\t                    \"description\": \"Forecast für Termin / Qualität aktuell grün\",\r\n\t                    \"deliverables\": \"\",\r\n\t                    \"bewerterName\": \"\",\r\n\t                    \"datum\": \"2020-04-09T15:50:45.7748966+02:00\"\r\n\t                  }\r\n\t                }\r\n\t              ],\r\n\t              \"name\": \"1§Finalization§0005\",\r\n\t              \"verantwortlich\": \"\",\r\n\t              \"offset\": 172,\r\n\t              \"alternativeColor\": 13959039,\r\n\t              \"shortName\": \"Fi\",\r\n\t              \"originalName\": \"Finalization\",\r\n\t              \"appearance\": \"M Abschluss\",\r\n\t              \"percentDone\": 0\r\n\t            }\r\n\t          ],\r\n\t          \"AllBewertungen\": [],\r\n\t          \"percentDone\": 0,\r\n\t          \"responsible\": \"\",\r\n\t          \"ampelStatus\": 0,\r\n\t          \"ampelErlaeuterung\": \"\",\r\n\t          \"earliestStart\": -999,\r\n\t          \"latestStart\": -999,\r\n\t          \"minDauer\": 0,\r\n\t          \"maxDauer\": 0,\r\n\t          \"relStart\": 13,\r\n\t          \"relEnde\": 18,\r\n\t          \"startOffsetinDays\": 375,\r\n\t          \"dauerInDays\": 173,\r\n\t          \"name\": \"0§05 GoLive Support§\",\r\n\t          \"farbe\": 11119017,\r\n\t          \"shortName\": \"5\",\r\n\t          \"originalName\": \"05 GoLive Support\",\r\n\t          \"appearance\": \"V orange 5\"\r\n\t        }\r\n\t      ],\r\n\t\"name\": \"Test-Ute-VP01 Cost\",\r\n\t\"variantDescription\": \"\",\r\n\t\"Risiko\": 2,\r\n\t\"StrategicFit\": 5,\r\n\t\"Erloes\": 380,\r\n\t\"leadPerson\": \"Visbo Tester (visbotest@visbo.de)\",\r\n\t\"status\": \"beauftragt\",\r\n\t\"ampelStatus\": 1,\r\n\t\"ampelErlaeuterung\": \"in der Realisierungs-Phase sind unerwartete Test-Schwierigkeiten aufgetreten. Die Realisierungs-Phase muss verlängert werden und es mussten zusätzliche Ressourcenhinzugezogen werden. Es ist nicht abzusehen, ob wir den neuen Schluss-Termin für die Realisierung halten können. \",\r\n\t\"VorlagenName\": \"IM BP\",\r\n\t\"Dauer\": 18,\r\n\t\"volumen\": 0,\r\n\t\"complexity\": 0,\r\n\t\"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\r\n\t\"businessUnit\": \"BU1\"\r\n}"
+									"raw": "{{vpvTemp}}"
 								},
 								"url": {
 									"raw": "{{url}}/vpv",
@@ -28590,24 +28507,6 @@
 							"name": "06-07-16 Create a VPV",
 							"event": [
 								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"pm.test(\"Check the VPV Result\", function () {",
-											"    var jsonData = pm.response.json();",
-											"",
-											"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, \"No correct Version returned during POST\");",
-											"    pm.globals.set(\"vpvID\", jsonData.vpv[0]._id);",
-											"});"
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
 									"listen": "prerequest",
 									"script": {
 										"exec": [
@@ -28633,6 +28532,7 @@
 											"",
 											"vpv.vpid = pm.globals.get(\"vpID\");",
 											"vpv.variantName = '';",
+											"vpv.businessUnit = 'BU2'",
 											"vpv.timestamp = timestamp;",
 											"vpv.actualDataUntil = actualDataUntil;",
 											"vpv.endDate = endDate",
@@ -28643,6 +28543,24 @@
 											"console.log(\"Create VPV for VP\", vpv.vpid, '/', vpv.variantName, \"TS\", vpv.timestamp.toISOString());",
 											"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
 											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Check the VPV Result\", function () {",
+											"    var jsonData = pm.response.json();",
+											"",
+											"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, \"No correct Version returned during POST\");",
+											"    pm.globals.set(\"vpvID\", jsonData.vpv[0]._id);",
+											"});"
 										],
 										"type": "text/javascript"
 									}
@@ -29576,451 +29494,6 @@
 					]
 				},
 				{
-					"name": "06-10 VPV for VC02 Calc Capacity",
-					"item": [
-						{
-							"name": "06-10-01 Login Admin",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"01 Login: Check Login Success\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    pm.globals.set(\"token\", jsonData.token);",
-											"    pm.expect(jsonData.state).to.eql(\"success\");",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
-								},
-								"url": {
-									"raw": "{{url}}/token/user/login",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"token",
-										"user",
-										"login"
-									]
-								},
-								"description": "Successful Login Request  "
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-02 Get VC",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"",
-											"pm.test(\"Check that VC Testname does not exist\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vc;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VCBaseName\") + '02';",
-											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].name)",
-											"        pm.globals.set(\"vcID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"06-10-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-03 Get VC Settings Orga",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"    var jsonData = pm.response.json();",
-											"    pm.expect(jsonData.vcsetting).not.to.be.eql(undefined, \"No Setting found\");",
-											"    pm.expect(jsonData.vcsetting.length).to.be.eql(1, \"Wrong expected number of Settings\");",
-											"",
-											"    var allRoles = jsonData.vcsetting[0].value.allRoles;",
-											"    var listItems = [];",
-											"    var orgaRoot = allRoles.find(child => child.uid == 1);",
-											"    pm.expect(orgaRoot != undefined && orgaRoot.subRoleIDs && orgaRoot.subRoleIDs.length >= 1).to.be.eql(true, \"Orga Root not found or no Childs\");",
-											"",
-											"    orgaRoot.subRoleIDs.forEach(item => listItems.push(item.key));",
-											"    pm.globals.set(\"TempID\", orgaRoot.uid);",
-											"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
-											"    pm.globals.set(\"capaList\", JSON.stringify([]));",
-											"    console.log(\"List Length:\", listItems.length);",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&refDate=&groupBy=type",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc",
-										"{{vcID}}",
-										"setting"
-									],
-									"query": [
-										{
-											"key": "type",
-											"value": "organisation"
-										},
-										{
-											"key": "refDate",
-											"value": ""
-										},
-										{
-											"key": "groupBy",
-											"value": "type"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-10 Get VC Capa Child (multiple)",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"pm.test(\"Cumulate Capacity Values for Childs\", function () { ",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vc;",
-											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"",
-											"    var vc = list[0];",
-											"",
-											"    var capaList = JSON.parse(pm.globals.get(\"capaList\"));",
-											"    for (var i=0; i < vc.capacity.length; i++) {",
-											"        var j = capaList.findIndex(item => item.month == vc.capacity[i].month)",
-											"        if (j < 0) {",
-											"            // console.log(\"Capa for Role/Month not found\", vc.capacity[i].roleID, vc.capacity[i].month);",
-											"            delete vc.capacity[i].roleID;",
-											"            delete vc.capacity[i].roleName;",
-											"            capaList.push(vc.capacity[i]);",
-											"",
-											"        } else {",
-											"            // console.log(\"Add Capa for Role/Month\", vc.capacity[i].roleID, vc.capacity[i].month)",
-											"            capaList[j].actualCost_PT += (vc.capacity[i].actualCost_PT || 0);",
-											"            capaList[j].plannedCost_PT += (vc.capacity[i].plannedCost_PT || 0);",
-											"            capaList[j].internCapa_PT += (vc.capacity[i].internCapa_PT || 0);",
-											"            capaList[j].externCapa_PT += (vc.capacity[i].externCapa_PT || 0);",
-											"        }",
-											"    }",
-											"    // console.log(\"Capa List Length:\", capaList.length);",
-											"    pm.globals.set(\"capaList\", JSON.stringify(capaList));",
-											"});",
-											"",
-											"    "
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
-											"pm.expect(listItems.length).to.be.gt(0, \"No more listItems\");",
-											"pm.globals.set(\"roleID\", listItems[0]);",
-											"listItems.shift();",
-											"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
-											"console.log(\"Remaining Items\", listItems.length);",
-											"if (listItems.length > 0) {",
-											"    postman.setNextRequest(\"06-10-10 Get VC Capa Child (multiple)\");",
-											"}",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc",
-										"{{vcID}}",
-										"capacity"
-									],
-									"query": [
-										{
-											"key": "roleID",
-											"value": "{{roleID}}"
-										}
-									]
-								},
-								"description": "Calculate Capa for first child item or organisation and check it against the sum of his childs"
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-12 Get VC Capa Parent",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"    var jsonData = pm.response.json();",
-											"",
-											"    pm.expect(jsonData.vc && jsonData.vc.length == 1).to.be.eql(true, 'No VC Capacity found');",
-											"    var vc = jsonData.vc[0];",
-											"    pm.expect(vc.capacity.length).to.be.gte(1, 'No Capacity Calculation found');",
-											"});",
-											"",
-											"pm.test(\"Cumulate Capacity Values for Childs\", function () { ",
-											"    var jsonData = pm.response.json();",
-											"    var vc = jsonData.vc[0];",
-											"",
-											"    var capaList = JSON.parse(pm.globals.get(\"capaList\"));",
-											"    for (var i=0; i < vc.capacity.length; i++) {",
-											"        var j = capaList.findIndex(item => item.month == vc.capacity[i].month);",
-											"        pm.expect(j).to.be.gte(0, \"No Capa Value found in childs for\", vc.capacity[i].month)",
-											"        // console.log(\"Compare Capa for Role/Month\", vc.capacity[i].roleID, vc.capacity[i].month)",
-											"        pm.expect(Math.round(vc.capacity[i].actualCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].actualCost_PT*10000)/10000, 'actualCost_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].plannedCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].plannedCost_PT*10000)/10000, 'plannedCost_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].internCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].internCapa_PT*10000)/10000, 'internCapa_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].externCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].externCapa_PT*10000)/10000, 'externCapa_PT must be the same' + vc.capacity[i].month);",
-											"    }",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{TempID}}&hierarchy=0",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc",
-										"{{vcID}}",
-										"capacity"
-									],
-									"query": [
-										{
-											"key": "roleID",
-											"value": "{{TempID}}"
-										},
-										{
-											"key": "hierarchy",
-											"value": "0"
-										}
-									]
-								},
-								"description": "Calculate Capa for first child item or organisation and check it against the sum of his childs"
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-15 Get VC Capa unknown role",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"pm.test(\"Capacity Calc Check - Done\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    pm.expect(jsonData.vc && jsonData.vc.length == 0).to.be.eql(false, 'No VC Capacity found');",
-											"    pm.expect(jsonData.vc[0].capacity.length).to.be.eql(0, 'Capacity found');",
-											"    ",
-											"});",
-											"",
-											"    "
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID=9999",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc",
-										"{{vcID}}",
-										"capacity"
-									],
-									"query": [
-										{
-											"key": "roleID",
-											"value": "9999"
-										}
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "06-10-99 Final",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											""
-										]
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "06-11 VPV for VC02/VP08 from Template",
 					"item": [
 						{
@@ -30373,7 +29846,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{  \n   \"name\":\"{{vpActualName}}\",\n   \"description\": \"Created from VP Template\",\n    \"startDate\": \"{{startDate}}\",\n    \"endDate\": \"{{endDate}}\",\n    \"BAC\": {{BAC}},\n    \"RAC\": {{RAC}},\n   \"vcid\":\"{{vcID}}\"\n}"
+									"raw": "{  \n   \"name\":\"{{vpActualName}}\",\n   \"description\": \"Created from VP Template\",\n    \"startDate\": \"{{startDate}}\",\n    \"endDate\": \"{{endDate}}\",\n    \"bac\": {{BAC}},\n    \"rac\": {{RAC}},\n    \"vcid\":\"{{vcID}}\"\n}"
 								},
 								"url": {
 									"raw": "{{url}}/vp?vpid={{TempID}}",
@@ -30529,8 +30002,6 @@
 											"    var jsonData = pm.response.json();",
 											"    pm.globals.set(\"token\", jsonData.token);",
 											"    pm.expect(jsonData.state).to.eql(\"success\");",
-											"    postman.setNextRequest(\"06-20-99 Final\")",
-											"    pm.expect(\"Capacity Calculation\").to.eql(\"\", \"Stop Executing Collection\");",
 											"});",
 											"",
 											"",
@@ -30762,11 +30233,11 @@
 											"",
 											"    var allRoles = jsonData.vcsetting[0].value.allRoles;",
 											"    var listItems = [];",
-											"    var orgaRoot = allRoles.find(child => child.uid == 23);",
+											"    var orgaRoot = allRoles.find(child => child.uid == 1);",
 											"    pm.expect(orgaRoot != undefined && orgaRoot.subRoleIDs && orgaRoot.subRoleIDs.length >= 1).to.be.eql(true, \"Orga Root not found or no Childs\");",
 											"",
 											"    orgaRoot.subRoleIDs.forEach(item => listItems.push(item.key));",
-											"    pm.globals.set(\"TempID\", orgaRoot.uid);",
+											"    pm.globals.set(\"roleID\", orgaRoot.uid);",
 											"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
 											"    pm.globals.set(\"capaList\", JSON.stringify([]));",
 											"    console.log(\"List Length:\", listItems.length);",
@@ -30827,7 +30298,7 @@
 							"response": []
 						},
 						{
-							"name": "06-20-20 Get Capa from VPV",
+							"name": "06-20-20 Get VPV Capa Child (multiple)",
 							"event": [
 								{
 									"listen": "test",
@@ -30840,21 +30311,116 @@
 											"pm.test(\"Cumulate Capacity Values for Childs\", function () { ",
 											"    var jsonData = pm.response.json();",
 											"    var list = jsonData.vpv;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No Capacity List found\");",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"",
-											"    return;",
+											"    var capacity = list[0].capacity;",
+											"",
 											"    var capaList = JSON.parse(pm.globals.get(\"capaList\"));",
-											"    for (var i=0; i < vc.capacity.length; i++) {",
-											"        var j = capaList.findIndex(item => item.month == vc.capacity[i].month);",
-											"        pm.expect(j).to.be.gte(0, \"No Capa Value found in childs for\", vc.capacity[i].month)",
-											"        // console.log(\"Compare Capa for Role/Month\", vc.capacity[i].roleID, vc.capacity[i].month)",
-											"        pm.expect(Math.round(vc.capacity[i].actualCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].actualCost_PT*10000)/10000, 'actualCost_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].plannedCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].plannedCost_PT*10000)/10000, 'plannedCost_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].internCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].internCapa_PT*10000)/10000, 'internCapa_PT must be the same' + vc.capacity[i].month);",
-											"        pm.expect(Math.round(vc.capacity[i].externCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].externCapa_PT*10000)/10000, 'externCapa_PT must be the same' + vc.capacity[i].month);",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaList.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            delete capacity[i].roleID;",
+											"            delete capacity[i].roleName;",
+											"            capaList.push(capacity[i]);",
+											"",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaList[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaList[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaList[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaList[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"        }",
 											"    }",
+											"    // console.log(\"Capa List Length:\", capaList.length);",
+											"    pm.globals.set(\"capaList\", JSON.stringify(capaList));",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+											"pm.expect(listItems.length).to.be.gt(0, \"No more listItems\");",
+											"pm.variables.set(\"varRoleID\", listItems[0]);",
+											"listItems.shift();",
+											"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+											"console.log(\"Remaining Items\", listItems.length);",
+											"if (listItems.length > 0) {",
+											"    postman.setNextRequest(\"06-20-20 Get VPV Capa Child (multiple)\");",
+											"}",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vpv/{{vpvID}}/capacity?roleID={{varRoleID}}",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vpv",
+										"{{vpvID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{varRoleID}}"
+										}
+									]
+								},
+								"description": "Calculate Capa for first child item or organisation and check it against the sum of his childs"
+							},
+							"response": []
+						},
+						{
+							"name": "06-20-22 Get VPV Capa Parent",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vpv;",
+											"",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, 'No VPV Capacity found');",
+											"    pm.expect(list[0].capacity.length).to.be.gte(1, 'No Capacity Calculation found');",
+											"});",
+											"",
+											"pm.test(\"Cumulate Capacity Values for Childs\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var vpv = jsonData.vpv[0];",
+											"    var list = vpv.capacity;",
+											"",
+											"    var capaList = JSON.parse(pm.globals.get(\"capaList\"));",
+											"    for (var i=0; i < list.length; i++) {",
+											"        var j = capaList.findIndex(item => item.month == list[i].month);",
+											"        pm.expect(j).to.be.gte(0, \"No Capa Value found in childs for\", list[i].month)",
+											"        // console.log(\"Compare Capa for Role/Month\", list[i].roleID, list[i].month)",
+											"        pm.expect(Math.round(list[i].actualCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].actualCost_PT*10000)/10000, 'actualCost_PT must be the same' + list[i].month);",
+											"        pm.expect(Math.round(list[i].plannedCost_PT*10000)/10000).to.be.eql(Math.round(capaList[j].plannedCost_PT*10000)/10000, 'plannedCost_PT must be the same' + list[i].month);",
+											"        pm.expect(Math.round(list[i].internCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].internCapa_PT*10000)/10000, 'internCapa_PT must be the same' + list[i].month);",
+											"        pm.expect(Math.round(list[i].externCapa_PT*10000)/10000).to.be.eql(Math.round(capaList[j].externCapa_PT*10000)/10000, 'externCapa_PT must be the same' + list[i].month);",
+											"    }",
+											"    pm.globals.set(\"capaListParent\", JSON.stringify(list));",
 											"});",
 											""
 										],
@@ -30880,7 +30446,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vpv/{{vpvID}}/capacity?roleID=1",
+									"raw": "{{url}}/vpv/{{vpvID}}/capacity?roleID={{roleID}}&hierarchy=0",
 									"host": [
 										"{{url}}"
 									],
@@ -30892,6 +30458,140 @@
 									"query": [
 										{
 											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
+											"value": "0"
+										}
+									]
+								},
+								"description": "Calculate Capa for first child item or organisation and check it against the sum of his childs"
+							},
+							"response": []
+						},
+						{
+							"name": "06-20-24 Get VPV Capa OU drilldown",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vpv;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID == roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vpv;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID != roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vpv/{{vpvID}}/capacity?roleID={{roleID}}&hierarchy=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vpv",
+										"{{vpvID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
 											"value": "1"
 										}
 									]
@@ -30934,7 +30634,8 @@
 							},
 							"response": []
 						}
-					]
+					],
+					"description": "Check the Capacity for all Childs of a specific Orga Unit and verify with the parent."
 				},
 				{
 					"name": "06-25 VPV for VC02 Restricted",
@@ -31964,7 +31665,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{  \n   \"variantName\":\"{{VPVariant}}\"\n}"
+									"raw": "{  \n   \"variantName\":\"{{VPVariant}}\",\n   \"description\":\"{{VPVariant}} Description\"\n}"
 								},
 								"url": {
 									"raw": "{{url}}/vp/{{vpID}}/variant",
@@ -34567,7 +34268,7 @@
 							"response": []
 						},
 						{
-							"name": "07-15-06 Get VPF Capacity",
+							"name": "07-15-10 Get VPF Capacity",
 							"event": [
 								{
 									"listen": "test",
@@ -34584,6 +34285,7 @@
 											"    list = list[0].capacity;",
 											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
 											"    console.log(\"Capacity List Length:\", list.length);",
+											"    pm.globals.set(\"capaListParent\", JSON.stringify(list));",
 											"});",
 											""
 										],
@@ -34600,7 +34302,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID=1",
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}",
 									"host": [
 										"{{url}}"
 									],
@@ -34614,7 +34316,7 @@
 									"query": [
 										{
 											"key": "roleID",
-											"value": "1"
+											"value": "{{roleID}}"
 										}
 									]
 								},
@@ -34623,26 +34325,88 @@
 							"response": []
 						},
 						{
-							"name": "07-15-07 Get VPF Capacity with Hierarchy",
+							"name": "07-15-12 Get VPF Capacity per OU",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
 											"pm.test(\"Status code Check\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Check that the Capacity is calculated\", function() {",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
 											"    var jsonData = pm.response.json();",
 											"    var list = jsonData.vp;",
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
-											"    console.log(\"Capacity List Length:\", list.length);",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID == roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
 											"});",
 											"",
-											"    ",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID != roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
 											"    "
 										],
 										"type": "text/javascript"
@@ -34658,7 +34422,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID=1&hierarchy=1",
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}&hierarchy=1",
 									"host": [
 										"{{url}}"
 									],
@@ -34672,7 +34436,7 @@
 									"query": [
 										{
 											"key": "roleID",
-											"value": "1"
+											"value": "{{roleID}}"
 										},
 										{
 											"key": "hierarchy",
@@ -34685,7 +34449,135 @@
 							"response": []
 						},
 						{
-							"name": "07-15-08 Get VPF Capacity PFV",
+							"name": "07-15-14 Get VPF Capacity per VP",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid == undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid != undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}&hierarchy=1&perProject=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vp",
+										"{{vpID}}",
+										"portfolio",
+										"{{vpfID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
+											"value": "1"
+										},
+										{
+											"key": "perProject",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "07-15-30 Get VPF Capacity PFV",
 							"event": [
 								{
 									"listen": "test",
@@ -34701,6 +34593,7 @@
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"    list = list[0].capacity;",
 											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
+											"    pm.globals.set(\"capaListParent\", JSON.stringify(list));",
 											"    console.log(\"Capacity List Length:\", list.length);",
 											"});",
 											"",
@@ -34720,7 +34613,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID=1&pfv=1",
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}&pfv=1",
 									"host": [
 										"{{url}}"
 									],
@@ -34734,6 +34627,134 @@
 									"query": [
 										{
 											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "pfv",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "07-15-32 Get VPF Capacity per OU PFV",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID == roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID != roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}&hierarchy=1&pfv=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vp",
+										"{{vpID}}",
+										"portfolio",
+										"{{vpfID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
 											"value": "1"
 										},
 										{
@@ -34747,26 +34768,88 @@
 							"response": []
 						},
 						{
-							"name": "07-15-09 Get VPF Capacity with Hierarchy PFV Copy",
+							"name": "07-15-34 Get VPF Capacity per VP PFV",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
 											"pm.test(\"Status code Check\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Check that the Capacity is calculated\", function() {",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
 											"    var jsonData = pm.response.json();",
 											"    var list = jsonData.vp;",
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
-											"    console.log(\"Capacity List Length:\", list.length);",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid == undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
 											"});",
 											"",
-											"    ",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vp;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid != undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
 											"    "
 										],
 										"type": "text/javascript"
@@ -34782,7 +34865,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID=1&hierarchy=1&pfv=1",
+									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID={{roleID}}&hierarchy=1&perProject=1&pfv=1",
 									"host": [
 										"{{url}}"
 									],
@@ -34796,10 +34879,14 @@
 									"query": [
 										{
 											"key": "roleID",
-											"value": "1"
+											"value": "{{roleID}}"
 										},
 										{
 											"key": "hierarchy",
+											"value": "1"
+										},
+										{
+											"key": "perProject",
 											"value": "1"
 										},
 										{
@@ -34848,369 +34935,6 @@
 							"response": []
 						}
 					]
-				},
-				{
-					"name": "07-20 VPF Capacity per Project",
-					"item": [
-						{
-							"name": "07-20-01 Login Admin",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"01 Login: Check Login Success\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    pm.globals.set(\"token\", jsonData.token);",
-											"    pm.expect(jsonData.state).to.eql(\"success\");",
-											"});",
-											"",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"auth": {
-									"type": "noauth"
-								},
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
-								},
-								"url": {
-									"raw": "{{url}}/token/user/login",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"token",
-										"user",
-										"login"
-									]
-								},
-								"description": "Successful Login Request  "
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-02 Get VC",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"",
-											"pm.test(\"Check that VC Testname does not exist\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vc;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VCBaseName\") + '02';",
-											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].name)",
-											"        pm.globals.set(\"vcID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"07-20-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-02 Get VC Organisation",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"",
-											"pm.test(\"Check that Organisation exists\", function () {",
-											"    var jsonData = pm.response.json();",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/organisation",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vc",
-										"{{vcID}}",
-										"organisation"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-03 Get VP Portfolio",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Check that VP PF exists or not\", function () {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vp;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VPBaseName\") + ' PF01';",
-											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].name)",
-											"        pm.globals.set(\"vpID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"07-20-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp?vcid={{vcID}}&vpType=1",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp"
-									],
-									"query": [
-										{
-											"key": "vcid",
-											"value": "{{vcID}}"
-										},
-										{
-											"key": "vpType",
-											"value": "1"
-										}
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-04 Get VPF of Portfolio",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"pm.test(\"Check that the Projects of all versions belong to the portfolio\", function() {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vpf;",
-											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-											"    var searchName = pm.environment.get(\"VPVariant\");",
-											"    var index = list.findIndex(item => item.variantName != searchName);",
-											"    if (index >= 0) {",
-											"        console.log(\"Found:\", list[index].variantName)",
-											"        pm.globals.set(\"vpfID\", list[index]._id);",
-											"    } else {",
-											"        console.log(\"Item not found\", searchName)",
-											"        postman.setNextRequest(\"07-20-99 Final\");",
-											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
-											"    }",
-											"});",
-											"",
-											"    ",
-											"    "
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp",
-										"{{vpID}}",
-										"portfolio"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-06 Get VPF Capacity",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Status code Check\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
-											"",
-											"pm.test(\"Check that the Capacity is calculated\", function() {",
-											"    var jsonData = pm.response.json();",
-											"    var list = jsonData.vp;",
-											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
-											"    console.log(\"Capacity List Length:\", list.length);",
-											"});",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vp/{{vpID}}/portfolio/{{vpfID}}/capacity?roleID=1",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vp",
-										"{{vpID}}",
-										"portfolio",
-										"{{vpfID}}",
-										"capacity"
-									],
-									"query": [
-										{
-											"key": "roleID",
-											"value": "1"
-										}
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						},
-						{
-							"name": "07-20-99 Final",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "access-key",
-										"value": "{{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{url}}/vpv/{{vpvID}}",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"vpv",
-										"{{vpvID}}"
-									]
-								},
-								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-							},
-							"response": []
-						}
-					]
 				}
 			]
 		},
@@ -35218,7 +34942,7 @@
 			"name": "08 VC Analyse",
 			"item": [
 				{
-					"name": "08-20 VC Capacity per Project",
+					"name": "08-20 VC Capacity",
 					"item": [
 						{
 							"name": "08-20-01 Login Admin",
@@ -35387,6 +35111,7 @@
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"    list = list[0].capacity;",
 											"    pm.expect(list && list.length >= 1).to.be.eql(true, \"No Capacity List found\");",
+											"    pm.globals.set(\"capaListParent\", JSON.stringify(list));",
 											"    console.log(\"Capacity List Length:\", list.length);",
 											"});",
 											""
@@ -35425,25 +35150,89 @@
 							"response": []
 						},
 						{
-							"name": "08-20-11 Get VC Capacity Hierachy",
+							"name": "08-20-11 Get VC Capacity per OU",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
 											"pm.test(\"Status code Check\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Check that the Capacity is calculated\", function() {",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
 											"    var jsonData = pm.response.json();",
 											"    var list = jsonData.vc;",
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
-											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 1).to.be.eql(true, \"No Capacity List found\");",
-											"    console.log(\"Capacity List Length:\", list.length);",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID == roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
 											"});",
-											""
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID != roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
 										],
 										"type": "text/javascript"
 									}
@@ -35458,7 +35247,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID=1&perProject=1",
+									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&hierarchy=1",
 									"host": [
 										"{{url}}"
 									],
@@ -35470,7 +35259,129 @@
 									"query": [
 										{
 											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
 											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-20-12 Get VC Capacity per VP",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid == undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid != undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&perProject=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
 										},
 										{
 											"key": "perProject",
@@ -35483,7 +35394,7 @@
 							"response": []
 						},
 						{
-							"name": "08-20-12 Get VC Capacity Hierachy VP",
+							"name": "08-20-30 Get VC Capacity PFV",
 							"event": [
 								{
 									"listen": "test",
@@ -35498,10 +35409,13 @@
 											"    var list = jsonData.vc;",
 											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
 											"    list = list[0].capacity;",
-											"    pm.expect(list && list.length >= 1).to.be.eql(true, \"No Capacity List found\");",
+											"    pm.expect(list && list.length >= 18).to.be.eql(true, \"No Capacity List found\");",
+											"    pm.globals.set(\"capaListParent\", JSON.stringify(list));",
 											"    console.log(\"Capacity List Length:\", list.length);",
 											"});",
-											""
+											"",
+											"    ",
+											"    "
 										],
 										"type": "text/javascript"
 									}
@@ -35516,7 +35430,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID=1&perProject=1",
+									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&pfv=1",
 									"host": [
 										"{{url}}"
 									],
@@ -35528,10 +35442,262 @@
 									"query": [
 										{
 											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "pfv",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-20-32 Get VC Capacity per OU PFV Copy",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID == roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.roleID != roleID);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&hierarchy=1&pfv=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
+											"key": "hierarchy",
 											"value": "1"
 										},
 										{
+											"key": "pfv",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-20-34 Get VC Capacity per VP PFV Copy",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"function visboRound(value) {",
+											"    return Math.round(value * 10000) / 10000;",
+											"}",
+											"function compareCapa(capa1, capa2, mode) {",
+											"    pm.expect(capa1.month).to.be.eql(capa2.month, \"Check Capacity month\" + capa1.month);",
+											"",
+											"    if (mode == 'full') {",
+											"        pm.expect(Number(capa1.roleID)).to.be.eql(Number(capa2.roleID), \"Check Capacity roleID\" + capa1.month);",
+											"    }",
+											"    if (mode != 'excludeCapa') {",
+											"        pm.expect(visboRound(capa1.actualCost_PT)).to.be.eql(visboRound(capa2.actualCost_PT), \"Check Capacity actualCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.actualCost)).to.be.eql(visboRound(capa2.actualCost), \"Check Capacity actualCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost_PT)).to.be.eql(visboRound(capa2.plannedCost_PT), \"Check Capacity plannedCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.plannedCost)).to.be.eql(visboRound(capa2.plannedCost), \"Check Capacity plannedCost\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa_PT)).to.be.eql(visboRound(capa2.internCapa_PT), \"Check Capacity internCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.internCapa)).to.be.eql(visboRound(capa2.internCapa), \"Check Capacity internCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa_PT)).to.be.eql(visboRound(capa2.externCapa_PT), \"Check Capacity externCapa_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.externCapa)).to.be.eql(visboRound(capa2.externCapa), \"Check Capacity externCapa\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost_PT)).to.be.eql(visboRound(capa2.baselineCost_PT), \"Check Capacity baselineCost_PT\" + capa1.month);",
+											"        pm.expect(visboRound(capa1.baselineCost)).to.be.eql(visboRound(capa2.baselineCost), \"Check Capacity baselineCost\" + capa1.month);",
+											"    }",
+											"    // console.log(\"Compare succesful\", capa1.month);",
+											"}",
+											"",
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Filter Root Capacities and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid == undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    pm.expect(capacity.length).to.be.eql(capaListParent.length, \"Different Length of Capa Lists\");",
+											"",
+											"    capacity.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"});",
+											"",
+											"pm.test(\"Filter Child Capacities, cumulate and compare to stored values\", function () { ",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+											"    var roleID = pm.globals.get(\"roleID\");",
+											"",
+											"    var capacity = list[0].capacity.filter(item => item.vpid != undefined);",
+											"    var capaListParent = JSON.parse(pm.globals.get(\"capaListParent\"));",
+											"    console.log(\"Check Capacity OU\", list[0].capacity.length, \"reduced to\", capacity.length, \"against\", capaListParent.length);",
+											"    var capaListCumulative = [];",
+											"    for (var i=0; i < capacity.length; i++) {",
+											"        var j = capaListCumulative.findIndex(item => item.month == capacity[i].month)",
+											"        if (j < 0) {",
+											"            // console.log(\"Capa for Role/Month not found\", capacity[i].roleID, capacity[i].month);",
+											"            capacity[i].roleID = Number(roleID);",
+											"            capaListCumulative.push(capacity[i]);",
+											"        } else {",
+											"            // console.log(\"Add Capa for Role/Month\", capacity[i].roleID, capacity[i].month)",
+											"            capaListCumulative[j].actualCost_PT += (capacity[i].actualCost_PT || 0);",
+											"            capaListCumulative[j].actualCost += (capacity[i].actualCost || 0);",
+											"            capaListCumulative[j].plannedCost_PT += (capacity[i].plannedCost_PT || 0);",
+											"            capaListCumulative[j].plannedCost += (capacity[i].plannedCost || 0);",
+											"            capaListCumulative[j].internCapa_PT += (capacity[i].internCapa_PT || 0);",
+											"            capaListCumulative[j].internCapa += (capacity[i].internCapa || 0);",
+											"            capaListCumulative[j].externCapa_PT += (capacity[i].externCapa_PT || 0);",
+											"            capaListCumulative[j].externCapa += (capacity[i].externCapa || 0);",
+											"            capaListCumulative[j].baselineCost_PT += (capacity[i].baselineCost_PT || 0);",
+											"            capaListCumulative[j].baselineCost += (capacity[i].baselineCost || 0);",
+											"        }",
+											"    }",
+											"    capaListCumulative.forEach((item, i) => compareCapa(item, capaListParent[i], 'full'));",
+											"",
+											"});",
+											"",
+											"    "
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&perProject=1&pfv=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"capacity"
+									],
+									"query": [
+										{
+											"key": "roleID",
+											"value": "{{roleID}}"
+										},
+										{
 											"key": "perProject",
+											"value": "1"
+										},
+										{
+											"key": "pfv",
 											"value": "1"
 										}
 									]
