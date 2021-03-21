@@ -430,12 +430,19 @@ router.route('/')
 		logger4js.info('Post a new Project Version for user %s with name %s variant :%s: TS: %s in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, req.body.timestamp, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
-		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
-		if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') permCreateVersion = true;
+		if (variantName == 'pfv') {
+			if ((perm.vp & constPermVP.Modify) && (perm.vc & constPermVC.Modify)) {
+				permCreateVersion = true;
+			}
+		} else if (perm.vp & constPermVP.Modify) {
+			permCreateVersion = true;
+		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
+			permCreateVersion = true;
+		}
 		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
-				message: 'No Permission to Create the specific Version',
+				message: 'No Permission to Create the specific Variant',
 				perm: perm
 			});
 		}
@@ -465,8 +472,18 @@ router.route('/')
 						message: 'Project variant does not exist',
 						vp: [req.oneVP]
 					});
+				} else if (!(perm.vp & constPermVP.Modify)) {
+					// check if the user owns the variant
+					variant = req.oneVP.variant[variantIndex];
+					if (useremail != variant.email) {
+						return res.status(409).send({
+							state: 'failure',
+							message: 'Project variant does not belong to user',
+							vp: [req.oneVP]
+						});
+					}
 				}
-			}
+ 			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
@@ -934,6 +951,7 @@ router.route('/:vpvid/copy')
 // POST/Copy a Project Version with a new TimeStamp and a new calculation for keyMetrics
 	.post(function(req, res) {
 		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
 		req.auditDescription = 'Project Versions Copy';
 
@@ -972,8 +990,18 @@ router.route('/:vpvid/copy')
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
 		var perm = req.listVPPerm.getPerm(vpid);
-		if (perm.vp & constPermVP.Modify) permCreateVersion = true;
-		if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') permCreateVersion = true;
+		if (variantName == 'pfv') {
+			if ((perm.vp & constPermVP.Modify) && (perm.vc & constPermVC.Modify)) {
+				permCreateVersion = true;
+			}
+		} else if (perm.vp & constPermVP.Modify) {
+			permCreateVersion = true;
+		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
+			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName)
+			if (variant && variant.email == useremail) {
+				permCreateVersion = true;
+			}
+		}
 		if (!permCreateVersion) {
 			return res.status(403).send({
 				state: 'failure',
@@ -999,7 +1027,12 @@ router.route('/:vpvid/copy')
 
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (variantName == 'pfv') {
-			newVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
+			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
+			if (!tmpVPV) {
+				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisations ? req.visboOrganisations.length : 0);
+			} else {
+				newVPV = tmpVPV;
+			}
 			delete newVPV.keyMetrics;
 		}
 		// check if we have to do scaling
@@ -1019,7 +1052,7 @@ router.route('/:vpvid/copy')
 		}
 		if (req.body.actualDataUntil) {
 			scale = 1;
-			scaleVPV.endDate = validate.validateDate(req.body.actualDataUntil, false, true);
+			scaleVPV.actualDataUntil = validate.validateDate(req.body.actualDataUntil, false, true);
 		}
 		if (req.query.scaleFactor) {
 			scale = validate.validateNumber(req.query.scaleFactor) || 1;

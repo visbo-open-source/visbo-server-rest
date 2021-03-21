@@ -2760,8 +2760,8 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName UpdateVISBOPortfolio
-	* @apiDescription Put updates a specific Portfolio Version used for undelete
-	* the system checks if the user has Delete permission to the Project.
+	* @apiDescription Put updates a specific Portfolio Version can also be used for undelete
+	* the system checks if the user has VP.Modify permission to the Project and in case of Undelete the user needs to have the VP.Delete Permission.
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
 	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
@@ -2843,6 +2843,13 @@ router.route('/:vpid/portfolio/:vpfid')
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No permission to change Portfolio List'
+				});
+			}
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify)
+			&& !((req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.CreateVariant) && variantName != '')) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to modify the Portfolio List!'
 				});
 			}
 
