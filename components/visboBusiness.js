@@ -1624,8 +1624,9 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
 		// old
-		//var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
-		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
+		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		// ur:22.03.2021 new but wrong at the moment:
+		// var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
 		var intStart = Math.max(vpvStartIndex, tz_startIndex);
 		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
@@ -1641,7 +1642,7 @@ return costValues;
 }
 
 
-function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex, endIndex) {
+function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 	var costValues = [];
 	var costElem = {};
 
@@ -1652,8 +1653,8 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex
 
 		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
-		// var startIndex = getColumnOfDate(vpv.startDate);
-		// var endIndex = getColumnOfDate(vpv.endDate);
+		var startIndex = getColumnOfDate(vpv.startDate);
+		var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
 
 		var actualDataUntil = vpv.actualDataUntil;
