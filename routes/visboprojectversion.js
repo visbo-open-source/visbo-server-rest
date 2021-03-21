@@ -565,6 +565,16 @@ router.route('/')
 					req.oneVPV = oneVPV;
 					// update the version count of the base version or the variant
 					helperVpv.updateVPVCount(req.oneVPV.vpid, variantName, 1);
+
+					// cleanup cost keyMetrics in case of missing audit permission
+					var perm = req.listVPPerm.getPerm(vpid);
+					if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
+						req.oneVPV.keyMetrics.costCurrentActual = undefined;
+						req.oneVPV.keyMetrics.costCurrentTotal = undefined;
+						req.oneVPV.keyMetrics.costBaseLastActual = undefined;
+						req.oneVPV.keyMetrics.costBaseLastTotal = undefined;
+					}
+
 					return res.status(200).send({
 						state: 'success',
 						message: 'Successfully created new Project Version',
@@ -1086,6 +1096,15 @@ router.route('/:vpvid/copy')
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
 			helperVpv.updateVPVCount(req.oneVPV.vpid, oneVPV.variantName, 1);
+
+			// cleanup cost keyMetrics in case of missing audit permission
+			var perm = req.listVPPerm.getPerm(vpid);
+			if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
+				req.oneVPV.keyMetrics.costCurrentActual = undefined;
+				req.oneVPV.keyMetrics.costCurrentTotal = undefined;
+				req.oneVPV.keyMetrics.costBaseLastActual = undefined;
+				req.oneVPV.keyMetrics.costBaseLastTotal = undefined;
+			}
 
 			return res.status(200).send({
 				state: 'success',

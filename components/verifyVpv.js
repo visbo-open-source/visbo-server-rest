@@ -745,12 +745,8 @@ function getVCVPVs(req, res, next) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
 	queryvpv.variantName = variantName;
-	// queryvpv.vpid = {$in: vpidList};
-
-	var vpCondition = [];
-	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
-	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
-	queryvpv['$and'] = vpCondition;
+	vpidList = vpidList.filter(vpid => vcvpids.findIndex(item => item.toString() == vpid.toString()) >= 0);
+	queryvpv.vpid = {$in: vpidList};
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
@@ -835,12 +831,8 @@ function getVCPFVs(req, res, next) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
 	queryvpv.variantName = variantName;
-	// queryvpv.vpid = {$in: vpidList};
-
-	var vpCondition = [];
-	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
-	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
-	queryvpv['$and'] = vpCondition;
+	vpidList = vpidList.filter(vpid => vcvpids.findIndex(item => item.toString() == vpid.toString()) >= 0);
+	queryvpv.vpid = {$in: vpidList};
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
