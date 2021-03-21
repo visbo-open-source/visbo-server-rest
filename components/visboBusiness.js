@@ -1408,7 +1408,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	if (vpvs.length <= 0 || calcC_dauer <= 0 ) {
 		return 	allCalcCapaValuesIndexed;
 	}
-// ur:17.03.2021
+	// ur:17.03.2021
 	// // divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid
 	// logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	// var timeZones = splitInTimeZones(organisations, calcC_startDate, calcC_endDate);
@@ -1617,9 +1617,15 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);
+		
+		var intStart = Math.max(vpvStartIndex, tz_startIndex);
+		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
+
 
 		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
-		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		// old
+		//var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
 		var intStart = Math.max(vpvStartIndex, tz_startIndex);
 		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
@@ -1635,7 +1641,7 @@ return costValues;
 }
 
 
-function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
+function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex, endIndex) {
 	var costValues = [];
 	var costElem = {};
 
@@ -1646,8 +1652,8 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
-		var startIndex = getColumnOfDate(vpv.startDate);
-		var endIndex = getColumnOfDate(vpv.endDate);
+		// var startIndex = getColumnOfDate(vpv.startDate);
+		// var endIndex = getColumnOfDate(vpv.endDate);
 		var dauer = endIndex - startIndex + 1;
 
 		var actualDataUntil = vpv.actualDataUntil;
@@ -2105,7 +2111,7 @@ function convertOrganisation(organisation_new) {
 
 
 }
-function buildOrgaList (orga){
+function buildOrgaList (orga) {
 	var organisation = [];
 	var organisationItem = {};
 	for (let i = 0; orga.value.allRoles && i < orga.value.allRoles.length; i++) {
@@ -2320,16 +2326,13 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	var newPFV = new VisboProjectVersion();
 
 	// check the existence of the orga
-	if ( !orga || orga.length < 1 ) {
-		logger4js.debug('creation of new PFV is going wrong because of no valid orga');
-		return undefined;
-	}
+	// if ( !orga || orga.length < 1 ) {
+	// 	logger4js.debug('creation of new PFV is going wrong because of no valid orga');
+	// 	return undefined;
+	// }
 
-	// check the existence of oldVPV, which will be the base of the newPFV
-	if ( !oldVPV ) {
-		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
-		return undefined;
-	} else {
+	if (orga && orga.length > 0) {	// convert the newest organisation
+
 		// it exists the oldVPV and at least one organisation
 		// find the newest organisation - maxIndex
 		var maxTimestamp = new Date(0);
@@ -2340,11 +2343,19 @@ function convertVPV(oldVPV, oldPFV, orga) {
 				maxIndex = i;
 				maxTimestamp = orga[i].timestamp;
 			}
-		}
-		// convert the newest organisation
+		}		
 		var actOrga = convertOrganisation(orga[maxIndex]);
-		const orgalist = buildOrgaList(actOrga);
+		var orgalist = buildOrgaList(actOrga);
 		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
+	}
+
+	// check the existence of oldVPV, which will be the base of the newPFV
+	if ( !oldVPV ) {
+		logger4js.debug('creation of new PFV is going wrong because of no valid old VPV');
+		return undefined;
+	} else {
+		// variable for the persCost of the oldVPV
+		var allPersCostVPV = 0;
 
 		// keep unchangable attributes
 		newPFV.name = oldVPV.name;
@@ -2391,8 +2402,15 @@ function convertVPV(oldVPV, oldPFV, orga) {
 			var onePhase = {};
 			var phase = oldVPV.AllPhases[i];
 
-			logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
-			onePhase.AllRoles  = aggregateRoles(phase, orgalist);
+			if (orga && orga.length > 0 && orgalist) {
+				if (i == 0 ) {
+					allPersCostVPV = getAllPersonalKosten(oldVPV, actOrga);
+				}
+				logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
+				onePhase.AllRoles  = aggregateRoles(phase, orgalist);
+			} else {
+				onePhase.AllRoles = phase.AllRoles;
+			}
 
 			var newAllCosts = [];
 			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
@@ -2570,6 +2588,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 	DeadlineToDelete.sort(function(a, b){return b.nameID.localeCompare(a.nameID);});
 
 	for ( var dl = 0; dl < DeadlineToDelete.length; dl++) {
+
 		actDeadline = DeadlineToDelete[dl];
 		if (actDeadline && actDeadline.type === 'Milestone') {
 			newPFV = deleteMSFromVPV(hrchy_vpv, newPFV, actDeadline);
@@ -2685,7 +2704,7 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 			parent.AllResults.push(phase.AllResults[ms]);
 			var msElemID = phase.AllResults[ms].name;
 			var vpvHrchyNodes = newPFV.hierarchy.allNodes;
-			newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, msElemID);
+			newPFV.hierarchy.allNodes = changeParentInHrchy(parentID, msElemID, vpvHrchyNodes);
 			hrchy_vpv[parentID].hryNode.childNodeKeys.push(msElemID);
 			hrchy_vpv[msElemID].hryNode.parentNodeKey = parentID;
 		}
@@ -2696,6 +2715,8 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 	logger4js.debug('take the needs of the phase an add them into the parentPhase');
 
 	newPFV = moveTheNeeds(newPFV, phase, parent);
+	newPFV = moveTheCosts(newPFV, phase, parent);
+	
 
 	logger4js.debug('remove the phase %s from hierarchy', elemID);
 	vpvHrchyNodes = newPFV.hierarchy.allNodes;
@@ -2704,6 +2725,18 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 
 	return phase;
 }
+
+function changeParentInHrchy(parentID, elemID, origHrchyNodes) {
+
+	var hryNodeElemID = {};
+	var hryNodeParentID = {};
+	origHrchyNodes.forEach( node => {	
+		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID) };
+		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID };
+	});	
+	return origHrchyNodes;
+}
+
 
 function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 	var rootKey = '0';
@@ -2758,21 +2791,22 @@ function moveTheNeeds (newPFV, phase, parent) {
 			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue; }
 			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
-			for ( var n = phase.relStart - parent.relStart; n < role.Bedarf.length; n++){
-				parentNeeds[n]=parentNeeds[n]+role.Bedarf[n];
+			for ( var n = 0; n < role.Bedarf.length || n < parentNeeds.length; n++){
+				parentNeeds[phase.relStart - parent.relStart + n] = parentNeeds[phase.relStart - parent.relStart + n] + role.Bedarf[n];
 				found = true;
 			}
 		}
+		// parent didn't have any needs for this role
 		if (!found) {
 			// insert the whole role and their needs
 			var parentNeeds = [];
-			for ( var p = parent.relStart-1; p < phase.relStart - parent.relStart; p++){
-				parentNeeds.push(0);
+			for ( var p = parent.relStart; p < phase.relStart ; p++){
+			 	parentNeeds.push(0);
 			}
 			for ( var n = 0; n < role.Bedarf.length; n++){
 				parentNeeds.push(role.Bedarf[n]);
 			}
-			for ( var p = phase.relStart - parent.relStart + role.Bedarf.length; p < parent.relEnde; p++){
+			for ( var p = phase.relEnde; p < parent.relEnde; p++){
 				parentNeeds.push(0);
 			}
 			role.Bedarf = parentNeeds;
@@ -2782,9 +2816,56 @@ function moveTheNeeds (newPFV, phase, parent) {
 	return newPFV;
 }
 
+
+
+function moveTheCosts (newPFV, phase, parent) {
+
+	logger4js.debug('Move the costss from phase to its parent');
+
+	logger4js.debug('Check startdates and enddates of the phase and the parent phase');
+	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
+		logger4js.error('parent %s isn not the parent of phase %s', parent.name, phase.name);
+		return newPFV;
+	}
+	for (var ar = 0; phase && phase.AllCosts && ar < phase.AllCosts.length; ar++) {
+		var cost = phase.AllCosts[ar];
+		// search the same role in parent
+		var found = false;
+		for (var i = 0; parent && parent.AllCosts && i < parent.AllCosts.length; i++) {
+			if ( !(parent.AllCosts[i].KostenTyp == cost.KostenTyp))  { continue; }
+			logger4js.debug( 'move costs of %s in his parent %s', cost.KostenTyp, parent.name);
+			var parentCosts = parent.AllCosts[i].Bedarf;
+			for ( var n = 0; n < cost.Bedarf.length || n < parentCosts.length; n++){
+				parentCosts[phase.relStart - parent.relStart + n] = parentCosts[phase.relStart - parent.relStart + n] + cost.Bedarf[n];
+				found = true;
+			}
+		}
+		// parent didn't have any needs for this role
+		if (!found) {
+			// insert the whole role and their needs
+			var parentCosts = [];
+			for ( var p = parent.relStart; p < phase.relStart ; p++){
+				parentCosts.push(0);
+			}
+			for ( var n = 0; n < cost.Bedarf.length; n++){
+				parentCosts.push(cost.Bedarf[n]);
+			}
+			for ( var p = phase.relEnde; p < parent.relEnde; p++){
+				parentCosts.push(0);
+			}
+			cost.Bedarf = parentCosts;
+			parent.AllCosts.push(cost);
+		}
+	}
+	return newPFV;
+}
+
 function aggregateRoles(phase, orgalist){
 
 	var newAllRoles = [];
+	if (orgalist.length <= 0) {
+		return phase.AllRoles;
+	}
 	for ( var ir = 0; phase && phase.AllRoles && ir < phase.AllRoles.length; ir++){
 		var oneRole = {};
 		var role = phase.AllRoles[ir];
