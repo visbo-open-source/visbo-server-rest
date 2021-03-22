@@ -1328,11 +1328,11 @@ function calcCapacityVPVs(vpvs, roleIdentifier, organisations, hierarchy) {
 	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
 		roleID = roleIDs[roleIndex].uid;
 		var roleName = roleIDs[roleIndex].roleName;
-		logger4js.debug('calculate for the different timeZones');
+		logger4js.trace('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
 			var monthlyNeeds = [];
 			// get Capacities for the different timeZones, in which always only one organisation is valid
-			logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
+			logger4js.trace('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
 
 			monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
 			if (monthlyNeeds) {
@@ -1481,10 +1481,10 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation
-	logger4js.debug('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
+	logger4js.trace('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
-	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
+	logger4js.trace('getting capacities for the related roleID given organisation %s',  roleID);
 	var tz_capaValues = getCapaValues(tz_startIndex, tz_dauer, concerningRoles, allRoles);
 
 	var costValues = [];
@@ -1535,7 +1535,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 	if (vpv && roleID && concerningRoles){
 
-		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
+		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
