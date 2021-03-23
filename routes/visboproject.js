@@ -31,6 +31,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 var Const = require('../models/constants');
 var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
+var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
 
 var mail = require('./../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -49,6 +50,25 @@ var constVPTypes = Object.freeze({'project':0, 'portfolio':1, 'projecttemplate':
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
 	return currentUser.userId.toString() == this.toString();
+}
+
+function convertCustomFieldString(customFieldString) {
+	var result;
+	if (customFieldString) {
+		customFieldString.forEach(item => {
+			if (!validateName(item.name, false)
+			|| !validateName(item.value, false)) {
+				return result;
+			}
+			if (constSystemCustomName.find(element => element == item.name)) {
+				item.type = 'System';
+			} else {
+				item.type = 'VP';
+			}
+		});
+		result = customFieldString;
+	}
+	return result;
 }
 
 // find a project in a simple array of project ids
@@ -483,6 +503,7 @@ router.route('/')
 		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
+		var customFieldString;
 		var kundennummer;
 		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace('Post a new Project body %O', req.body);
@@ -495,6 +516,16 @@ router.route('/')
 				state: 'failure',
 				message: 'Project Body contains invalid strings'
 			});
+		}
+		if (req.body.customFieldString) {
+			customFieldString =  convertCustomFieldString(req.body.customFieldString);
+			if (!customFieldString) {
+				logger4js.info('POST Project contains illegal strings in customFieldString %O', req.body.customFieldString);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid strings'
+				});
+			}
 		}
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
 
@@ -543,6 +574,9 @@ router.route('/')
 				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
+				if (customFieldString) {
+					newVP.customFieldString = customFieldString;
+				}
 				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
 					newVP.vpType = 0;
 				} else {
@@ -802,6 +836,8 @@ router.route('/:vpid')
 		var name = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
+		var customFieldString;
+
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
 		|| !validateName(kundennummer, true)) {
@@ -810,6 +846,9 @@ router.route('/:vpid')
 				state: 'failure',
 				message: 'Project Body contains invalid strings'
 			});
+		}
+		if (req.body.customFieldString) {
+			customFieldString =  convertCustomFieldString(req.body.customFieldString);
 		}
 
 		var vpUndelete = false;
@@ -846,6 +885,9 @@ router.route('/:vpid')
 		}
 		if (req.body.kundennummer != undefined) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
+		}
+		if (req.body.customFieldString) {
+			req.oneVP.customFieldString =  convertCustomFieldString(req.body.customFieldString);
 		}
 		// check duplicate Name
 		var query = {};

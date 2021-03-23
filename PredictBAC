@@ -1,0 +1,18 @@
+predictDir=$HOME/Documents/GitHub/NpDeployPackage
+tmp=$TMPDIR/predictBAC
+input="$tmp"Input.json
+output="$tmp"Output.json
+error="$tmp"_predictBAC_STDOE
+
+echo $1 > $input
+python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -m RandomForestRegressor -q NpQuestion1 -p $predictDir > $error 2>&1
+
+if [ $? -ne 0 ]
+then
+  echo "FATAL: PredictBAC failed" 1>&2
+  cat $error 1>&2
+  exit 1
+fi
+echo "" >>$output
+cat <$output
+# rm -f "$tmp"*

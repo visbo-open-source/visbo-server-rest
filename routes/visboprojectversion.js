@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -140,7 +141,7 @@ router.route('/')
 		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = req.query.longList != undefined;		// show only specific columns instead of all
-		var keyMetrics = req.query.keyMetrics != undefined;
+		var keyMetrics = validate.validateNumber(req.query.keyMetrics, true) || 0;
 		var nowDate = new Date();
 		var reducedPerm = false;
 		var variantName = req.query.variantName;
@@ -180,7 +181,7 @@ router.route('/')
 				// only restricted View Permission, restrict the Result to main variant only
 				variantName = '';
 				longList = false;
-				keyMetrics = false;
+				keyMetrics = 0;
 				reducedPerm = true;
 			}
 		} else {
@@ -344,13 +345,59 @@ router.route('/')
 						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
 					}
 				}
+				if (keyMetrics == 2) {
+					var cmd = './PredictBAC'
+					var reducedKM = [];
+					listVPV.forEach(vpv => {
+						if (vpv.keyMetrics && vpv.keyMetrics.costCurrentActual) {
+							var newVPV = {};
+							newVPV._id = vpv._id;
+							newVPV.timestamp = vpv.timestamp;
+							newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual;
+							newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual;
+							newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal;
+							newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent;
+							newVPV.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
+							reducedKM.push(newVPV);
+						}
+					});
+					cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+					logger4js.debug('Found %d Versions for Prediction', reducedKM.length, cmd.length);
 
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned VISBO Project Versions',
-					count: listVPV.length,
-					vpv: listVPV
-				});
+					exec(cmd, function callback(error, stdout, stderr) {
+						if (error) {
+							errorHandler(err, res, 'predictBAC:'.concat(stderr), 'Error getting Prediction ');
+							return;
+						}
+						var predictVPV = JSON.parse(stdout);
+						if (!predictVPV) {
+							errorHandler(err, res, 'predictBAC no JSON:'.concat(stdout), 'Error getting Prediction ');
+							return;
+						}
+						// update the original keyMetric with predicted BAC
+						predictVPV.forEach(vpv => {
+							if (vpv._id && vpv.costCurrentTotal) {
+								origVPV = listVPV.find(item => item._id.toString() == vpv._id.toString());
+								if (origVPV) {
+									origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
+								}
+							}
+						});
+						return res.status(200).send({
+							state: 'success',
+							message: 'Returned VISBO Project Versions Prediction',
+							count: listVPV.length,
+							vpv: listVPV
+						});
+					});
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned VISBO Project Versions',
+						count: listVPV.length,
+						vpv: listVPV
+					});
+				}
 			});
 		});
 	})
@@ -539,11 +586,13 @@ router.route('/')
 				newVPV.variantName = variantName;
 				if (req.visboPFV) {
 					newVPV.status = req.visboPFV.status;
-					newVPV.businessUnit = req.visboPFV.businessUnit;
 					newVPV.Erloes = req.visboPFV.Erloes;
 					newVPV.Risiko = req.visboPFV.Risiko;
 					newVPV.StrategicFit = req.visboPFV.StrategicFit;
-					newVPV.businessUnit = req.visboPFV.businessUnit;
+				}
+				if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
+					var customField = req.oneVP.customFieldString.find(item => item.name == 'businessUnit')
+					if (customField) { newVPV.businessUnit = customField.value; }
 				}
 
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
@@ -1029,10 +1078,13 @@ router.route('/:vpvid/copy')
 		newVPV.timestamp = timestamp;
 		if (req.visboPFV) {
 			newVPV.status = req.visboPFV.status;
-			newVPV.businessUnit = req.visboPFV.businessUnit;
 			newVPV.Erloes = req.visboPFV.Erloes;
 			newVPV.Risiko = req.visboPFV.Risiko;
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
+		}
+		if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
+			var customField = req.oneVP.customFieldString.find(item => item.name == 'businessUnit')
+			if (customField) { newVPV.businessUnit = customField.value; }
 		}
 
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
