@@ -3582,6 +3582,11 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
+	
+	if (!oldVPV || !newVPV) {
+		return undefined;
+	}
+
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', newVPV._id, 'scaleFactor', scaleFactor);
 
 	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
@@ -3589,14 +3594,37 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged
 	//let scaleFromDate = new Date(2021, 7, 1);
 
+	// determin the scaleFromDate
 	let scaleFromDate = undefined;
+
+	//if (!oldVPV.actualDataUntil && !newVPV.actualDataUntil) { };
+	if (!oldVPV.actualDataUntil) {
+		scaleFromDate = newVPV.actualDataUntil ? newVPV.actualDataUntil : undefined;
+	};
+	if (!newVPV.actualDataUntil && oldVPV.actualDataUntil) {
+		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
+		scaleFromDate = new Date (oldVPV.actualDataUntil);
+		scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
+		scaleFromDate.setDate(1);
+	}
+	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
+		if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) > 0) {
+			scaleFromDate = newVPV.actualDataUntil;
+		} else {
+			scaleFromDate = new Date (oldVPV.actualDataUntil);
+			scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);			
+			scaleFromDate.setDate(1);
+		}
+	}
 	let scaleFromDateColumn = -1;
 
-
-
-	if (!ensureValidVPV(oldVPV)) {
+	if (!newVPV) {
 		return undefined;
 	}
+
+	// if (!ensureValidVPV(oldVPV)) {
+	// 	return undefined;
+	// }
 
 	// if a scaleFromDate has been provided: startDates have to be the same ...
 	// use case preserve actualData : in this case a project must not start later or earlier -
