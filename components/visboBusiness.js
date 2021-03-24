@@ -1047,11 +1047,11 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// // conversion of the all given organisations
-	// var organisations_new = [];
-	// organisations.forEach( orga => {
-	// 	organisations_new.push(convertOrganisation(orga))
-	// });
+	// conversion of the all given organisations
+	var organisations_new = [];
+	organisations.forEach( orga => {
+		organisations_new.push(convertOrganisation(orga))
+	});
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1074,10 +1074,10 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
-	timeZones.forEach( tz => {
-		let newOrga = convertOrganisation(tz.orga);
-		tz.orga = newOrga;
-	})
+	// timeZones.forEach( tz => {
+	// 	let newOrga = convertOrganisation(tz.orga);
+	// 	tz.orga = newOrga;
+	// })
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1168,11 +1168,11 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// // conversion of the all given organisations
-	// var organisations_new = [];
-	// organisations.forEach( orga => {
-	// 	organisations_new.push(convertOrganisation(orga))
-	// });
+	// conversion of the all given organisations
+	var organisations_new = [];
+	organisations.forEach( orga => {
+		organisations_new.push(convertOrganisation(orga))
+	});
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1195,10 +1195,10 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
-	timeZones.forEach( tz => {
-		let newOrga = convertOrganisation(tz.orga);
-		tz.orga = newOrga;
-	})
+	// timeZones.forEach( tz => {
+	// 	let newOrga = convertOrganisation(tz.orga);
+	// 	tz.orga = newOrga;
+	// })
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
