@@ -3166,9 +3166,9 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
 			}
 
 			req.auditInfo = '';

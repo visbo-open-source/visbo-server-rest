@@ -315,8 +315,7 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				// deliver only the short info about project versions
-
-				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
@@ -606,6 +605,17 @@ router.route('/')
 				}
 
 				logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);
+
+				// check if newVPV is a valid VPV
+				var validVPV = visboBusiness.ensureValidVPV(newVPV);
+				if (!validVPV) {
+					logger4js.info('POST Project Version - inconsistent VPV - %O', newVPV);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Project Version is an inconsistent VPV'
+					});
+				}
+
 				newVPV.save(function(err, oneVPV) {
 					if (err) {
 						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
@@ -1249,7 +1259,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',

@@ -2689,15 +2689,15 @@ router.route('/:vcid/group/:groupid')
 
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
 			}
 
 			var filteredCapacity = [];
 			var startDate = validate.validateDate(req.query.startDate, false, true);
 			if (!startDate) {
-				startDate = new Date(-8640000000000000);
+				startDate = new Date(-8640000000000000); 
 			}
 			var endDate = validate.validateDate(req.query.endDate, false, true);
 			if (!endDate) {
