@@ -24,6 +24,18 @@ function getColumnOfDate(value) {
 	return valueMonth - refMonth;
 }
 
+function visboCmpDate(first, second) {
+	let result = 0;
+	if (first === undefined) { first = new Date(-8640000000000000); }
+	if (second === undefined) { second = new Date(-8640000000000000); }
+	if (first < second) {
+	  result = -1;
+	} else if (first > second) {
+	  result = 1;
+	}
+	return result;
+  }
+
 function addDays(dd, numDays) {
 	var inputDate = new Date(dd);
 	inputDate.setDate(inputDate.getDate() + numDays);
@@ -183,14 +195,12 @@ function calcCosts(vpv, pfv, organisations) {
 			calcEndDate = pfv.endDate;
 		}
 
-		// conversion of the all given organisations
-		var organisations_new = [];
-		organisations.forEach( orga => {
-			organisations_new.push(convertOrganisation(orga))
-		});
-
-
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
+		// convert only the needed organisations			
+		timeZones.forEach( tz => {
+			let newOrga = convertOrganisation(tz.orga);
+			tz.orga = newOrga;
+		})
 
 		if  (vpv){
 			logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
@@ -1047,11 +1057,6 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// conversion of the all given organisations
-	var organisations_new = [];
-	organisations.forEach( orga => {
-		organisations_new.push(convertOrganisation(orga))
-	});
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1074,10 +1079,10 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
-	// timeZones.forEach( tz => {
-	// 	let newOrga = convertOrganisation(tz.orga);
-	// 	tz.orga = newOrga;
-	// })
+	timeZones.forEach( tz => {
+		let newOrga = convertOrganisation(tz.orga);
+		tz.orga = newOrga;
+	})
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1168,11 +1173,6 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// conversion of the all given organisations
-	var organisations_new = [];
-	organisations.forEach( orga => {
-		organisations_new.push(convertOrganisation(orga))
-	});
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1195,10 +1195,10 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
-	// timeZones.forEach( tz => {
-	// 	let newOrga = convertOrganisation(tz.orga);
-	// 	tz.orga = newOrga;
-	// })
+	timeZones.forEach( tz => {
+		let newOrga = convertOrganisation(tz.orga);
+		tz.orga = newOrga;
+	})
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1502,7 +1502,9 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 		timeZones.push(timeZoneElem);
 	} else {
-		// organisations are sorted ascending
+		// organisations are not sorted surely
+		// sort them ascending
+		organisations.sort(function(a, b) { return visboCmpDate(a.timestamp, b.timestamp); });		
 		// determine for all organisations the beginning on the first day of month of the timestamp
 		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
@@ -1513,13 +1515,10 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
-				// old: if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
-				// old: if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
 				if (  (intervallStart < organisations[o+1].timestamp) ) {
 					// prepare organisation: change the new modelling of capacities into the old version for calculation
-
 					// ur:210302 -organisation_converted = convertOrganisation(organisations[0]);
-					organisation_converted = organisations[0];
+					organisation_converted = organisations[o];
 					timeZoneElem.orga = organisation_converted;
 					timeZoneElem.startdate = new Date(intervallStart);
 					timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
@@ -1535,7 +1534,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 				} else { continue; }
 			} else {
 				// ur:210302 -organisation_converted = convertOrganisation(organisations[0]);
-				organisation_converted = organisations[0];
+				organisation_converted = organisations[o];
 				timeZoneElem.orga = organisation_converted;
 				timeZoneElem.startdate = new Date(intervallStart);
 				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
