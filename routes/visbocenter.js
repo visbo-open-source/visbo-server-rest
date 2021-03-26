@@ -1911,9 +1911,9 @@ router.route('/:vcid/group/:groupid')
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext) {
-				queryVCSetting.sort('type name userId +timestamp');
+				queryVCSetting.sort({timestamp: 1});
 			} else {
-				queryVCSetting.sort('type name userId -timestamp');
+				queryVCSetting.sort({timestamp: -1});
 			}
 			if (req.query.shortList) {
 				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
@@ -1928,14 +1928,6 @@ router.route('/:vcid/group/:groupid')
 					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 					return;
 				}
-				for (let i = 0; i < listVCSetting.length; i++){
-					// Remove Password Information
-					if (listVCSetting[i].type == 'SysConfig' && listVCSetting[i].name == 'SMTP'
-					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
-						listVCSetting[i].value.auth.pass = '';
-						break;
-					}
-				}
 				if (listVCSetting.length > 1 && latestOnly){
 					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
@@ -1943,7 +1935,7 @@ router.route('/:vcid/group/:groupid')
 						//compare current item with previous and ignore if it is the same type, name, userId
 						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
 						if (listVCSetting[i].type != listVCSetting[i-1].type
-						|| listVCSetting[i].name != listVCSetting[i-1].name
+						// || listVCSetting[i].name != listVCSetting[i-1].name
 						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
 							listVCSettingfiltered.push(listVCSetting[i]);
 							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
@@ -2616,6 +2608,7 @@ router.route('/:vcid/group/:groupid')
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion-uid, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
+		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
 		*
 		* @apiPermission Authenticated and VC.View and VC.Modify or VC.ViewAudit for the VISBO Center.
 		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has VP.View Permission and VP.ViewAudit or VP.Modify permission.
@@ -2647,6 +2640,8 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
 			var hierarchy = req.query.hierarchy == true;
+			var perProject = req.query.perProject == true;
+
 			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
 			req.auditDescription = 'VISBO Center Capacity Read';
@@ -2692,11 +2687,17 @@ router.route('/:vcid/group/:groupid')
 					}
 				});
 
-			var capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.visboOrganisations, hierarchy, onlyPT);
+			var capacity = undefined;
+			if (perProject) {
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+			} else {
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+			}
+
 			var filteredCapacity = [];
 			var startDate = validate.validateDate(req.query.startDate, false, true);
 			if (!startDate) {
-				startDate = new Date(-8640000000000000);
+				startDate = new Date(-8640000000000000); 
 			}
 			var endDate = validate.validateDate(req.query.endDate, false, true);
 			if (!endDate) {
