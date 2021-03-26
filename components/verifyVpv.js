@@ -564,7 +564,7 @@ function getVPFVPVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVPFVPVs', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -665,7 +665,7 @@ function getVPFPFVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVPFPFVs Find', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -745,12 +745,8 @@ function getVCVPVs(req, res, next) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
 	queryvpv.variantName = variantName;
-	// queryvpv.vpid = {$in: vpidList};
-
-	var vpCondition = [];
-	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
-	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
-	queryvpv['$and'] = vpCondition;
+	vpidList = vpidList.filter(vpid => vcvpids.findIndex(item => item.toString() == vpid.toString()) >= 0);
+	queryvpv.vpid = {$in: vpidList};
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
@@ -760,7 +756,7 @@ function getVCVPVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVCVPVs Find', 'Error getting VISBO Project Versions:');
 			return;
 		}
 		var timeMongoEnd = new Date();
@@ -835,12 +831,8 @@ function getVCPFVs(req, res, next) {
 		queryvpv.timestamp = {$lt: nowDate};
 	}
 	queryvpv.variantName = variantName;
-	// queryvpv.vpid = {$in: vpidList};
-
-	var vpCondition = [];
-	vpCondition.push({'vpid': {$in: vpidList}});	// View Permission to the Project
-	vpCondition.push({'vpid': {$in: vcvpids}});		// Real Project of the VC, no Portfolio or Template
-	queryvpv['$and'] = vpCondition;
+	vpidList = vpidList.filter(vpid => vcvpids.findIndex(item => item.toString() == vpid.toString()) >= 0);
+	queryvpv.vpid = {$in: vpidList};
 
 	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
@@ -850,7 +842,7 @@ function getVCPFVs(req, res, next) {
 	queryVPV.lean();
 	queryVPV.exec(function (err, listVPV) {
 		if (err) {
-			errorHandler(err, res, 'DB: GET VC Calc Find Short', 'Error getting VISBO Project Versions ');
+			errorHandler(err, res, 'DB: GET VC Calc getVCPFVs Find', 'Error getting VISBO Project Versions ');
 			return;
 		}
 		var timeMongoEnd = new Date();
