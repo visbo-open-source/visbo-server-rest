@@ -5,7 +5,7 @@ output="$tmp"Output.json
 error="$tmp"_predictBAC_STDOE
 
 echo $1 > $input
-python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -m RandomForestRegressor -q NpQuestion1 -p $predictDir > $error 2>&1
+python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -m LinearRegression -q NpQuestion1 -p $predictDir > $error 2>&1
 
 if [ $? -ne 0 ]
 then

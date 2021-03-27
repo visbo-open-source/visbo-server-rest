@@ -5,6 +5,8 @@ mongoose.Promise = require('q').Promise;
 var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
+var systemVC = require('./../components/systemVC');
+var getSystemVCSetting = systemVC.getSystemVCSetting;
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVpv = require('./../components/verifyVpv');
@@ -344,7 +346,10 @@ router.route('/')
 						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
 					}
 				}
-				if (keyMetrics == 2) {
+				var settingPredict = getSystemVCSetting('Predict');
+				var predictBAC;
+				if (settingPredict && settingPredict.value) { predictBAC = settingPredict.value.BAC; }
+				if (keyMetrics == 2 && predictBAC) {
 					var cmd = './PredictBAC'
 					var reducedKM = [];
 					listVPV.forEach(vpv => {
@@ -590,7 +595,7 @@ router.route('/')
 					newVPV.StrategicFit = req.visboPFV.StrategicFit;
 				}
 				if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
-					var customField = req.oneVP.customFieldString.find(item => item.name == 'businessUnit')
+					var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
 					if (customField) { newVPV.businessUnit = customField.value; }
 				}
 
@@ -1093,7 +1098,7 @@ router.route('/:vpvid/copy')
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
 		}
 		if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
-			var customField = req.oneVP.customFieldString.find(item => item.name == 'businessUnit')
+			var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
 			if (customField) { newVPV.businessUnit = customField.value; }
 		}
 

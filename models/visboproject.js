@@ -61,7 +61,7 @@ var visboProjectSchema = new mongoose.Schema({
 visboProjectSchema.set('timestamps', true);
 
 var constSystemCustomName = Object.freeze([
-	'businessUnit', 'risk', 'strategicFit', 'customerID'
+	'_businessUnit', '_risk', '_strategicFit', '_customerID'
 ]);
 
 // declare a model
