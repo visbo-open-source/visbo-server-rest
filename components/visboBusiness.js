@@ -1623,14 +1623,14 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
 		// old
-		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 		// ur:22.03.2021 new but wrong at the moment:
 		// var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
-		var intStart = Math.max(vpvStartIndex, tz_startIndex);
-		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
+		var intStart = Math.max(vpvStartIndex, tz_startIndex, intStart);
+		var intEnd = Math.min(vpvEndIndex, tz_endIndex, intEnd);
 
-		for (var ci=intStart ; ci < intEnd + 1; ci++) {
+		for (var ci=intStart ; ci < intEnd+1; ci++) {
 			costValues[ci].actCost_PT += oneVPVcostValues[ci].actCost_PT || 0;
 			costValues[ci].plannedCost_PT += oneVPVcostValues[ci].plannedCost_PT || 0;
 			costValues[ci].actCost += oneVPVcostValues[ci].actCost || 0;
@@ -1641,7 +1641,7 @@ return costValues;
 }
 
 
-function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
+function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex, endIndex) {
 	var costValues = [];
 	var costElem = {};
 
@@ -1652,15 +1652,15 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
-		var startIndex = getColumnOfDate(vpv.startDate);
-		var endIndex = getColumnOfDate(vpv.endDate);
-		var dauer = endIndex - startIndex + 1;
+		var vpvStartIndex = getColumnOfDate(vpv.startDate);
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);
+		var dauer = vpvEndIndex - vpvStartIndex + 1;
 
 		var actualDataUntil = vpv.actualDataUntil;
 		var actualDataIndex = getColumnOfDate(actualDataUntil) + 1;
 
 		// for (var i=0 ; i < dauer; i++){
-		for (var i=startIndex ; i < dauer+startIndex; i++){
+		for (var i=startIndex ; ( i < endIndex + 1) && ( i < dauer+vpvStartIndex ); i++){
 			costElem = {};
 			costElem.actCost_PT = 0;
 			costElem.actCost = 0;
@@ -1740,7 +1740,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					if (!phase) {
 						continue;
 					}
-					var phasenStart = startIndex + phase.relStart - 1;
+					var phasenStart = vpvStartIndex + phase.relStart - 1;
 
 					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
@@ -1750,7 +1750,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 							if (role &&  role.Bedarf) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
-								for (var l = phasenStart; (l < phasenStart + dimension) && (l < dauer + startIndex); l++) {
+								for (var l = (Math.max(phasenStart,startIndex)); (l < phasenStart + dimension) && (l < dauer + vpvStartIndex) && (l < endIndex + 1); l++) {
 									// result in euro or in personal day
 									// if costValues[l] is not set yet use 0
 									if (l < actualDataIndex) {
