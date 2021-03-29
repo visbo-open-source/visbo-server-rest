@@ -973,6 +973,25 @@ if (currentVersion < dateBlock) {
     }
   })
 
+  var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldDouble.name': {$nin: ['_risk']}}, {_id: 1}).toArray()
+  var vpidList = [];
+  vpList.forEach(vp => vpidList.push(vp._id));
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', Risiko: {$exists: true}, Risiko: {$ne: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, Risiko: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  print("Found VPV", vpList.length, vpvList.length);
+  // print("VPV List", JSON.stringify(vpvList));
+  var vpIDLast;
+  vpvList.forEach(vpv => {
+    if (vpv.vpid.toString() != vpIDLast) {
+      // update VP with businessUnit
+      print("Update VP _risk", vpv.vpid.toString(), vpv._id.toString(), vpv.Risiko);
+      // db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldString: {
+      //   name: '_businessUnit',
+      //   value: vpv.businessUnit
+      // }}})
+        vpIDLast = vpv.vpid.toString();
+    }
+  })
+
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock

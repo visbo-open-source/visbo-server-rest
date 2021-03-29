@@ -591,12 +591,16 @@ router.route('/')
 				if (req.visboPFV) {
 					newVPV.status = req.visboPFV.status;
 					newVPV.Erloes = req.visboPFV.Erloes;
-					newVPV.Risiko = req.visboPFV.Risiko;
-					newVPV.StrategicFit = req.visboPFV.StrategicFit;
 				}
-				if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
+				if (req.oneVP && req.oneVP.customFieldString) {
 					var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
 					if (customField) { newVPV.businessUnit = customField.value; }
+				}
+				if (req.oneVP && req.oneVP.customFieldDouble) {
+					var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+					if (customField) { newVPV.Risiko = customField.value; }
+					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
 
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
@@ -1097,9 +1101,15 @@ router.route('/:vpvid/copy')
 			newVPV.Risiko = req.visboPFV.Risiko;
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
 		}
-		if (req.oneVP && req.oneVP.customFieldString && req.oneVP.customFieldString.length > 0) {
+		if (req.oneVP && req.oneVP.customFieldString) {
 			var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
 			if (customField) { newVPV.businessUnit = customField.value; }
+		}
+		if (req.oneVP && req.oneVP.customFieldDouble) {
+			var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+			if (customField) { newVPV.Risiko = customField.value; }
+			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+			if (customField) { newVPV.StrategicFit = customField.value; }
 		}
 
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);

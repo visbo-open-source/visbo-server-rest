@@ -43,6 +43,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var validateName = validate.validateName;
+var validateNumber = validate.validateNumber;
 
 var constVPTypes = Object.freeze({'project':0, 'portfolio':1, 'projecttemplate':2});
 
@@ -67,6 +68,25 @@ function convertCustomFieldString(customFieldString) {
 			}
 		});
 		result = customFieldString;
+	}
+	return result;
+}
+
+function convertCustomFieldDouble(customFieldDouble) {
+	var result;
+	if (customFieldDouble) {
+		customFieldDouble.forEach(item => {
+			if (!validateName(item.name, false)
+			|| !validateNumber(item.value, false)) {
+				return result;
+			}
+			if (constSystemCustomName.find(element => element == item.name)) {
+				item.type = 'System';
+			} else {
+				item.type = 'VP';
+			}
+		});
+		result = customFieldDouble;
 	}
 	return result;
 }
@@ -503,7 +523,7 @@ router.route('/')
 		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
-		var customFieldString;
+		var customFieldString, customFieldDouble;
 		var kundennummer;
 		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace('Post a new Project body %O', req.body);
@@ -523,7 +543,17 @@ router.route('/')
 				logger4js.info('POST Project contains illegal strings in customFieldString %O', req.body.customFieldString);
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Project Body contains invalid strings'
+					message: 'Project Body contains invalid custom strings'
+				});
+			}
+		}
+		if (req.body.customFieldDouble) {
+			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
+			if (!customFieldDouble) {
+				logger4js.info('POST Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid custom doubles'
 				});
 			}
 		}
@@ -576,6 +606,9 @@ router.route('/')
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
 				if (customFieldString) {
 					newVP.customFieldString = customFieldString;
+				}
+				if (customFieldDouble) {
+					newVP.customFieldDouble = customFieldDouble;
 				}
 				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
 					newVP.vpType = 0;
@@ -836,7 +869,7 @@ router.route('/:vpid')
 		var name = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
-		var customFieldString;
+		var customFieldString, customFieldDouble;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -849,6 +882,23 @@ router.route('/:vpid')
 		}
 		if (req.body.customFieldString) {
 			customFieldString =  convertCustomFieldString(req.body.customFieldString);
+			if (!customFieldString) {
+				logger4js.info('PUT Project contains illegal strings in customFieldString %O', req.body.customFieldString);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid values in customFieldString'
+				});
+			}
+		}
+		if (req.body.customFieldDouble) {
+			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
+			if (!customFieldDouble) {
+				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid values in customFieldDouble'
+				});
+			}
 		}
 
 		var vpUndelete = false;
@@ -886,8 +936,11 @@ router.route('/:vpid')
 		if (req.body.kundennummer != undefined) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
 		}
-		if (req.body.customFieldString) {
-			req.oneVP.customFieldString =  convertCustomFieldString(req.body.customFieldString);
+		if (customFieldString) {
+			req.oneVP.customFieldString =  customFieldString;
+		}
+		if (customFieldDouble) {
+			req.oneVP.customFieldDouble =  customFieldDouble;
 		}
 		// check duplicate Name
 		var query = {};
