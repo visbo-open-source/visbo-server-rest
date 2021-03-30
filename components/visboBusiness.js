@@ -1057,6 +1057,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
+	logger4js.debug('Calculate Capacities %s', roleIdentifier);
+	var startTimer = new Date();
+
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1165,6 +1168,10 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 			});
 		}
 	}
+	
+	var endTimer = new Date();
+	logger4js.trace('Calculate Capacities duration: ', endTimer.getTime() - startTimer.getTime());
+
 	return capa;
 }
 
@@ -1750,7 +1757,9 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex
 							if (role &&  role.Bedarf) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
-								for (var l = (Math.max(phasenStart,startIndex)); (l < phasenStart + dimension) && (l < dauer + vpvStartIndex) && (l < endIndex + 1); l++) {
+								var maxStart = Math.max(phasenStart,startIndex);
+								var minEnd = Math.min(phasenStart + dimension, dauer + vpvStartIndex, endIndex + 1);
+								for (var l = (maxStart); l < minEnd ; l++) {
 									// result in euro or in personal day
 									// if costValues[l] is not set yet use 0
 									if (l < actualDataIndex) {
