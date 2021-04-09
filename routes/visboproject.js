@@ -661,10 +661,16 @@ router.route('/')
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
 				}
-				if (req.oneVPTemplate && req.oneVPTemplate.variant) {
+				if (req.oneVPTemplate) {
 					newVP.variant = [];
-					req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
+					if (req.oneVPTemplate.variant) {
+						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
+					}
+					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
+						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})					
+					}
 				}
+
 				// Create new VP Group
 				var newVG = new VisboGroup();
 				newVG.name = 'VISBO Project Admin';

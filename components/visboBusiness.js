@@ -24,6 +24,18 @@ function getColumnOfDate(value) {
 	return valueMonth - refMonth;
 }
 
+function visboCmpDate(first, second) {
+	let result = 0;
+	if (first === undefined) { first = new Date(-8640000000000000); }
+	if (second === undefined) { second = new Date(-8640000000000000); }
+	if (first < second) {
+	  result = -1;
+	} else if (first > second) {
+	  result = 1;
+	}
+	return result;
+  }
+
 function addDays(dd, numDays) {
 	var inputDate = new Date(dd);
 	inputDate.setDate(inputDate.getDate() + numDays);
@@ -183,14 +195,12 @@ function calcCosts(vpv, pfv, organisations) {
 			calcEndDate = pfv.endDate;
 		}
 
-		// conversion of the all given organisations
-		var organisations_new = [];
-		organisations.forEach( orga => {
-			organisations_new.push(convertOrganisation(orga))
-		});
-
-
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
+		// convert only the needed organisations			
+		timeZones.forEach( tz => {
+			let newOrga = convertOrganisation(tz.orga);
+			tz.orga = newOrga;
+		})
 
 		if  (vpv){
 			logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
@@ -1047,11 +1057,6 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// // conversion of the all given organisations
-	// var organisations_new = [];
-	// organisations.forEach( orga => {
-	// 	organisations_new.push(convertOrganisation(orga))
-	// });
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1168,11 +1173,6 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	// // conversion of the all given organisations
-	// var organisations_new = [];
-	// organisations.forEach( orga => {
-	// 	organisations_new.push(convertOrganisation(orga))
-	// });
 
 	if (!startDate) { 
 		startDate = new Date();
@@ -1437,11 +1437,11 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	for ( var roleIndex = 0; roleIndex < roleIDs.length; roleIndex++) {
 		roleID = roleIDs[roleIndex].uid;
 		var roleName = roleIDs[roleIndex].roleName;
-		logger4js.trace('calculate for the different timeZones');
+		logger4js.debug('calculate for the different timeZones');
 		for ( var tz = 0; timeZones && tz < timeZones.length; tz++) {
 			var monthlyNeeds = [];
 			// get Capacities for the different timeZones, in which always only one organisation is valid
-			logger4js.trace('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
+			logger4js.debug('get Capacities for the different timeZones; timeZone %s - %s', timeZones[tz].startdate, timeZones[tz].enddate);
 
 			monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, timeZones[tz]);
 			if (monthlyNeeds) {
@@ -1502,7 +1502,9 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 		timeZoneElem.endIndex = getColumnOfDate(timeZoneElem.enddate);
 		timeZones.push(timeZoneElem);
 	} else {
-		// organisations are sorted ascending
+		// organisations are not sorted surely
+		// sort them ascending
+		organisations.sort(function(a, b) { return visboCmpDate(a.timestamp, b.timestamp); });		
 		// determine for all organisations the beginning on the first day of month of the timestamp
 		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
@@ -1513,13 +1515,10 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 			timeZoneElem = {};
 			if (organisations[o+1]) {
 				if ( (intervallStart >= organisations[o].timestamp) && (intervallStart >= organisations[o+1].timestamp) ) { continue;}
-				// old: if ( (intervallStart < organisations[o].timestamp)) { return timeZones;}
-				// old: if ( (intervallStart >= organisations[o].timestamp) && (intervallStart < organisations[o+1].timestamp) ) {
 				if (  (intervallStart < organisations[o+1].timestamp) ) {
 					// prepare organisation: change the new modelling of capacities into the old version for calculation
-
 					// ur:210302 -organisation_converted = convertOrganisation(organisations[0]);
-					organisation_converted = organisations[0];
+					organisation_converted = organisations[o];
 					timeZoneElem.orga = organisation_converted;
 					timeZoneElem.startdate = new Date(intervallStart);
 					timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
@@ -1535,7 +1534,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 				} else { continue; }
 			} else {
 				// ur:210302 -organisation_converted = convertOrganisation(organisations[0]);
-				organisation_converted = organisations[0];
+				organisation_converted = organisations[o];
 				timeZoneElem.orga = organisation_converted;
 				timeZoneElem.startdate = new Date(intervallStart);
 				timeZoneElem.startIndex = getColumnOfDate(timeZoneElem.startdate);
@@ -1590,10 +1589,10 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation
-	logger4js.trace('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
+	logger4js.debug('getting roles/teams, which are concerned/connected with roleID in the given organisation %s',  roleID);
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID);
 
-	logger4js.trace('getting capacities for the related roleID given organisation %s',  roleID);
+	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
 	var tz_capaValues = getCapaValues(tz_startIndex, tz_dauer, concerningRoles, allRoles);
 
 	var costValues = [];
@@ -1651,7 +1650,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 	if (vpv && roleID && concerningRoles){
 
-		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
+		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
 		var startIndex = getColumnOfDate(vpv.startDate);
 		var endIndex = getColumnOfDate(vpv.endDate);
@@ -3617,6 +3616,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		}
 	}
 	let scaleFromDateColumn = -1;
+	// make sure, that actualDataUntil will not be changed
+	newVPV.actualDataUntil = oldVPV.actualDataUntil ? oldVPV.actualDataUntil : undefined;
 
 	if (!newVPV) {
 		return undefined;
