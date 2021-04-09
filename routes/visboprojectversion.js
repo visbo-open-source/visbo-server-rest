@@ -314,8 +314,7 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				// deliver only the short info about project versions
-
-				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
@@ -474,7 +473,7 @@ router.route('/')
 					});
 				} else if (!(perm.vp & constPermVP.Modify)) {
 					// check if the user owns the variant
-					variant = req.oneVP.variant[variantIndex];
+					var variant = req.oneVP.variant[variantIndex];
 					if (useremail != variant.email) {
 						return res.status(409).send({
 							state: 'failure',
@@ -483,7 +482,7 @@ router.route('/')
 						});
 					}
 				}
- 			}
+			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
@@ -524,7 +523,8 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
-				helperVpv.cleanupVPV(newVPV);
+				// ur: 210406: cleanupVPV will not be called, because the excelClient is not adopted therefore
+				// helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
@@ -557,9 +557,9 @@ router.route('/')
 				}
 
 				logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', newVPV.vpid, newVPV.name, newVPV.timestamp);
-				
+
 				// check if newVPV is a valid VPV
-				var validVPV = visboBusiness.ensureValidVPV(newVPV);				
+				var validVPV = visboBusiness.ensureValidVPV(newVPV);
 				if (!validVPV) {
 					logger4js.info('POST Project Version - inconsistent VPV - %O', newVPV);
 					return res.status(400).send({
