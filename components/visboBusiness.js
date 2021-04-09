@@ -29,9 +29,9 @@ function visboCmpDate(first, second) {
 	if (first === undefined) { first = new Date(-8640000000000000); }
 	if (second === undefined) { second = new Date(-8640000000000000); }
 	if (first < second) {
-	  result = -1;
+		result = -1;
 	} else if (first > second) {
-	  result = 1;
+		result = 1;
 	}
 	return result;
   }
@@ -1085,11 +1085,11 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	timeZones.forEach( tz => {
 		let newOrga = convertOrganisation(tz.orga);
 		tz.orga = newOrga;
-	})
+	});
 
-	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
-	for ( i = 0; vpvs && i < vpvs.length; i++) {
+	for ( var i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
@@ -1102,13 +1102,13 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	var capaPFV = [];
 	var item;
 
-	if (pfvs) {
+	if (pfvs && pfvs.length > 0 && pfvs[0] !== null) {
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
 		for ( i = 0; pfvs && i < pfvs.length; i++) {
-			var vpv = pfvs[i];
-			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			let vpv = pfvs[i];
+			let vpvStartIndex = getColumnOfDate(vpv.startDate);
+			let vpvEndIndex = getColumnOfDate(vpv.endDate);		
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
@@ -1122,7 +1122,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 				capaVPV[item] = {};
 				capaVPV[item].currentDate = capaPFV[item].currentDate;
 				capaVPV[item].roleID = capaPFV[item].roleID;
-				capaVPV[item].roleName = capaPFV[item].roleName
+				capaVPV[item].roleName = capaPFV[item].roleName;
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
@@ -1240,10 +1240,10 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 	if (pfvs) {
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
-		for ( i = 0; pfvs && i < pfvs.length; i++) {
-			var vpv = pfvs[i];
-			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		for ( var i = 0; pfvs && i < pfvs.length; i++) {
+			vpv = pfvs[i];
+			vpvStartIndex = getColumnOfDate(vpv.startDate);
+			vpvEndIndex = getColumnOfDate(vpv.endDate);		
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
@@ -1403,7 +1403,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	var calcC_startIndex = getColumnOfDate(calcC_startDate);
 	var calcC_endDate = new Date(endDate);
 	var calcC_endIndex = getColumnOfDate(calcC_endDate);
-	calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	var calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
 	
 
 	var currentDate = new Date(calcC_startDate);
@@ -1460,7 +1460,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 				currentDate.setHours(0, 0, 0, 0);
 
 				// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
-				for (i = 0 ; i < zoneDauer; i++){
+				for (var i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
 						'currentDate': currentDate.toISOString(),
@@ -1634,8 +1634,8 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		// ur:22.03.2021 new but wrong at the moment:
 		// var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
-		var intStart = Math.max(vpvStartIndex, tz_startIndex, intStart);
-		var intEnd = Math.min(vpvEndIndex, tz_endIndex, intEnd);
+		intStart = Math.max(vpvStartIndex, tz_startIndex, intStart);
+		intEnd = Math.min(vpvEndIndex, tz_endIndex, intEnd);
 
 		for (var ci=intStart ; ci < intEnd+1; ci++) {
 			costValues[ci].actCost_PT += oneVPVcostValues[ci].actCost_PT || 0;
@@ -2737,11 +2737,9 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 
 function changeParentInHrchy(parentID, elemID, origHrchyNodes) {
 
-	var hryNodeElemID = {};
-	var hryNodeParentID = {};
 	origHrchyNodes.forEach( node => {	
-		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID) };
-		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID };
+		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID); }
+		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID; }
 	});	
 	return origHrchyNodes;
 }
@@ -2808,14 +2806,14 @@ function moveTheNeeds (newPFV, phase, parent) {
 		// parent didn't have any needs for this role
 		if (!found) {
 			// insert the whole role and their needs
-			var parentNeeds = [];
+			parentNeeds = [];
 			for ( var p = parent.relStart; p < phase.relStart ; p++){
-			 	parentNeeds.push(0);
+				parentNeeds.push(0);
 			}
-			for ( var n = 0; n < role.Bedarf.length; n++){
+			for ( n = 0; n < role.Bedarf.length; n++){
 				parentNeeds.push(role.Bedarf[n]);
 			}
-			for ( var p = phase.relEnde; p < parent.relEnde; p++){
+			for ( p = phase.relEnde; p < parent.relEnde; p++){
 				parentNeeds.push(0);
 			}
 			role.Bedarf = parentNeeds;
@@ -2852,14 +2850,14 @@ function moveTheCosts (newPFV, phase, parent) {
 		// parent didn't have any needs for this role
 		if (!found) {
 			// insert the whole role and their needs
-			var parentCosts = [];
+			parentCosts = [];
 			for ( var p = parent.relStart; p < phase.relStart ; p++){
 				parentCosts.push(0);
 			}
-			for ( var n = 0; n < cost.Bedarf.length; n++){
+			for ( n = 0; n < cost.Bedarf.length; n++){
 				parentCosts.push(cost.Bedarf[n]);
 			}
-			for ( var p = phase.relEnde; p < parent.relEnde; p++){
+			for ( p = phase.relEnde; p < parent.relEnde; p++){
 				parentCosts.push(0);
 			}
 			cost.Bedarf = parentCosts;
@@ -3427,7 +3425,7 @@ function ensureValidVPV(myVPV) {
 					}
 					
 				} else {
-					logger4js.warn('ensureValidVPV severe violation C5 NoBFH: Role Array length (vpvId/roleId/arLength/phLength/projectStartDate/ActualDataUntil) ', 
+					logger4js.warn('ensureValidVPV severe violation C5 NoBFH: Role Array length (vpvId= %s/roleId/arLength/phLength/projectStartDate/ActualDataUntil) ', 
 					myVPV._id, role.RollenTyp, role.Bedarf.length, phLength, myVPV.startDate, myVPV.actualDataUntil);
 				}
 	
@@ -3591,7 +3589,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
 	
-	if (!oldVPV || !newVPV) {
+	if (!oldVPV || !newVPV || scaleFactor < 0) {
 		return undefined;
 	}
 
