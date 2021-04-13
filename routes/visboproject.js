@@ -58,7 +58,7 @@ function convertCustomFieldString(customFieldString) {
 	if (customFieldString) {
 		customFieldString.forEach(item => {
 			if (!validateName(item.name, false)
-			|| !validateName(item.value, false)) {
+			|| !validateName(item.value, true)) {
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -67,7 +67,7 @@ function convertCustomFieldString(customFieldString) {
 				item.type = 'VP';
 			}
 		});
-		result = customFieldString;
+		result = customFieldString.filter(item => item.value);
 	}
 	return result;
 }
@@ -81,13 +81,13 @@ function detectChangeCustomFieldDouble(original, update) {
 			if (!updateItem) {
 				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value.toString()});
 			} else if (item.value != updateItem.value) {
-				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: updateItem.value.toString()});
+				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: (updateItem.value || '').toString()});
 			}
 	});
 	update.forEach(item => {
 			var originalItem = original.find(element => element.name == item.name);
 			if (!originalItem) {
-				result.push({action: 'Project Property Add', name: item.name, newValue: item.value.toString()});
+				result.push({action: 'Project Property Add', name: item.name, newValue: (item.value || '').toString()});
 			}
 	});
 	return result;
@@ -119,7 +119,7 @@ function convertCustomFieldDouble(customFieldDouble) {
 	if (customFieldDouble) {
 		customFieldDouble.forEach(item => {
 			if (!validateName(item.name, false)
-			|| !validateNumber(item.value, false)) {
+			|| !validateNumber(item.value, true)) {
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -128,7 +128,7 @@ function convertCustomFieldDouble(customFieldDouble) {
 				item.type = 'VP';
 			}
 		});
-		result = customFieldDouble;
+		result = customFieldDouble.filter(item => item.value != undefined);
 	}
 	return result;
 }
@@ -667,7 +667,7 @@ router.route('/')
 						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
 					}
 					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
-						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})					
+						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})
 					}
 				}
 
@@ -987,11 +987,11 @@ router.route('/:vpid')
 		req.auditProperty = [];
 		if (customFieldString) {
 			req.auditProperty = detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString);
-			req.oneVP.customFieldString =  customFieldString;
+			req.oneVP.customFieldString =  customFieldString.filter(item => item.value != undefined);
 		}
 		if (customFieldDouble) {
 			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDouble(req.oneVP.customFieldDouble, customFieldDouble));
-			req.oneVP.customFieldDouble =  customFieldDouble;
+			req.oneVP.customFieldDouble =  customFieldDouble.filter(item => item.value != undefined);
 		}
 		// check duplicate Name
 		var query = {};
@@ -2954,7 +2954,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 		req.auditDescription = 'Portfolio List Update';
 
-		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s perm %O', userId, useremail, req.params.vpfid, req.listVPPerm);
+		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s', userId, useremail, req.params.vpfid);
 		// undelete the VPF in case of PUT
 		if (req.oneVPF.deletedAt) {
 			req.auditDescription = 'Portfolio List Undelete';

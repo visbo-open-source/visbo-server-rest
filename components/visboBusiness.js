@@ -196,7 +196,7 @@ function calcCosts(vpv, pfv, organisations) {
 		}
 
 		var timeZones = splitInTimeZones(organisations, calcStartDate, calcEndDate);
-		// convert only the needed organisations			
+		// convert only the needed organisations
 		timeZones.forEach( tz => {
 			let newOrga = convertOrganisation(tz.orga);
 			tz.orga = newOrga;
@@ -1058,24 +1058,24 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		return [];
 	}
 
-	if (!startDate) { 
+	if (!startDate) {
 		startDate = new Date();
 		startDate.setMonth(startDate.getMonth() - 4);
 		startDate.setDate(1);
-		startDate.setHours(0, 0, 0, 0);		
+		startDate.setHours(0, 0, 0, 0);
 	}
 	startDate = new Date(startDate);
 	var startIndex = getColumnOfDate(startDate);
 
-	if (!endDate) { 
+	if (!endDate) {
 		endDate = new Date();
 		endDate.setMonth(endDate.getMonth() + 9);
 		endDate.setDate(1);
-		endDate.setHours(0, 0, 0, 0);	
-	}	
+		endDate.setHours(0, 0, 0, 0);
+	}
 	endDate = new Date(endDate);
-	var endIndex = getColumnOfDate(endDate);	
-	
+	var endIndex = getColumnOfDate(endDate);
+
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
@@ -1089,7 +1089,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	for ( i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
-		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);
 		if (vpvEndIndex < startIndex) continue;
 		if (vpvStartIndex > endIndex) continue;
 		newvpvs.push(vpv);
@@ -1105,11 +1105,11 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		for ( i = 0; pfvs && i < pfvs.length; i++) {
 			var vpv = pfvs[i];
 			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			var vpvEndIndex = getColumnOfDate(vpv.endDate);
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
-		}			
+		}
 		// calc the corresponding of the PFVs
 		capaPFV = calcCapacityVPVs(newpfvs, roleIdentifier, startDate, endDate, timeZones, hierarchy);
 		// insert or update capa values
@@ -1174,24 +1174,24 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 		return [];
 	}
 
-	if (!startDate) { 
+	if (!startDate) {
 		startDate = new Date();
 		startDate.setMonth(startDate.getMonth() - 4);
 		startDate.setDate(1);
-		startDate.setHours(0, 0, 0, 0);		
+		startDate.setHours(0, 0, 0, 0);
 	}
 	startDate = new Date(startDate);
 	var startIndex = getColumnOfDate(startDate);
 
-	if (!endDate) { 
+	if (!endDate) {
 		endDate = new Date();
 		endDate.setMonth(endDate.getMonth() + 9);
 		endDate.setDate(1);
-		endDate.setHours(0, 0, 0, 0);	
-	}	
+		endDate.setHours(0, 0, 0, 0);
+	}
 	endDate = new Date(endDate);
-	var endIndex = getColumnOfDate(endDate);	
-	
+	var endIndex = getColumnOfDate(endDate);
+
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisations, startDate, endDate);
@@ -1205,7 +1205,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 	for ( i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
-		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);
 		if (vpvEndIndex < startIndex) continue;
 		if (vpvStartIndex > endIndex) continue;
 		newvpvs.push(vpv);
@@ -1229,19 +1229,19 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 
 	var capaPFV = [];
 	var item;
-	
+
 	if (pfvs) {
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
 		for ( i = 0; pfvs && i < pfvs.length; i++) {
 			var vpv = pfvs[i];
 			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			var vpvEndIndex = getColumnOfDate(vpv.endDate);
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
 		}
-	
+
 		// calc the capacity of the pfvs
 		newpfvs.forEach(vpv => {
 			var capaTempVPV = calcCapacityVPVs([vpv], roleIdentifier, startDate, endDate, timeZones, false);
@@ -1388,7 +1388,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	// }
 
 	//ur: optimize
-	
+
 	// startCalc is defined for time-measuring
 	var startCalc = new Date();
 
@@ -1397,7 +1397,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	var calcC_endDate = new Date(endDate);
 	var calcC_endIndex = getColumnOfDate(calcC_endDate);
 	calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
-	
+
 
 	var currentDate = new Date(calcC_startDate);
 	logger4js.trace('Calculate Capacities and Cost of Role %s startDate %s ISO currentDate %s', roleID, calcC_startDate, currentDate.toISOString());
@@ -1504,7 +1504,7 @@ function splitInTimeZones(organisations, calcC_startDate, calcC_endDate) {
 	} else {
 		// organisations are not sorted surely
 		// sort them ascending
-		organisations.sort(function(a, b) { return visboCmpDate(a.timestamp, b.timestamp); });		
+		organisations.sort(function(a, b) { return visboCmpDate(a.timestamp, b.timestamp); });
 		// determine for all organisations the beginning on the first day of month of the timestamp
 		for ( var o = 0;  o < organisations.length; o++) {
 			organisations[o].timestamp.setDate(1);
@@ -1613,10 +1613,10 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 	for ( i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
-		
+
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);
-		
+
 		var intStart = Math.max(vpvStartIndex, tz_startIndex);
 		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
 
@@ -2343,7 +2343,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 				maxIndex = i;
 				maxTimestamp = orga[i].timestamp;
 			}
-		}		
+		}
 		var actOrga = convertOrganisation(orga[maxIndex]);
 		var orgalist = buildOrgaList(actOrga);
 		logger4js.debug('generate new PFV %s out of VPV %s , actOrga %s ', oldPFV && oldPFV.name, oldVPV && oldVPV.name + oldVPV.variantName , actOrga && actOrga.timestamp);
@@ -2644,7 +2644,7 @@ function createIndices(newPFV) {
 				}
 			} else {
 				logger4js.warn('phaseName %s is not included in the hierarchy of newVPV', phaseName)
-			}			
+			}
 		}
 	}
 
@@ -2716,7 +2716,7 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 
 	newPFV = moveTheNeeds(newPFV, phase, parent);
 	newPFV = moveTheCosts(newPFV, phase, parent);
-	
+
 
 	logger4js.debug('remove the phase %s from hierarchy', elemID);
 	vpvHrchyNodes = newPFV.hierarchy.allNodes;
@@ -2730,10 +2730,10 @@ function changeParentInHrchy(parentID, elemID, origHrchyNodes) {
 
 	var hryNodeElemID = {};
 	var hryNodeParentID = {};
-	origHrchyNodes.forEach( node => {	
+	origHrchyNodes.forEach( node => {
 		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID) };
 		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID };
-	});	
+	});
 	return origHrchyNodes;
 }
 
@@ -3027,7 +3027,7 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDa
 	// example: oldPhase 6.3 - 17.5 and newPhase 4.6 - 19.8 are considered similarCharacteristics
 
 	let similarCharacteristics = false;
-	
+
 	if (oldPhStartDate !== undefined && oldPhEndDate !== undefined) {
 	let sameLengthInMonths =  ((getColumnOfDate(oldPhEndDate) - getColumnOfDate(oldPhStartDate)) == (getColumnOfDate(newPhEndDate) - getColumnOfDate(newPhStartDate)));
 	let similar1 = ((Math.abs((oldPhStartDate.getDate() - newPhStartDate.getDate())) <=2) && (Math.abs((oldPhEndDate.getDate() - newPhEndDate.getDate())) <=2));
@@ -3035,7 +3035,7 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDa
 
 	similarCharacteristics = sameLengthInMonths && (similar1 || similar2);
 	}
-	
+
 
 	if (separatorIndex && separatorIndex > 0) {
 
@@ -3072,25 +3072,25 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDa
 function ensureValidVPV(myVPV) {
 	// function checks whether consistency criterias of a vpv are fulfilled respectively can be healed without harm
 	//
-	// if enforceHealing is set to true, then array lengths/values of roles / costs are healed as well: sumOfValues remains the same, but there is a new distribution of values over time!		// 
-	// currently: enforceHealing is set to true. we should discuss whether we provide that as an (optional) parameter or whether we treat it as the standard way 
+	// if enforceHealing is set to true, then array lengths/values of roles / costs are healed as well: sumOfValues remains the same, but there is a new distribution of values over time!		//
+	// currently: enforceHealing is set to true. we should discuss whether we provide that as an (optional) parameter or whether we treat it as the standard way
 	// Exception: enforceHealing is automatically set to false, if actualDataUntil > VPV.StartDate
 	//
-	// 
-	// Violation handling: 
+	//
+	// Violation handling:
 	// each violated 'stop criterium' will cause 'return false' and is documented via trace.warn
 	// each violated 'can be healed criterium' will be healed and documented via trace.warn; a healed criterium will not cause 'return false'
-	// 
-	// List of Validity Criterias: 
+	//
+	// List of Validity Criterias:
 	// check on minimum requirements1 (stop criterium): existence of myVPV, startDate, endDate, name
 	// check on minimum requirements2 (can be healed criterium): startDate <= endDate, startDate >= startOfCalendar=1.1.2015
 	// C0 (can be healed)  : is Dauer eq. Number of covered months of the project, i.e checks consistency between VPV.startDate, VPV.endDate and Dauer ?
 	// C1 (can be healed)  : does rootPhase = '0§.§' exist and are startDate and endDate of project and rootPhase identical ?
 	// C2 (stop criterium) : does no Phase is having a start-Date earlier than project startdate ?
 	// C3 (stop criterium) : does no Phase is having a end-Date later than project endDate ?
-	// C3 (can be healed, enforceHealing=true) 
+	// C3 (can be healed, enforceHealing=true)
 	// C4 (stop criterium) : is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
-	// C4 (can be healed, enforceHealing=true) : 
+	// C4 (can be healed, enforceHealing=true) :
 	// before C5 check (can be healed): are relStart and relEnde corresponding to phaseStartDate and phaseEndDate?
 	// C5 (stop criterium) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?
 	// C5 (can be healed, enforceHealing=true)
@@ -3101,39 +3101,40 @@ function ensureValidVPV(myVPV) {
 	// C9 (can be healed)  : is strategicFit either undefined or having a numeric value >= 0 and <= 10?
 	// C10 (can be healed) : is Risiko either undefined or having a numeric value >= 0 and <= 10 ?
 	// C11 (stop criterium): is number of milestones / phases in hierarchy eq. to number of phases/milestones when traversed in the list?
-	// C12 (stop criterium): is each name of a phase / milestone listed in the hierarchy 
-	// C13 (stop criterium): are indices given in the hierarchy referencing phases / milestones in their AllPhases / AllResults Array correctly, 
+	// C12 (stop criterium): is each name of a phase / milestone listed in the hierarchy
+	// C13 (stop criterium): are indices given in the hierarchy referencing phases / milestones in their AllPhases / AllResults Array correctly,
 	// C13 .. continued    : i.e: are indices in hierarchyNode consistent with relative position of elements in AllPhases / AllResults ?
 
 	// if enforceHealing is set to true, then violations regarding offsets, array lengths of roles , of costs are healed
-	// sumOfValues remains the same, but value distribution is of course different	
-	let enforceHealing = true; 
-	let startOfCalendar = new Date ('2015-01-01');	
+	// sumOfValues remains the same, but value distribution is of course different
+	let enforceHealing = true;
+	let startOfCalendar = new Date ('2015-01-01');
 
+	return true;
 
-	// check on minimum requirements: existence of myVPV, name, startDate, endDate	
+	// check on minimum requirements: existence of myVPV, name, startDate, endDate
 	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.name && myVPV.name != '')) {
-		logger4js.warn('ensureValidVPV:  myVPV, startDate, endDate do not exist: (myVPV exists/StartDate/EndDate)', 
+		logger4js.warn('ensureValidVPV:  myVPV, startDate, endDate do not exist: (myVPV exists/StartDate/EndDate)',
 		myVPV === undefined, !(myVPV && myVPV.startDate), !(myVPV && myVPV.endDate));
 		return false;
 	}
 
-	// check on minimum requirements, might be healed: is startDate <= endDate, then: is startDate >= start Of Calendar 	
+	// check on minimum requirements, might be healed: is startDate <= endDate, then: is startDate >= start Of Calendar
 	if (myVPV.startDate > myVPV.endDate) {
 		// heal it, document it
-		logger4js.warn('ensureValidVPV healed:  startDate after endDate  (vpvId/startDate/EndDate)', 
+		logger4js.warn('ensureValidVPV healed:  startDate after endDate  (vpvId/startDate/EndDate)',
 		myVPV._id, myVPV.StartDate, ' after ', myVPV.endDate);
 		let correctStartDate = myVPV.endDate;
 		myVPV.endDate = myVPV.startDate;
 		myVPV.startDate = correctStartDate;
 	}
 
-	
+
 	if (myVPV.startDate < startOfCalendar) {
-		// heal it, document it 
-		logger4js.warn('ensureValidVPV healed:  startDate before startOfCalendar: (vpvId/StartDate/Start OF Calendar)', 
+		// heal it, document it
+		logger4js.warn('ensureValidVPV healed:  startDate before startOfCalendar: (vpvId/StartDate/Start OF Calendar)',
 		myVPV._id, myVPV.StartDate, ' before ', startOfCalendar);
-		
+
 		let numberOfDays = diffDays(startOfCalendar, myVPV.startDate);
 		if (numberOfDays > 0) {
 			myVPV.startDate = addDays(myVPV.startDate, numberOfDays);
@@ -3148,12 +3149,12 @@ function ensureValidVPV(myVPV) {
 
 	// variable criterias is a array of boolean values, indicating which validity criterias are fulfilled / not fulfilled
 	// all criterias which are violated but can be healed, will be healed, and it will be documented in the logger.warn
-	// all criterias which are stop criterias will lead to return false 
+	// all criterias which are stop criterias will lead to return false
 	let criterias = [];
 
 	let projectDurationInDays = diffDays(myVPV.endDate, myVPV.startDate) + 1;
 
-	// 
+	//
 	// Criterium
 	// C0: is Dauer eq. Number of covered months of the project ?
 	let c0 = (myVPV.Dauer && myVPV.Dauer == (getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1));
@@ -3161,63 +3162,63 @@ function ensureValidVPV(myVPV) {
 	if (!c0) {
 		// heal it:
 		myVPV.Dauer = getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1;
-		
-		logger4js.warn('ensureValidVPV healed C0: project months-coverage (vpvId/Month coverage/StartDate/EndDate)', 
+
+		logger4js.warn('ensureValidVPV healed C0: project months-coverage (vpvId/Month coverage/StartDate/EndDate)',
 		myVPV._id, myVPV.Dauer, myVPV.startDate, myVPV.endDate);
-		
+
 		c0 = true;
 	}
 
-	// 
-	// Criterium 
+	//
+	// Criterium
 	// C1: does rootPhase = '0§.§' exist and are start-Date and endDate of project and rootPhase identical ?
 	let c1 = false;
 
 	if (!myVPV.AllPhases || myVPV.AllPhases.length < 1 ) {
 		// there are no phases at all, but one Phase have to exist, so this is now corrected
 		// the AllPhases[0] Element always corresponds to the project startDate and endDate
-		let phObject = { 
-			AllRoles: [], 
-			AllCosts: [], 
-			AllResults: [], 
-			AllBewertungen: [], 
-			percentDone: 0, 
-			invoice: undefined, 
-			penalty: undefined, 
-			responsible: '', 
-			deliverables: [], 
+		let phObject = {
+			AllRoles: [],
+			AllCosts: [],
+			AllResults: [],
+			AllBewertungen: [],
+			percentDone: 0,
+			invoice: undefined,
+			penalty: undefined,
+			responsible: '',
+			deliverables: [],
 			ampelStatus: 0,
 			ampelErlaeuterung: '',
-			earliestStart: 0, 
+			earliestStart: 0,
 			latestStart: 0,
-			minDauer: projectDurationInDays, 
-			maxDauer: projectDurationInDays, 
-			relStart: 1, 
-			relEnde: myVPV.Dauer, 
-			startOffsetinDays: 0, 
-			dauerInDays: projectDurationInDays, 
-			name: rootPhaseName, 
-			shortName: '', 
-			originalName: '', 
-			appearance: ''			
+			minDauer: projectDurationInDays,
+			maxDauer: projectDurationInDays,
+			relStart: 1,
+			relEnde: myVPV.Dauer,
+			startOffsetinDays: 0,
+			dauerInDays: projectDurationInDays,
+			name: rootPhaseName,
+			shortName: '',
+			originalName: '',
+			appearance: ''
 		};
-		
+
 		myVPV.AllPhases = [];
-		myVPV.AllPhases.push(phObject); 
+		myVPV.AllPhases.push(phObject);
 
 		// in this case the hierarchy only consists of one single Element
 		myVPV.hierarchy.allNodes = [];
-				
-		let hryNodeObject = { 
-			elemName: rootPhaseName, 
-			origName: '', 
-			indexOfElem: 1, 
-			parentNodeKey: '', 
-			childNodeKeys: [] 
+
+		let hryNodeObject = {
+			elemName: rootPhaseName,
+			origName: '',
+			indexOfElem: 1,
+			parentNodeKey: '',
+			childNodeKeys: []
 		};
 
 		let hryObject = {
-			hryNodeKey: '0', 
+			hryNodeKey: '0',
 			hryNode: hryNodeObject
 		};
 
@@ -3234,7 +3235,7 @@ function ensureValidVPV(myVPV) {
 	let timeScalingCorrectionFactor = 1.0;
 
 	if (!c1) {
-		// heal it: 
+		// heal it:
 		// pre-condition is now granted: existence of AllPhases[0]
 		myVPV.AllPhases[0].name = rootPhaseName;
 
@@ -3244,12 +3245,12 @@ function ensureValidVPV(myVPV) {
 				timeScalingCorrectionFactor = projectDurationInDays / myVPV.AllPhases[0].dauerInDays;
 			}
 
-		} 
+		}
 		myVPV.AllPhases[0].dauerInDays = projectDurationInDays;
-		
 
-		logger4js.warn('ensureValidVPV healed C1: rootPhase did not correspond to project duration or name requirements (vpvId/name/dauerinDays)', 
-						myVPV._id, 
+
+		logger4js.warn('ensureValidVPV healed C1: rootPhase did not correspond to project duration or name requirements (vpvId/name/dauerinDays)',
+						myVPV._id,
 						myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].name,
 						myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].dauerInDays);
 		c1 = true;
@@ -3263,65 +3264,65 @@ function ensureValidVPV(myVPV) {
 	let c7 = true;
 	let c8 = true;
 
-	// 
-	// Criterium 
+	//
+	// Criterium
 	let c9 = !myVPV.StrategicFit || (myVPV.StrategicFit >= 0 && myVPV.StrategicFit <= 10);
 	if (!c9) {
 		// heal it: if a value exists, but is <0 or > 10 then set it to 0
-		// heal it: if it is undefined, ignore it, i.e leave it as is  
+		// heal it: if it is undefined, ignore it, i.e leave it as is
 		if (myVPV.StrategicFit) {
 			myVPV.StrategicFit = 0;
 		}
-		logger4js.warn('ensureValidVPV healed/ignored C9: strategic fit (vpvId/strategicFit)', 
+		logger4js.warn('ensureValidVPV healed/ignored C9: strategic fit (vpvId/strategicFit)',
 		myVPV._id, myVPV.StrategicFit);
-		
+
 		c9 = true;
 	}
 
-	// 
-	// Criterium 
+	//
+	// Criterium
 	let c10 = !myVPV.Risiko || (myVPV.Risiko && myVPV.Risiko >= 0 && myVPV.Risiko <= 10);
 	if (!c10) {
 		// heal it: if a value exists, but is <0 or >10 then set it to 0
-		// heal it: if it is undefined, ignore it, i.e leave it as is  
+		// heal it: if it is undefined, ignore it, i.e leave it as is
 		if (myVPV.Risiko) {
 			myVPV.Risiko = 0;
 		}
-		logger4js.warn('ensureValidVPV healed/ignored C10: Risiko (vpvId/roleId/Risk)', 
+		logger4js.warn('ensureValidVPV healed/ignored C10: Risiko (vpvId/roleId/Risk)',
 		myVPV._id, myVPV.Risiko);
-		
-		c10 = true; 
+
+		c10 = true;
 	}
 
 	let c11 = true;
 	let c12 = true;
-	let c13 = true;	
-	
+	let c13 = true;
+
 	let anzPlanElements = 0;
 	let phaseIX = 0;
 
-	// 
-	// Criterium 
+	//
+	// Criterium
 	// to play it safe, it is again checked that myVPV.hierarchy exists and has a length of at least 1
-	// otherwise c11 is set to false: is number of phase/milestone elements eq. to number of hierarchy entries 	
+	// otherwise c11 is set to false: is number of phase/milestone elements eq. to number of hierarchy entries
 	c11 = (myVPV.hierarchy && myVPV.hierarchy.allNodes && myVPV.hierarchy.allNodes.length > 0 );
 
 	if (!c11) {
-		logger4js.warn('ensureValidVPV severe violation C11: hierarchy either does not exist or has a length of 0 (vpvId)', 
+		logger4js.warn('ensureValidVPV severe violation C11: hierarchy either does not exist or has a length of 0 (vpvId)',
 		myVPV._id);
 		return false;
-	} 
+	}
 
-	// now convert to indexed hierarchy for all subsequent checks 
+	// now convert to indexed hierarchy for all subsequent checks
 	let myHrchy = convertHierarchy(myVPV);
 
 	myVPV.AllPhases.forEach(phase => {
-	
+
 		phaseIX = phaseIX + 1;
 		anzPlanElements = anzPlanElements + 1;
-	
-		// check existence and validity in hierarchy  	
-		let nodeItem = undefined; 
+
+		// check existence and validity in hierarchy
+		let nodeItem = undefined;
 		if ( phaseIX == 1) {
 			nodeItem = myHrchy['0'] ? myHrchy['0'].hryNode : undefined;
 		} else {
@@ -3330,72 +3331,72 @@ function ensureValidVPV(myVPV) {
 		let c13tmp = (nodeItem && nodeItem.indexOfElem == phaseIX);
 		c13 = c13 && c13tmp;
 		if (!c13tmp) {
-			logger4js.warn('ensureValidVPV severe violation C13: Index of Phase does not match with hierarchy information (vpvId/phase-Name/Index)', 
+			logger4js.warn('ensureValidVPV severe violation C13: Index of Phase does not match with hierarchy information (vpvId/phase-Name/Index)',
 			myVPV._id, phase.name, phaseIX);
 		}
-	
-		// 
-		// Criterium 
+
+		//
+		// Criterium
 		c2 = c2 && (phase.startOffsetinDays >= 0);
 		if (!(phase.startOffsetinDays >= 0)) {
-			logger4js.warn('ensureValidVPV severe violation C2: Phase-Start Offset (vpvId/phase-Name/startOffset)', 
+			logger4js.warn('ensureValidVPV severe violation C2: Phase-Start Offset (vpvId/phase-Name/startOffset)',
 			myVPV._id, phase.name, phase.startOffsetinDays);
 		}
 
-		// now check whether there need to be a correction in offset and duration 
+		// now check whether there need to be a correction in offset and duration
 		if (enforceHealing && (timeScalingCorrectionFactor != 1.0) && phase.startOffsetinDays && phase.dauerInDays) {
 
 			// heal it , trunc just to avoid that becaue of rounding phase ends after project ...
 			let newOffset = Math.trunc(phase.startOffsetinDays * timeScalingCorrectionFactor);
 			let newDauer = Math.trunc(phase.dauerInDays * timeScalingCorrectionFactor);
 
-			logger4js.warn('ensureValidVPV enf-healed C3: Phase-End (vpvId/phase-Name/old start-Offset/old duration/new startoffset/new duration)', 
+			logger4js.warn('ensureValidVPV enf-healed C3: Phase-End (vpvId/phase-Name/old start-Offset/old duration/new startoffset/new duration)',
 							myVPV._id, phase.name, phase.startOffsetinDays, phase.dauerInDays, newOffset, newDauer);
-			
+
 			phase.startOffsetinDays = newOffset;
 			phase.dauerInDays = newDauer;
-		} 
-	
-		// 
-		// Criterium 
+		}
+
+		//
+		// Criterium
 		let c3tmp = (phase.startOffsetinDays !== undefined && phase.dauerInDays !== undefined && (phase.startOffsetinDays + phase.dauerInDays  <= projectDurationInDays));
 		c3 = c3 && c3tmp;
 		if (!c3tmp) {
 
-			logger4js.warn('ensureValidVPV severe violation C3: Phase-End (vpvId/phase-Name/Offset/Duration/project Duration)', 
+			logger4js.warn('ensureValidVPV severe violation C3: Phase-End (vpvId/phase-Name/Offset/Duration/project Duration)',
 							myVPV._id, phase.name, phase.startOffsetinDays, phase.dauerInDays, projectDurationInDays);
 
 		}
-	
-		// now check here whether relEnde and relStart fit to phStartDate and phEndDate, if not correct relStart and relEnde 
+
+		// now check here whether relEnde and relStart fit to phStartDate and phEndDate, if not correct relStart and relEnde
 		// this can easily be done, because the constituting data is startOffset, durationInDays
 		let vpvStartColumn = getColumnOfDate(myVPV.startDate);
 		let phStartDate = addDays(myVPV.startDate, phase.startOffsetinDays);
 		let phEndDate = addDays(myVPV.startDate, phase.startOffsetinDays + phase.dauerInDays - 1);
-	
+
 		let chkRelStart = getColumnOfDate(phStartDate) - vpvStartColumn + 1;
 		let chkRelEnde = getColumnOfDate(phEndDate) - vpvStartColumn + 1;
-	
-	
+
+
 		let correctionNecessary = ((chkRelStart != phase.relStart) || (chkRelEnde != phase.relEnde));
 		if (correctionNecessary) {
-			// now protocoll, that is has been corrected ... 
+			// now protocoll, that is has been corrected ...
 			phase.relStart = chkRelStart;
 			phase.relEnde = chkRelEnde;
-			logger4js.warn('ensureValidVPV healed relEnde and relStart (vpvId/phase-Name/StartDate/EndDate/new relStart/ new relEnde)', 
+			logger4js.warn('ensureValidVPV healed relEnde and relStart (vpvId/phase-Name/StartDate/EndDate/new relStart/ new relEnde)',
 			myVPV._id, phase.name, phStartDate, phEndDate, chkRelStart, chkRelEnde );
 		}
-	
+
 		let phLength = phase.relEnde - phase.relStart + 1;
-		
+
 		phase.AllRoles.forEach(role => {
-		
-			let c5tmp = (role.Bedarf && (role.Bedarf.length == phLength));			
+
+			let c5tmp = (role.Bedarf && (role.Bedarf.length == phLength));
 			if (!c5tmp) {
-	
+
 				if (enforceHealing) {
 
-					let beforeSum = 0;	
+					let beforeSum = 0;
 					if (role.Bedarf && role.Bedarf !== null && role.Bedarf.reduce(sumOF) > 0 ) {
 						beforeSum = role.Bedarf.reduce(sumOF);
 						role.Bedarf = calcNewBedarfe(undefined, undefined, phStartDate, phEndDate, role.Bedarf, 1.0, -1);
@@ -3407,46 +3408,46 @@ function ensureValidVPV(myVPV) {
 
 					let afterSum = 	role.Bedarf.reduce(sumOF);
 					if (Math.round(Math.abs(beforeSum - afterSum)*1000)/1000 != 0) {
-						logger4js.warn('ensureValidVPV enf-healing calculation failed C5: Role Array length (vpvId/roleId/beforeSum/aftersum)', 
+						logger4js.warn('ensureValidVPV enf-healing calculation failed C5: Role Array length (vpvId/roleId/beforeSum/aftersum)',
 						myVPV._id, role.RollenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV enf-healed C5: Role Array length (vpvId/roleId/new arLength/new phLength)', 
+						logger4js.warn('ensureValidVPV enf-healed C5: Role Array length (vpvId/roleId/new arLength/new phLength)',
 						myVPV._id, role.RollenTyp, role.Bedarf.length, phLength);
 
 						c5tmp = true;
 					}
-					
+
 				} else {
-					logger4js.warn('ensureValidVPV severe violation C5 NoBFH: Role Array length (vpvId/roleId/arLength/phLength/projectStartDate/ActualDataUntil) ', 
+					logger4js.warn('ensureValidVPV severe violation C5 NoBFH: Role Array length (vpvId/roleId/arLength/phLength/projectStartDate/ActualDataUntil) ',
 					myVPV._id, role.RollenTyp, role.Bedarf.length, phLength, myVPV.startDate, myVPV.actualDataUntil);
 				}
-	
-				c5 = c5 && c5tmp;				
+
+				c5 = c5 && c5tmp;
 			}
-							
-			// 
-			// Criterium 
+
+			//
+			// Criterium
 			// checks whether all elements of an array are >= 0
 			let c6tmp = (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
 			c6 = c6 && c6tmp;
 			if (!c6tmp) {
-				logger4js.warn('ensureValidVPV severe violation C6: Role Array with negative values (vpvId, RoleId) ', 
+				logger4js.warn('ensureValidVPV severe violation C6: Role Array with negative values (vpvId, RoleId) ',
 				myVPV._id, role.RollenTyp);
 			}
 		});
-	
+
 		phase.AllCosts.forEach(cost => {
 
-			// 
-			// Criterium 
+			//
+			// Criterium
 			let c7tmp = (cost.Bedarf && (cost.Bedarf.length == phLength));
-			
+
 			if (!c7tmp) {
-	
+
 				if (enforceHealing) {
 
-					let beforeSum = 0;	
+					let beforeSum = 0;
 					// if (role.Bedarf && role.Bedarf !== null && role.Bedarf.reduce(sumOF) > 0 ) {
 					if (cost.Bedarf  && cost.Bedarf !== null && cost.Bedarf.reduce(sumOF) > 0 ) {
 						beforeSum = cost.Bedarf.reduce(sumOF);
@@ -3459,77 +3460,77 @@ function ensureValidVPV(myVPV) {
 
 					let afterSum = 	cost.Bedarf.reduce(sumOF);
 					if (Math.round(Math.abs(beforeSum - afterSum)*1000)/1000 != 0) {
-						logger4js.warn('ensureValidVPV enf-healing calculation failed C7: Cost Array length (vpvId/costId/beforeSum/aftersum', 
+						logger4js.warn('ensureValidVPV enf-healing calculation failed C7: Cost Array length (vpvId/costId/beforeSum/aftersum',
 						myVPV._id, cost.KostenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV enf-healed C7: Cost Array length (vpvId/costId/new arLength/new phLength)', 
+						logger4js.warn('ensureValidVPV enf-healed C7: Cost Array length (vpvId/costId/new arLength/new phLength)',
 						myVPV._id, cost.KostenTyp, cost.Bedarf.length, phLength);
 						c7tmp = true;
 					}
-	
+
 				} else {
-					logger4js.warn('ensureValidVPV severe violation C7 NoBFH: Cost Array length (vpvId/costId/arLength/phLength/projectStartDate/ActualDataUntil) ', 
+					logger4js.warn('ensureValidVPV severe violation C7 NoBFH: Cost Array length (vpvId/costId/arLength/phLength/projectStartDate/ActualDataUntil) ',
 					myVPV._id, cost.KostenTyp, cost.Bedarf.length, phLength, myVPV.startDate, myVPV.actualDataUntil);
 				}
-					
+
 				c7 = c7 && c7tmp;
-			}			
-	
-			// 
-			// Criterium 
+			}
+
+			//
+			// Criterium
 			// checks whether all elements of an array are >= 0
 			let c8tmp = (cost.Bedarf && cost.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
 			c8 = c8 && c8tmp;
 			if (!c8tmp) {
-				logger4js.warn('ensureValidVPV severe violation C8: Cost Array with negative values (vpvId/costId/new arLength/new phLength)', 
+				logger4js.warn('ensureValidVPV severe violation C8: Cost Array with negative values (vpvId/costId/new arLength/new phLength)',
 				myVPV._id, cost.uid);
 			}
 		});
-	
+
 		let mileStoneIX = 0;
 		phase.AllResults.forEach(result => {
-	
+
 			mileStoneIX = mileStoneIX + 1;
 			anzPlanElements = anzPlanElements + 1;
-	
-			// 
-			// Criterium 
+
+			//
+			// Criterium
 			// C13: check existence and validity in hierarchy
 			let nodeItem = myHrchy[result.name] ? myHrchy[result.name].hryNode : undefined ;
 			let c13tmp = nodeItem && (nodeItem.indexOfElem == mileStoneIX) && (((nodeItem.parentNodeKey == phase.name) || (nodeItem.parentNodeKey == '0')));
-	
+
 			c13 = c13 && c13tmp;
-			
+
 			if (!c13tmp) {
-				logger4js.warn('ensureValidVPV severe violation C13: Index of Milestone does not match with hierarchy information (vpvId/phase-Name/phase-Index)', 
+				logger4js.warn('ensureValidVPV severe violation C13: Index of Milestone does not match with hierarchy information (vpvId/phase-Name/phase-Index)',
 				myVPV._id, phase.name, phaseIX);
 			}
 
 			if (enforceHealing && (timeScalingCorrectionFactor != 1.0) && result.offset && result.offset >= 0) {
 
 				// heal it , trunc just to avoid that because of rounding results ends after project/phase ...
-				let newOffset = Math.trunc(result.offset * timeScalingCorrectionFactor);				
-	
-				logger4js.warn('ensureValidVPV enf-healed C4: Milestone Offet (vpvId/milestone-Name/old Offset/new Offset)', 
+				let newOffset = Math.trunc(result.offset * timeScalingCorrectionFactor);
+
+				logger4js.warn('ensureValidVPV enf-healed C4: Milestone Offet (vpvId/milestone-Name/old Offset/new Offset)',
 								myVPV._id, result.name, result.offset, newOffset);
-				
-				result.offset = newOffset; 
-			} 
-	
-			// 
-			// Criterium 
+
+				result.offset = newOffset;
+			}
+
+			//
+			// Criterium
 			let c4tmp = (result.offset && result.offset >= 0 &&
 						(phase.startOffsetinDays + result.offset <= projectDurationInDays) &&
 						(result.offset <= phase.dauerInDays));
-	
+
 			c4 = c4 && c4tmp;
 			if (!c4tmp) {
-				logger4js.warn('ensureValidVPV severe violation C4: Milestone not within phase limits: (vpvId/milestone-Name/phase-Name/milestone offset/phase-offset/phase-duration) ', 
+				logger4js.warn('ensureValidVPV severe violation C4: Milestone not within phase limits: (vpvId/milestone-Name/phase-Name/milestone offset/phase-offset/phase-duration) ',
 				myVPV._id, result.name, ' in ', phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays);
 			}
-	
-			// 
+
+			//
 			// Criterium c12
 			let c12tmp = !(myHrchy[result.name] === undefined);
 			c12 = c12 && c12tmp;
@@ -3537,26 +3538,26 @@ function ensureValidVPV(myVPV) {
 				logger4js.warn('ensureValidVPV severe violation C12: Milestone not in hierarchy: (vpvId/milestone-Name)', myVPV._id, result.name);
 			}
 			// c12 = c12 && !(myHrchy[result.name] === undefined);
-	
+
 		});
-	
+
 		if (!(phase.name == rootPhaseName)) {
 			// check auf rootPhaseName ist bereits in c1 abgeprüft ..
 
-			// 
-			// Criterium 
+			//
+			// Criterium
 			let c12tmp = !(myHrchy[phase.name] === undefined);
 			c12 = c12 && c12tmp;
 			if (!c12tmp) {
 				logger4js.warn('ensureValidVPV severe violation C12: Phase not in hierarchy: (vpvId/phase-Name) ', myVPV._id, phase.name);
 			}
 		}
-	
-	
-	});	
 
-	// 
-	// Criterium 
+
+	});
+
+	//
+	// Criterium
 	c11 = (myHrchy && (myVPV.hierarchy && myVPV.hierarchy.allNodes && (myVPV.hierarchy.allNodes.length == anzPlanElements)));
 	if (!c11) {
 		logger4js.warn('ensureValidVPV severe violation C11: Number of hierarchy elements does not match number of plan-Elements (vpvId/nr Elements in hierarchy/ nr Elements in List)',
@@ -3581,7 +3582,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
-	
+
 	if (!oldVPV || !newVPV) {
 		return undefined;
 	}
@@ -3611,7 +3612,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			scaleFromDate = newVPV.actualDataUntil;
 		} else {
 			scaleFromDate = new Date (oldVPV.actualDataUntil);
-			scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);			
+			scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 			scaleFromDate.setDate(1);
 		}
 	}
@@ -3691,7 +3692,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			separatorIndex = scaleFromDateColumn - oldPhaseStartColumn;
 		}
 
-		// make sure that because of rounding it does not go beyond  
+		// make sure that because of rounding it does not go beyond
 		let newOffsetInDays = Math.trunc(timeScalingFactor * phase.startOffsetinDays);
 		let newDauerInDays = Math.trunc(timeScalingFactor * phase.dauerInDays);
 
