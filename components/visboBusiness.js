@@ -29,9 +29,9 @@ function visboCmpDate(first, second) {
 	if (first === undefined) { first = new Date(-8640000000000000); }
 	if (second === undefined) { second = new Date(-8640000000000000); }
 	if (first < second) {
-	  result = -1;
+		result = -1;
 	} else if (first > second) {
-	  result = 1;
+		result = 1;
 	}
 	return result;
   }
@@ -1086,7 +1086,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
-	for ( i = 0; vpvs && i < vpvs.length; i++) {
+	for ( var i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
 		var vpvStartIndex = getColumnOfDate(vpv.startDate);
 		var vpvEndIndex = getColumnOfDate(vpv.endDate);		
@@ -1103,9 +1103,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
 		for ( i = 0; pfvs && i < pfvs.length; i++) {
-			var vpv = pfvs[i];
-			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+			vpv = pfvs[i];
+			vpvStartIndex = getColumnOfDate(vpv.startDate);
+			vpvEndIndex = getColumnOfDate(vpv.endDate);		
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
@@ -1233,10 +1233,10 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 	if (pfvs) {
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
-		for ( i = 0; pfvs && i < pfvs.length; i++) {
-			var vpv = pfvs[i];
-			var vpvStartIndex = getColumnOfDate(vpv.startDate);
-			var vpvEndIndex = getColumnOfDate(vpv.endDate);		
+		for ( var i = 0; pfvs && i < pfvs.length; i++) {
+			vpv = pfvs[i];
+			vpvStartIndex = getColumnOfDate(vpv.startDate);
+			vpvEndIndex = getColumnOfDate(vpv.endDate);		
 			if (vpvEndIndex < startIndex) continue;
 			if (vpvStartIndex > endIndex) continue;
 			newpfvs.push(vpv);
@@ -1396,7 +1396,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	var calcC_startIndex = getColumnOfDate(calcC_startDate);
 	var calcC_endDate = new Date(endDate);
 	var calcC_endIndex = getColumnOfDate(calcC_endDate);
-	calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
+	var calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
 	
 
 	var currentDate = new Date(calcC_startDate);
@@ -1453,7 +1453,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 				currentDate.setHours(0, 0, 0, 0);
 
 				// append the monthlyNeeds of the actual timezone at the result-Arry allCalcCapaValues
-				for (i = 0 ; i < zoneDauer; i++){
+				for ( var i = 0 ; i < zoneDauer; i++){
 					const currentIndex = currentDate.toISOString().concat('_', roleID);
 					allCalcCapaValues[currentIndex] = {
 						'currentDate': currentDate.toISOString(),
@@ -1627,8 +1627,8 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 		// ur:22.03.2021 new but wrong at the moment:
 		// var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
-		var intStart = Math.max(vpvStartIndex, tz_startIndex);
-		var intEnd = Math.min(vpvEndIndex, tz_endIndex);
+		intStart = Math.max(vpvStartIndex, tz_startIndex);
+		intEnd = Math.min(vpvEndIndex, tz_endIndex);
 
 		for (var ci=intStart ; ci < intEnd + 1; ci++) {
 			costValues[ci].actCost_PT += oneVPVcostValues[ci].actCost_PT || 0;
@@ -2490,7 +2490,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
 		newPFV = createIndices(newPFV);
 
-		var correct = ensureValidVPV(newPFV);
+		//var correct = ensureValidVPV(newPFV);
 	}
 
 	logger4js.debug('check the cost of VPV and newPFV - they have to be equal');
@@ -2728,11 +2728,10 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 
 function changeParentInHrchy(parentID, elemID, origHrchyNodes) {
 
-	var hryNodeElemID = {};
-	var hryNodeParentID = {};
+	
 	origHrchyNodes.forEach( node => {	
-		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID) };
-		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID };
+		if (node.hryNodeKey == parentID) { node.hryNode.childNodeKeys.push(elemID);}
+		if (node.hryNodeKey == elemID) { node.hryNode.parentNodeKey = parentID;}
 	});	
 	return origHrchyNodes;
 }
@@ -2792,21 +2791,24 @@ function moveTheNeeds (newPFV, phase, parent) {
 			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
 			for ( var n = 0; n < role.Bedarf.length || n < parentNeeds.length; n++){
-				parentNeeds[phase.relStart - parent.relStart + n] = parentNeeds[phase.relStart - parent.relStart + n] + role.Bedarf[n];
+				var index = phase.relStart - parent.relStart;				
+				var parentNeed = (parentNeeds[index + n]) ? parentNeeds[index + n] : 0;
+				var phaseNeed = (role.Bedarf[n]) ? role.Bedarf[n] : 0;
+				parentNeeds[ index + n] = parentNeed + phaseNeed;
 				found = true;
 			}
 		}
 		// parent didn't have any needs for this role
 		if (!found) {
 			// insert the whole role and their needs
-			var parentNeeds = [];
+			parentNeeds = [];
 			for ( var p = parent.relStart; p < phase.relStart ; p++){
-			 	parentNeeds.push(0);
+				parentNeeds.push(0);
 			}
-			for ( var n = 0; n < role.Bedarf.length; n++){
+			for ( n = 0; n < role.Bedarf.length; n++){
 				parentNeeds.push(role.Bedarf[n]);
 			}
-			for ( var p = phase.relEnde; p < parent.relEnde; p++){
+			for (p = phase.relEnde; p < parent.relEnde; p++){
 				parentNeeds.push(0);
 			}
 			role.Bedarf = parentNeeds;
