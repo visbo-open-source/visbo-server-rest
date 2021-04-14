@@ -3110,7 +3110,7 @@ function ensureValidVPV(myVPV) {
 	let enforceHealing = true;
 	let startOfCalendar = new Date ('2015-01-01');
 
-	return true;
+	// return true;
 
 	// check on minimum requirements: existence of myVPV, name, startDate, endDate
 	if  (!(myVPV && myVPV.startDate && myVPV.endDate && myVPV.name && myVPV.name != '')) {

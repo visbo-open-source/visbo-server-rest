@@ -556,7 +556,7 @@ function getVPFVPVs(req, res, next) {
 	}
 	queryvpv.vpid = {$in: vpidList};
 
-	logger4js.trace('VPV query string %s', JSON.stringify(queryvpv));
+	logger4js.debug('VPV query string %s', JSON.stringify(queryvpv));
 	var timeMongoStart = new Date();
 	var queryVPV = VisboProjectVersion.find(queryvpv);
 	queryVPV.sort('vpid variantName -timestamp');
@@ -718,7 +718,6 @@ function getVCVPVs(req, res, next) {
 	var queryvpv = {};
 	var queryvpvids = {};
 	var nowDate = new Date();
-	var variantName = '';
 	var vcvpids = [];
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
