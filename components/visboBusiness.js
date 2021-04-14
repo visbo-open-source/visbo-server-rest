@@ -1099,7 +1099,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	var capaPFV = [];
 	var item;
 
-	if (pfvs) {
+	if (pfvs && pfvs.length > 0 && pfvs[0] !== null) {
 		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 		var newpfvs = [];
 		for ( i = 0; pfvs && i < pfvs.length; i++) {
