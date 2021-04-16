@@ -38,6 +38,7 @@ router.use('/', verifyVpv.getPortfolioVPs);
 
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVPV);
+router.use('/:vpvid', verifyVpv.getAllVPVsShort);
 // register the get VPF middleware for calls for a specific VPV, like /cost, /capacity, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
@@ -840,20 +841,79 @@ router.route('/:vpvid')
 				perm: perm
 			});
 		}
-		logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
-		req.oneVPV.save(function(err, oneVPV) {
-			if (err) {
-				errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
-				return;
-			}
-			req.oneVPV = oneVPV;
-			helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-			return res.status(200).send({
-				state: 'success',
-				message: 'Updated Project Version',
-				vpv: [ oneVPV ]
+		if (req.oneVPV.variantName != 'pfv') {
+			// fetch the pfv Version and calculate the keyMetrics
+			var queryvpv = {};
+			queryvpv.deletedAt = {$exists: false};
+			queryvpv.deletedByParent = {$exists: false};
+			queryvpv.vpid = req.oneVPV.vpid;
+			queryvpv.variantName = 'pfv'
+			queryvpv.timestamp = {$lt: req.oneVPV.timestamp}
+			var queryVPV = VisboProjectVersion.find(queryvpv);
+			queryVPV.sort('-timestamp');
+			queryVPV.lean();
+			queryVPV.exec(function (err, listPFV) {
+				if (err) {
+					errorHandler(err, res, 'DB: GET VPV during Undelete', 'Error getting Project Versions ');
+					return;
+				}
+				if (listPFV) {
+					logger4js.debug('VPV Undelete getPFV: Found %s ', listPFV.length);
+					if (listPFV.length > 0) {
+						var obj = visboBusiness.calcKeyMetrics(req.oneVPV, listPFV[0], req.visboOrganisations);
+						if (obj && Object.keys(obj).length > 0) {
+							req.oneVPV.keyMetrics = obj;
+						} else {
+							// no valid key Metrics delivered
+							delete req.oneVPV.keyMetrics;
+						}
+					} else {
+						// no pfv found
+						delete req.oneVPV.keyMetrics;
+					}
+				}
+				logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
+				req.oneVPV.save(function(err, oneVPV) {
+					if (err) {
+						errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
+						return;
+					}
+					req.oneVPV = oneVPV;
+					helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Project Version',
+						vpv: [ oneVPV ]
+					});
+				});
 			});
-		});
+		} else {
+			logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
+			if (req.visboAllVPVs && req.visboAllVPVs.length > 0) {
+				var ts = new Date(req.visboAllVPVs[0].timestamp);
+				var tsUndelete = new Date(req.oneVPV.timestamp);
+				if (ts.getTime() > tsUndelete.getTime()) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Newer Project Version exists, Baseline could not be restored',
+						vpv: [ req.oneVPV ]
+					});
+				}
+			}
+			req.oneVPV.save(function(err, oneVPV) {
+				if (err) {
+					errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
+					return;
+				}
+				req.oneVPV = oneVPV;
+				helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated Project Version',
+					vpv: [ oneVPV ]
+				});
+			});
+		}
 	})
 
 /**
@@ -931,6 +991,19 @@ router.route('/:vpvid')
 		if (!destroyVPV) {
 			logger4js.debug('Delete Project Version %s %s', req.params.vpvid, req.oneVPV._id);
 			variantName = req.oneVPV.variantName;
+			if (req.oneVPV.variantName == 'pfv' && req.visboAllVPVs && req.visboAllVPVs.length > 0) {
+				// check if a newer VPV exists and if so, forbid to delete the baseline as long as a newer version exists
+				var refDate = new Date(req.oneVPV.timestamp);
+				newVPV = req.visboAllVPVs.find(vpv => (new Date(vpv.timestamp)).getTime() > refDate.getTime());
+				if (newVPV) {
+					logger4js.warn('PFV Delete not possible as a newer VPV exists', req.oneVPV._id, newVPV._id);
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Could not delete Baseline because a newer VPV exists',
+						perm: perm
+					});
+				}
+			}
 
 			req.oneVPV.deletedAt = new Date();
 			req.oneVPV.save(function(err, oneVPV) {

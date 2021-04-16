@@ -3130,7 +3130,7 @@ function ensureValidVPV(myVPV) {
 	// check on minimum requirements, might be healed: is startDate <= endDate, then: is startDate >= start Of Calendar
 	if (myVPV.startDate > myVPV.endDate) {
 		// heal it, document it
-		logger4js.warn('ensureValidVPV healed:  startDate after endDate  (vpvId: %s, startDate: %s, EndDate: %s)',
+		logger4js.info('ensureValidVPV healed:  startDate after endDate  (vpvId: %s, startDate: %s, EndDate: %s)',
 		myVPV._id, myVPV.StartDate, myVPV.endDate);
 		let correctStartDate = myVPV.endDate;
 		myVPV.endDate = myVPV.startDate;
@@ -3140,7 +3140,7 @@ function ensureValidVPV(myVPV) {
 
 	if (myVPV.startDate < startOfCalendar) {
 		// heal it, document it
-		logger4js.warn('ensureValidVPV healed:  startDate before startOfCalendar: (vpvId: %s, StartDate: %s, Start OF Calendar: %s)',
+		logger4js.info('ensureValidVPV healed:  startDate before startOfCalendar: (vpvId: %s, StartDate: %s, Start OF Calendar: %s)',
 		myVPV._id, myVPV.StartDate, startOfCalendar);
 
 		let numberOfDays = diffDays(startOfCalendar, myVPV.startDate);
@@ -3171,7 +3171,7 @@ function ensureValidVPV(myVPV) {
 		// heal it:
 		myVPV.Dauer = getColumnOfDate(myVPV.endDate) - getColumnOfDate(myVPV.startDate) + 1;
 
-		logger4js.warn('ensureValidVPV healed C0: project months-coverage (vpvId: %s, Month coverage: %s, StartDate: %s, EndDate: %s)',
+		logger4js.info('ensureValidVPV healed C0: project months-coverage (vpvId: %s, Month coverage: %s, StartDate: %s, EndDate: %s)',
 		myVPV._id, myVPV.Dauer, myVPV.startDate, myVPV.endDate);
 
 		c0 = true;
@@ -3256,7 +3256,7 @@ function ensureValidVPV(myVPV) {
 		}
 		myVPV.AllPhases[0].dauerInDays = projectDurationInDays;
 
-		logger4js.warn('ensureValidVPV healed C1: rootPhase did not correspond to project duration or name requirements (vpvId: %s, name: %s, dauerinDays: %s)',
+		logger4js.info('ensureValidVPV healed C1: rootPhase did not correspond to project duration or name requirements (vpvId: %s, name: %s, dauerinDays: %s)',
 						myVPV._id,
 						myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].name,
 						myVPV.AllPhases && myVPV.AllPhases[0] && myVPV.AllPhases[0].dauerInDays);
@@ -3280,7 +3280,7 @@ function ensureValidVPV(myVPV) {
 		if (myVPV.StrategicFit) {
 			myVPV.StrategicFit = 0;
 		}
-		logger4js.warn('ensureValidVPV healed/ignored C9: strategic fit (vpvId: %s, strategicFit: %s)',
+		logger4js.info('ensureValidVPV healed/ignored C9: strategic fit (vpvId: %s, strategicFit: %s)',
 		myVPV._id, myVPV.StrategicFit);
 
 		c9 = true;
@@ -3295,7 +3295,7 @@ function ensureValidVPV(myVPV) {
 		if (myVPV.Risiko) {
 			myVPV.Risiko = 0;
 		}
-		logger4js.warn('ensureValidVPV healed/ignored C10: Risiko (vpvId: %s, Risk: %s)',
+		logger4js.info('ensureValidVPV healed/ignored C10: Risiko (vpvId: %s, Risk: %s)',
 		myVPV._id, myVPV.Risiko);
 
 		c10 = true;
@@ -3357,7 +3357,7 @@ function ensureValidVPV(myVPV) {
 			let newOffset = Math.trunc(phase.startOffsetinDays * timeScalingCorrectionFactor);
 			let newDauer = Math.trunc(phase.dauerInDays * timeScalingCorrectionFactor);
 
-			logger4js.warn('ensureValidVPV enf-healed C3: Phase-End (vpvId: %s, phase-Name: %s, old start-Offset: %s, old duration: %s, new startoffset: %s, new duration: %s)',
+			logger4js.info('ensureValidVPV enf-healed C3: Phase-End (vpvId: %s, phase-Name: %s, old start-Offset: %s, old duration: %s, new startoffset: %s, new duration: %s)',
 							myVPV._id, phase.name, phase.startOffsetinDays, phase.dauerInDays, newOffset, newDauer);
 
 			phase.startOffsetinDays = newOffset;
@@ -3390,7 +3390,7 @@ function ensureValidVPV(myVPV) {
 			// now protocoll, that is has been corrected ...
 			phase.relStart = chkRelStart;
 			phase.relEnde = chkRelEnde;
-			logger4js.warn('ensureValidVPV healed relEnde and relStart (vpvId: %s, phase-Name: %s, StartDate: %s, EndDate: %s, new relStart: %s, new relEnde %s)',
+			logger4js.info('ensureValidVPV healed relEnde and relStart (vpvId: %s, phase-Name: %s, StartDate: %s, EndDate: %s, new relStart: %s, new relEnde %s)',
 			myVPV._id, phase.name, phStartDate, phEndDate, chkRelStart, chkRelEnde );
 		}
 
@@ -3419,7 +3419,7 @@ function ensureValidVPV(myVPV) {
 						myVPV._id, phase.name, role.RollenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV enf-healed C5: Role Array length (vpvId: %s, phase: %s, roleId: %s, new arLength: %s, new phLength: %s)',
+						logger4js.info('ensureValidVPV enf-healed C5: Role Array length (vpvId: %s, phase: %s, roleId: %s, new arLength: %s, new phLength: %s)',
 						myVPV._id, phase.name, role.RollenTyp, role.Bedarf.length, phLength);
 
 						c5tmp = true;
@@ -3471,7 +3471,7 @@ function ensureValidVPV(myVPV) {
 						myVPV._id, phase.name, cost.KostenTyp, beforeSum, afterSum);
 
 					} else {
-						logger4js.warn('ensureValidVPV enf-healed C7: Cost Array length (vpvId: %s, phase: %s, costId: %s, new arLength: %s, new phLength: %s)',
+						logger4js.info('ensureValidVPV enf-healed C7: Cost Array length (vpvId: %s, phase: %s, costId: %s, new arLength: %s, new phLength: %s)',
 						myVPV._id, phase.name, cost.KostenTyp, cost.Bedarf.length, phLength);
 						c7tmp = true;
 					}
@@ -3519,7 +3519,7 @@ function ensureValidVPV(myVPV) {
 				// heal it , trunc just to avoid that because of rounding results ends after project/phase ...
 				let newOffset = Math.trunc(result.offset * timeScalingCorrectionFactor);
 
-				logger4js.warn('ensureValidVPV enf-healed C4: Milestone Offet (vpvId: %s, phase: %s, milestone-Name: %s, old Offset: %s, new Offset: %s)',
+				logger4js.info('ensureValidVPV enf-healed C4: Milestone Offet (vpvId: %s, phase: %s, milestone-Name: %s, old Offset: %s, new Offset: %s)',
 								myVPV._id, phase.name, result.name, result.offset, newOffset);
 
 				result.offset = newOffset;

@@ -375,7 +375,7 @@ function getVCOrgs(req, res, next) {
 	// or in case of capacity calculation
 
 	let skip = true;
-	if (req.method == 'POST' && baseUrl == '/vpv') {
+	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
 		skip = false;
 	}
 	if (req.method == 'GET' && urlComponent.findIndex(comp => comp == 'capacity') >= 0) {
@@ -410,7 +410,7 @@ function getVCOrganisation(vcid, req, res, next) {
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
 	// do not get the big capa array, to reduce load, it is not necessary to get in case of keyMetrics calculation
-	if (req.method == 'POST') {
+	if (req.method == 'POST' || req.method == 'PUT') {
 		queryVCSetting.select('-value.allRoles.kapazitaet');
 	}
 	queryVCSetting.sort('+timestamp');
@@ -480,6 +480,36 @@ function getVPVpfv(req, res, next) {
 		logger4js.debug('Calculate verifyVPV getVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
+}
+
+function getAllVPVsShort(req, res, next) {
+	if (req.method == 'DELETE' || req.method == 'PUT') {
+		logger4js.trace('GET AllVPVsShort');
+		// get all versions of VP short to check consistency
+		if (req.oneVPV && req.oneVPV.vpid) {
+			var queryvpv = {};
+			queryvpv.deletedAt = {$exists: false};
+			queryvpv.deletedByParent = {$exists: false};
+			queryvpv.vpid = req.oneVPV.vpid;
+			var queryVPV = VisboProjectVersion.find(queryvpv);
+			queryVPV.sort('-timestamp');
+			queryVPV.select('_id vpid variantName timestamp');
+			queryVPV.lean();
+			queryVPV.exec(function (err, listVPV) {
+				if (err) {
+					errorHandler(err, res, 'DB: GET VPV during Delete/Undelete', 'Error getting Project Versions ');
+					return;
+				}
+				logger4js.debug('VPV getAllVPVsShort: Found VPVs %s ', listVPV && listVPV.length);
+				req.visboAllVPVs = listVPV;
+				return next();
+			});
+		} else {
+			return next();
+		}
+	} else {
+		return next();
+	}
 }
 
 // Get the current base line (pfv) for keyMetrics calculation
@@ -808,5 +838,6 @@ module.exports = {
 	getVPFPFVs: getVPFPFVs,
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs,
-	getVCOrganisation: getVCOrganisation
+	getVCOrganisation: getVCOrganisation,
+	getAllVPVsShort: getAllVPVsShort
 };
