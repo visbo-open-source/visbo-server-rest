@@ -2845,14 +2845,14 @@ function moveTheCosts (newPFV, phase, parent) {
 		// parent didn't have any needs for this role
 		if (!found) {
 			// insert the whole role and their needs
-			var parentCosts = [];
+			parentCosts = [];
 			for ( var p = parent.relStart; p < phase.relStart ; p++){
 				parentCosts.push(0);
 			}
-			for ( var n = 0; n < cost.Bedarf.length; n++){
+			for ( n = 0; n < cost.Bedarf.length; n++){
 				parentCosts.push(cost.Bedarf[n]);
 			}
-			for ( var p = phase.relEnde; p < parent.relEnde; p++){
+			for ( p = phase.relEnde; p < parent.relEnde; p++){
 				parentCosts.push(0);
 			}
 			cost.Bedarf = parentCosts;
@@ -3816,6 +3816,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// now copy by reference to allPhases of oldVPV
 	newVPV.AllPhases = oldVPV.AllPhases;
 	newVPV.Dauer = getColumnOfDate(newVPV.endDate) - getColumnOfDate(newVPV.startDate) + 1;
+	newVPV.status = 'geplant';
 
 	if (ensureValidVPV(newVPV)) {
 		return newVPV;
@@ -3873,7 +3874,7 @@ function resetStatusVPV(oldVPV) {
 
 	//
 
-	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':'' };
+	const emptyBewertung = { 'color': 0, 'description':'', 'deliverables':'', 'bewerterName':'', 'datum':new Date().toISOString() };
 	let bKey = '#' + new Date().toLocaleString('de-DE');
 	let bItem = {key: bKey, bewertung: emptyBewertung};
 
