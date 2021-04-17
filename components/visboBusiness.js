@@ -3604,19 +3604,25 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	//if (!oldVPV.actualDataUntil && !newVPV.actualDataUntil) { };
 	if (!oldVPV.actualDataUntil && newVPV.actualDataUntil) {
-		scaleFromDate = new Date(newVPV.actualDataUntil);
+				scaleFromDate = new Date(newVPV.actualDataUntil);
+				newVPV.actualDataUntil = undefined;
 	}
 
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
-		scaleFromDate = new Date (oldVPV.actualDataUntil);		
+		scaleFromDate = new Date (oldVPV.actualDataUntil);	
+		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 		if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
 			scaleFromDate = new Date(oldVPV.actualDataUntil);
 		} else {
-			scaleFromDate = new Date(newVPV.actualDataUntil);			
+			scaleFromDate = new Date(newVPV.actualDataUntil);
+			// in the next command scaleFromDate is moved one to the right , that is why it is here increased	
+			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);		
 		}
+		
+		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	let scaleFromDateColumn = -1;
 	
