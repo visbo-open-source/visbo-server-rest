@@ -473,7 +473,7 @@ router.route('/')
 					});
 				} else if (!(perm.vp & constPermVP.Modify)) {
 					// check if the user owns the variant
-					variant = req.oneVP.variant[variantIndex];
+					var variant = req.oneVP.variant[variantIndex];
 					if (useremail != variant.email) {
 						return res.status(409).send({
 							state: 'failure',
@@ -482,7 +482,7 @@ router.route('/')
 						});
 					}
 				}
- 			}
+			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
@@ -523,7 +523,8 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
-				helperVpv.cleanupVPV(newVPV);
+				// ur: 210406: cleanupVPV will not be called, because the excelClient is not adopted therefore
+				// helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
@@ -1207,7 +1208,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
