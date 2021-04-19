@@ -1023,10 +1023,11 @@ if (currentVersion < dateBlock) {
 }
 
 // db.visboprojects.update({vpType:1, vpfCount: {$exists: false}}, {$set: {vpfCount: 0}}, {multi: true})
-dateBlock = "2021-04-19T00:00:00"
+dateBlock = "2021-04-19T01:00:00"
 if (currentVersion < dateBlock) {
   // Set arrays for customFieldString and customFieldDouble for all Projects if not existing
-  db.visboprojects.update({customdFieldString: {$exists: false}}, {$set: {customdFieldString: []}}, {multi: true})
+  db.visboprojects.update({customdFieldString: {$exists: true}}, {$unset: {customdFieldString}}, {multi: true})
+  db.visboprojects.update({customFieldString: {$exists: false}}, {$set: {customFieldString: []}}, {multi: true})
   db.visboprojects.update({customFieldDouble: {$exists: false}}, {$set: {customFieldDouble: []}}, {multi: true})
 
   // Set the currentVersion in Script and in DB
