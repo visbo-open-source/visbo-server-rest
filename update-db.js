@@ -950,6 +950,77 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2021-03-26T00:00:00"
+if (currentVersion < dateBlock) {
+  // Set busniessUnit Property in VP if not set, copy it from VPV
+
+  var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldString.name': {$nin: ['_businessUnit']}}, {_id: 1}).toArray()
+  var vpidList = [];
+  vpList.forEach(vp => vpidList.push(vp._id));
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', businessUnit: {$exists: true}, businessUnit: {$ne: ''}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, businessUnit: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  print("Found VPV", vpList.length, vpvList.length);
+  // print("VPV List", JSON.stringify(vpvList));
+  var vpIDLast, count = 0;
+  vpvList.forEach(vpv => {
+    if (vpv.vpid.toString() != vpIDLast) {
+      // update VP with businessUnit
+      print("Update VP businessUnit", vpv.vpid.toString(), vpv.businessUnit);
+      db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldString: {
+        name: '_businessUnit',
+        value: vpv.businessUnit
+      }}})
+      vpIDLast = vpv.vpid.toString();
+      count += 1;
+    }
+  })
+  print("Updated VP _businessUnit", count);
+
+  var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldDouble.name': {$nin: ['_risk']}}, {_id: 1}).toArray()
+  var vpidList = [];
+  vpList.forEach(vp => vpidList.push(vp._id));
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', Risiko: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, Risiko: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  print("Found VPV", vpList.length, vpvList.length);
+  // print("VPV List", JSON.stringify(vpvList));
+  vpIDLast = undefined; count = 0;
+  vpvList.forEach(vpv => {
+    if (vpv.vpid.toString() != vpIDLast) {
+      // update VP with businessUnit
+      // print("Update VP _risk", vpv.vpid.toString(), vpv._id.toString(), vpv.Risiko);
+      db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldDouble: {
+        name: '_risk',
+        value: vpv.Risiko
+      }}});
+      count += 1;
+      vpIDLast = vpv.vpid.toString();
+    }
+  })
+  print("Updated VP _risk", count);
+
+  var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldDouble.name': {$nin: ['_strategicFit']}}, {_id: 1}).toArray()
+  var vpidList = [];
+  vpList.forEach(vp => vpidList.push(vp._id));
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', StrategicFit: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, StrategicFit: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  print("Found VPV", vpList.length, vpvList.length);
+  // print("VPV List", JSON.stringify(vpvList));
+  vpIDLast = undefined; count = 0;
+  vpvList.forEach(vpv => {
+    if (vpv.vpid.toString() != vpIDLast) {
+      // update VP with businessUnit
+      // print("Update VP _risk", vpv.vpid.toString(), vpv._id.toString(), vpv.Risiko);
+      db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldDouble: {
+        name: '_strategicFit',
+        value: vpv.StrategicFit
+      }}});
+      count += 1;
+      vpIDLast = vpv.vpid.toString();
+    }
+  })
+  print("Updated VP _strategicFit", count);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
 
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {

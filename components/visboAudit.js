@@ -222,6 +222,77 @@ function saveAuditEntry(tokens, req, res, factor) {
 	logger4js.trace('saveAudit %s %s', auditEntry.url, auditEntry.result.status);
 }
 
+function savePropertyEntry(tokens, req, res, property) {
+	var auditEntry = new VisboAudit();
+
+	auditEntry.action = tokens.method(req, res);
+	auditEntry.url = tokens.url(req, res);
+	auditEntry.host = os.hostname().split('.')[0];
+	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
+	var baseUrl = auditEntry.url.split('?')[0];
+
+	auditEntry.user = {};
+	if (req.decoded && req.decoded._id) {
+		auditEntry.user.userId = req.decoded._id;
+		auditEntry.user.email = req.decoded.email;
+	} else if (req.body && req.body.email) {
+		auditEntry.user.email = req.body.email;
+	} else {
+		auditEntry.user.email = 'Unknown';
+	}
+	auditEntry.vpv = {};
+	auditEntry.vp = {};
+	auditEntry.vc = {};
+	if (req.oneVP) {
+		auditEntry.vp.vpid = req.oneVP._id;
+		auditEntry.vc.vcid = req.oneVP.vcid;
+		auditEntry.vp.name = req.oneVP.name;
+		auditEntry.vc.name = req.oneVP.vc.name;
+	}
+	if (req.oneVC) {
+		auditEntry.vc.vcid = req.oneVC._id;
+		auditEntry.vc.name = req.oneVC.name;
+	}
+
+	auditEntry.actionDescription = property.action;
+	var name = property.name;
+	if (name.indexOf('_') == 0) {
+		name = name.substring(1);
+	}
+	auditEntry.actionInfo = name + ': ';
+	if (property.newValue && property.oldValue) {
+		auditEntry.actionInfo += property.oldValue + ' => ' + property.newValue;
+	} else {
+		auditEntry.actionInfo += (property.oldValue || property.newValue);
+	}
+
+	// set the correct ip in case of NGINX Reverse Proxy
+	auditEntry.ip = req.headers['x-real-ip'] || req.ip;
+	auditEntry.userAgent = req.get('User-Agent');
+	auditEntry.result = {};
+	auditEntry.result.time = 0;
+	var status = tokens.status(req, res) || 0;
+	auditEntry.result.status = status;
+	if (status == 200) auditEntry.result.statusText = 'Success';
+	if (status == 304) auditEntry.result.statusText = 'Success';
+	if (status == 400) auditEntry.result.statusText = 'Bad Request';
+	if (status == 401) auditEntry.result.statusText = 'Not Authenticated';
+	if (status == 403) auditEntry.result.statusText = 'Permission Denied';
+	if (status == 404) auditEntry.result.statusText = 'URL not found';
+	if (status == 409) auditEntry.result.statusText = 'Conflict';
+	if (status == 423) auditEntry.result.statusText = 'Locked';
+	if (status == 500) auditEntry.result.statusText = 'Server Error';
+
+	auditEntry.result.size = 0;
+	auditEntry.save(function(err) {
+		if (err) {
+			logger4js.error('Save Property Audit failed to save %O', err);
+		}
+	});
+
+	logger4js.trace('savePropertyAudit %s %s', auditEntry.url, auditEntry.result.status);
+}
+
 function visboAudit(tokens, req, res) {
 	if (req.auditIgnore) return;
 	if (tokens.method(req, res) == 'GET' && req.listVPV) {
@@ -244,6 +315,11 @@ function visboAudit(tokens, req, res) {
 		}
 	} else {
 		saveAuditEntry(tokens, req, res, 1);
+		if (req.auditProperty) {
+			for (var i = 0; i < req.auditProperty.length; i++) {
+				savePropertyEntry(tokens, req, res, req.auditProperty[i]);
+			}
+		}
 	}
 }
 
