@@ -3598,13 +3598,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
-<<<<<<< HEAD
 	
 	if (!oldVPV || !newVPV || scaleFactor < 0) {
-=======
-
-	if (!oldVPV || !newVPV) {
->>>>>>> development
 		return undefined;
 	}
 
@@ -3626,23 +3621,16 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
-<<<<<<< HEAD
 		scaleFromDate = new Date (oldVPV.actualDataUntil);	
 		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
-=======
-		scaleFromDate = new Date (oldVPV.actualDataUntil);
->>>>>>> development
 	}
 	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 		if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
 			scaleFromDate = new Date(oldVPV.actualDataUntil);
 		} else {
 			scaleFromDate = new Date(newVPV.actualDataUntil);
-<<<<<<< HEAD
 			// in the next command scaleFromDate is moved one to the right , that is why it is here increased	
 			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);		
-=======
->>>>>>> development
 		}
 		
 		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
