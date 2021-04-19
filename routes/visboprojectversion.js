@@ -1018,7 +1018,7 @@ router.route('/:vpvid/copy')
 		} else if (perm.vp & constPermVP.Modify) {
 			permCreateVersion = true;
 		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
-			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName)
+			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName);
 			if (variant && variant.email == useremail) {
 				permCreateVersion = true;
 			}
@@ -1208,7 +1208,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
