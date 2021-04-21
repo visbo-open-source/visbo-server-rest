@@ -950,9 +950,13 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
-dateBlock = "2021-03-26T00:00:00"
+dateBlock = "2021-04-20T00:00:00"
 if (currentVersion < dateBlock) {
   // Set busniessUnit Property in VP if not set, copy it from VPV
+
+  // Set arrays for customFieldString and customFieldDouble for all Projects
+  db.visboprojects.update({}, {$set: {customFieldString: []}}, {multi: true})
+  db.visboprojects.update({}, {$set: {customFieldDouble: []}}, {multi: true})
 
   var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldString.name': {$nin: ['_businessUnit']}}, {_id: 1}).toArray()
   var vpidList = [];
@@ -962,7 +966,7 @@ if (currentVersion < dateBlock) {
   // print("VPV List", JSON.stringify(vpvList));
   var vpIDLast, count = 0;
   vpvList.forEach(vpv => {
-    if (vpv.vpid.toString() != vpIDLast) {
+    if (vpv.vpid.toString() != vpIDLast && vpv.businessUnit) {
       // update VP with businessUnit
       print("Update VP businessUnit", vpv.vpid.toString(), vpv.businessUnit);
       db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldString: {

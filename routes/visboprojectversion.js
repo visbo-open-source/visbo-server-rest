@@ -865,11 +865,11 @@ router.route('/:vpvid')
 							req.oneVPV.keyMetrics = obj;
 						} else {
 							// no valid key Metrics delivered
-							delete req.oneVPV.keyMetrics;
+							req.oneVPV.keyMetrics = undefined;
 						}
 					} else {
 						// no pfv found
-						delete req.oneVPV.keyMetrics;
+						req.oneVPV.keyMetrics = undefined;
 					}
 				}
 				logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
