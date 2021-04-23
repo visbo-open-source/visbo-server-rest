@@ -1,6 +1,6 @@
 # predictDir=$HOME/Documents/GitHub/NpDeployPackage
 predictDir=../predictkm
-tmpdir=`mktemp -d -t predict-xxxxxxxx`
+tmpdir=`mktemp -d -t predict-XXXXXXXX`
 input=$tmpdir/predictInput.json
 output=$tmpdir/predictOutput.json
 error=$tmpdir/predictError
