@@ -3527,14 +3527,14 @@ function ensureValidVPV(myVPV) {
 	
 			// 
 			// Criterium 
-			let c4tmp = (result.offset && result.offset >= 0 &&
-						(phase.startOffsetinDays + result.offset <= projectDurationInDays) &&
+			let c4tmp = ((result.offset >= 0) &&
+						((phase.startOffsetinDays + result.offset) <= projectDurationInDays) &&
 						(result.offset <= phase.dauerInDays));
 	
 			c4 = c4 && c4tmp;
 			if (!c4tmp) {
-				logger4js.warn('ensureValidVPV severe violation C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s) ', 
-				myVPV._id, result.name, phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays);
+				logger4js.warn('ensureValidVPV severe violation C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s, project-duration: %s) ', 
+				myVPV._id, result.name, phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays, projectDurationInDays);
 			}
 	
 			// 
