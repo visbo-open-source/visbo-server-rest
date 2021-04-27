@@ -87,7 +87,7 @@ function getVC(req, res, next, vcid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
-	req.auditDescription = 'VISBO Center Read';
+	req.auditDescription = 'VISBO Center (Read)';
 	req.auditSysAdmin = isSysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups

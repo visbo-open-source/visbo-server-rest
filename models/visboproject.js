@@ -36,6 +36,16 @@ var visboProjectSchema = new mongoose.Schema({
 	vpType: {type: Number, required: false},					// vpType: Project, Portfolio, ProjectTemplate
 	description: { type: String, required: false, maxlength: 4096 },
 	kundennummer: { type: String, required: false, maxlength: 256 }, // customer project identifier
+	customFieldDouble: [{
+		name: {type: String, required: true},
+		value: {type: Number, required: true},
+		type: {type: String, required: false}
+	}],
+	customFieldString: [{
+		name: {type: String, required: true},
+		value: {type: String, required: true},
+		type: {type: String, required: false}
+	}],
 	vc: {
 		name: { type: String, required: false, maxlength: 256},
 		deletedAt: {type: Date, required: false}
@@ -50,8 +60,16 @@ var visboProjectSchema = new mongoose.Schema({
 // Set Creation and modification date automatically
 visboProjectSchema.set('timestamps', true);
 
+var constSystemCustomName = Object.freeze([
+	'_businessUnit', '_risk', '_strategicFit', '_customerID'
+]);
+
 // declare a model
 mongoose.model('VisboProject', visboProjectSchema);
 mongoose.model('Lock', lockSchema);
 mongoose.model('Variant', variantSchema);
 mongoose.model('Restrict', restrictSchema);
+
+module.exports = {
+	constSystemCustomName: constSystemCustomName
+};
