@@ -2,8 +2,11 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
+var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
+var systemVC = require('./../components/systemVC');
+var getSystemVCSetting = systemVC.getSystemVCSetting;
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVpv = require('./../components/verifyVpv');
@@ -35,6 +38,7 @@ router.use('/', verifyVpv.getPortfolioVPs);
 
 // register the VPV middleware to check that the user has access to the VPV
 router.param('vpvid', verifyVpv.getVPV);
+router.use('/:vpvid', verifyVpv.getAllVPVsShort);
 // register the get VPF middleware for calls for a specific VPV, like /cost, /capacity, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
@@ -130,7 +134,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Versions Read';
+		req.auditDescription = 'Project Versions (Read)';
 		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
@@ -140,7 +144,7 @@ router.route('/')
 		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects
 		var longList = req.query.longList != undefined;		// show only specific columns instead of all
-		var keyMetrics = req.query.keyMetrics != undefined;
+		var keyMetrics = validate.validateNumber(req.query.keyMetrics, true) || 0;
 		var nowDate = new Date();
 		var reducedPerm = false;
 		var variantName = req.query.variantName;
@@ -180,7 +184,7 @@ router.route('/')
 				// only restricted View Permission, restrict the Result to main variant only
 				variantName = '';
 				longList = false;
-				keyMetrics = false;
+				keyMetrics = 0;
 				reducedPerm = true;
 			}
 		} else {
@@ -343,13 +347,71 @@ router.route('/')
 						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
 					}
 				}
-
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned VISBO Project Versions',
-					count: listVPV.length,
-					vpv: listVPV
-				});
+				var settingPredict = getSystemVCSetting('Predict');
+				var predictBAC;
+				if (settingPredict && settingPredict.value) { predictBAC = settingPredict.value.BAC; }
+				if (keyMetrics == 2 && predictBAC) {
+					var cmd = './PredictBAC'
+					var reducedKM = [];
+					listVPV.forEach(vpv => {
+						if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
+							var newVPV = {};
+							newVPV._id = vpv._id;
+							newVPV.timestamp = vpv.timestamp;
+							newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
+							newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
+							newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
+							newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
+							newVPV.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
+							reducedKM.push(newVPV);
+						}
+					});
+					cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+					logger4js.debug('Found %d Versions for Prediction', reducedKM.length, cmd.length);
+					if (reducedKM.length) {
+						exec(cmd, function callback(error, stdout, stderr) {
+							if (error) {
+								errorHandler(err, res, 'predictBAC:'.concat(stderr), 'Error getting Prediction ');
+								return;
+							}
+							var predictVPV = JSON.parse(stdout);
+							if (!predictVPV) {
+								errorHandler(err, res, 'predictBAC no JSON:'.concat(stdout), 'Error getting Prediction ');
+								return;
+							}
+							// update the original keyMetric with predicted BAC
+							predictVPV.forEach(vpv => {
+								if (vpv._id && vpv.costCurrentTotal) {
+									origVPV = listVPV.find(item => item._id.toString() == vpv._id.toString());
+									if (origVPV) {
+										origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
+									}
+								}
+							});
+							return res.status(200).send({
+								state: 'success',
+								message: 'Returned VISBO Project Versions Prediction',
+								count: listVPV.length,
+								vpv: listVPV
+							});
+						});
+					} else {
+						logger4js.info('No Versions for Prediction');
+						return res.status(200).send({
+							state: 'success',
+							message: 'Returned VISBO Project Versions Prediction',
+							count: listVPV.length,
+							vpv: listVPV
+						});
+					}
+				} else {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned VISBO Project Versions',
+						count: listVPV.length,
+						vpv: listVPV
+					});
+				}
 			});
 		});
 	})
@@ -419,7 +481,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 
-		req.auditDescription = 'Project Versions Create';
+		req.auditDescription = 'Project Version (Create)';
 		var queryvpv = {};
 
 		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
@@ -473,7 +535,7 @@ router.route('/')
 					});
 				} else if (!(perm.vp & constPermVP.Modify)) {
 					// check if the user owns the variant
-					variant = req.oneVP.variant[variantIndex];
+					var variant = req.oneVP.variant[variantIndex];
 					if (useremail != variant.email) {
 						return res.status(409).send({
 							state: 'failure',
@@ -482,7 +544,7 @@ router.route('/')
 						});
 					}
 				}
- 			}
+			}
 			// check if the version is locked
 			if (lockVP.lockStatus(oneVP, useremail, req.body.variantName).locked) {
 				logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
@@ -523,7 +585,8 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
-				helperVpv.cleanupVPV(newVPV);
+				// ur: 210406: cleanupVPV will not be called, because the excelClient is not adopted therefore
+				// helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
@@ -538,11 +601,17 @@ router.route('/')
 				newVPV.variantName = variantName;
 				if (req.visboPFV) {
 					newVPV.status = req.visboPFV.status;
-					newVPV.businessUnit = req.visboPFV.businessUnit;
 					newVPV.Erloes = req.visboPFV.Erloes;
-					newVPV.Risiko = req.visboPFV.Risiko;
-					newVPV.StrategicFit = req.visboPFV.StrategicFit;
-					newVPV.businessUnit = req.visboPFV.businessUnit;
+				}
+				if (req.oneVP && req.oneVP.customFieldString) {
+					var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
+					if (customField) { newVPV.businessUnit = customField.value; }
+				}
+				if (req.oneVP && req.oneVP.customFieldDouble) {
+					var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+					if (customField) { newVPV.Risiko = customField.value; }
+					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
 
 				var obj = visboBusiness.calcKeyMetrics(newVPV, req.visboPFV, req.visboOrganisations);
@@ -655,7 +724,7 @@ router.route('/:vpvid')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Version Read';
+		req.auditDescription = 'Project Version (Read)';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 0;	// Real Download of Project Version
 
@@ -745,14 +814,14 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version Update';
+		req.auditDescription = 'Project Version (Update)';
 
 		logger4js.info('PUT/Save Project Version for userid %s email %s and vpv %s perm %O', userId, useremail, req.params.vpvid, req.listVPPerm);
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVPV.deletedAt) {
-			req.auditDescription = 'Project Version Undelete';
+			req.auditDescription = 'Project Version (Undelete)';
 			req.oneVPV.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug('Undelete VPV %s', req.oneVPV._id);
@@ -772,20 +841,79 @@ router.route('/:vpvid')
 				perm: perm
 			});
 		}
-		logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
-		req.oneVPV.save(function(err, oneVPV) {
-			if (err) {
-				errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
-				return;
-			}
-			req.oneVPV = oneVPV;
-			helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-			return res.status(200).send({
-				state: 'success',
-				message: 'Updated Project Version',
-				vpv: [ oneVPV ]
+		if (req.oneVPV.variantName != 'pfv') {
+			// fetch the pfv Version and calculate the keyMetrics
+			var queryvpv = {};
+			queryvpv.deletedAt = {$exists: false};
+			queryvpv.deletedByParent = {$exists: false};
+			queryvpv.vpid = req.oneVPV.vpid;
+			queryvpv.variantName = 'pfv'
+			queryvpv.timestamp = {$lt: req.oneVPV.timestamp}
+			var queryVPV = VisboProjectVersion.find(queryvpv);
+			queryVPV.sort('-timestamp');
+			queryVPV.lean();
+			queryVPV.exec(function (err, listPFV) {
+				if (err) {
+					errorHandler(err, res, 'DB: GET VPV during Undelete', 'Error getting Project Versions ');
+					return;
+				}
+				if (listPFV) {
+					logger4js.debug('VPV Undelete getPFV: Found %s ', listPFV.length);
+					if (listPFV.length > 0) {
+						var obj = visboBusiness.calcKeyMetrics(req.oneVPV, listPFV[0], req.visboOrganisations);
+						if (obj && Object.keys(obj).length > 0) {
+							req.oneVPV.keyMetrics = obj;
+						} else {
+							// no valid key Metrics delivered
+							req.oneVPV.keyMetrics = undefined;
+						}
+					} else {
+						// no pfv found
+						req.oneVPV.keyMetrics = undefined;
+					}
+				}
+				logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
+				req.oneVPV.save(function(err, oneVPV) {
+					if (err) {
+						errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
+						return;
+					}
+					req.oneVPV = oneVPV;
+					helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated Project Version',
+						vpv: [ oneVPV ]
+					});
+				});
 			});
-		});
+		} else {
+			logger4js.debug('PUT VPV: save now %s unDelete %s', req.oneVPV._id, vpUndelete);
+			if (req.visboAllVPVs && req.visboAllVPVs.length > 0) {
+				var ts = new Date(req.visboAllVPVs[0].timestamp);
+				var tsUndelete = new Date(req.oneVPV.timestamp);
+				if (ts.getTime() > tsUndelete.getTime()) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Newer Project Version exists, Baseline could not be restored',
+						vpv: [ req.oneVPV ]
+					});
+				}
+			}
+			req.oneVPV.save(function(err, oneVPV) {
+				if (err) {
+					errorHandler(err, res, 'DB: PUT VPV Save', 'Error updating Project Versions ');
+					return;
+				}
+				req.oneVPV = oneVPV;
+				helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated Project Version',
+					vpv: [ oneVPV ]
+				});
+			});
+		}
 	})
 
 /**
@@ -817,7 +945,7 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version Delete';
+		req.auditDescription = 'Project Version (Delete)';
 
 		logger4js.info('DELETE Project Version for userid %s email %s and vc %s ', userId, useremail, req.params.vpvid);
 		logger4js.debug('DELETE Project Version DETAILS ', req.oneVPV._id, req.oneVP.name, req.oneVPV.variantName);
@@ -863,6 +991,19 @@ router.route('/:vpvid')
 		if (!destroyVPV) {
 			logger4js.debug('Delete Project Version %s %s', req.params.vpvid, req.oneVPV._id);
 			variantName = req.oneVPV.variantName;
+			if (req.oneVPV.variantName == 'pfv' && req.visboAllVPVs && req.visboAllVPVs.length > 0) {
+				// check if a newer VPV exists and if so, forbid to delete the baseline as long as a newer version exists
+				var refDate = new Date(req.oneVPV.timestamp);
+				newVPV = req.visboAllVPVs.find(vpv => (new Date(vpv.timestamp)).getTime() > refDate.getTime());
+				if (newVPV) {
+					logger4js.warn('PFV Delete not possible as a newer VPV exists', req.oneVPV._id, newVPV._id);
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Could not delete Baseline because a newer VPV exists',
+						perm: perm
+					});
+				}
+			}
 
 			req.oneVPV.deletedAt = new Date();
 			req.oneVPV.save(function(err, oneVPV) {
@@ -880,7 +1021,7 @@ router.route('/:vpvid')
 			});
 		} else {
 			// Destroy the Deleted Version
-			req.auditDescription = 'Project Version Destroy';
+			req.auditDescription = 'Project Version (Destroy)';
 			logger4js.info('Destroy Project Version %s %s', req.params.vpvid, req.oneVPV._id);
 			var queryVPV = {};
 			queryVPV._id = req.oneVPV._id;
@@ -973,7 +1114,7 @@ router.route('/:vpvid/copy')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Versions Copy';
+		req.auditDescription = 'Project Versions (Copy)';
 
 		var vpid = req.oneVPV.vpid;
 		var variantName = req.oneVPV.variantName;
@@ -1039,10 +1180,19 @@ router.route('/:vpvid/copy')
 		newVPV.timestamp = timestamp;
 		if (req.visboPFV) {
 			newVPV.status = req.visboPFV.status;
-			newVPV.businessUnit = req.visboPFV.businessUnit;
 			newVPV.Erloes = req.visboPFV.Erloes;
 			newVPV.Risiko = req.visboPFV.Risiko;
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
+		}
+		if (req.oneVP && req.oneVP.customFieldString) {
+			var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
+			if (customField) { newVPV.businessUnit = customField.value; }
+		}
+		if (req.oneVP && req.oneVP.customFieldDouble) {
+			var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+			if (customField) { newVPV.Risiko = customField.value; }
+			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+			if (customField) { newVPV.StrategicFit = customField.value; }
 		}
 
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
@@ -1175,7 +1325,7 @@ router.route('/:vpvid/capacity')
 		}
 		var roleID = req.query.roleID;
 
-		req.auditDescription = 'Project Version Capacity Read';
+		req.auditDescription = 'Project Version Capacity (Read)';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
@@ -1207,7 +1357,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], [req.visboPFV], roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
@@ -1269,7 +1419,7 @@ router.route('/:vpvid/keyMetrics')
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
-		req.auditDescription = 'Project Version KeyMetrics Read';
+		req.auditDescription = 'Project Version KeyMetrics (Read)';
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
@@ -1346,7 +1496,7 @@ router.route('/:vpvid/cost')
 			perm.vc = perm.vc | permVC.vc;
 		}
 
-		req.auditDescription = 'Project Version Cost Read';
+		req.auditDescription = 'Project Version Cost (Read)';
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
@@ -1441,7 +1591,7 @@ router.route('/:vpvid/delivery')
 			getAll = true;
 		}
 
-		req.auditDescription = 'Project Version Deliveries Read';
+		req.auditDescription = 'Project Version Deliveries (Read)';
 		req.auditSysAdmin = sysAdmin;
 
 		var restriction;
@@ -1531,7 +1681,7 @@ router.route('/:vpvid/deadline')
 			getAll = true;
 		}
 
-		req.auditDescription = 'Project Version Deadlines Read';
+		req.auditDescription = 'Project Version Deadlines (Read)';
 		req.auditSysAdmin = sysAdmin;
 
 		var restriction;

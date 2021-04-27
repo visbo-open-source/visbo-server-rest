@@ -1,4 +1,25 @@
 #!/bin/bash
+predictkm=$HOME/GitHub/predictkm
+// if prediction is installed update it
+if test -f "$predictkm"; then
+  cd $predictkm
+  echo "01 Predict: Checking Local Status of Branch"
+  git status
+  if [ $? -ne 0 ]
+  then
+    echo "Predict: FATAL: Local Changes have to be checked first before upgrading."
+    exit 1
+  fi
+
+  echo "02 Predict: Pull Branch from Repository Server"
+  pullOutput=`git pull`
+  if [ $? -ne 0 ]
+  then
+    echo "FATAL Predict: Pull Failed to update Predict Branch."
+    exit 1
+  fi
+fi
+
 cd $HOME/GitHub/visbo-server-rest
 continueOnEmptyPull=0
 if [ $# -gt 0 -a "$1" = "force" ]

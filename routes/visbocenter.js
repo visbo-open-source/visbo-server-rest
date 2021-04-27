@@ -59,7 +59,6 @@ router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
-router.use('/:vcid/capacity', verifyVpv.getVCPFVs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 
@@ -300,7 +299,7 @@ router.route('/')
 			var userId = req.decoded._id;
 			var isSysAdmin = req.query.sysadmin ? true : false;
 
-			req.auditDescription = 'VISBO Center Read';
+			req.auditDescription = 'VISBO Center (Read)';
 			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
@@ -391,7 +390,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'VISBO Center Create';
+		req.auditDescription = 'VISBO Center (Create)';
 
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
 		if (req.body.description) req.body.description = (req.body.description || '').trim();
@@ -506,7 +505,7 @@ router.route('/:vcid')
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'VISBO Center Read';
+		req.auditDescription = 'VISBO Center (Read)';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -515,7 +514,7 @@ router.route('/:vcid')
 		if (isSysAdmin && req.query.deleted && req.oneVC.deletedAt) {
 			found = true;
 		} else if (!req.oneVC.deletedAt) {
-			logger4js.info('VC not Deleted: DeletedAt %s', req.oneVC.deletedAt);
+			logger4js.debug('VC not Deleted: DeletedAt %s', req.oneVC.deletedAt);
 			found= true;
 		}
 
@@ -581,7 +580,7 @@ router.route('/:vcid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 
-		req.auditDescription = 'VISBO Center Update';
+		req.auditDescription = 'VISBO Center (Update)';
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var checkSystemPerm = false;
 
@@ -599,7 +598,7 @@ router.route('/:vcid')
 		var vcUndelete = false;
 		// undelete the VC in case of change
 		if (req.oneVC.deletedAt) {
-			req.auditDescription = 'VISBO Center Undelete';
+			req.auditDescription = 'VISBO Center (Undelete)';
 			req.oneVC.deletedAt = undefined;
 			vcUndelete = true;
 			logger4js.debug('Undelete VC %s flag %s', req.oneVC._id, req.oneVC.deletedAt);
@@ -696,7 +695,7 @@ router.route('/:vcid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'VISBO Center Delete';
+		req.auditDescription = 'VISBO Center (Delete)';
 
 		logger4js.info('DELETE VISBO Center for userid %s email %s and vc %s oneVC %s is SysAdminPerm %O', userId, useremail, req.params.vcid, req.oneVC.name, req.listVCPerm.getPerm(0));
 		// user is sysadmin
@@ -749,7 +748,7 @@ router.route('/:vcid')
 		} else {
 			// VC is already marked as deleted, now destory it including VP and VPV
 			// Collect all ProjectIDs of this VC
-			req.auditDescription = 'VISBO Center Destroy';
+			req.auditDescription = 'VISBO Center (Destroy)';
 			var query = {};
 			query.vcid = req.oneVC._id;
 			var queryVP = VisboProject.find(query);
@@ -894,7 +893,7 @@ router.route('/:vcid/audit')
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var checkSystemPerm = false;
 
-		req.auditDescription = 'VISBO Center Audit Read';
+		req.auditDescription = 'VISBO Center Audit (Read)';
 		req.auditSysAdmin = isSysAdmin;
 
 		if (req.oneVC.system || req.query.sysadmin) checkSystemPerm = true;
@@ -1050,7 +1049,7 @@ router.route('/:vcid/group')
 		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'VISBO Center Group Read';
+		req.auditDescription = 'VISBO Center Group (Read)';
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
@@ -1191,7 +1190,7 @@ router.route('/:vcid/group')
 		}
 		if (req.body.name) req.body.name = req.body.name.trim();
 
-		req.auditDescription = 'VISBO Center Group Create';
+		req.auditDescription = 'VISBO Center Group (Create)';
 		req.auditInfo = req.body.name;
 
 		if (groupType == 'VC' && req.query.sysadmin) checkSystemPerm = true;
@@ -1312,7 +1311,7 @@ router.route('/:vcid/group/:groupid')
 		var useremail = req.decoded.email;
 		var checkSystemPerm = false;
 
-		req.auditDescription = 'VISBO Center Group Delete';
+		req.auditDescription = 'VISBO Center Group (Delete)';
 		req.auditInfo = req.oneGroup.name;
 		logger4js.info('DELETE VISBO Center Group for userid %s email %s and vc %s group %s ', userId, useremail, req.params.vcid, req.params.groupid);
 
@@ -1389,7 +1388,7 @@ router.route('/:vcid/group/:groupid')
 		var useremail = req.decoded.email;
 		var checkSystemPerm = false;
 
-		req.auditDescription = 'VISBO Center Group Update';
+		req.auditDescription = 'VISBO Center Group (Update)';
 		req.auditInfo = req.oneGroup.name;
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
 		if (req.body.name && req.body.name != req.oneGroup.name) {
@@ -1571,7 +1570,7 @@ router.route('/:vcid/group/:groupid')
 		var checkSystemPerm = false;
 
 		logger4js.info('Post a new VISBO Center User with name %s  to group executed by user %s with perm %s ', req.body.email, req.oneGroup.name, userId, req.listVCPerm.getPerm(req.params.vcid));
-		req.auditDescription = 'VISBO Center User Add';
+		req.auditDescription = 'VISBO Center User (Add)';
 
 		if (req.body.email) req.body.email = req.body.email.trim().toLowerCase();
 		if (!validate.validateEmail(req.body.email, false)) {
@@ -1791,7 +1790,7 @@ router.route('/:vcid/group/:groupid')
 
 		logger4js.info('DELETE VISBO Center User by userid %s email %s for user %s Group %s ', userId, useremail, req.params.userid, req.oneGroup._id);
 
-		req.auditDescription = 'VISBO Center User Delete';
+		req.auditDescription = 'VISBO Center User (Delete)';
 
 		var delUser = req.oneGroup.users.find(findUserById, req.params.userid);
 		if (delUser) req.auditInfo = delUser.email  + ' / ' + req.oneGroup.name;
@@ -1892,7 +1891,7 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
 
-			req.auditDescription = 'VISBO Center Organisation Read';
+			req.auditDescription = 'VISBO Center Organisation (Read)';
 			req.auditTTLMode = 1;
 
 			logger4js.info('Get VISBO Center Organisation for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
@@ -1907,20 +1906,18 @@ router.route('/:vcid/group/:groupid')
 			query.vcid = req.oneVC._id;
 			query.type = 'organisation';
 
-			logger4js.info('Find VC Organisation with query %O', query);
+			logger4js.debug('Find VC Organisation with query %O', query);
 			var queryVCSetting = VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext) {
-				queryVCSetting.sort({timestamp: 1});
+				queryVCSetting.sort({vcid:1, timestamp: 1});
 			} else {
-				queryVCSetting.sort({timestamp: -1});
+				queryVCSetting.sort({vcid:1, timestamp: -1});
 			}
 			if (req.query.shortList) {
 				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-			} else {
-				if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
-					queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-				}
+			} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
 			}
 			queryVCSetting.lean();
 			queryVCSetting.exec(function (err, listVCSetting) {
@@ -1928,20 +1925,10 @@ router.route('/:vcid/group/:groupid')
 					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 					return;
 				}
+				logger4js.debug('Found %d VC Organisation', listVCSetting.length);
 				if (listVCSetting.length > 1 && latestOnly){
 					var listVCSettingfiltered = [];
 					listVCSettingfiltered.push(listVCSetting[0]);
-					for (let i = 1; i < listVCSetting.length; i++){
-						//compare current item with previous and ignore if it is the same type, name, userId
-						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
-						if (listVCSetting[i].type != listVCSetting[i-1].type
-						// || listVCSetting[i].name != listVCSetting[i-1].name
-						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
-							listVCSettingfiltered.push(listVCSetting[i]);
-							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
-						}
-					}
-					logger4js.debug('Found %d Project Versions after Filtering', listVCSettingfiltered.length);
 
 					req.auditInfo = listVCSettingfiltered.length;
 					return res.status(200).send({
@@ -2020,7 +2007,7 @@ router.route('/:vcid/group/:groupid')
 			var isSysAdmin = req.query.sysadmin ? true : false;
 			var sortColumns;
 
-			req.auditDescription = 'VISBO Center Setting Read';
+			req.auditDescription = 'VISBO Center Setting (Read)';
 			req.auditSysAdmin = isSysAdmin;
 			req.auditTTLMode = 1;
 
@@ -2048,7 +2035,7 @@ router.route('/:vcid/group/:groupid')
 				else sortColumns = sortColumns.concat(' -timestamp');
 			}
 
-			logger4js.info('Find VC Settings with query %O', query);
+			logger4js.debug('Find VC Settings with query %O', query);
 			var queryVCSetting = VCSetting.find(query);
 			if (req.query.shortList == true) {
 				queryVCSetting.select('-value');
@@ -2144,7 +2131,7 @@ router.route('/:vcid/group/:groupid')
 			var userId = req.decoded._id;
 			var settingArea = 'public';
 
-			req.auditDescription = 'VISBO Center Setting Create';
+			req.auditDescription = 'VISBO Center Setting (Create)';
 			req.auditInfo = req.body.name;
 
 			logger4js.trace('Post a new VISBO Center Setting Req Body: %O Name %s', req.body, req.body.name);
@@ -2229,7 +2216,7 @@ router.route('/:vcid/group/:groupid')
 				newTimeStamp.setDate(1);
 				newTimeStamp.setHours(0,0,0,0);
 				orga.validFrom = newTimeStamp;
-				logger4js.info('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
+				logger4js.debug('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
 				if (!visboBusiness.verifyOrganisation(orga, oldOrga)) {
 					return res.status(400).send({
 						state: 'failure',
@@ -2289,7 +2276,7 @@ router.route('/:vcid/group/:groupid')
 			var useremail = req.decoded.email;
 			var settingArea = 'public';
 
-			req.auditDescription = 'VISBO Center Setting Delete';
+			req.auditDescription = 'VISBO Center Setting (Delete)';
 			req.auditInfo = req.params.settingid;
 
 			logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
@@ -2341,7 +2328,7 @@ router.route('/:vcid/group/:groupid')
 						message: 'Not allowed to delete this setting type'
 					});
 				}
-				logger4js.info('Found the Setting for VC');
+				logger4js.debug('Found the Setting for VC');
 				oneVCSetting.remove(function(err) {
 					if (err) {
 						errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
@@ -2399,7 +2386,7 @@ router.route('/:vcid/group/:groupid')
 		var settingChangeSMTP = false;
 		var settingArea = 'public';
 
-		req.auditDescription = 'VISBO Center Setting Update';
+		req.auditDescription = 'VISBO Center Setting (Update)';
 		req.auditInfo = (req.body.name || '').trim();
 
 		logger4js.info('PUT VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
@@ -2433,7 +2420,7 @@ router.route('/:vcid/group/:groupid')
 			if (req.auditInfo && req.auditInfo != oneVCSetting.name) {
 				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name);
 			}
-			logger4js.info('Found the Setting for VC Updated');
+			logger4js.debug('Found the Setting for VC Updated');
 
 			if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
 				settingArea = 'private';
@@ -2533,7 +2520,7 @@ router.route('/:vcid/group/:groupid')
 					}
 					if (isSysConfig) {
 						if (resultVCSetting.name == 'DEBUG') {
-							logger4js.info('Update System Log Setting');
+							logger4js.debug('Update System Log Setting');
 							logging.setLogLevelConfig(resultVCSetting.value);
 						}
 						reloadSystemSetting();
@@ -2644,7 +2631,7 @@ router.route('/:vcid/group/:groupid')
 
 			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
-			req.auditDescription = 'VISBO Center Capacity Read';
+			req.auditDescription = 'VISBO Center Capacity (Read)';
 
 			if ((perm.vc & (constPermVC.ViewAudit + constPermVC.Modify)) == 0) {
 				return res.status(403).send({
@@ -2697,7 +2684,7 @@ router.route('/:vcid/group/:groupid')
 			var filteredCapacity = [];
 			var startDate = validate.validateDate(req.query.startDate, false, true);
 			if (!startDate) {
-				startDate = new Date(-8640000000000000); 
+				startDate = new Date(-8640000000000000);
 			}
 			var endDate = validate.validateDate(req.query.endDate, false, true);
 			if (!endDate) {
