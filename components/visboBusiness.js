@@ -3098,7 +3098,7 @@ function ensureValidVPV(myVPV) {
 	// C3 (stop criterium) : does no Phase is having a end-Date later than project endDate ?
 	// C3 (can be healed, enforceHealing=true)
 	// C4 (stop criterium) : is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
-	// C4 (can be healed, enforceHealing=true) :
+	// C4 (only information, no healing , no abort criterium) :
 	// before C5 check (can be healed): are relStart and relEnde corresponding to phaseStartDate and phaseEndDate?
 	// C5 (stop criterium) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?
 	// C5 (can be healed, enforceHealing=true)
@@ -3526,15 +3526,17 @@ function ensureValidVPV(myVPV) {
 			} 
 	
 			// 
-			// Criterium 
+			// Criterium is only info, not any more restirction
 			let c4tmp = ((result.offset >= 0) &&
 						((phase.startOffsetinDays + result.offset) <= projectDurationInDays) &&
 						(result.offset <= phase.dauerInDays));
 
 			c4 = c4 && c4tmp;
 			if (!c4tmp) {
-				logger4js.warn('ensureValidVPV severe violation C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s, project-duration: %s) ', 
+				logger4js.info('ensureValidVPV warning C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s, project-duration: %s) ', 
 				myVPV._id, result.name, phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays, projectDurationInDays);
+
+				c4 = true;
 			}
 
 			//
