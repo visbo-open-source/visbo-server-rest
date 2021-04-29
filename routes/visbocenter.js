@@ -1926,8 +1926,8 @@ router.route('/:vcid/group/:groupid')
 						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 						return;
 					}
-					logger4js.debug('Found VC Organisation', VCSetting.timestamp);
-					req.auditInfo = 1;
+					logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
+					req.auditInfo = VCSetting ? 1 : 0;
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned VISBO Center Settings',

@@ -359,6 +359,7 @@ router.route('/')
 							newVPV._id = vpv._id;
 							newVPV.timestamp = vpv.timestamp;
 							newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
+							newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
 							newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
 							newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
 							newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
