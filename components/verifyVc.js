@@ -48,7 +48,7 @@ function getAllGroups(req, res, next) {
 	var query = {};
 	query = {'users.userId': userId};	// search for VC groups where user is member
 
-	if (vcid) {
+	if (!isSysAdmin && vcid) {
 		query.vcid = vcid;
 	}
 	if (req.query.systemvc || isSysAdmin) {
