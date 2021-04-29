@@ -28,13 +28,13 @@ function getAllGroups(req, res, next) {
 
 	// get the VC Groups the user is member of
 	// handle sysadmin and systemvc case
-	logger4js.trace('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
+	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
 
 	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
 	} else if (req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
-	} else if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'capacity') {
+	} else if (req.method == 'GET' && urlComponent.length >= 2) {
 		vcid = urlComponent[1];
 	}
 	if (!validate.validateObjectId(vcid, true)) {
@@ -62,12 +62,13 @@ function getAllGroups(req, res, next) {
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid groupType');
+	queryVG.lean();
 	queryVG.exec(function (err, listVG) {
 		if (err) {
 			errorHandler(err, res, 'DB: VC Groups get all', 'Error getting VISBO Centers');
 			return;
 		}
-		logger4js.trace('Found VGs %d', listVG.length);
+		logger4js.debug('Found VGs %d', listVG.length);
 		var listVCPerm = new VisboPermission();
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
@@ -87,11 +88,11 @@ function getVC(req, res, next, vcid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
-	req.auditDescription = 'VISBO Center (Read)';
+	req.auditDescription = 'VISBO Center Read';
 	req.auditSysAdmin = isSysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
-	logger4js.debug('Generate VC Groups for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
+	logger4js.debug('Find VC for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
 	var query = {};
 	if (!validate.validateObjectId(vcid, false)) {
 		logger4js.warn('getVC Bad Parameter vcid %s', vcid);
@@ -113,6 +114,7 @@ function getVC(req, res, next, vcid) {
 	query._id = vcid;
 	query.deletedAt =  {$exists: checkDeleted};
 	var queryVC = VisboCenter.findOne(query);
+	queryVC.lean();
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {

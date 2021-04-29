@@ -1,11 +1,12 @@
-predictDir=$HOME/Documents/GitHub/NpDeployPackage
-tmp=$TMPDIR/predictBAC
-input="$tmp"Input.json
-output="$tmp"Output.json
-error="$tmp"_predictBAC_STDOE
+# predictDir=$HOME/Documents/GitHub/NpDeployPackage
+predictDir=../predictkm
+tmpdir=`mktemp -d -t predict-XXXXXXXX`
+input=$tmpdir/predictInput.json
+output=$tmpdir/predictOutput.json
+error=$tmpdir/predictError
 
 echo $1 > $input
-python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -m RandomForestRegressor -q NpQuestion5 -p $predictDir > $error 2>&1
+python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -p $predictDir -m RandomForestRegressor -q NpQFinalCost1 -r False -c Visbo > $error 2>&1
 
 if [ $? -ne 0 ]
 then
@@ -15,4 +16,4 @@ then
 fi
 echo "" >>$output
 cat <$output
-# rm -f "$tmp"*
+rm -rf $tmpdir

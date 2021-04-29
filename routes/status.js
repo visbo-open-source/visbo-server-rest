@@ -167,7 +167,7 @@ router.route('/setting')
 	*/
 // get status/setting
   .get(function(req, res) {
-    req.auditDescription = 'Status Setting Read (Public)';
+    req.auditDescription = 'Status Public Setting Read';
     req.auditTTLMode = 3;
     logger4js.info('Get Settings from ReST Server ');
     var vcsetting = [];

@@ -134,7 +134,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Versions (Read)';
+		req.auditDescription = 'Project Versions Read';
 		req.auditTTLMode = req.query.longList ? 0 : 1;
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
@@ -359,6 +359,7 @@ router.route('/')
 							newVPV._id = vpv._id;
 							newVPV.timestamp = vpv.timestamp;
 							newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
+							newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
 							newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
 							newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
 							newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
@@ -481,7 +482,7 @@ router.route('/')
 		var userId = req.decoded._id;
 		var useremail  = req.decoded.email;
 
-		req.auditDescription = 'Project Version (Create)';
+		req.auditDescription = 'Project Version Create';
 		var queryvpv = {};
 
 		var vpid = (req.body.vpid && validate.validateObjectId(req.body.vpid, false)) ? req.body.vpid : 0;
@@ -724,7 +725,7 @@ router.route('/:vpvid')
 		var useremail = req.decoded.email;
 		var sysAdmin = req.query.sysadmin ? true : false;
 
-		req.auditDescription = 'Project Version (Read)';
+		req.auditDescription = 'Project Version Read';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 0;	// Real Download of Project Version
 
@@ -814,14 +815,14 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version (Update)';
+		req.auditDescription = 'Project Version Update';
 
 		logger4js.info('PUT/Save Project Version for userid %s email %s and vpv %s perm %O', userId, useremail, req.params.vpvid, req.listVPPerm);
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
 		if (req.oneVPV.deletedAt) {
-			req.auditDescription = 'Project Version (Undelete)';
+			req.auditDescription = 'Project Version Undelete';
 			req.oneVPV.deletedAt = undefined;
 			vpUndelete = true;
 			logger4js.debug('Undelete VPV %s', req.oneVPV._id);
@@ -945,7 +946,7 @@ router.route('/:vpvid')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Version (Delete)';
+		req.auditDescription = 'Project Version Delete';
 
 		logger4js.info('DELETE Project Version for userid %s email %s and vc %s ', userId, useremail, req.params.vpvid);
 		logger4js.debug('DELETE Project Version DETAILS ', req.oneVPV._id, req.oneVP.name, req.oneVPV.variantName);
@@ -1021,7 +1022,7 @@ router.route('/:vpvid')
 			});
 		} else {
 			// Destroy the Deleted Version
-			req.auditDescription = 'Project Version (Destroy)';
+			req.auditDescription = 'Project Version Destroy';
 			logger4js.info('Destroy Project Version %s %s', req.params.vpvid, req.oneVPV._id);
 			var queryVPV = {};
 			queryVPV._id = req.oneVPV._id;
@@ -1114,7 +1115,7 @@ router.route('/:vpvid/copy')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 
-		req.auditDescription = 'Project Versions (Copy)';
+		req.auditDescription = 'Project Version Copy';
 
 		var vpid = req.oneVPV.vpid;
 		var variantName = req.oneVPV.variantName;
@@ -1325,7 +1326,7 @@ router.route('/:vpvid/capacity')
 		}
 		var roleID = req.query.roleID;
 
-		req.auditDescription = 'Project Version Capacity (Read)';
+		req.auditDescription = 'Project Version Capacity Read';
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
@@ -1419,7 +1420,7 @@ router.route('/:vpvid/keyMetrics')
 		var sysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
 
-		req.auditDescription = 'Project Version KeyMetrics (Read)';
+		req.auditDescription = 'Project Version KeyMetrics Read';
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
@@ -1496,7 +1497,7 @@ router.route('/:vpvid/cost')
 			perm.vc = perm.vc | permVC.vc;
 		}
 
-		req.auditDescription = 'Project Version Cost (Read)';
+		req.auditDescription = 'Project Version Cost Read';
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
@@ -1591,7 +1592,7 @@ router.route('/:vpvid/delivery')
 			getAll = true;
 		}
 
-		req.auditDescription = 'Project Version Deliveries (Read)';
+		req.auditDescription = 'Project Version Deliveries Read';
 		req.auditSysAdmin = sysAdmin;
 
 		var restriction;
@@ -1681,7 +1682,7 @@ router.route('/:vpvid/deadline')
 			getAll = true;
 		}
 
-		req.auditDescription = 'Project Version Deadlines (Read)';
+		req.auditDescription = 'Project Version Deadlines Read';
 		req.auditSysAdmin = sysAdmin;
 
 		var restriction;
