@@ -355,7 +355,7 @@ router.route('/user/logingoogle')
 	// MS TODO: setup as middleware function??
 	.get(passport.authenticate('google', { scope: ['profile','email'] }));
 	// .get(function(req, res) {
-	// 	req.auditDescription = 'Login (Google)';
+	// 	req.auditDescription = 'Google Login';
 	// 	req.auditTTLMode = 1;
 	//
 	// 	var result = passport.authenticate('google', { scope: ['profile', 'email'] });
