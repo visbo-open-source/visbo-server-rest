@@ -1057,6 +1057,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
+	logger4js.debug('Calculate Capacities %s', roleIdentifier);
+	var startTimer = new Date();
+
 
 	if (!startDate) {
 		startDate = new Date();
@@ -1082,9 +1085,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	timeZones.forEach( tz => {
 		let newOrga = convertOrganisation(tz.orga);
 		tz.orga = newOrga;
-	})
+	});
 
-	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
 	for ( var i = 0; vpvs && i < vpvs.length; i++) {
 		var vpv = vpvs[i];
@@ -1119,7 +1122,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 				capaVPV[item] = {};
 				capaVPV[item].currentDate = capaPFV[item].currentDate;
 				capaVPV[item].roleID = capaPFV[item].roleID;
-				capaVPV[item].roleName = capaPFV[item].roleName
+				capaVPV[item].roleName = capaPFV[item].roleName;
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
@@ -1165,6 +1168,10 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 			});
 		}
 	}
+	
+	var endTimer = new Date();
+	logger4js.trace('Calculate Capacities duration: ', endTimer.getTime() - startTimer.getTime());
+
 	return capa;
 }
 
@@ -1623,14 +1630,14 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, timeZone) {
 
 		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s organisation TS %s', roleID, vpv._id, vpv.startDate, vpv.endDate, tz_organisation.timestamp);
 		// old
-		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles);
+		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 		// ur:22.03.2021 new but wrong at the moment:
 		// var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, intStart, intEnd);
 
-		intStart = Math.max(vpvStartIndex, tz_startIndex);
-		intEnd = Math.min(vpvEndIndex, tz_endIndex);
+		intStart = Math.max(vpvStartIndex, tz_startIndex, intStart);
+		intEnd = Math.min(vpvEndIndex, tz_endIndex, intEnd);
 
-		for (var ci=intStart ; ci < intEnd + 1; ci++) {
+		for (var ci=intStart ; ci < intEnd+1; ci++) {
 			costValues[ci].actCost_PT += oneVPVcostValues[ci].actCost_PT || 0;
 			costValues[ci].plannedCost_PT += oneVPVcostValues[ci].plannedCost_PT || 0;
 			costValues[ci].actCost += oneVPVcostValues[ci].actCost || 0;
@@ -1641,7 +1648,7 @@ return costValues;
 }
 
 
-function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
+function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex, endIndex) {
 	var costValues = [];
 	var costElem = {};
 
@@ -1652,15 +1659,15 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 
 		logger4js.debug('Calculate Personal Cost of RoleID %s of Project Version %s start %s end %s actualDataUntil %s', roleID, vpv._id, vpv.startDate, vpv.endDate, vpv.actualDataUntil);
 
-		var startIndex = getColumnOfDate(vpv.startDate);
-		var endIndex = getColumnOfDate(vpv.endDate);
-		var dauer = endIndex - startIndex + 1;
+		var vpvStartIndex = getColumnOfDate(vpv.startDate);
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);
+		var dauer = vpvEndIndex - vpvStartIndex + 1;
 
 		var actualDataUntil = vpv.actualDataUntil;
 		var actualDataIndex = getColumnOfDate(actualDataUntil) + 1;
 
 		// for (var i=0 ; i < dauer; i++){
-		for (var i=startIndex ; i < dauer+startIndex; i++){
+		for (var i=startIndex ; ( i < endIndex + 1) && ( i < dauer+vpvStartIndex ); i++){
 			costElem = {};
 			costElem.actCost_PT = 0;
 			costElem.actCost = 0;
@@ -1740,7 +1747,7 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 					if (!phase) {
 						continue;
 					}
-					var phasenStart = startIndex + phase.relStart - 1;
+					var phasenStart = vpvStartIndex + phase.relStart - 1;
 
 					logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					for (var k = 0; phase.AllRoles && k < phase.AllRoles.length ; k++) {
@@ -1750,7 +1757,9 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles) {
 							if (role &&  role.Bedarf) {
 								var dimension = role.Bedarf.length;
 								// for (var l = phasenStart; l < phasenStart + dimension; l++) {
-								for (var l = phasenStart; (l < phasenStart + dimension) && (l < dauer + startIndex); l++) {
+								var maxStart = Math.max(phasenStart,startIndex);
+								var minEnd = Math.min(phasenStart + dimension, dauer + vpvStartIndex, endIndex + 1);
+								for (var l = (maxStart); l < minEnd ; l++) {
 									// result in euro or in personal day
 									// if costValues[l] is not set yet use 0
 									if (l < actualDataIndex) {
@@ -3589,8 +3598,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
-
-	if (!oldVPV || !newVPV) {
+	
+	if (!oldVPV || !newVPV || scaleFactor < 0) {
 		return undefined;
 	}
 
@@ -3606,19 +3615,25 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	//if (!oldVPV.actualDataUntil && !newVPV.actualDataUntil) { };
 	if (!oldVPV.actualDataUntil && newVPV.actualDataUntil) {
-		scaleFromDate = new Date(newVPV.actualDataUntil);
+				scaleFromDate = new Date(newVPV.actualDataUntil);
+				newVPV.actualDataUntil = undefined;
 	}
 
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
-		scaleFromDate = new Date (oldVPV.actualDataUntil);
+		scaleFromDate = new Date (oldVPV.actualDataUntil);	
+		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 		if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
 			scaleFromDate = new Date(oldVPV.actualDataUntil);
 		} else {
 			scaleFromDate = new Date(newVPV.actualDataUntil);
+			// in the next command scaleFromDate is moved one to the right , that is why it is here increased	
+			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);		
 		}
+		
+		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	let scaleFromDateColumn = -1;
 

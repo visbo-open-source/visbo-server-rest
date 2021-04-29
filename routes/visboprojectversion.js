@@ -1159,7 +1159,7 @@ router.route('/:vpvid/copy')
 		} else if (perm.vp & constPermVP.Modify) {
 			permCreateVersion = true;
 		} else if ((perm.vp & constPermVP.CreateVariant) && variantName != '' && variantName != 'pfv') {
-			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName)
+			var variant = req.oneVP && req.oneVP.variant.find(item => item.variantName == variantName);
 			if (variant && variant.email == useremail) {
 				permCreateVersion = true;
 			}
