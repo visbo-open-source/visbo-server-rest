@@ -114,7 +114,6 @@ function getVC(req, res, next, vcid) {
 	query._id = vcid;
 	query.deletedAt =  {$exists: checkDeleted};
 	var queryVC = VisboCenter.findOne(query);
-	queryVC.lean();
 	// queryVC.select('name users updatedAt createdAt');
 	queryVC.exec(function (err, oneVC) {
 		if (err) {
