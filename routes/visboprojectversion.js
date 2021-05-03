@@ -6,9 +6,9 @@ var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var systemVC = require('./../components/systemVC');
-var getSystemVCSetting = systemVC.getSystemVCSetting;
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
+var verifyVc = require('./../components/verifyVc');
 var verifyVpv = require('./../components/verifyVpv');
 var helperVpv = require('./../components/helperVpv');
 var visboBusiness = require('./../components/visboBusiness');
@@ -32,6 +32,8 @@ router.use('/', verifyVpv.getOneVP);
 router.use('/', verifyVpv.getVCOrgs);
 // register the base line middleware to get the related base line version
 router.use('/', verifyVpv.getVPVpfv);
+// register the base line middleware to get the VC Settings if necessary
+router.use('/', verifyVc.getVCSetting);
 
 // register the VPF middleware to generate the Project List that is assigned to the portfolio
 router.use('/', verifyVpv.getPortfolioVPs);
@@ -226,7 +228,7 @@ router.route('/')
 			}
 		}
 
-		logger4js.info('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
+		logger4js.debug('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
 
 		if (req.listPortfolioVP) {
 			// restrict query to VPs with Permission and VPs part of Portfolio
@@ -347,11 +349,17 @@ router.route('/')
 						listVPV[i].keyMetrics.costBaseLastTotal = undefined;
 					}
 				}
-				var settingPredict = getSystemVCSetting('Predict');
-				var predictBAC;
-				if (settingPredict && settingPredict.value) { predictBAC = settingPredict.value.BAC; }
-				if (keyMetrics == 2 && predictBAC) {
-					var cmd = './PredictBAC'
+				var enablePredict = systemVC.checkSystemEnabled('EnablePredict');
+				if (keyMetrics == 2 && enablePredict && req.listVCSetting) {
+					enablePredict = req.listVCSetting.find(item => item.name == 'EnablePredict');
+					if (enablePredict && enablePredict.value && enablePredict.value.sysVCEnabled) {
+						logger4js.debug('Prediction Setting enabled', enablePredict.value);
+					} else {
+						enablePredict = undefined;
+					}
+				}
+				if (enablePredict) {
+					var cmd = './PredictKM'
 					var reducedKM = [];
 					listVPV.forEach(vpv => {
 						if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
@@ -817,7 +825,7 @@ router.route('/:vpvid')
 
 		req.auditDescription = 'Project Version Update';
 
-		logger4js.info('PUT/Save Project Version for userid %s email %s and vpv %s perm %O', userId, useremail, req.params.vpvid, req.listVPPerm);
+		logger4js.info('PUT/Save Project Version for userid %s email %s and vpv %s', userId, useremail, req.params.vpvid);
 
 		var vpUndelete = false;
 		// undelete the VP in case of change

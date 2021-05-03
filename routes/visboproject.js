@@ -2786,7 +2786,7 @@ router.route('/:vpid/portfolio')
 				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}
-			logger4js.warn('Replaced in List (%d) correct VP Names %s', newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
+			logger4js.info('Replaced in List (%d) correct VP Names %s', newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
 			newPortfolio.sortType = req.body.sortType;
 			newPortfolio.sortList = req.body.sortList;
 			newPortfolio.updatedFrom = {};
@@ -3038,7 +3038,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					delete req.body.allItems[i]._id;
 					req.oneVPF.allItems.push(req.body.allItems[i]);
 				}
-				logger4js.warn('Replaced in List (%d) correct VP Names %s', req.oneVPF.allItems.length, JSON.stringify(req.oneVPF.allItems));
+				logger4js.info('Replaced in List (%d) correct VP Names %s', req.oneVPF.allItems.length, JSON.stringify(req.oneVPF.allItems));
 				if (req.body.sortType) req.oneVPF.sortType = req.body.sortType;
 				if (req.body.sortType) req.oneVPF.sortList = req.body.sortList;
 

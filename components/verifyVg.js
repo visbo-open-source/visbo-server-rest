@@ -54,7 +54,7 @@ function getGroupId(req, res, next, groupId) {
 function checkUserId(req, res, next, userid) {
 	logger4js.debug('Check UserID %s user %s for url %s ', userid, req.decoded.email, req.url);
 	if (!validate.validateObjectId(userid, false)) {
-		logger4js.warn('UserID Bad Parameter vpid %s', userid);
+		logger4js.warn('UserID Bad Parameter %s', userid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid VISBO User'

@@ -1026,6 +1026,32 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2021-05-02T00:00:00"
+if (currentVersion < dateBlock) {
+  // insert _VCConfig Setting for EnablePredict
+
+  var name = 'EnablePredict';
+  var type = '_VCConfig';
+
+  var settingList = db.vcsettings.find({vcid: systemvc._id, type: type, name: name}, {_id: 1}).toArray();
+  if (settingList.length == 0) {
+    var value = {systemLimit: true, systemEnabled: false}
+    db.vcsettings.insertOne({vcid: systemvc._id, name: name, type: type, value: value, createdAt: new Date(), updatedAt: new Date()})
+    // add the settings for all VCs even deleted
+    var vcList = db.visbocenters.find({system: {$exists: false}}, {_id:1}).toArray();
+    print("Update Predict Settings for VCs", vcList.length);
+    settingList = [];
+    vcList.forEach(item => settingList.push({vcid: item._id, name: name, type: type, value: value, createdAt: new Date(), updatedAt: new Date()}))
+    // print("Prepared VCs", settingList.length);
+    db.vcsettings.insertMany(settingList);
+    db.vcsettings.deleteOne({name: 'Predict', type: 'SysConfig', vcid: systemvc._id})
+  }
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
