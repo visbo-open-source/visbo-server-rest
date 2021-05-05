@@ -509,22 +509,22 @@ router.route('/')
 					if (err) {
 						errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined);
 					}
-				});
-				var settingList = systemVC.getSystemSettingList(undefined, '_VCConfig');
-				if (settingList.length > 0) {
-					logger4js.warn('VC Post Setting %d ', settingList.length);
-					settingList.forEach(item => item.vcid = req.oneVC._id);
-					VCSetting.insertMany(settingList, function (err, resultList) {
-			      if (err){
-							errorHandler(err, undefined, `DB: POST VC Create Setting ${req.body.name}`, undefined);
-			      }
-			    })
-				}
+					var settingList = systemVC.getSystemSettingList(undefined, '_VCConfig');
+					if (settingList.length > 0) {
+						logger4js.warn('VC Post Setting %d ', settingList.length);
+						settingList.forEach(item => item.vcid = req.oneVC._id);
+						VCSetting.insertMany(settingList, function (err, resultList) {
+				      if (err){
+								errorHandler(err, undefined, `DB: POST VC Create Setting ${req.body.name}`, undefined);
+				      }
+				    })
+					}
 
-				return res.status(200).send({
-					state: 'success',
-					message: 'Successfully created new VISBO Center',
-					vc: [ vc ]
+					return res.status(200).send({
+						state: 'success',
+						message: 'Successfully created new VISBO Center',
+						vc: [ vc ]
+					});
 				});
 			});
 		});
