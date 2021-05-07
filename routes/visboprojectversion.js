@@ -245,7 +245,7 @@ router.route('/')
 	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
 	* @apiParam {String} status Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
-	* @apiParam {String} keyMetrics if set deliver deliver the keyMetrics for the project version
+	* @apiParam {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
 	*
 	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the VP.View or VP.ViewRestricted Permission for the specified object.
 	* @apiError {number} 400 Bad Values in paramter in URL
@@ -487,69 +487,79 @@ router.route('/')
 						helperVpv.cleanupKM(listVPV[i].keyMetrics);
 					}
 				}
-				var enablePredict = keyMetrics == 2 ? systemVC.checkSystemEnabled('EnablePredict') : undefined;
-				if (enablePredict && req.listVCSetting) {
-					enablePredict = req.listVCSetting.find(item => item.name == 'EnablePredict');
-					if (enablePredict && enablePredict.value && enablePredict.value.sysVCEnabled) {
-						logger4js.debug('Prediction Setting enabled', enablePredict.value);
-					} else {
-						enablePredict = undefined;
-					}
-				}
-				if (enablePredict) {
-					var cmd = './PredictKM'
-					var reducedKM = [];
-					listVPV.forEach(vpv => {
-						if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
-							var newVPV = {};
-							newVPV._id = vpv._id;
-							newVPV.timestamp = vpv.timestamp;
-							newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
-							newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
-							newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
-							newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
-							newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
-							newVPV.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
-							reducedKM.push(newVPV);
+				if (keyMetrics == 2 && req.listVCSetting) {
+					// user want to recalculate keyMetrics and we have fetched the VCSettings (means user has focused on one VC)
+					var enablePredict = keyMetrics == 2 ? systemVC.checkSystemEnabled('EnablePredict') : undefined;
+					if (enablePredict && req.listVCSetting) {
+						enablePredict = req.listVCSetting.find(item => item.name == 'EnablePredict');
+						if (enablePredict && enablePredict.value && enablePredict.value.sysVCEnabled) {
+							logger4js.debug('Prediction Setting enabled', enablePredict.value);
+						} else {
+							enablePredict = undefined;
 						}
-					});
-					cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
-					logger4js.debug('Found %d Versions for Prediction', reducedKM.length, cmd.length);
-					if (reducedKM.length) {
-						exec(cmd, function callback(error, stdout, stderr) {
-							if (error) {
-								errorHandler(err, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
-								return;
-							}
-							var predictVPV = JSON.parse(stdout);
-							if (!predictVPV) {
-								errorHandler(err, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
-								return;
-							}
-							// update the original keyMetric with predicted BAC
-							predictVPV.forEach(vpv => {
-								if (vpv._id && vpv.costCurrentTotal) {
-									origVPV = listVPV.find(item => item._id.toString() == vpv._id.toString());
-									if (origVPV) {
-										origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
-									}
+						if (enablePredict) {
+							var cmd = './PredictKM'
+							var reducedKM = [];
+							listVPV.forEach(vpv => {
+								if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
+									var newVPV = {};
+									newVPV._id = vpv._id;
+									newVPV.timestamp = vpv.timestamp;
+									newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
+									newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
+									newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
+									newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
+									newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
+									newVPV.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
+									reducedKM.push(newVPV);
 								}
 							});
+							cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+							logger4js.debug('Found %d Versions for Prediction', reducedKM.length, cmd.length);
+							if (reducedKM.length) {
+								exec(cmd, function callback(error, stdout, stderr) {
+									if (error) {
+										errorHandler(err, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
+										return;
+									}
+									var predictVPV = JSON.parse(stdout);
+									if (!predictVPV) {
+										errorHandler(err, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
+										return;
+									}
+									// update the original keyMetric with predicted BAC
+									predictVPV.forEach(vpv => {
+										if (vpv._id && vpv.costCurrentTotal) {
+											origVPV = listVPV.find(item => item._id.toString() == vpv._id.toString());
+											if (origVPV) {
+												origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
+											}
+										}
+									});
+									return res.status(200).send({
+										state: 'success',
+										message: 'Returned VISBO Project Versions Prediction',
+										count: listVPV.length,
+										vpv: listVPV
+									});
+								});
+							} else {
+								logger4js.info('No Versions for Prediction');
+								return res.status(200).send({
+									state: 'success',
+									message: 'Returned VISBO Project Versions Prediction',
+									count: listVPV.length,
+									vpv: listVPV
+								});
+							}
+						} else {
 							return res.status(200).send({
 								state: 'success',
-								message: 'Returned VISBO Project Versions Prediction',
+								message: 'Returned VISBO Project Versions',
 								count: listVPV.length,
 								vpv: listVPV
 							});
-						});
-					} else {
-						logger4js.info('No Versions for Prediction');
-						return res.status(200).send({
-							state: 'success',
-							message: 'Returned VISBO Project Versions Prediction',
-							count: listVPV.length,
-							vpv: listVPV
-						});
+						}
 					}
 				} else {
 					return res.status(200).send({
