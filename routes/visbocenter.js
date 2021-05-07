@@ -59,7 +59,6 @@ router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
-router.use('/:vcid/capacity', verifyVpv.getVCPFVs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 
@@ -515,7 +514,7 @@ router.route('/:vcid')
 		if (isSysAdmin && req.query.deleted && req.oneVC.deletedAt) {
 			found = true;
 		} else if (!req.oneVC.deletedAt) {
-			logger4js.info('VC not Deleted: DeletedAt %s', req.oneVC.deletedAt);
+			logger4js.debug('VC not Deleted: DeletedAt %s', req.oneVC.deletedAt);
 			found= true;
 		}
 
@@ -1901,56 +1900,48 @@ router.route('/:vcid/group/:groupid')
 			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
-				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
+				query.timestamp = compare;
 				latestOnly = true;
 			}
 			query.vcid = req.oneVC._id;
 			query.type = 'organisation';
 
-			logger4js.info('Find VC Organisation with query %O', query);
-			var queryVCSetting = VCSetting.find(query);
+			logger4js.debug('Find VC Organisation with query %O', query);
+			var queryVCSetting = latestOnly ? VCSetting.findOne(query) : VCSetting.find(query);
 			// queryVCSetting.select('_id vcid name');
 			if (req.query.refNext) {
-				queryVCSetting.sort({timestamp: 1});
+				queryVCSetting.sort({vcid:1, timestamp: 1});
 			} else {
-				queryVCSetting.sort({timestamp: -1});
+				queryVCSetting.sort({vcid:1, timestamp: -1});
 			}
 			if (req.query.shortList) {
 				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-			} else {
-				if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
-					queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-				}
+			} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
 			}
 			queryVCSetting.lean();
-			queryVCSetting.exec(function (err, listVCSetting) {
-				if (err) {
-					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
-					return;
-				}
-				if (listVCSetting.length > 1 && latestOnly){
-					var listVCSettingfiltered = [];
-					listVCSettingfiltered.push(listVCSetting[0]);
-					for (let i = 1; i < listVCSetting.length; i++){
-						//compare current item with previous and ignore if it is the same type, name, userId
-						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
-						if (listVCSetting[i].type != listVCSetting[i-1].type
-						// || listVCSetting[i].name != listVCSetting[i-1].name
-						|| JSON.stringify(listVCSetting[i].userId) != JSON.stringify(listVCSetting[i-1].userId)) {
-							listVCSettingfiltered.push(listVCSetting[i]);
-							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
-						}
+			if (latestOnly) {
+				queryVCSetting.exec(function (err, VCSetting) {
+					if (err) {
+						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+						return;
 					}
-					logger4js.debug('Found %d Project Versions after Filtering', listVCSettingfiltered.length);
-
-					req.auditInfo = listVCSettingfiltered.length;
+					logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
+					req.auditInfo = VCSetting ? 1 : 0;
 					return res.status(200).send({
 						state: 'success',
 						message: 'Returned VISBO Center Settings',
-						count: listVCSettingfiltered.length,
-						vcsetting: listVCSettingfiltered
+						count: 1,
+						vcsetting: [VCSetting]
 					});
-				} else {
+				});
+			} else {
+				queryVCSetting.exec(function (err, listVCSetting) {
+					if (err) {
+						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+						return;
+					}
+					logger4js.warn('Found %d VC Organisation', listVCSetting.length);
 					req.auditInfo = listVCSetting.length;
 					return res.status(200).send({
 						state: 'success',
@@ -1958,8 +1949,8 @@ router.route('/:vcid/group/:groupid')
 						count: listVCSetting.length,
 						vcsetting: listVCSetting
 					});
-				}
-			});
+				});
+			}
 		});
 
 	router.route('/:vcid/setting')
@@ -2048,7 +2039,7 @@ router.route('/:vcid/group/:groupid')
 				else sortColumns = sortColumns.concat(' -timestamp');
 			}
 
-			logger4js.info('Find VC Settings with query %O', query);
+			logger4js.debug('Find VC Settings with query %O', query);
 			var queryVCSetting = VCSetting.find(query);
 			if (req.query.shortList == true) {
 				queryVCSetting.select('-value');
@@ -2229,7 +2220,7 @@ router.route('/:vcid/group/:groupid')
 				newTimeStamp.setDate(1);
 				newTimeStamp.setHours(0,0,0,0);
 				orga.validFrom = newTimeStamp;
-				logger4js.info('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
+				logger4js.debug('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
 				if (!visboBusiness.verifyOrganisation(orga, oldOrga)) {
 					return res.status(400).send({
 						state: 'failure',
@@ -2341,7 +2332,7 @@ router.route('/:vcid/group/:groupid')
 						message: 'Not allowed to delete this setting type'
 					});
 				}
-				logger4js.info('Found the Setting for VC');
+				logger4js.debug('Found the Setting for VC');
 				oneVCSetting.remove(function(err) {
 					if (err) {
 						errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
@@ -2433,7 +2424,7 @@ router.route('/:vcid/group/:groupid')
 			if (req.auditInfo && req.auditInfo != oneVCSetting.name) {
 				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name);
 			}
-			logger4js.info('Found the Setting for VC Updated');
+			logger4js.debug('Found the Setting for VC Updated');
 
 			if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
 				settingArea = 'private';
@@ -2533,7 +2524,7 @@ router.route('/:vcid/group/:groupid')
 					}
 					if (isSysConfig) {
 						if (resultVCSetting.name == 'DEBUG') {
-							logger4js.info('Update System Log Setting');
+							logger4js.debug('Update System Log Setting');
 							logging.setLogLevelConfig(resultVCSetting.value);
 						}
 						reloadSystemSetting();
@@ -2697,7 +2688,7 @@ router.route('/:vcid/group/:groupid')
 			var filteredCapacity = [];
 			var startDate = validate.validateDate(req.query.startDate, false, true);
 			if (!startDate) {
-				startDate = new Date(-8640000000000000); 
+				startDate = new Date(-8640000000000000);
 			}
 			var endDate = validate.validateDate(req.query.endDate, false, true);
 			if (!endDate) {

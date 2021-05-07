@@ -31,6 +31,7 @@ var VisboAudit = mongoose.model('VisboAudit');
 var Const = require('../models/constants');
 var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
+var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
 
 var mail = require('./../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -42,6 +43,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var validateName = validate.validateName;
+var validateNumber = validate.validateNumber;
 
 var constVPTypes = Object.freeze({'project':0, 'portfolio':1, 'projecttemplate':2});
 
@@ -49,6 +51,86 @@ var constVPTypes = Object.freeze({'project':0, 'portfolio':1, 'projecttemplate':
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
 	return currentUser.userId.toString() == this.toString();
+}
+
+function convertCustomFieldString(customFieldString) {
+	var result;
+	if (customFieldString) {
+		customFieldString.forEach(item => {
+			if (!validateName(item.name, false)
+			|| !validateName(item.value, true)) {
+				return result;
+			}
+			if (constSystemCustomName.find(element => element == item.name)) {
+				item.type = 'System';
+			} else {
+				item.type = 'VP';
+			}
+		});
+		result = customFieldString.filter(item => item.value);
+	}
+	return result;
+}
+
+function detectChangeCustomFieldDouble(original, update) {
+	var result = [];
+	original = original || [];
+	update = update || [];
+	original.forEach(item => {
+			var updateItem = update.find(element => element.name == item.name);
+			if (!updateItem) {
+				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value.toString()});
+			} else if (item.value != updateItem.value) {
+				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: (updateItem.value || '').toString()});
+			}
+	});
+	update.forEach(item => {
+			var originalItem = original.find(element => element.name == item.name);
+			if (!originalItem) {
+				result.push({action: 'Project Property Add', name: item.name, newValue: (item.value || '').toString()});
+			}
+	});
+	return result;
+}
+
+function detectChangeCustomFieldString(original, update) {
+	var result = [];
+	original = original || [];
+	update = update || [];
+	original.forEach(item => {
+			var updateItem = update.find(element => element.name == item.name);
+			if (!updateItem) {
+				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value});
+			} else if (item.value != updateItem.value) {
+				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value, newValue: updateItem.value});
+			}
+	});
+	update.forEach(item => {
+			var originalItem = original.find(element => element.name == item.name);
+			if (!originalItem) {
+				result.push({action: 'Project Property Add', name: item.name, newValue: item.value});
+			}
+	});
+	return result;
+}
+
+function convertCustomFieldDouble(customFieldDouble) {
+	var result;
+	if (customFieldDouble) {
+		customFieldDouble.forEach(item => {
+			if (!validateName(item.name, false)
+			|| !validateNumber(item.value, true)) {
+				return result;
+			}
+			if (constSystemCustomName.find(element => element == item.name)) {
+				item.type = 'System';
+			} else {
+				item.type = 'VP';
+			}
+		});
+		result = customFieldDouble.filter(item => item.value != undefined);
+	}
+	return result;
 }
 
 // find a project in a simple array of project ids
@@ -483,6 +565,7 @@ router.route('/')
 		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
+		var customFieldString, customFieldDouble;
 		var kundennummer;
 		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace('Post a new Project body %O', req.body);
@@ -495,6 +578,26 @@ router.route('/')
 				state: 'failure',
 				message: 'Project Body contains invalid strings'
 			});
+		}
+		if (req.body.customFieldString) {
+			customFieldString =  convertCustomFieldString(req.body.customFieldString);
+			if (!customFieldString) {
+				logger4js.info('POST Project contains illegal strings in customFieldString %O', req.body.customFieldString);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid custom strings'
+				});
+			}
+		}
+		if (req.body.customFieldDouble) {
+			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
+			if (!customFieldDouble) {
+				logger4js.info('POST Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid custom doubles'
+				});
+			}
 		}
 		if (req.body.kundennummer) req.body.kundennummer = req.body.kundennummer.trim();
 
@@ -543,6 +646,12 @@ router.route('/')
 				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
+				if (customFieldString) {
+					newVP.customFieldString = customFieldString;
+				}
+				if (customFieldDouble) {
+					newVP.customFieldDouble = customFieldDouble;
+				}
 				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
 					newVP.vpType = 0;
 				} else {
@@ -558,7 +667,7 @@ router.route('/')
 						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
 					}
 					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
-						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})					
+						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})
 					}
 				}
 
@@ -808,6 +917,8 @@ router.route('/:vpid')
 		var name = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
+		var customFieldString, customFieldDouble;
+
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
 		|| !validateName(kundennummer, true)) {
@@ -816,6 +927,26 @@ router.route('/:vpid')
 				state: 'failure',
 				message: 'Project Body contains invalid strings'
 			});
+		}
+		if (req.body.customFieldString) {
+			customFieldString =  convertCustomFieldString(req.body.customFieldString);
+			if (!customFieldString) {
+				logger4js.info('PUT Project contains illegal strings in customFieldString %O', req.body.customFieldString);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid values in customFieldString'
+				});
+			}
+		}
+		if (req.body.customFieldDouble) {
+			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
+			if (!customFieldDouble) {
+				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid values in customFieldDouble'
+				});
+			}
 		}
 
 		var vpUndelete = false;
@@ -852,6 +983,15 @@ router.route('/:vpid')
 		}
 		if (req.body.kundennummer != undefined) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
+		}
+		req.auditProperty = [];
+		if (customFieldString) {
+			req.auditProperty = detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString);
+			req.oneVP.customFieldString =  customFieldString.filter(item => item.value != undefined);
+		}
+		if (customFieldDouble) {
+			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDouble(req.oneVP.customFieldDouble, customFieldDouble));
+			req.oneVP.customFieldDouble =  customFieldDouble.filter(item => item.value != undefined);
 		}
 		// check duplicate Name
 		var query = {};
@@ -2814,7 +2954,7 @@ router.route('/:vpid/portfolio/:vpfid')
 
 		req.auditDescription = 'Portfolio List Update';
 
-		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s perm %O', userId, useremail, req.params.vpfid, req.listVPPerm);
+		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s', userId, useremail, req.params.vpfid);
 		// undelete the VPF in case of PUT
 		if (req.oneVPF.deletedAt) {
 			req.auditDescription = 'Portfolio List Undelete';
