@@ -296,6 +296,27 @@ function checkVCOrgs(req, res, next) {
 	}
 }
 
+function isVCEnabled(req, name, level) {
+	var setting;
+	var result = false;
+	if (req.listVCSetting) {
+		setting = req.listVCSetting.find(item => item.name == name)
+		if (setting && setting.value) {
+			if (level == 0) {
+				result = setting.value.systemEnabled;
+			} else if (level == 1) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+			} else if (level == 2) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+				if (!setting.value.systemLimit && !setting.value.sysVCLimit && setting.value.VCEnabled != undefined) {
+					result = setting.value.VCEnabled != false;
+				}
+			}
+		}
+	}
+	return result;
+}
+
 module.exports = {
 	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
@@ -304,5 +325,6 @@ module.exports = {
 	getSystemGroups: getSystemGroups,
 	checkVCOrgs: checkVCOrgs,
 	checkSettingId: checkSettingId,
-	getVCSetting: getVCSetting
+	getVCSetting: getVCSetting,
+	isVCEnabled: isVCEnabled
 };
