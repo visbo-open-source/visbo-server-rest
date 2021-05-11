@@ -27,20 +27,21 @@ var logger4js = log4js.getLogger(logModule);
 router.use('/', auth.verifyUser);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
+// register the VPV middleware to check that the user has access to the VPV
+router.param('vpvid', verifyVpv.getVPV);
+router.use('/:vpvid', verifyVpv.getAllVPVsShort);
+// register the middleware to collect get the related VP if required
 router.use('/', verifyVpv.getOneVP);
 // register the organisation middleware to get the related organisation
 router.use('/', verifyVpv.getVCOrgs);
 // register the base line middleware to get the related base line version
 router.use('/', verifyVpv.getVPVpfv);
-// register the base line middleware to get the VC Settings if necessary
-router.use('/', verifyVc.getVCSetting);
 
 // register the VPF middleware to generate the Project List that is assigned to the portfolio
 router.use('/', verifyVpv.getPortfolioVPs);
+// register the base line middleware to get the VC Settings if necessary
+router.use('/', verifyVc.getVCSetting);
 
-// register the VPV middleware to check that the user has access to the VPV
-router.param('vpvid', verifyVpv.getVPV);
-router.use('/:vpvid', verifyVpv.getAllVPVsShort);
 // register the get VPF middleware for calls for a specific VPV, like /cost, /capacity, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
@@ -88,6 +89,9 @@ function saveRecalcKM(req, res, message) {
 				req.oneVPV.keyMetrics.baselineVPVID = req.visboPFV._id;
 			}
 		}
+	} else if (req.oneVPV.variantName != 'pfv') {
+		// restore a vpv and no visboPFV exists, delete keyMetrics as there is no related baseline
+		req.oneVPV.keyMetrics = undefined;
 	}
 	logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', req.oneVPV.vpid, req.oneVPV.name, req.oneVPV.timestamp);
 
@@ -226,8 +230,8 @@ function getRecalcKM(req, res, message) {
 			}
 		});
 		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
-		logger4js.debug('Found %d Versions for Prediction', reducedKM.length, cmd.length);
 		if (reducedKM.length) {
+			logger4js.warn('Recalc %d Versions for Prediction', reducedKM.length, cmd.length);
 			exec(cmd, function callback(error, stdout, stderr) {
 				if (error) {
 					errorHandler(err, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');

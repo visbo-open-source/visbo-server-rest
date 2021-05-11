@@ -182,7 +182,7 @@ function getVCSetting(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 	var checkSetting = false;
-	if (req.method == 'GET' && req.url.indexOf('&keyMetrics=2') >= 0) {
+	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
 		checkSetting = true;
 	} else if (req.method == 'POST') {
 		checkSetting = true;
@@ -192,6 +192,8 @@ function getVCSetting(req, res, next) {
 		vcid = req.oneVP.vcid;
 	} else if (req.oneVC)  {
 		vcid = req.oneVC._id;
+	} else if (req.query.vcid) {
+		vcid = req.query.vcid;
 	}
 	if (checkSetting && vcid) {
 		logger4js.trace('GET VC Settings for VC %s and URL', vcid, req.url);

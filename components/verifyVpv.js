@@ -31,6 +31,9 @@ function getOneVP(req, res, next) {
 	} else if (req.method == 'POST' && baseUrl == '/') {
 		skip = false
 		vpid = req.body.vpid;
+	} else if (req.method == 'POST' && req.oneVPV) {
+		skip = false
+		vpid = req.oneVPV.vpid;
 	}
 	if (skip) {
 		return next();

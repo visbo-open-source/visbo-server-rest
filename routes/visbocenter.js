@@ -2040,7 +2040,7 @@ router.route('/:vcid/group/:groupid')
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
 		* @apiParam {String} name Deliver only settings with the specified name
-		* @apiParam {String} type Deliver only settings of the the specified type
+		* @apiParam {String} type Deliver only settings of the the specified types (comma separated list)
 		* @apiParam {String} userId Deliver only settings that has set the specified userId
 		* @apiParam {String} groupBy Groups the Settings regarding refDate by Type and userId and returns one per group
 		* @apiParam {String} shortList Delivers only the Settings without the value structure (to be able to check what is available)
@@ -2093,7 +2093,13 @@ router.route('/:vcid/group/:groupid')
 
 			query.vcid = req.oneVC._id;
 			if (req.query.name) query.name = req.query.name;
-			if (req.query.type) query.type = req.query.type;
+			if (req.query.type) {
+				if (req.query.type.indexOf(',') == -1) {
+					query.type = req.query.type;
+				} else {
+					query.type = {$in: req.query.type.split(',')};
+				}
+			}
 			if (req.query.userId && validate.validateObjectId(req.query.userId, true)) query.userId = req.query.userId;
 			if (req.query.groupBy == 'type') groupBy = 'type';
 
@@ -2559,7 +2565,7 @@ router.route('/:vcid/group/:groupid')
 						// populate to all VCs
 						populateVCConfig(req.oneVCSetting, 'sysVC');
 					}
-				} else if (req.query.sysadmin) {
+				} else if (req.query.sysadmin && reqValue) {
 					// Change it as sysadmin for a specific VC
 					logger4js.debug('PUT update _VCConfig as sysadmin for VC', req.oneVCSetting.vcid, req.oneVCSetting.name, req.oneVCSetting.value);
 					var changedValue = false;
@@ -2589,7 +2595,7 @@ router.route('/:vcid/group/:groupid')
 					if (changedValue || changedLimit) {
 						req.oneVCSetting.value = newValue;
 					}
-				} else {
+				} else if (reqValue) {
 					// Change it as VC Admin for a specific VC
 					logger4js.debug('PUT update _VCConfig as VC admin for VC', req.oneVCSetting.vcid, req.oneVCSetting.name, req.oneVCSetting.value);
 					if (reqValue.VCEnabled != undefined) {
