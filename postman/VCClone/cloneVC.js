@@ -9,7 +9,7 @@ print('STDERR: Export VC: ', VCName);
 var VCID='';
 
 function annonymise(value) {
-  strAnonymise = /[a-zA-Z]/g;
+  strAnonymise = /[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g;
   if (!value || value == '') {
     return value;
   } else if (value) {
