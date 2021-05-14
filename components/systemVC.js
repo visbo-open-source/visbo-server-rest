@@ -106,7 +106,7 @@ var initSystemSettings = function(launchServer) {
 	}
 	var query = {};
 	query.vcid = vcSystem._id;
-	query.type = 'SysConfig';
+	query.type = {$in: ['SysConfig', '_VCConfig']};
 	var queryVCSetting = VCSetting.find(query);
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
@@ -246,6 +246,34 @@ var getSystemVCSetting = function (name) {
 	return undefined;
 };
 
+var getSystemSettingList = function (name, type) {
+	logger4js.trace('Get System VISBO Center Enable Setting: %s', name);
+	if (!vcSystemSetting) return undefined;
+
+	var list = vcSystemSetting.filter(item => (name && item.name == name) || (type && item.type == type));
+	var resultList = [];
+	list.forEach(item => resultList.push({
+		name: item.name,
+		vcid: item.vcid,
+		value: item.value,
+		type: item.type
+	}));
+	return resultList;
+}
+
+var checkSystemEnabled = function(name) {
+	var vcSetting = getSystemVCSetting(name);
+	if (!vcSetting || !vcSetting.value) {
+		logger4js.info('Check System VISBO Center Setting: %s not found', name);
+		return undefined;
+	} else if (vcSetting.value.systemLimit == true && vcSetting.value.systemEnabled != true) {
+		logger4js.info('Check System VISBO Center Setting: %s Limit Off', name);
+		return undefined;
+	} else {
+		return vcSetting;
+	}
+}
+
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');
 	var result = vcSetting ? vcSetting.value && vcSetting.value.UIUrl : false;
@@ -274,5 +302,7 @@ module.exports = {
 	getSystemUrl: getSystemUrl,
 	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
-	reloadSystemSetting: reloadSystemSetting
+	reloadSystemSetting: reloadSystemSetting,
+	checkSystemEnabled: checkSystemEnabled,
+	getSystemSettingList: getSystemSettingList
 };

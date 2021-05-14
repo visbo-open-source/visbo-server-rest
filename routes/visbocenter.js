@@ -44,6 +44,8 @@ var logModule = 'VC';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+var restrictedSettings = ['SysValue', 'SysConfig', 'Task', '_VCConfig'];
+
 // Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
 // Register the VC middleware to check that the user has access to the VC
@@ -54,6 +56,8 @@ router.param('vcid', verifyVc.getVC);
 router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
+// Register the settingID middleware to check the settingID param
+router.param('settingid', verifyVc.checkSettingId);
 // get details for capacity calculation
 router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
@@ -255,6 +259,57 @@ var unDeleteGroup = function(vcid){
 	});
 };
 
+// populate _VCConfig Setting from System to all VCs
+var populateVCConfig = function(vcSetting, type) {
+	if (!vcSetting || vcSetting.type != '_VCConfig' || !vcSetting.value || vcSetting.value.systemLimit == undefined) return;
+
+	if (type == 'System') {
+		// update systemLimit & systemEnabled to all VCs
+		var updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
+		var updateOption = {upsert: false};
+
+		var updateUpdate;
+		if (vcSetting.value.systemLimit == true) {
+			// set Limit ON populate the sysVCEnabled Value also
+			updateUpdate = {$set: {'value.systemLimit': vcSetting.value.systemLimit, 'value.systemEnabled': vcSetting.value.systemEnabled}};
+		} else {
+			// set Limit OFF don't populate the systemEnabled Value
+			updateUpdate = {$set: {'value.systemLimit': vcSetting.value.systemLimit}};
+		}
+
+		logger4js.debug('Populate Setting %s new Limit %s', vcSetting.name, vcSetting.value.systemLimit);
+		VCSetting.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+			if (err){
+				logger4js.warn('DB: Problem populating VC setting System', err);
+			} else {
+				logger4js.debug('Populate VC Setting %s changed %d %d', vcSetting.name, result.n, result.nModified);
+			}
+		});
+	} else if (type == 'sysVC') {
+		// update systemLimit & systemEnabled to all VCs
+		var updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
+		var updateOption = {upsert: false};
+
+		var updateUpdate;
+		if (vcSetting.value.sysVCLimit == true) {
+			// set Limit ON populate the sysVCEnabled Value also
+			updateUpdate = {$set: {'value.sysVCLimit': vcSetting.value.sysVCLimit, 'value.sysVCEnabled': vcSetting.value.sysVCEnabled}};
+		} else {
+			// set Limit OFF don't populate the sysVCEnabled Value
+			updateUpdate = {$set: {'value.sysVCLimit': vcSetting.value.sysVCLimit}};
+		}
+
+		logger4js.warn('Populate Setting %s sysVC new Limit %s', vcSetting.name, vcSetting.value.sysVCLimit);
+		VCSetting.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+			if (err){
+				logger4js.warn('DB: Problem populating VC setting SysVC', err);
+			} else {
+				logger4js.warn('Populate VC Setting %s SysVC changed %d %d', vcSetting.name, result.n, result.nModified);
+			}
+		});
+	}
+};
+
 /////////////////
 // VISBO Center API
 // /vc
@@ -449,17 +504,27 @@ router.route('/')
 				newVG.users = [];
 				newVG.users.push({email: useremail, userId: userId});
 
-				logger4js.trace('VC Post Create Admin Group for vc %s group %O ', newVC._id, newVG);
+				logger4js.trace('VC Post Create Admin Group (async) for vc %s group %O ', newVC._id, newVG);
 				newVG.save(function(err) {
 					if (err) {
 						errorHandler(err, undefined, `DB: POST VC  ${req.body.name} Create Admin Group`, undefined);
 					}
-				});
+					var settingList = systemVC.getSystemSettingList(undefined, '_VCConfig');
+					if (settingList.length > 0) {
+						logger4js.warn('VC Post Setting %d ', settingList.length);
+						settingList.forEach(item => item.vcid = req.oneVC._id);
+						VCSetting.insertMany(settingList, function (err, resultList) {
+				      if (err){
+								errorHandler(err, undefined, `DB: POST VC Create Setting ${req.body.name}`, undefined);
+				      }
+				    })
+					}
 
-				return res.status(200).send({
-					state: 'success',
-					message: 'Successfully created new VISBO Center',
-					vc: [ vc ]
+					return res.status(200).send({
+						state: 'success',
+						message: 'Successfully created new VISBO Center',
+						vc: [ vc ]
+					});
 				});
 			});
 		});
@@ -1941,7 +2006,7 @@ router.route('/:vcid/group/:groupid')
 						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 						return;
 					}
-					logger4js.warn('Found %d VC Organisation', listVCSetting.length);
+					logger4js.debug('Found %d VC Organisation', listVCSetting.length);
 					req.auditInfo = listVCSetting.length;
 					return res.status(200).send({
 						state: 'success',
@@ -1975,7 +2040,7 @@ router.route('/:vcid/group/:groupid')
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
 		* @apiParam {String} name Deliver only settings with the specified name
-		* @apiParam {String} type Deliver only settings of the the specified type
+		* @apiParam {String} type Deliver only settings of the the specified types (comma separated list)
 		* @apiParam {String} userId Deliver only settings that has set the specified userId
 		* @apiParam {String} groupBy Groups the Settings regarding refDate by Type and userId and returns one per group
 		* @apiParam {String} shortList Delivers only the Settings without the value structure (to be able to check what is available)
@@ -2028,7 +2093,13 @@ router.route('/:vcid/group/:groupid')
 
 			query.vcid = req.oneVC._id;
 			if (req.query.name) query.name = req.query.name;
-			if (req.query.type) query.type = req.query.type;
+			if (req.query.type) {
+				if (req.query.type.indexOf(',') == -1) {
+					query.type = req.query.type;
+				} else {
+					query.type = {$in: req.query.type.split(',')};
+				}
+			}
 			if (req.query.userId && validate.validateObjectId(req.query.userId, true)) query.userId = req.query.userId;
 			if (req.query.groupBy == 'type') groupBy = 'type';
 
@@ -2178,8 +2249,7 @@ router.route('/:vcid/group/:groupid')
 			vcSetting.type = 'Custom';
 			if (req.body.userId) vcSetting.userId = req.body.userId;
 			if (req.body.type) {
-				if (req.params.vcid.toString() != getSystemVC()._id.toString()
-				&& (req.body.type == 'SysValue' || req.body.type == 'SysConfig' && req.body.type == 'Task')) {
+				if (restrictedSettings.findIndex(item => item == req.body.type) >= 0) {
 					// not allowed to Create / Delete System Config Settings
 					return res.status(409).send({
 						state: 'failure',
@@ -2281,67 +2351,45 @@ router.route('/:vcid/group/:groupid')
 			var settingArea = 'public';
 
 			req.auditDescription = 'VISBO Center Setting Delete';
-			req.auditInfo = req.params.settingid;
+			req.auditInfo = req.oneVCSetting.name;
 
 			logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
-			var query = {};
-			query._id = req.params.settingid;
-			query.vcid = req.params.vcid;
-			var queryVCSetting = VCSetting.findOne(query);
-			// queryVCSetting.select('_id vcid name');
-			queryVCSetting.exec(function (err, oneVCSetting) {
+			if (privateSettings.findIndex(type => type == req.oneVCSetting.type) >= 0) {
+				settingArea = 'private';
+			} else if (req.oneVCSetting.userId && req.oneVCSetting.userId.toString() == userId) {
+				settingArea = 'personal';
+			}
+			var reqPermVC = constPermVC.View;
+			if (settingArea == 'private') {
+				reqPermVC = constPermVC.ManagePerm;
+			} else if (settingArea == 'public') {
+				reqPermVC = constPermVC.Modify;
+			}
+			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No Permission to delete VISBO Center Setting',
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
+			}
+
+			if (restrictedSettings.findIndex(item => item == req.oneVCSetting.type) >= 0) {
+				// not allowed to Create / Delete System Config Settings
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Not allowed to delete this setting type'
+				});
+			}
+			req.oneVCSetting.remove(function(err) {
 				if (err) {
-					errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Find`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
+					errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
 					return;
 				}
-				if (!oneVCSetting) {
-					return res.status(409).send({
-						state: 'failure',
-						message: 'VISBO Center Setting not found',
-						error: err
-					});
-				}
-				req.auditInfo = oneVCSetting.name;
-				if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
-					settingArea = 'private';
-				} else if (oneVCSetting.userId && oneVCSetting.userId.toString() == userId) {
-					settingArea = 'personal';
-				}
-				var reqPermVC = constPermVC.View;
-				if (settingArea == 'private') {
-					reqPermVC = constPermVC.ManagePerm;
-				} else if (settingArea == 'public') {
-					reqPermVC = constPermVC.Modify;
-				}
-				if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
-				|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-					return res.status(403).send({
-						state: 'failure',
-						message: 'No Permission to delete VISBO Center Setting',
-						perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-					});
-				}
-
-				req.oneVCSetting = oneVCSetting;
-				if (oneVCSetting._id.toString() != getSystemVC()._id.toString()
-				&& (oneVCSetting.type == 'SysValue' || oneVCSetting.type == 'SysConfig' && oneVCSetting.type == 'Task')) {
-					// not allowed to Create / Delete System Config Settings
-					return res.status(409).send({
-						state: 'failure',
-						message: 'Not allowed to delete this setting type'
-					});
-				}
-				logger4js.debug('Found the Setting for VC');
-				oneVCSetting.remove(function(err) {
-					if (err) {
-						errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
-						return;
-					}
-					return res.status(200).send({
-						state: 'success',
-						message: 'Deleted VISBO Center Setting'
-					});
+				return res.status(200).send({
+					state: 'success',
+					message: 'Deleted VISBO Center Setting'
 				});
 			});
 		})
@@ -2404,180 +2452,264 @@ router.route('/:vcid/group/:groupid')
 			});
 		}
 
-		var query = {};
-		query._id =  req.params.settingid;
-		query.vcid = req.params.vcid;
-		var queryVCSetting = VCSetting.findOne(query);
-		// queryVCSetting.select('_id vcid name');
-		queryVCSetting.exec(function (err, oneVCSetting) {
-			if (err) {
-				errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Find`, `Error updating VISBO Center Setting ${req.params.settingid}`);
-				return;
-			}
-			if (!oneVCSetting) {
-				return res.status(409).send({
-					state: 'failure',
-					message: 'VISBO Center Setting not found',
-					error: err
-				});
-			}
-			if (req.auditInfo && req.auditInfo != oneVCSetting.name) {
-				req.auditInfo = oneVCSetting.name.concat(' / ', req.body.name);
-			}
-			logger4js.debug('Found the Setting for VC Updated');
+		if (req.auditInfo && req.auditInfo != req.oneVCSetting.name) {
+			req.auditInfo = req.oneVCSetting.name.concat(' / ', req.body.name);
+		}
+		logger4js.debug('Found the Setting for VC Updated');
 
-			if (privateSettings.findIndex(type => type == oneVCSetting.type) >= 0) {
-				settingArea = 'private';
-			} else if (oneVCSetting.userId && oneVCSetting.userId.toString() == userId) {
-				settingArea = 'personal';
-			}
-			var reqPermVC = constPermVC.View;
-			if (settingArea == 'private') {
-				reqPermVC = constPermVC.ManagePerm;
-			} else if (settingArea == 'public') {
-				reqPermVC = constPermVC.Modify;
-			}
+		if (privateSettings.findIndex(type => type == req.oneVCSetting.type) >= 0) {
+			settingArea = 'private';
+		} else if (req.oneVCSetting.userId && req.oneVCSetting.userId.toString() == userId) {
+			settingArea = 'personal';
+		}
+		var reqPermVC = constPermVC.View;
+		if (settingArea == 'private') {
+			reqPermVC = constPermVC.ManagePerm;
+		} else if (settingArea == 'public') {
+			reqPermVC = constPermVC.Modify;
+		}
 
-			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
-			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Permission to Change VISBO Center Setting',
-					perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-				});
-			}
-			if (req.body.updatedAt && Date.parse(req.body.updatedAt) && oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
-				logger4js.info('VC Setting: Conflict with updatedAt %s %s', oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
-				return res.status(409).send({
-					state: 'failure',
-					message: 'VISBO Center Setting already updated inbetween',
-					vcsetting: [ oneVCSetting ],
-					perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-				});
-			}
-			var isSystemVC = getSystemVC()._id.toString() == oneVCSetting.vcid.toString();
-			var isTask = isSystemVC && oneVCSetting.type == 'Task' ? true: false;
-			var isSysConfig = isSystemVC && oneVCSetting.type == 'SysConfig' ? true: false;
+		if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+		|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to Change VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+			});
+		}
+		if (req.body.updatedAt && Date.parse(req.body.updatedAt) && req.oneVCSetting.updatedAt.getTime() != (new Date(req.body.updatedAt)).getTime()) {
+			logger4js.info('VC Setting: Conflict with updatedAt %s %s', req.oneVCSetting.updatedAt.getTime(), (new Date(req.body.updatedAt)).getTime());
+			return res.status(409).send({
+				state: 'failure',
+				message: 'VISBO Center Setting already updated inbetween',
+				vcsetting: [ req.oneVCSetting ],
+				perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+			});
+		}
+		var isSystemVC = getSystemVC()._id.toString() == req.oneVCSetting.vcid.toString();
+		var isTask = isSystemVC && req.oneVCSetting.type == 'Task' ? true: false;
+		var isSysConfig = isSystemVC && req.oneVCSetting.type == 'SysConfig' ? true: false;
+		var isVCConfig = req.oneVCSetting.type == '_VCConfig' ? true: false
 
-			if (!isTask) {
-				if (isSysConfig) {
-					// only update Value do not change name, type, timestamp and userId
-					logger4js.info('Update System Setting for VC %O', req.body.value);
-					var password = '';
-					if (oneVCSetting.name == 'SMTP') {
-						if (oneVCSetting.value && oneVCSetting.value.auth && oneVCSetting.value.auth.pass)
-							settingChangeSMTP = true;
-							password = oneVCSetting.value.auth.pass;
-					}
-					if (req.body.value) oneVCSetting.value = req.body.value;
-					if (settingChangeSMTP) {
-						if (req.body.value.auth && req.body.value.auth.pass) {
-							// encrypt new password before save
-							oneVCSetting.value.auth.pass = crypt.encrypt(req.body.value.auth.pass);
-							logger4js.warn('Update SMTP Setting New Password');
+		if (!isTask) {
+			if (isSysConfig) {
+				// only update Value do not change name, type, timestamp and userId
+				logger4js.info('Update System Setting for VC %O', req.body.value);
+				var password = '';
+				if (req.oneVCSetting.name == 'SMTP') {
+					if (req.oneVCSetting.value && req.oneVCSetting.value.auth && req.oneVCSetting.value.auth.pass)
+						settingChangeSMTP = true;
+						password = req.oneVCSetting.value.auth.pass;
+				}
+				if (req.body.value) req.oneVCSetting.value = req.body.value;
+				if (settingChangeSMTP) {
+					if (req.body.value.auth && req.body.value.auth.pass) {
+						// encrypt new password before save
+						req.oneVCSetting.value.auth.pass = crypt.encrypt(req.body.value.auth.pass);
+						logger4js.warn('Update SMTP Setting New Password');
 
-						} else {
-							// restore old encrypted password
-							oneVCSetting.value.auth.pass = password;
-						}
-					}
-				} else {
-					if (oneVCSetting.type == 'organisation' && req.body.value) {
-						// normalize the organisaion to defined values
-						var value = req.body.value;
-						var orga = {};
-						orga.allRoles = [];
-						value.allRoles.forEach(item => {
-							var newRole = generateNewRole(item);
-							orga.allRoles.push(newRole);
-						});
-
-						orga.allCosts = [];
-						value.allCosts.forEach(item => {
-							var newCost = generateNewCost(item);
-							orga.allCosts.push(newCost);
-						});
-
-						orga.validFrom = value.validFrom;
-
-						if (!visboBusiness.verifyOrganisation(orga, oneVCSetting)) {
-							return res.status(400).send({
-								state: 'failure',
-								message: 'Incorrect Information in organisation',
-								organisation: orga
-							});
-						}
-						oneVCSetting.value = orga;
 					} else {
-						if (req.body.value) oneVCSetting.value = req.body.value;
+						// restore old encrypted password
+						req.oneVCSetting.value.auth.pass = password;
 					}
-					// allow to change all beside userId and type
-					if (req.body.name) oneVCSetting.name = req.body.name;
-					var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
-					// ignore new timestamp during PUT for organisation
-					if (oneVCSetting.type != 'organisation' && req.body.timestamp) oneVCSetting.timestamp = dateValue;
 				}
-				oneVCSetting.save(function(err, resultVCSetting) {
-					if (err) {
-						errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, 'Error updating VISBO Center Setting');
-						return;
-					}
-					if (isSysConfig) {
-						if (resultVCSetting.name == 'DEBUG') {
-							logger4js.debug('Update System Log Setting');
-							logging.setLogLevelConfig(resultVCSetting.value);
-						}
-						reloadSystemSetting();
-					}
-					if (settingChangeSMTP) {
-						resultVCSetting.value.auth.pass = '';
-					}
-					req.oneVCSetting = resultVCSetting;
-					return res.status(200).send({
-						state: 'success',
-						message: 'Updated VISBO Center Setting',
-						vcsetting: [ resultVCSetting ],
-						perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-					});
-				});
-			} else {
-				// Special Handling for Tasks required to avoid parallel updates by ReST and Task-Schedule
-				if (oneVCSetting.value && req.body.value) {
-					// only update nextRun, interval and taskSpecific, do not change type, name, timestamp, userId
-					if (req.body.value.interval) oneVCSetting.value.interval = req.body.value.interval;
-					if (req.body.value.taskSpecific) oneVCSetting.value.taskSpecific = req.body.value.taskSpecific;
-					oneVCSetting.value.nextRun = (req.body.value.nextRun && Date.parse(req.body.value.nextRun)) ? new Date(req.body.value.nextRun) : new Date();
-				}
-				var updateQuery = {_id: oneVCSetting._id, '$or': [{'value.lockedUntil': {$exists: false}}, {'value.lockedUntil': {$lt: new Date()}}]};
-				var updateOption = {upsert: false};
-				var updateUpdate = {$set : {'value.nextRun' : oneVCSetting.value.nextRun, 'value.interval' : oneVCSetting.value.interval, 'value.taskSpecific' : oneVCSetting.value.taskSpecific} };
-				logger4js.debug('VC Seting Task (%s/%s) Before Save %O', oneVCSetting.name, oneVCSetting._id, oneVCSetting);
+			} else if (isVCConfig) {
+				// Change Limit & Setting for VC
+				var newValue = Object.assign({}, req.oneVCSetting.value);			//make a copy of the object to allow recognize change for mongoose
+				var reqValue = req.body.value;
 
-				VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
-						if (err) {
-							errorHandler(err, undefined, 'DB: VC Setting Update Task', undefined);
+				if (isSystemVC && reqValue) {
+					// Change it for the System itself and populate it to the VCs
+					logger4js.debug('PUT update _VCConfig for systemVC', req.oneVCSetting.name, req.oneVCSetting.value);
+					var changedValue = false;
+					var changedVCValue = false;
+					var changedLimit = false;
+					if (reqValue.systemEnabled != undefined) {
+						reqValue.systemEnabled = reqValue.systemEnabled ? true : false;
+						if (newValue.systemEnabled != reqValue.systemEnabled) {
+							changedValue = true;
+							newValue.systemEnabled = reqValue.systemEnabled;
 						}
-						logger4js.debug('VC Seting Task (%s/%s) Saved %O', oneVCSetting.name, oneVCSetting._id, result);
-						if (result.nModified == 1) {
-							req.oneVCSetting = oneVCSetting;
-							return res.status(200).send({
-								state: 'success',
-								message: 'Updated VISBO Center Setting',
-								vcsetting: [ oneVCSetting ],
-								perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-							});
-						} else {
-							logger4js.info('VC Seting Task (%s/%s) locked already by another Server', oneVCSetting.name, oneVCSetting._id);
-							return res.status(409).send({
-								state: 'failure',
-								message: 'VISBO Center Setting already updated inbetween',
-								vcsetting: [ oneVCSetting ],
-								perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
-							});
+					}
+					if (reqValue.sysVCEnabled != undefined) {
+						reqValue.sysVCEnabled = reqValue.sysVCEnabled ? true : false;
+						if (newValue.sysVCEnabled != reqValue.sysVCEnabled) {
+							changedVCValue = true;
+							newValue.sysVCEnabled = reqValue.sysVCEnabled;
 						}
-				});
+					}
+					if (reqValue.sysVCLimit != undefined) {
+						reqValue.sysVCLimit = reqValue.sysVCLimit ? true : false;
+						if (newValue.sysVCLimit != reqValue.sysVCLimit) {
+							changedVCValue = true;
+							newValue.sysVCLimit = reqValue.sysVCLimit;
+						}
+					}
+					if (reqValue.systemLimit != undefined) {
+						reqValue.systemLimit = reqValue.systemLimit ? true : false;
+						if (newValue.systemLimit != reqValue.systemLimit) {
+							changedLimit = true;
+							newValue.systemLimit = reqValue.systemLimit;
+						}
+					}
+					if (changedValue || changedVCValue || changedLimit) {
+						req.oneVCSetting.value = newValue;
+					}
+					if (changedLimit || (changedValue && newValue.systemLimit)) {
+						logger4js.debug('PUT update _VCConfig for systemVC set/unset SystemLimit', req.oneVCSetting.name, req.oneVCSetting.value.systemLimit, req.oneVCSetting.value.systemEnabled);
+						// populate to all VCs
+						populateVCConfig(req.oneVCSetting, 'System');
+					}
+					if (changedVCValue) {
+						logger4js.debug('PUT update _VCConfig for all sysVC set sysVCEnabled', req.oneVCSetting.name, req.oneVCSetting.value.systemEnabled);
+						// populate to all VCs
+						populateVCConfig(req.oneVCSetting, 'sysVC');
+					}
+				} else if (req.query.sysadmin && reqValue) {
+					// Change it as sysadmin for a specific VC
+					logger4js.debug('PUT update _VCConfig as sysadmin for VC', req.oneVCSetting.vcid, req.oneVCSetting.name, req.oneVCSetting.value);
+					var changedValue = false;
+					var changedLimit = false;
+					if (reqValue.sysVCEnabled != undefined) {
+						reqValue.sysVCEnabled = reqValue.sysVCEnabled ? true : false;
+						if (newValue.sysVCEnabled != reqValue.sysVCEnabled) {
+							changedValue = true;
+							newValue.sysVCEnabled = reqValue.sysVCEnabled;
+						}
+					}
+					if (reqValue.sysVCLimit != undefined) {
+						reqValue.sysVCLimit = reqValue.sysVCLimit ? true : false;
+						if (newValue.sysVCLimit != reqValue.sysVCLimit) {
+							changedLimit = true;
+							newValue.sysVCLimit = reqValue.sysVCLimit;
+						}
+					}
+					// accept change only if systemLimit is not set
+					if (newValue.systemLimit && (changedValue || changedLimit)) {
+						return res.status(409).send({
+							state: 'failure',
+							message: 'VISBO Center Setting is set as System Limit',
+							vcsetting: [ req.oneVCSetting ]
+						});
+					}
+					if (changedValue || changedLimit) {
+						req.oneVCSetting.value = newValue;
+					}
+				} else if (reqValue) {
+					// Change it as VC Admin for a specific VC
+					logger4js.debug('PUT update _VCConfig as VC admin for VC', req.oneVCSetting.vcid, req.oneVCSetting.name, req.oneVCSetting.value);
+					if (reqValue.VCEnabled != undefined) {
+						reqValue.VCEnabled = reqValue.VCEnabled ? true : false;
+						if (newValue.VCEnabled != reqValue.VCEnabled) {
+							if (newValue.systemLimit || newValue.sysVCLimit) {
+								return res.status(409).send({
+									state: 'failure',
+									message: 'VISBO Center Setting is set as Limit',
+									vcsetting: [ req.oneVCSetting ]
+								});
+							} else {
+								newValue.VCEnabled = reqValue.VCEnabled;
+							}
+							req.oneVCSetting.value = newValue;
+						}
+					}
+				}
+			} else {
+				if (req.oneVCSetting.type == 'organisation' && req.body.value) {
+					// normalize the organisaion to defined values
+					var value = req.body.value;
+					var orga = {};
+					orga.allRoles = [];
+					value.allRoles.forEach(item => {
+						var newRole = generateNewRole(item);
+						orga.allRoles.push(newRole);
+					});
+
+					orga.allCosts = [];
+					value.allCosts.forEach(item => {
+						var newCost = generateNewCost(item);
+						orga.allCosts.push(newCost);
+					});
+
+					orga.validFrom = value.validFrom;
+
+					if (!visboBusiness.verifyOrganisation(orga, req.oneVCSetting)) {
+						return res.status(400).send({
+							state: 'failure',
+							message: 'Incorrect Information in organisation',
+							organisation: orga
+						});
+					}
+					req.oneVCSetting.value = orga;
+				} else {
+					if (req.body.value) req.oneVCSetting.value = req.body.value;
+				}
+				// allow to change all beside userId and type
+				if (req.body.name) req.oneVCSetting.name = req.body.name;
+				var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
+				// ignore new timestamp during PUT for organisation
+				if (req.oneVCSetting.type != 'organisation' && req.body.timestamp) req.oneVCSetting.timestamp = dateValue;
 			}
-		});
+			req.oneVCSetting.save(function(err, resultVCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: PUT VC Setting ${req.params.settingid} Save`, 'Error updating VISBO Center Setting');
+					return;
+				}
+				if (isSysConfig || isVCConfig) {
+					if (resultVCSetting.name == 'DEBUG') {
+						logger4js.debug('Update System Log Setting');
+						logging.setLogLevelConfig(resultVCSetting.value);
+					}
+					reloadSystemSetting();
+				}
+				if (settingChangeSMTP) {
+					resultVCSetting.value.auth.pass = '';
+				}
+				req.oneVCSetting = resultVCSetting;
+				logger4js.debug('Update Setting %s Value %O', req.oneVCSetting._id, req.oneVCSetting);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated VISBO Center Setting',
+					vcsetting: [ resultVCSetting ],
+					perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+				});
+			});
+		} else {
+			// Special Handling for Tasks required to avoid parallel updates by ReST and Task-Schedule
+			if (req.oneVCSetting.value && req.body.value) {
+				// only update nextRun, interval and taskSpecific, do not change type, name, timestamp, userId
+				if (req.body.value.interval) req.oneVCSetting.value.interval = req.body.value.interval;
+				if (req.body.value.taskSpecific) req.oneVCSetting.value.taskSpecific = req.body.value.taskSpecific;
+				req.oneVCSetting.value.nextRun = (req.body.value.nextRun && Date.parse(req.body.value.nextRun)) ? new Date(req.body.value.nextRun) : new Date();
+			}
+			var updateQuery = {_id: req.oneVCSetting._id, '$or': [{'value.lockedUntil': {$exists: false}}, {'value.lockedUntil': {$lt: new Date()}}]};
+			var updateOption = {upsert: false};
+			var updateUpdate = {$set : {'value.nextRun' : req.oneVCSetting.value.nextRun, 'value.interval' : req.oneVCSetting.value.interval, 'value.taskSpecific' : req.oneVCSetting.value.taskSpecific} };
+			logger4js.debug('VC Seting Task (%s/%s) Before Save %O', req.oneVCSetting.name, req.oneVCSetting._id, req.oneVCSetting);
+
+			VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+					if (err) {
+						errorHandler(err, undefined, 'DB: VC Setting Update Task', undefined);
+					}
+					logger4js.debug('VC Seting Task (%s/%s) Saved %O', req.oneVCSetting.name, req.oneVCSetting._id, result);
+					if (result.nModified == 1) {
+						return res.status(200).send({
+							state: 'success',
+							message: 'Updated VISBO Center Setting',
+							vcsetting: [ req.oneVCSetting ],
+							perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+						});
+					} else {
+						logger4js.info('VC Seting Task (%s/%s) locked already by another Server', req.oneVCSetting.name, req.oneVCSetting._id);
+						return res.status(409).send({
+							state: 'failure',
+							message: 'VISBO Center Setting already updated inbetween',
+							vcsetting: [ req.oneVCSetting ],
+							perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
+						});
+					}
+			});
+		}
 	});
 
 	router.route('/:vcid/capacity')

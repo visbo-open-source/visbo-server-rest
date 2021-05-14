@@ -134,6 +134,17 @@ function cleanupVPV(vpv) {
 	}
 }
 
+function cleanupKM(keyMetrics) {
+	if (!keyMetrics) {
+		return;
+	}
+	keyMetrics.costCurrentActual = undefined;
+	keyMetrics.costCurrentTotal = undefined;
+	keyMetrics.costBaseLastActual = undefined;
+	keyMetrics.costBaseLastTotal = undefined;
+	keyMetrics.costCurrentTotalPredict = undefined;
+}
+
 function getKeyAttributes(newVPV) {
 	if (!newVPV) return undefined;
 	var keyVPV = new VisboProjectVersion();
@@ -198,5 +209,6 @@ module.exports = {
 	cleanupVPV: cleanupVPV,
 	getKeyAttributes: getKeyAttributes,
 	setKeyAttributes: setKeyAttributes,
-	checkValidKeyMetrics: checkValidKeyMetrics
+	checkValidKeyMetrics: checkValidKeyMetrics,
+	cleanupKM: cleanupKM
 };
