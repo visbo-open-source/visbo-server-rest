@@ -10,6 +10,7 @@ var VisboGroup = mongoose.model('VisboGroup');
 var VisboCenter = mongoose.model('VisboCenter');
 var VCSetting = mongoose.model('VCSetting');
 
+const fs = require('fs');
 var logging = require('./logging');
 var logModule = 'VC';
 var log4js = require('log4js');
@@ -23,6 +24,7 @@ var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
+var predictConfigured = undefined;
 
 // Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body, launchServer) {
@@ -122,6 +124,21 @@ var initSystemSettings = function(launchServer) {
 				logger4js.info('Setting REDIS found init Client');
 				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
 				redisClient.set('vcSystem', vcSystem._id.toString());
+			}
+			if (vcSystemSetting[i].name == 'Predict') {
+				if (predictConfigured == undefined) {
+					// MS TODO: Check if the Predict program is installed
+					if(vcSystemSetting[i].value && vcSystemSetting[i].value.cmd
+					&& fs.existsSync(vcSystemSetting[i].value.cmd)) {
+						logger4js.warn('Predict Configured:', vcSystemSetting[i].value.cmd);
+						predictConfigured = 1;
+			    } else {
+						logger4js.info('Predict not Configured', vcSystemSetting[i].value && vcSystemSetting[i].value.cmd);
+			    }
+				}
+				if (!predictConfigured) {
+					vcSystemSetting[i].value = undefined;
+				}
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt;
