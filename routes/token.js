@@ -349,6 +349,167 @@ router.route('/user/login')
 		});
 	});
 
+	router.route('/user/ott')
+
+	/**
+		* @api {post} /token/user/ott User Login with One Time Token
+		* @apiVersion 1.0.0
+		* @apiGroup Authentication
+		* @apiName UserLoginOtt
+		* @apiDescription POST Login returns if it was successful an access token and the user profile information
+		* of the authenticated user. The token has to be passed to every subsequent API Call in the header with name "access-key"
+		* @apiPermission none
+		* @apiError {number} 401 One Time Token is not valid for any reason
+		* @apiError {number} 400 One Time Token missing
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/token/user/ott
+		* {
+		*  'ott':'OTT Token'
+		* }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Successfully logged in',
+		*   'token':'eyJhbG...brDI',
+		*   'user':{
+		*     '_id':'UID5a96787976294c5417f0e49',
+		*     'updatedAt':'2018-02-28T09:00:00.000Z',
+		*     'createdAt':'2018-02-28T10:00:00.000Z',
+		*     'email':'example@example.com',
+		*     'profile': {
+		*       'firstname': 'First',
+		*       'lastname': 'Last',
+		*       'company': 'Company inc',
+		*       'phone': '0151-11223344',
+		*       'address' : {
+		*         'street': 'Street',
+		*         'city': 'City',
+		*         'zip': '88888',
+		*         'state': 'State',
+		*         'country': 'Country',
+		*       }
+		*     },
+		*     'status': {
+		*       'registeredAt': '2018-06-01T13:00:00.000Z',
+		*       'lastLoginAt': '2019-01-01T14:00:00.001Z',
+		*       'loginRetries': 0,
+		*       'lastLoginFailedAt': '2018-11-01T09:00:00.001Z',
+		*       'lastPWResetAt': '2018-12-01T14:00:00.001ZZ'
+		*     }
+		*   }
+		* }
+		*/
+
+	// Post OTT Login
+		.post(function(req, res) {
+			var currentDate = new Date();
+			req.auditDescription = 'Login OTT';
+
+			logger4js.info('Try to Login with OTT');
+			var lang = validate.evaluateLanguage(req);
+	    logger4js.debug('The Accepted Language is: ' + lang);
+			auth.verifyOTT(req, res, function() {
+				logger4js.debug('OTT Token valid & checked ', req.decoded.email, req.decoded._id);
+				visbouser.findOne({ 'email' : req.decoded.email }, function(err, user) {
+					if (err) {
+						errorHandler(err, res, `DB: POST OTT Login ${req.decoded.email} Find `, 'Error OTT Login Failed');
+						return;
+					}
+					if (!user) {
+						logger4js.warn('OTT Token valid but User not found', req.decoded.email);
+						return res.status(403).send({
+							state: 'failure',
+							message: 'One time Token email mismatch'
+						});
+					}
+					logger4js.debug('Try to Login User Found %s', user.email);
+
+					var message = 'Successfully logged in.';
+					req.visboUserAgent = visboShortUA(req.headers['user-agent']);
+					var passwordCopy = user.password;
+					user.password = undefined;
+					if (!user.status) user.status = {};
+					// add info about the session ip and userAgent to verify during further requests to avoid session steeling
+					user.session = {};
+					user.session.ip = req.headers['x-real-ip'] || req.ip;
+					user.session.ticket = req.get('User-Agent');
+
+					var userReduced = {};
+					userReduced._id = user._id;
+					userReduced.email = user.email;
+					userReduced.profile = user.profile;
+					userReduced.status = user.status;
+					userReduced.session = user.session;
+					logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
+
+					jwt.sign(userReduced, jwtSecret.user.secret,
+						{ expiresIn: jwtSecret.user.expiresIn },
+						function(err, token) {
+							if (err) {
+								logger4js.error('JWT Signing Error %s ', err.message);
+								return res.status(500)({
+									state: 'failure',
+									message: 'token generation failed',
+									error: err
+								});
+							}
+							logger4js.trace('OTT JWT Signing Success ');
+							user.password = passwordCopy;
+							user.session = undefined;
+							// Check user Agent and update or add it and send e-Mail about new login
+							var curAgent = {};
+							curAgent.userAgent = req.visboUserAgent;
+							curAgent.createdAt = new Date();
+							curAgent.lastUsedAt = curAgent.createdAt;
+							logger4js.trace('User Agent prepared %s', curAgent.userAgents);
+
+							if (!user.userAgents || user.userAgents.length == 0) {
+								user.userAgents = [];
+								user.userAgents.push(curAgent);
+								logger4js.debug('Init User Agent first Login %s', JSON.stringify(user.userAgents));
+							} else {
+								// Check List of User Agents and add or updated
+								var index = user.userAgents.findIndex(findUserAgent, curAgent);
+								if (index >= 0) {
+									user.userAgents[index].lastUsedAt = curAgent.lastUsedAt;
+								} else {
+									user.userAgents.push(curAgent);
+									// Send Mail about new Login with unknown User Agent
+									sendMail.accountNewLogin(req, res, user);
+									logger4js.debug('New Login with new User Agent %s', req.visboUserAgent);
+								}
+								// Cleanup old User Agents older than 3 Months
+								var expiredAt = new Date();
+								expiredAt.setMonth(expiredAt.getMonth()-3);
+								logger4js.trace('User before Filter %s User Agents %s', expiredAt, JSON.stringify(user.userAgents));
+								user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ));
+							}
+							logger4js.trace('User before Save User Agents %s', JSON.stringify(user.userAgents));
+							user.save(function(err, user) {
+								if (err) {
+									logger4js.error('Login User Update DB Connection %s', err.message);
+									return res.status(500).send({
+										state: 'failure',
+										message: 'database error, failed to update user',
+										error: err
+									});
+								}
+								user.password = undefined;
+								return res.status(200).send({
+									state: 'success',
+									message: message,
+									token: token,
+									user: user
+								});
+							});
+						}
+					);
+				});
+			});
+		});
+
 router.route('/user/logingoogle')
 
 	// get google authentication
@@ -433,7 +594,7 @@ router.route('/user/googleRedirect')
 			userReduced.status = user.status;
 			userReduced.session = user.session;
 			logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
-			// jwt.sign(user.toJSON(), jwtSecret.user.secret,
+
 			jwt.sign(userReduced, jwtSecret.user.secret,
 				{ expiresIn: jwtSecret.user.expiresIn },
 				function(err, token) {
