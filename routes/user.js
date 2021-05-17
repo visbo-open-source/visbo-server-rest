@@ -379,11 +379,12 @@ router.route('/ott')
 		userReduced.session = {};
 		userReduced.session.ip = req.headers['x-real-ip'] || req.ip;
 		var timestamp = new Date();
+		var expiresIn = 120;
 		userReduced.session.timestamp = timestamp;
 
 		logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
 		jwt.sign(userReduced, jwtSecret.user.secret,
-			{ expiresIn: 180 },
+			{ expiresIn: expiresIn },
 			function(err, ott) {
 				if (err) {
 					logger4js.error('JWT Signing Error %s ', err.message);
@@ -397,7 +398,7 @@ router.route('/ott')
 				// add token to Redis
 				var redisClient = visboRedis.VisboRedisInit();
 				var ottID = ott.split('.')[2];
-				redisClient.set('ott.'+ottID, req.decoded._id, 'EX', 180);
+				redisClient.set('ott.'+ottID, req.decoded._id, 'EX', expiresIn);
 				return res.status(200).send({
 					state: 'success',
 					message: 'One Time Token successfully generated',

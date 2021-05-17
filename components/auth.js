@@ -107,12 +107,13 @@ function verifyOTT(req, res, next) {
 	var ott = req.body.ott;
 	// decode token
   if (ott) {
+		logger4js.debug('OTT Authentication with token:', ott);
     // verifies secret and checks exp
     jwt.verify(ott, jwtSecret.user.secret, function(err, decoded) {
       if (err) {
 				logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
 				if (decoded) req.decoded = decoded;
-        return res.status(401).send({
+        return res.status(400).send({
 					state: 'failure',
 					message: 'One Time Token is no longer valid'
         });
@@ -124,7 +125,7 @@ function verifyOTT(req, res, next) {
 					sessionValid = false;
 				}
 				if (!sessionValid) {
-					return res.status(401).send({
+					return res.status(400).send({
 						state: 'failure',
 						message: 'One Time Token is no longer valid'
 					});
@@ -141,7 +142,7 @@ function verifyOTT(req, res, next) {
 					}
 					if (!reply || reply != decoded._id) {
 						logger4js.warn('OTT Token already terminated');
-						return res.status(401).send({
+						return res.status(400).send({
 							state: 'failure',
 							message: 'One Time Token is no longer valid'
 						});
@@ -165,7 +166,7 @@ function verifyOTT(req, res, next) {
     });
   } else {
 		logger4js.info('OTT Authentication without token.');
-		return res.status(401).send({
+		return res.status(400).send({
 			state: 'failure',
 			message: 'No One Time Token provided'
 		});
