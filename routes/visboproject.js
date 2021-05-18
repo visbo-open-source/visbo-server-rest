@@ -746,9 +746,10 @@ router.route('/')
 								}
 							}
 							var newVPV = helperVpv.initVPV(templateVPV);
-							newVPV.VorlagenName = req.oneVPVTemplate.name;
+							newVPV.VorlagenName = req.oneVPVTemplate.name;							
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
+							newVPV.description = req.oneVP.description;
 							newVPV.variantName = 'pfv'; // first Version is the pfv
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
