@@ -4,14 +4,10 @@ require('../models/vcsetting');
 require('../models/predictkm');
 
 var fs = require('fs');
-var path = require('path');
 
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VCSetting = mongoose.model('VCSetting');
 var PredictKM = mongoose.model('PredictKM');
-
-var validate = require('./../components/validate');
-var os = require('os');
 
 var logModule = 'OTHER';
 var log4js = require('log4js');
@@ -49,7 +45,7 @@ function kmCollect(task, finishedTask, vcSystemId) {
 			if (item.vcid != vcSystemId && item.value && item.value.sysVCEnabled) {
 				vcidList.push(item.vcid);
 			}
-		})
+		});
 		if (!vcidList.length) {
 			logger4js.info('kmCollect Switched off for all VCs');
 			task.value.taskSpecific = {result: 0, resultDescription: 'Predict Training switched off for all VCs'};
@@ -62,8 +58,8 @@ function kmCollect(task, finishedTask, vcSystemId) {
 		query.push({$lookup: { from: 'visboprojects', localField: 'vpid', foreignField: '_id', as: 'vp' }});
 		query.push({$project: { _id: 1, timestamp: 1, vpid: 1, keyMetrics: 1, vp: 1 }});
 		query.push({$match: { keyMetrics: {$exists: true}, 'vp.vcid': {$in: vcidList} }});
-		query.push({$addFields: { vcid: "$vp.vcid" }});
-		query.push({$unwind: { path: "$vcid", preserveNullAndEmptyArrays: false }});
+		query.push({$addFields: { vcid: '$vp.vcid' }});
+		query.push({$unwind: { path: '$vcid', preserveNullAndEmptyArrays: false }});
 		query.push({$lookup: { from: 'predictkms', localField: '_id', foreignField: 'vpvid', as: 'predict' }});
 		query.push({$match: { 'predict._id': {$exists: false} }});
 		query.push({$limit: 100 });
@@ -82,7 +78,7 @@ function kmCollect(task, finishedTask, vcSystemId) {
 			// now we have the list of VPVs with keymetrics that we want to insert into predictkms
 			PredictKM.insertMany(listVPV, function (err, resultList) {
 				if (err){
-					errorHandler(err, undefined, `DB: Insert PredictKM`, undefined);
+					errorHandler(err, undefined, 'DB: Insert PredictKM', undefined);
 				}
 				logger4js.debug('Task: kmCollect Inserted %d', resultList.length);
 				var endDate = new Date();
@@ -90,7 +86,7 @@ function kmCollect(task, finishedTask, vcSystemId) {
 				task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`};
 				logger4js.info('Task: kmCollect Result %d Duration %d ms', listVPV.length, duration);
 				finishedTask(task, false);
-			})
+			});
 		});
 	});
 }
@@ -99,8 +95,8 @@ function isSameDay(first, second) {
 	if (!first || !second) {
 		return true;
 	}
-	dateFirst = new Date(first);
-	dateSecond = new Date(second);
+	var dateFirst = new Date(first);
+	var dateSecond = new Date(second);
 	dateFirst.setHours(0, 0, 0, 0);
 	dateSecond.setHours(0, 0, 0, 0);
 	return dateFirst.getTime() == dateSecond.getTime();
@@ -172,9 +168,9 @@ function kmTraining(task, finishedTask, vcSystemId) {
 					oldVPV = vpv;
 				}
 			});
+			var endDate = new Date();
+			var duration = endDate.getTime() - startDate.getTime();
 			if (reducedVPV.length < 500) {
-				var endDate = new Date();
-				var duration = endDate.getTime() - startDate.getTime();
 				task.value.taskSpecific = {result: 0, resultDescription: `Not enough Versions for Training ${listVPV.length}`};
 				logger4js.warn('Task: kmTraining Not enough results %d Duration %d ms', listVPV.length, duration);
 				finishedTask(task, false);
@@ -185,27 +181,25 @@ function kmTraining(task, finishedTask, vcSystemId) {
 			var tmpdir = '/var/tmp';
 			if (!fs.existsSync(tmpdir)) {
 				logger4js.warn('Task: kmTraining Tmp Folder does not exists', tmpdir);
-				var endDate = new Date();
-				var duration = endDate.getTime() - startDate.getTime();
 				task.value.taskSpecific = {result: 0, resultDescription: `Temp Folder for Training does not exists ${tmpdir}`};
 				logger4js.warn('Task: kmTraining Folder %s missing', tmpdir);
 				finishedTask(task, false);
 				return;
 			}
-			var tmpfile = tmpdir.concat('/predictkms')
+			var tmpfile = tmpdir.concat('/predictkms');
 			var content = JSON.stringify(reducedVPV);
 			logger4js.warn('Task: kmTraining Converted to JSON %d kB', Math.round(content.length / 1024));
 			fs.writeFileSync(tmpfile, content, {
-						  encoding: 'utf8',
-						  flag: 'w'
-						});
+													encoding: 'utf8',
+													flag: 'w'
+												});
 
-			var endDate = new Date();
-			var duration = endDate.getTime() - startDate.getTime();
+			endDate = new Date();
+			duration = endDate.getTime() - startDate.getTime();
 			task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`};
 			logger4js.info('Task: kmTraining Result %d Duration %d ms', listVPV.length, duration);
 			finishedTask(task, false);
-		})
+		});
 	});
 }
 

@@ -179,8 +179,6 @@ function checkSettingId(req, res, next, settingID) {
 }
 
 function getVCSetting(req, res, next) {
-	var baseUrl = req.url.split('?')[0];
-	var urlComponent = baseUrl.split('/');
 	var checkSetting = false;
 	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
 		checkSetting = true;
@@ -302,7 +300,7 @@ function isVCEnabled(req, name, level) {
 	var setting;
 	var result = false;
 	if (req.listVCSetting) {
-		setting = req.listVCSetting.find(item => item.name == name)
+		setting = req.listVCSetting.find(item => item.name == name);
 		if (setting && setting.value) {
 			if (level == 0) {
 				result = setting.value.systemEnabled;

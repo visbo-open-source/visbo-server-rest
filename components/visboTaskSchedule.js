@@ -100,7 +100,7 @@ function checkNextRun() {
     var query = {};
 		query.vcid = vcSystemId;
 		query.type = 'Task';
-    query['value.nextRun'] = {$lt: new Date()}
+    query['value.nextRun'] = {$lt: new Date()};
 		var queryVCSetting = VCSetting.find(query);
     queryVCSetting.lean();
 		queryVCSetting.exec(function (err, listTask) {

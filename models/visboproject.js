@@ -70,6 +70,4 @@ mongoose.model('Lock', lockSchema);
 mongoose.model('Variant', variantSchema);
 mongoose.model('Restrict', restrictSchema);
 
-module.exports = {
-	constSystemCustomName: constSystemCustomName
-};
+module.exports = { constSystemCustomName: constSystemCustomName };

@@ -404,12 +404,11 @@ router.route('/user/login')
 
 	// Post OTT Login
 		.post(function(req, res) {
-			var currentDate = new Date();
 			req.auditDescription = 'Login OTT';
 
 			logger4js.info('Try to Login with OTT');
 			var lang = validate.evaluateLanguage(req);
-	    logger4js.debug('The Accepted Language is: ' + lang);
+			logger4js.debug('The Accepted Language is: ' + lang);
 			auth.verifyOTT(req, res, function() {
 				logger4js.debug('OTT Token valid & checked ', req.decoded.email, req.decoded._id);
 				visbouser.findOne({ 'email' : req.decoded.email }, function(err, user) {

@@ -5,7 +5,6 @@ mongoose.Promise = require('q').Promise;
 var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
-var systemVC = require('./../components/systemVC');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
 var verifyVc = require('./../components/verifyVc');
@@ -72,7 +71,7 @@ var convertVariantList = function(idList, vp) {
 
 function saveRecalcKM(req, res, message) {
 	if (!req.oneVPV) {
-		errorHandler(err, res, 'saveReaclcKM: No VPV found', 'Error creating Project Versions ');
+		errorHandler(undefined, res, 'saveReaclcKM: No VPV found', 'Error creating Project Versions ');
 		return;
 	}
 	if (req.oneVPV.variantName != 'pfv' && req.visboPFV) {
@@ -106,7 +105,7 @@ function saveRecalcKM(req, res, message) {
 	}
 	// check if prediction is enabled and needed
 	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
-		var cmd = './PredictKM'
+		var cmd = './PredictKM';
 		var reducedKM = [];
 		if (req.oneVPV.keyMetrics && req.oneVPV.keyMetrics.costBaseLastTotal && req.oneVPV.keyMetrics.endDateBaseLast) {
 			var tmpVPV = {};
@@ -116,7 +115,7 @@ function saveRecalcKM(req, res, message) {
 			tmpVPV.costCurrentTotal = req.oneVPV.keyMetrics.costCurrentTotal || 0;
 			tmpVPV.costBaseLastActual = req.oneVPV.keyMetrics.costBaseLastActual || 0;
 			tmpVPV.costBaseLastTotal = req.oneVPV.keyMetrics.costBaseLastTotal || 0;
-			tmpVPV.endDateCurrent = req.oneVPV.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
+			tmpVPV.endDateCurrent = req.oneVPV.keyMetrics.endDateCurrent || req.oneVPV.endDate;
 			tmpVPV.endDateBaseLast = req.oneVPV.keyMetrics.endDateBaseLast;
 			reducedKM.push(tmpVPV);
 		}
@@ -125,12 +124,12 @@ function saveRecalcKM(req, res, message) {
 			logger4js.warn('POST VPV calculate Prediction for Version', req.oneVPV._id, req.oneVPV.variantName || 'Standard');
 			exec(cmd, function callback(error, stdout, stderr) {
 				if (error) {
-					errorHandler(err, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
+					errorHandler(undefined, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
 					return;
 				}
 				var predictVPV = JSON.parse(stdout);
 				if (!predictVPV || predictVPV.length != 1) {
-					errorHandler(err, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
+					errorHandler(undefined, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
 					return;
 				}
 				// update the original keyMetric with predictedKM
@@ -208,12 +207,12 @@ function saveRecalcKM(req, res, message) {
 
 function getRecalcKM(req, res, message) {
 	if (!req.listVPV) {
-		errorHandler(err, res, 'fetchRecalcKM: No VPV list found', 'Error getting Project Versions ');
+		errorHandler(undefined, res, 'fetchRecalcKM: No VPV list found', 'Error getting Project Versions ');
 		return;
 	}
 	// check if prediction is enabled and needed
 	if (verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
-		var cmd = './PredictKM'
+		var cmd = './PredictKM';
 		var reducedKM = [];
 		req.listVPV.forEach(vpv => {
 			if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
@@ -234,18 +233,18 @@ function getRecalcKM(req, res, message) {
 			logger4js.warn('Recalc %d Versions for Prediction', reducedKM.length, cmd.length);
 			exec(cmd, function callback(error, stdout, stderr) {
 				if (error) {
-					errorHandler(err, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
+					errorHandler(undefined, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
 					return;
 				}
 				var predictVPV = JSON.parse(stdout);
 				if (!predictVPV) {
-					errorHandler(err, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
+					errorHandler(undefined, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
 					return;
 				}
 				// update the original keyMetric with predicted BAC
 				predictVPV.forEach(vpv => {
 					if (vpv._id && vpv.costCurrentTotal) {
-						origVPV = req.listVPV.find(item => item._id.toString() == vpv._id.toString());
+						var origVPV = req.listVPV.find(item => item._id.toString() == vpv._id.toString());
 						if (origVPV) {
 							origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
 						}
@@ -754,14 +753,15 @@ router.route('/')
 					newVPV.status = req.visboPFV.status;
 					newVPV.Erloes = req.visboPFV.Erloes;
 				}
+				var customField;
 				if (req.oneVP && req.oneVP.customFieldString) {
-					var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
+					customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
 					if (customField) { newVPV.businessUnit = customField.value; }
 				}
 				if (req.oneVP && req.oneVP.customFieldDouble) {
-					var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+					customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
 					if (customField) { newVPV.Risiko = customField.value; }
-					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
 				req.oneVPV = newVPV;
@@ -950,8 +950,8 @@ router.route('/:vpvid')
 			queryvpv.deletedAt = {$exists: false};
 			queryvpv.deletedByParent = {$exists: false};
 			queryvpv.vpid = req.oneVPV.vpid;
-			queryvpv.variantName = 'pfv'
-			queryvpv.timestamp = {$lt: req.oneVPV.timestamp}
+			queryvpv.variantName = 'pfv';
+			queryvpv.timestamp = {$lt: req.oneVPV.timestamp};
 			var queryVPV = VisboProjectVersion.find(queryvpv);
 			queryVPV.sort('-timestamp');
 			queryVPV.lean();
@@ -1072,7 +1072,7 @@ router.route('/:vpvid')
 			if (req.oneVPV.variantName == 'pfv' && req.visboAllVPVs && req.visboAllVPVs.length > 0) {
 				// check if a newer VPV exists and if so, forbid to delete the baseline as long as a newer version exists
 				var refDate = new Date(req.oneVPV.timestamp);
-				newVPV = req.visboAllVPVs.find(vpv => (new Date(vpv.timestamp)).getTime() > refDate.getTime());
+				var newVPV = req.visboAllVPVs.find(vpv => (new Date(vpv.timestamp)).getTime() > refDate.getTime());
 				if (newVPV) {
 					logger4js.warn('PFV Delete not possible as a newer VPV exists', req.oneVPV._id, newVPV._id);
 					return res.status(409).send({
@@ -1191,6 +1191,7 @@ router.route('/:vpvid/copy')
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
+		var customField;
 
 		req.auditDescription = 'Project Version Copy';
 
@@ -1263,13 +1264,13 @@ router.route('/:vpvid/copy')
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;
 		}
 		if (req.oneVP && req.oneVP.customFieldString) {
-			var customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit')
+			customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
 			if (customField) { newVPV.businessUnit = customField.value; }
 		}
 		if (req.oneVP && req.oneVP.customFieldDouble) {
-			var customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk')
+			customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
 			if (customField) { newVPV.Risiko = customField.value; }
-			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit')
+			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 			if (customField) { newVPV.StrategicFit = customField.value; }
 		}
 

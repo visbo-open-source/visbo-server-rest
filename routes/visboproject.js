@@ -667,7 +667,7 @@ router.route('/')
 						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
 					}
 					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
-						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})
+						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail});
 					}
 				}
 

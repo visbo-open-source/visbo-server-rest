@@ -4,6 +4,7 @@ var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
 var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
+var errorHandler = require('./../components/errorhandler').handler;
 
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
