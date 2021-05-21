@@ -2132,7 +2132,7 @@ router.route('/:vcid/group/:groupid')
 					}
 				}
 				var listVCSettingfiltered = [];
-				if (listVCSetting.length > 1 && latestOnly){
+				if (listVCSetting.length > 1 && latestOnly) {
 					listVCSettingfiltered.push(listVCSetting[0]);
 					for (let i = 1; i < listVCSetting.length; i++){
 						//compare current item with previous and ignore if it is the same type, name, userId
@@ -2153,6 +2153,10 @@ router.route('/:vcid/group/:groupid')
 					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
 					// squeeze private settings, remove sensitive Information
 					listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
+				}
+				// filter _VCConfig Settings if not sysAdmin
+				if (!isSysAdmin) {
+					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level != 2);
 				}
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({

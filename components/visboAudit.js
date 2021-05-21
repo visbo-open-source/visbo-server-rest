@@ -24,8 +24,6 @@ function cleanupAudit(task, finishedTask) {
 		logger4js.debug('Task: cleanupAudit Result %O', result);
 		finishedTask(task, false);
 	});
-
-	logger4js.debug('cleanupAudit Done %s', task._id);
 }
 
 function squeezeDelete(squeezeEntry, lastDate) {
@@ -111,7 +109,6 @@ function squeezeAudit(task, finishedTask) {
 		task.value.taskSpecific = resultFinished;
 		finishedTask(task, false);
 	});
-	logger4js.debug('squeezeAudit Done %s', task._id);
 }
 
 function saveAuditEntry(tokens, req, res, factor) {
