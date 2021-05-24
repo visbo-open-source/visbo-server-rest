@@ -114,7 +114,8 @@ function convertFlat(vpv) {
 	vpv.timeCompletionBaseLastTotal = vpv.keyMetrics.timeCompletionBaseLastTotal;
 	vpv.timeDelayFinished = vpv.keyMetrics.timeDelayFinished;
 	vpv.timeDelayUnFinished = vpv.keyMetrics.timeDelayUnFinished;
-	vpv.endDateBaseLast = vpv.keyMetrics.endDateCurrent;
+	vpv.endDateCurrent = vpv.keyMetrics.endDateCurrent;
+	vpv.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
 	vpv.deliverableCompletionCurrentActual = vpv.keyMetrics.deliverableCompletionCurrentActual;
 	vpv.deliverableCompletionCurrentTotal = vpv.keyMetrics.deliverableCompletionCurrentTotal;
 	vpv.deliverableCompletionBaseLastActual = vpv.keyMetrics.deliverableCompletionBaseLastActual;

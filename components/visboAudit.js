@@ -312,7 +312,7 @@ function visboAudit(tokens, req, res) {
 	} else {
 		saveAuditEntry(tokens, req, res, 1);
 		if (req.auditProperty) {
-			req.auditProperty.forEach(item => savePropertyEntry(tokens, req, res, req.auditProperty[item]));
+			req.auditProperty.forEach(item => savePropertyEntry(tokens, req, res, item));
 		}
 	}
 }
