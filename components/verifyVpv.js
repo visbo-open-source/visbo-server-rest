@@ -29,10 +29,10 @@ function getOneVP(req, res, next) {
 		skip = false;
 		vpid = req.query.vpid;
 	} else if (req.method == 'POST' && baseUrl == '/') {
-		skip = false
+		skip = false;
 		vpid = req.body.vpid;
 	} else if (req.method == 'POST' && req.oneVPV) {
-		skip = false
+		skip = false;
 		vpid = req.oneVPV.vpid;
 	}
 	if (skip) {

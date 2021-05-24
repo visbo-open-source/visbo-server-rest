@@ -261,14 +261,14 @@ var unDeleteGroup = function(vcid){
 
 // populate _VCConfig Setting from System to all VCs
 var populateVCConfig = function(vcSetting, type) {
+	var updateQuery, updateOption, updateUpdate;
 	if (!vcSetting || vcSetting.type != '_VCConfig' || !vcSetting.value || vcSetting.value.systemLimit == undefined) return;
 
 	if (type == 'System') {
 		// update systemLimit & systemEnabled to all VCs
-		var updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
-		var updateOption = {upsert: false};
+		updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
+		updateOption = {upsert: false};
 
-		var updateUpdate;
 		if (vcSetting.value.systemLimit == true) {
 			// set Limit ON populate the sysVCEnabled Value also
 			updateUpdate = {$set: {'value.systemLimit': vcSetting.value.systemLimit, 'value.systemEnabled': vcSetting.value.systemEnabled}};
@@ -287,10 +287,9 @@ var populateVCConfig = function(vcSetting, type) {
 		});
 	} else if (type == 'sysVC') {
 		// update systemLimit & systemEnabled to all VCs
-		var updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
-		var updateOption = {upsert: false};
+		updateQuery = {_id: {$ne: vcSetting._id}, type: vcSetting.type, 'name': vcSetting.name};
+		updateOption = {upsert: false};
 
-		var updateUpdate;
 		if (vcSetting.value.sysVCLimit == true) {
 			// set Limit ON populate the sysVCEnabled Value also
 			updateUpdate = {$set: {'value.sysVCLimit': vcSetting.value.sysVCLimit, 'value.sysVCEnabled': vcSetting.value.sysVCEnabled}};
@@ -513,11 +512,11 @@ router.route('/')
 					if (settingList.length > 0) {
 						logger4js.warn('VC Post Setting %d ', settingList.length);
 						settingList.forEach(item => item.vcid = req.oneVC._id);
-						VCSetting.insertMany(settingList, function (err, resultList) {
-				      if (err){
+						VCSetting.insertMany(settingList, function (err) {
+							if (err){
 								errorHandler(err, undefined, `DB: POST VC Create Setting ${req.body.name}`, undefined);
-				      }
-				    })
+							}
+						});
 					}
 
 					return res.status(200).send({
@@ -2132,7 +2131,7 @@ router.route('/:vcid/group/:groupid')
 					}
 				}
 				var listVCSettingfiltered = [];
-				if (listVCSetting.length > 1 && latestOnly){
+				if (listVCSetting.length > 1 && latestOnly) {
 					listVCSettingfiltered.push(listVCSetting[0]);
 					for (let i = 1; i < listVCSetting.length; i++){
 						//compare current item with previous and ignore if it is the same type, name, userId
@@ -2153,6 +2152,10 @@ router.route('/:vcid/group/:groupid')
 					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
 					// squeeze private settings, remove sensitive Information
 					listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
+				}
+				// filter _VCConfig Settings if not sysAdmin
+				if (!isSysAdmin) {
+					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level != 2);
 				}
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({
@@ -2489,7 +2492,7 @@ router.route('/:vcid/group/:groupid')
 		var isSystemVC = getSystemVC()._id.toString() == req.oneVCSetting.vcid.toString();
 		var isTask = isSystemVC && req.oneVCSetting.type == 'Task' ? true: false;
 		var isSysConfig = isSystemVC && req.oneVCSetting.type == 'SysConfig' ? true: false;
-		var isVCConfig = req.oneVCSetting.type == '_VCConfig' ? true: false
+		var isVCConfig = req.oneVCSetting.type == '_VCConfig' ? true: false;
 
 		if (!isTask) {
 			if (isSysConfig) {
@@ -2518,12 +2521,13 @@ router.route('/:vcid/group/:groupid')
 				var newValue = Object.assign({}, req.oneVCSetting.value);			//make a copy of the object to allow recognize change for mongoose
 				var reqValue = req.body.value;
 
+				var changedValue, changedVCValue, changedLimit;
 				if (isSystemVC && reqValue) {
 					// Change it for the System itself and populate it to the VCs
 					logger4js.debug('PUT update _VCConfig for systemVC', req.oneVCSetting.name, req.oneVCSetting.value);
-					var changedValue = false;
-					var changedVCValue = false;
-					var changedLimit = false;
+					changedValue = false;
+					changedVCValue = false;
+					changedLimit = false;
 					if (reqValue.systemEnabled != undefined) {
 						reqValue.systemEnabled = reqValue.systemEnabled ? true : false;
 						if (newValue.systemEnabled != reqValue.systemEnabled) {
@@ -2568,8 +2572,8 @@ router.route('/:vcid/group/:groupid')
 				} else if (req.query.sysadmin && reqValue) {
 					// Change it as sysadmin for a specific VC
 					logger4js.debug('PUT update _VCConfig as sysadmin for VC', req.oneVCSetting.vcid, req.oneVCSetting.name, req.oneVCSetting.value);
-					var changedValue = false;
-					var changedLimit = false;
+					changedValue = false;
+					changedLimit = false;
 					if (reqValue.sysVCEnabled != undefined) {
 						reqValue.sysVCEnabled = reqValue.sysVCEnabled ? true : false;
 						if (newValue.sysVCEnabled != reqValue.sysVCEnabled) {

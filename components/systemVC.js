@@ -132,9 +132,9 @@ var initSystemSettings = function(launchServer) {
 					&& fs.existsSync(vcSystemSetting[i].value.cmd)) {
 						logger4js.warn('Predict Configured:', vcSystemSetting[i].value.cmd);
 						predictConfigured = 1;
-			    } else {
+					} else {
 						logger4js.info('Predict not Configured', vcSystemSetting[i].value && vcSystemSetting[i].value.cmd);
-			    }
+					}
 				}
 				if (!predictConfigured) {
 					vcSystemSetting[i].value = undefined;
@@ -259,7 +259,7 @@ var getSystemSettingList = function (name, type) {
 		type: item.type
 	}));
 	return resultList;
-}
+};
 
 var checkSystemEnabled = function(name) {
 	var vcSetting = getSystemVCSetting(name);
@@ -272,7 +272,7 @@ var checkSystemEnabled = function(name) {
 	} else {
 		return vcSetting;
 	}
-}
+};
 
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');

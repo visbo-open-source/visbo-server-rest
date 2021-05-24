@@ -1,0 +1,21 @@
+# predictDir=$HOME/Documents/GitHub/NpDeployPackage
+predictDir=../predictkm
+tmpdir=`mktemp -d -t predict-XXXXXXXX`
+input=$1
+validation=$predictDir/NpData/Visbo/ValidationData.json
+output=$tmpdir/predictTrainingOutput.json
+error=$tmpdir/predictTrainingError
+
+echo python3 $predictDir/NpDeploy/NpIncrementModels.py -i $input -p $predictDir -v $validation -m RandomForestRegressor -q NpQFinalCost1 -c Visbo
+python3 $predictDir/NpDeploy/NpIncrementModels.py -i $input -p $predictDir -v $validation -m RandomForestRegressor -q NpQFinalCost1 -c Visbo
+# > $output 2> $error
+
+#if [ $? -ne 0 ]
+#then
+#  echo "FATAL: PredictBACTraining failed" 1>&2
+#  cat $error 1>&2
+#  exit 1
+#fi
+#echo "" >>$output
+#cat <$output
+# rm -rf $tmpdir
