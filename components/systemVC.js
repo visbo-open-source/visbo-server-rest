@@ -19,12 +19,14 @@ var errorHandler = require('./../components/errorhandler').handler;
 
 var visboRedis = require('./../components/visboRedis');
 var crypt = require('./../components/encrypt');
+var path = require('path');
 
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 var predictConfigured = undefined;
+var fsModell = undefined;
 
 // Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body, launchServer) {
@@ -125,19 +127,17 @@ var initSystemSettings = function(launchServer) {
 				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
 				redisClient.set('vcSystem', vcSystem._id.toString());
 			}
-			if (vcSystemSetting[i].name == 'Predict') {
+			if (vcSystemSetting[i].name == 'EnablePredict') {
 				if (predictConfigured == undefined) {
-					// MS TODO: Check if the Predict program is installed
-					if(vcSystemSetting[i].value && vcSystemSetting[i].value.cmd
-					&& fs.existsSync(vcSystemSetting[i].value.cmd)) {
-						logger4js.warn('Predict Configured:', vcSystemSetting[i].value.cmd);
+					// Check if the Predict Module is installed and the Model data is available
+					var fsModule = '../predictkm';
+					fsModell = (process.env.DATAPATH || path.join(__dirname, '../data')).concat('/predictkm');
+					if(fs.existsSync(fsModule) && fs.existsSync(fsModell)) {
+						logger4js.warn('Predict Configured', fsModule, fsModell);
 						predictConfigured = 1;
 					} else {
-						logger4js.info('Predict not Configured', vcSystemSetting[i].value && vcSystemSetting[i].value.cmd);
+						logger4js.warn('Predict not Configured', fsModule, fsModell);
 					}
-				}
-				if (!predictConfigured) {
-					vcSystemSetting[i].value = undefined;
 				}
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
@@ -295,6 +295,14 @@ var getReSTUrl = function () {
 	return result;
 };
 
+var checkPredictConfigured = function () {
+	return predictConfigured;
+};
+
+var getPredictModel = function () {
+	return fsModell;
+}
+
 module.exports = {
 	createSystemVC: createSystemVC,
 	getSystemVC: getSystemVC,
@@ -304,5 +312,7 @@ module.exports = {
 	refreshSystemSetting: refreshSystemSetting,
 	reloadSystemSetting: reloadSystemSetting,
 	checkSystemEnabled: checkSystemEnabled,
-	getSystemSettingList: getSystemSettingList
+	getSystemSettingList: getSystemSettingList,
+	checkPredictConfigured: checkPredictConfigured,
+	getPredictModel: getPredictModel
 };

@@ -2155,7 +2155,7 @@ router.route('/:vcid/group/:groupid')
 				}
 				// filter _VCConfig Settings if not sysAdmin
 				if (!isSysAdmin) {
-					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level != 2);
+					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level == 2);
 				}
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({

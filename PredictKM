@@ -1,12 +1,13 @@
 # predictDir=$HOME/Documents/GitHub/NpDeployPackage
 predictDir=../predictkm
+model=$2
 tmpdir=`mktemp -d -t predict-XXXXXXXX`
 input=$tmpdir/predictInput.json
 output=$tmpdir/predictOutput.json
 error=$tmpdir/predictError
 
 echo $1 > $input
-python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -p $predictDir -m RandomForestRegressor -q NpQFinalCost1 -r False -c Visbo > $error 2>&1
+python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -p $predictDir -d $model -m RandomForestRegressor -q NpQFinalCost1 -r False -c Visbo > $error 2>&1
 
 if [ $? -ne 0 ]
 then

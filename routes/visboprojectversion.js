@@ -6,6 +6,8 @@ var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
+
+var systemVC = require('./../components/systemVC');
 var lockVP = require('./../components/lock');
 var verifyVc = require('./../components/verifyVc');
 var verifyVpv = require('./../components/verifyVpv');
@@ -104,7 +106,8 @@ function saveRecalcKM(req, res, message) {
 		});
 	}
 	// check if prediction is enabled and needed
-	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
+	var fsModell = systemVC.getPredictModel();
+	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
 		if (req.oneVPV.keyMetrics && req.oneVPV.keyMetrics.costBaseLastTotal && req.oneVPV.keyMetrics.endDateBaseLast) {
@@ -119,7 +122,7 @@ function saveRecalcKM(req, res, message) {
 			tmpVPV.endDateBaseLast = req.oneVPV.keyMetrics.endDateBaseLast;
 			reducedKM.push(tmpVPV);
 		}
-		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
 		if (reducedKM.length) {
 			logger4js.warn('POST VPV calculate Prediction for Version', req.oneVPV._id, req.oneVPV.variantName || 'Standard');
 			exec(cmd, function callback(error, stdout, stderr) {
@@ -211,7 +214,8 @@ function getRecalcKM(req, res, message) {
 		return;
 	}
 	// check if prediction is enabled and needed
-	if (verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
+	var fsModell = systemVC.getPredictModel();
+	if (verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
 		req.listVPV.forEach(vpv => {
@@ -228,7 +232,7 @@ function getRecalcKM(req, res, message) {
 				reducedKM.push(newVPV);
 			}
 		});
-		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
 		if (reducedKM.length) {
 			logger4js.warn('Recalc %d Versions for Prediction', reducedKM.length, cmd.length);
 			exec(cmd, function callback(error, stdout, stderr) {

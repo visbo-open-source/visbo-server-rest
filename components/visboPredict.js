@@ -3,8 +3,10 @@ require('../models/visboprojectversion');
 require('../models/vcsetting');
 require('../models/predictkm');
 
+var exec = require('child_process').exec;
 var fs = require('fs');
 
+var systemVC = require('./../components/systemVC');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VCSetting = mongoose.model('VCSetting');
 var PredictKM = mongoose.model('PredictKM');
@@ -179,27 +181,38 @@ function kmTraining(task, finishedTask, vcSystemId) {
 			}
 			logger4js.warn('Task: kmTraining Starting Training for', reducedVPV.length);
 
-			var tmpdir = '/var/tmp';
-			if (!fs.existsSync(tmpdir)) {
-				logger4js.warn('Task: kmTraining Tmp Folder does not exists', tmpdir);
-				task.value.taskSpecific = {result: 0, resultDescription: `Temp Folder for Training does not exists ${tmpdir}`};
-				logger4js.warn('Task: kmTraining Folder %s missing', tmpdir);
+			var dir = systemVC.getPredictModel();
+			if (!dir || !fs.existsSync(dir)) {
+				task.value.taskSpecific = {result: 0, resultDescription: `Temp Folder for Training does not exists ${dir}`};
+				logger4js.warn('Task: kmTraining Folder %s missing', dir);
 				finishedTask(task, false);
 				return;
 			}
-			var tmpfile = tmpdir.concat('/predictkms');
+			var tmpfile = dir.concat('/predictkms.json');
 			var content = JSON.stringify(reducedVPV);
 			logger4js.warn('Task: kmTraining Converted to JSON %d kB', Math.round(content.length / 1024));
 			fs.writeFileSync(tmpfile, content, {
 													encoding: 'utf8',
 													flag: 'w'
 												});
+			// export finished now run the training
+			var cmd = './PredictKMTraining';
+			cmd = cmd.concat(' \'', tmpfile, '\' ', dir);
+			exec(cmd, function callback(error, stdout, stderr) {
+				if (error) {
+					logger4js.warn('Task: Error running Prediction Training', stderr);
+					finishedTask(task, false);
+					return;
+				}
+				// var result = JSON.parse(stdout);
+				var result = stdout;
+				endDate = new Date();
+				duration = endDate.getTime() - startDate.getTime();
+				task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()} Details: ${result}`};
+				logger4js.warn('Task: kmTraining Result %d Duration %d ms Output %s', listVPV.length, duration, result);
+				finishedTask(task, false);
+			});
 
-			endDate = new Date();
-			duration = endDate.getTime() - startDate.getTime();
-			task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`};
-			logger4js.info('Task: kmTraining Result %d Duration %d ms', listVPV.length, duration);
-			finishedTask(task, false);
 		});
 	});
 }
