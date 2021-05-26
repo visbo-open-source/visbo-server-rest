@@ -66,11 +66,11 @@ function createTaskAudit(task, duration) {
   auditEntry.vc = {};
   auditEntry.vc.vcid = vcSystemId;
   auditEntry.vc.name = 'Visbo-System';
-  var vcjson = {'Info': task.value.taskSpecific.resultDescription};
+  var vcjson = {'Info': task.value.taskSpecific};
   auditEntry.vc.vcjson = JSON.stringify(vcjson);
 
   auditEntry.ttl = new Date();
-  auditEntry.ttl.setSeconds(auditEntry.ttl.getSeconds() + task.value.interval * 7);
+  auditEntry.ttl.setSeconds(auditEntry.ttl.getSeconds() + task.value.interval * 50);
   auditEntry.actionDescription = 'Task: ' + task.name;
   auditEntry.actionInfo = task.value.taskSpecific.result;
   auditEntry.result = {};
