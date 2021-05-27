@@ -5,6 +5,7 @@ var logModule = 'VPV';
 var log4js = require('log4js');
 const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
+const { min } = require('moment');
 const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
 
@@ -1053,26 +1054,46 @@ function calcKeyMetrics(vpv, pfv, organisations) {
 }
 
 function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisations, hierarchy, onlyPT) {
+	const minStartDate = new Date('2015-01-01');
+	const maxEndDate = new Date('2050-12-01');
+
 	if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
+	
+	if (visboCmpDate(new Date(startDate), new Date(endDate)) > 0 ){
+		logger4js.warn('Calculate Capacities startDate %s before endDate %s ', startDate, endDate);
+		return [];
+	}
+
 	logger4js.debug('Calculate Capacities %s', roleIdentifier);
 	var startTimer = new Date();
 
-
+	startDate = validateDate(startDate,false);
 	if (!startDate) {
 		startDate = new Date();
 		startDate.setMonth(startDate.getMonth() - 4);
 		startDate.setDate(1);
 		startDate.setHours(0, 0, 0, 0);
 	}
+	if (visboCmpDate(new Date(startDate), minStartDate) < 0){
+		startDate = new Date(minStartDate);
+		startDate.setDate(1);	
+		startDate.setHours(0, 0, 0, 0);
+	}
 	startDate = new Date(startDate);
 	var startIndex = getColumnOfDate(startDate);
 
+	endDate = validateDate(endDate,false);
 	if (!endDate) {
 		endDate = new Date();
 		endDate.setMonth(endDate.getMonth() + 9);
+		endDate.setDate(1);
+		endDate.setHours(0, 0, 0, 0);
+	}
+	if (visboCmpDate(new Date(endDate), maxEndDate) > 0){
+		endDate = new Date(maxEndDate);
 		endDate.setDate(1);
 		endDate.setHours(0, 0, 0, 0);
 	}
@@ -1365,37 +1386,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	var allCalcCapaValuesIndexed = [];
 
 	var roleID = '';
-	// var dateMinValue = -8640000000000000;
-	// var dateMaxValue = 8640000000000000;
-	// var calcC_startIndex = Infinity;
-	// var calcC_endIndex = 0;
-	// var calcC_startDate = new Date(dateMaxValue);
-	// var calcC_endDate = new Date(dateMinValue);
-	// var calcC_dauer = 0;
-
-	// var startCalc = new Date();
-
-	// if (!vpvs || vpvs.length == 0 || !organisations || organisations.length == 0) {
-	// 	logger4js.debug('Calculate Capacities missing vpvs or organisation ');
-	// 	return allCalcCapaValuesIndexed;
-	// }
-
-	// // get startIndex and endIndex and dauer of the several vpvs
-	// for (var i = 0; i < vpvs.length; i++) {
-	// 	var vpv = vpvs[i];
-	// 	if (!vpv) {
-	// 		// skip the version
-	// 		continue;
-	// 	}
-	// 	calcC_startIndex = Math.min(calcC_startIndex, getColumnOfDate(vpv.startDate));
-	// 	calcC_startDate = Math.min(calcC_startDate, vpv.startDate);
-	// 	calcC_endIndex = Math.max(calcC_endIndex, getColumnOfDate(vpv.endDate));
-	// 	calcC_endDate = Math.max(calcC_endDate, vpv.endDate);
-	//  calcC_dauer = calcC_endIndex - calcC_startIndex + 1;
-	// }
-
-	//ur: optimize
-
+	
 	// startCalc is defined for time-measuring
 	var startCalc = new Date();
 
