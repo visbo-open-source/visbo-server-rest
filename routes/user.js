@@ -371,6 +371,7 @@ router.route('/ott')
 	*/
 	.get(function(req, res) {
 		req.auditDescription = 'Generate One Time Token';
+		req.auditTTLMode = 1;
 
 		logger4js.info('Generate One Time Token %s', req.decoded._id);
 		var userReduced = {};
