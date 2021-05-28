@@ -53,7 +53,7 @@ var validateDate = function(dateString, allowEmpty, dateObject) {
 	return dateObject ? dateValue : dateValue.toISOString();
 };
 
-// validate a date to prevent XSS
+// validate a number to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
 	if (!allowEmpty && isNaN(numberValue)) {
 		logger4js.info('validate Number: Number is NaN! :%s:', numberValue);
