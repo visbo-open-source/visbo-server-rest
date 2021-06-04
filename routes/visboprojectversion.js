@@ -113,6 +113,7 @@ function saveRecalcKM(req, res, message) {
 		if (req.oneVPV.keyMetrics && req.oneVPV.keyMetrics.costBaseLastTotal && req.oneVPV.keyMetrics.endDateBaseLast) {
 			var tmpVPV = {};
 			tmpVPV._id = req.oneVPV._id;
+			tmpVPV.vpid = req.oneVPV.vpid;
 			tmpVPV.timestamp = req.oneVPV.timestamp;
 			tmpVPV.costCurrentActual = req.oneVPV.keyMetrics.costCurrentActual || 0;
 			tmpVPV.costCurrentTotal = req.oneVPV.keyMetrics.costCurrentTotal || 0;
@@ -222,6 +223,7 @@ function getRecalcKM(req, res, message) {
 			if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
 				var newVPV = {};
 				newVPV._id = vpv._id;
+				newVPV.vpid = vpv.vpid;
 				newVPV.timestamp = vpv.timestamp;
 				newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
 				newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;

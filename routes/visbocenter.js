@@ -24,9 +24,8 @@ var VCGroupUser = mongoose.model('VisboGroupUser');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
-var VCRole = mongoose.model('VCRole');
-var VCCost = mongoose.model('VCCost');
 var VCSetting = mongoose.model('VCSetting');
+var PredictKM = mongoose.model('PredictKM');
 var VisboAudit = mongoose.model('VisboAudit');
 
 var Const = require('../models/constants');
@@ -859,21 +858,7 @@ router.route('/:vcid')
 					}
 					logger4js.trace('VC Destroy: %s VPs Deleted', req.oneVC._id);
 				});
-				// Delete all VCCosts
 				var queryvcid = {vcid: req.oneVC._id};
-				VCCost.deleteMany(queryvcid, function (err) {
-					if (err){
-						logger4js.error('DB: Destroy VC %s, Problem deleting VC Cost %s', req.oneVC._id, err.message);
-					}
-					logger4js.trace('VC Destroy: %s VC Costs Deleted', req.oneVC._id);
-				});
-				// Delete all VCRoles
-				VCRole.deleteMany(queryvcid, function (err) {
-					if (err){
-						logger4js.error('DB: Destroy VC %s, Problem deleting VC Role %s', req.oneVC._id, err.message);
-					}
-					logger4js.trace('VC Destroy: %s VC Roles Deleted', req.oneVC._id);
-				});
 				// Delete all VCSettings
 				VCSetting.deleteMany(queryvcid, function (err) {
 					if (err){
@@ -2855,5 +2840,149 @@ router.route('/:vcid/group/:groupid')
 				} ]
 			});
 		});
+
+router.route('/:vcid/predict')
+
+/**
+	* @api {get} /vc/:vcid/predict Get Predict Statistics
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Center Properties
+	* @apiName GetVISBOCenterPredict
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Gets all groups of the specified VISBO Center
+	*
+	* @apiPermission Authenticated and sysAdmin and VC.View Permission for the VISBO Center.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vc/:vcid/predict
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Returned VISBO Center Predict Statistics',
+	*   'count': 100,
+	*   'vp':[{
+	*     '_id':'vp5c754feaa',
+	*     'name':'Project Name',
+	*     'vcid': 'vc5c754feaa',
+	*     'vpvCount': 10
+	*   }]
+	* }
+	*/
+
+// Get VC Predict Statistics
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var isSysAdmin = req.query.sysadmin ? true : false;
+		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
+
+		req.auditDescription = 'VISBO Center Predict Read';
+		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
+
+		if (!isSysAdmin) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to get Predict Statistics',
+				perm: perm
+			});
+		}
+
+		logger4js.info('Get VISBO Center Predict for userid %s email %s and vc %s oneVC %s Perm %O', userId, useremail, req.params.vcid, req.oneVC.name, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
+		var aggregateQuery = [
+			{$match: {vcid: req.oneVC._id}},
+			{
+				$group: {
+					_id: '$vpid',
+					vpvCount: { $sum: 1}
+				}
+			},
+			{
+				$lookup: {
+					from: 'visboprojects',
+					localField: '_id',
+					foreignField: '_id',  // field in the items collection
+					as: 'vp'
+				}
+			},
+			{$unwind: '$vp'}
+		];
+		var queryVCPredictKM = PredictKM.aggregate(aggregateQuery);
+		queryVCPredictKM.exec(function (err, listVP) {
+			if (err) {
+				errorHandler(err, res, `DB: GET VC Predict ${req.oneVC._id} `, `Error getting Predict Information for VISBO Center ${req.oneVC.name}`);
+				return;
+			}
+			var totalVersions = 0;
+			listVP.forEach(item => totalVersions += item.vpvCount || 0);
+			logger4js.info('Found %d Projects for VC with total Versions %d', listVP.length, totalVersions);
+			req.auditInfo = totalVersions;
+			var list = [];
+			listVP.forEach(item => list.push({_id: item.vp._id, name: item.vp.name, vcid: item.vp.vcid, vpvCount: item.vpvCount }));
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Center Predict Statistics',
+				count: totalVersions,
+				vp: list
+			});
+		})
+	})
+
+/**
+	* @api {delete} /vc/:vcid/predict Delete Predict Training
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Center Properties
+	* @apiName DeleteVISBOCenterPredict
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Deletes the training data of the VISBO Center
+	*
+	* @apiPermission Authenticated and sysAdmin and VC.View and VC.Delete for the VISBO Center.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Delete VISBO Center Training Data
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vc/:vcid/predict
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Deleted VISBO Center Predict Training'
+	* }
+	*/
+
+// Delete VISBO Center Predict Training
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var isSysAdmin = req.query.sysadmin ? true : false;
+		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
+
+		req.auditDescription = 'VISBO Center Predict Training Delete';
+		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
+
+		if (!isSysAdmin || (perm.system & constPermSystem.DeleteVC)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to delete Predict Training',
+				perm: perm
+			});
+		}
+		var queryPredict = {vcid: req.oneVC._id};
+		PredictKM.deleteMany(queryPredict, function (err) {
+			if (err){
+				logger4js.error('DB: Problem Deleting Predict Training for VC %s', req.oneVC._id, err.message);
+			}
+			logger4js.debug('VC Predict Deleted: %s', req.oneVC._id);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Deleted VISBO Center Predict Training'
+			});
+		});
+	})
+
+
 
 module.exports = router;
