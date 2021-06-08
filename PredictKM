@@ -9,7 +9,7 @@ error=$tmpdir/predictError
 # Models: RandomForestRegressor, Lasso, BayesianRidge
 # Questions: NpQFinalCost1, NpQFinalCost2, NpQFinalCostTimeSeries1, NpQFinalCostTimeSeries2
 echo $1 > $input
-python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -p $predictDir -d $model -m Lasso -q NpQFinalCost1 -r False -c Visbo > $error 2>&1
+python3 $predictDir/NpDeploy/NpPredictModel.py -i $input -o $output -p $predictDir -d $model -m RandomForestRegressor -q NpQFinalCost2 -r False -c Visbo > $error 2>&1
 
 if [ $? -ne 0 ]
 then
