@@ -1061,7 +1061,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
-	
+
 	if (visboCmpDate(new Date(startDate), new Date(endDate)) > 0 ){
 		logger4js.warn('Calculate Capacities startDate %s before endDate %s ', startDate, endDate);
 		return [];
@@ -1079,7 +1079,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 	}
 	if (visboCmpDate(new Date(startDate), minStartDate) < 0){
 		startDate = new Date(minStartDate);
-		startDate.setDate(1);	
+		startDate.setDate(1);
 		startDate.setHours(0, 0, 0, 0);
 	}
 	startDate = new Date(startDate);
@@ -1189,7 +1189,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, startDate, endDate, organisa
 			});
 		}
 	}
-	
+
 	var endTimer = new Date();
 	logger4js.trace('Calculate Capacities duration: ', endTimer.getTime() - startTimer.getTime());
 
@@ -1386,7 +1386,7 @@ function calcCapacityVPVs(vpvs, roleIdentifier, startDate, endDate, timeZones, h
 	var allCalcCapaValuesIndexed = [];
 
 	var roleID = '';
-	
+
 	// startCalc is defined for time-measuring
 	var startCalc = new Date();
 
@@ -2178,7 +2178,7 @@ function buildOrgaList (orga) {
       // build team members Information by duplicating users with their percentage
       let maxid = 0;
       orga.value.allRoles.forEach(element => { if (element.uid > maxid) maxid = element.uid; } );
-      logger4js.info(`MaxID ${maxid}`);
+      logger4js.trace(`MaxID ${maxid}`);
       for (let i = 0; i < orga.value.allRoles.length; i++) {
         const role = orga.value.allRoles[i];
         if (role.isTeam && role.subRoleIDs && role.subRoleIDs.length > 0) {
@@ -3521,11 +3521,11 @@ function ensureValidVPV(myVPV) {
 
 				logger4js.info('ensureValidVPV enf-healed C4: Milestone Offet (vpvId: %s, phase: %s, milestone-Name: %s, old Offset: %s, new Offset: %s)',
 								myVPV._id, phase.name, result.name, result.offset, newOffset);
-				
-				result.offset = newOffset; 
-			} 
-	
-			// 
+
+				result.offset = newOffset;
+			}
+
+			//
 			// Criterium is only info, not any more restirction
 			let c4tmp = ((result.offset >= 0) &&
 						((phase.startOffsetinDays + result.offset) <= projectDurationInDays) &&
@@ -3533,7 +3533,7 @@ function ensureValidVPV(myVPV) {
 
 			c4 = c4 && c4tmp;
 			if (!c4tmp) {
-				logger4js.info('ensureValidVPV warning C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s, project-duration: %s) ', 
+				logger4js.info('ensureValidVPV warning C4: Milestone not within phase limits: (vpvId: %s, milestone-Name: %s, phase-Name: %s, milestone offset: %s, phase-offset: %s, phase-duration: %s, project-duration: %s) ',
 				myVPV._id, result.name, phase.name, result.offset, phase.startOffsetinDays, phase.dauerInDays, projectDurationInDays);
 
 				c4 = true;
@@ -3591,7 +3591,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
-	
+
 	if (!oldVPV || !newVPV || scaleFactor < 0) {
 		return undefined;
 	}
@@ -3614,7 +3614,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
-		scaleFromDate = new Date (oldVPV.actualDataUntil);	
+		scaleFromDate = new Date (oldVPV.actualDataUntil);
 		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
@@ -3622,10 +3622,10 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			scaleFromDate = new Date(oldVPV.actualDataUntil);
 		} else {
 			scaleFromDate = new Date(newVPV.actualDataUntil);
-			// in the next command scaleFromDate is moved one to the right , that is why it is here increased	
-			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);		
+			// in the next command scaleFromDate is moved one to the right , that is why it is here increased
+			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);
 		}
-		
+
 		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	}
 	let scaleFromDateColumn = -1;
