@@ -24,8 +24,6 @@ function cleanupAudit(task, finishedTask) {
 		logger4js.debug('Task: cleanupAudit Result %O', result);
 		finishedTask(task, false);
 	});
-
-	logger4js.debug('cleanupAudit Done %s', task._id);
 }
 
 function squeezeDelete(squeezeEntry, lastDate) {
@@ -111,7 +109,6 @@ function squeezeAudit(task, finishedTask) {
 		task.value.taskSpecific = resultFinished;
 		finishedTask(task, false);
 	});
-	logger4js.debug('squeezeAudit Done %s', task._id);
 }
 
 function saveAuditEntry(tokens, req, res, factor) {
@@ -229,7 +226,6 @@ function savePropertyEntry(tokens, req, res, property) {
 	auditEntry.url = tokens.url(req, res);
 	auditEntry.host = os.hostname().split('.')[0];
 	if (req.auditSysAdmin) auditEntry.sysAdmin = true;
-	var baseUrl = auditEntry.url.split('?')[0];
 
 	auditEntry.user = {};
 	if (req.decoded && req.decoded._id) {
@@ -316,9 +312,7 @@ function visboAudit(tokens, req, res) {
 	} else {
 		saveAuditEntry(tokens, req, res, 1);
 		if (req.auditProperty) {
-			for (var i = 0; i < req.auditProperty.length; i++) {
-				savePropertyEntry(tokens, req, res, req.auditProperty[i]);
-			}
+			req.auditProperty.forEach(item => savePropertyEntry(tokens, req, res, item));
 		}
 	}
 }

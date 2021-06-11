@@ -23,12 +23,24 @@ function getOneVP(req, res, next) {
 
 	// get the VP that is specified in the URL
 	logger4js.debug('Generate oneVP for user %s for url %s', req.decoded.email, req.url);
-	if (!validate.validateObjectId(req.query.vpid, false) || baseUrl != '/') {
+	var skip = true;
+	var vpid;
+	if (req.method == 'GET' && baseUrl == '/' && validate.validateObjectId(req.query.vpid, false)) {
+		skip = false;
+		vpid = req.query.vpid;
+	} else if (req.method == 'POST' && baseUrl == '/') {
+		skip = false;
+		vpid = req.body.vpid;
+	} else if (req.method == 'POST' && req.oneVPV) {
+		skip = false;
+		vpid = req.oneVPV.vpid;
+	}
+	if (skip) {
 		return next();
 	}
 
 	var query = {};
-	query._id = req.query.vpid;
+	query._id = vpid;
 	var queryVP = VisboProject.findOne(query);
 	// queryVP.select('name users updatedAt createdAt');
 	queryVP.exec(function (err, oneVP) {

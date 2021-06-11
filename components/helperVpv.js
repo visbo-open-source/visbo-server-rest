@@ -117,21 +117,32 @@ function cleanupVPV(vpv) {
 		return;
 	}
 	if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
-	if (vpv.earliestStart == -999) { vpv.earliestStart = undefined;; }
+	if (vpv.earliestStart == -999) { vpv.earliestStart = undefined; }
 	if (vpv.AllPhases) {
 		vpv.AllPhases.forEach(phase => {
-			if (phase.latestStart == -999) { phase.latestStart = undefined;; }
-			if (phase.earliestStart == -999) { phase.earliestStart = undefined;; }
+			if (phase.latestStart == -999) { phase.latestStart = undefined; }
+			if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
 			if (phase.invoice && phase.invoice.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
 			if (phase.penalty && phase.penalty.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
 			if (phase.AllResults) {
 				phase.AllResults.forEach(result => {
 					if (result.invoice && result.invoice.Key == 0 && result.invoice.Value == 0) { result.invoice = undefined; }
 					if (result.penalty && result.penalty.Key.indexOf('9999-12-31') == 0 && result.penalty.Value == 0) { result.penalty = undefined; }
-				})
+				});
 			}
-		})
+		});
 	}
+}
+
+function cleanupKM(keyMetrics) {
+	if (!keyMetrics) {
+		return;
+	}
+	keyMetrics.costCurrentActual = undefined;
+	keyMetrics.costCurrentTotal = undefined;
+	keyMetrics.costBaseLastActual = undefined;
+	keyMetrics.costBaseLastTotal = undefined;
+	keyMetrics.costCurrentTotalPredict = undefined;
 }
 
 function getKeyAttributes(newVPV) {
@@ -198,5 +209,6 @@ module.exports = {
 	cleanupVPV: cleanupVPV,
 	getKeyAttributes: getKeyAttributes,
 	setKeyAttributes: setKeyAttributes,
-	checkValidKeyMetrics: checkValidKeyMetrics
+	checkValidKeyMetrics: checkValidKeyMetrics,
+	cleanupKM: cleanupKM
 };

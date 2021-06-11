@@ -667,7 +667,7 @@ router.route('/')
 						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
 					}
 					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
-						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail})
+						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail});
 					}
 				}
 
@@ -687,92 +687,93 @@ router.route('/')
 					if (err) {
 						errorHandler(err, undefined, `DB: POST VP Create Group for VP ${newVP._id}`, undefined);
 					}
-				});
-				// set the VP Name
-				newVP.vc.name = vc.name;
-				logger4js.trace('VP Create add VP Name %s %O', vc.name, newVP);
-				logger4js.debug('Save Project %s %s from Template %s VPV %s', newVP.name, newVP._id, req.oneVPTemplate && req.oneVPTemplate._id, req.oneVPVTemplate && req.oneVPVTemplate.timestamp);
+					// set the VP Name
+					newVP.vc.name = vc.name;
+					logger4js.trace('VP Create add VP Name %s %O', vc.name, newVP);
+					logger4js.debug('Save Project %s %s from Template %s VPV %s', newVP.name, newVP._id, req.oneVPTemplate && req.oneVPTemplate._id, req.oneVPVTemplate && req.oneVPVTemplate.timestamp);
 
-				newVP.save(function(err, vp) {
-					if (err) {
-						errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Project ${req.body.name}`);
-						return;
-					}
-					req.oneVP = vp;
-					logger4js.debug('Update VC %s with %d Projects ', req.oneVC.name, req.oneVC.vpCount);
-					updatePermAddVP(req.oneVP.vcid, req.oneVP._id); // async
-					updateVPCount(req.oneVP.vcid, 1); // async
-					if (req.oneVPVTemplate) {
-						// Transform the VPV
-						var templateVPV = helperVpv.initVPV(req.oneVPVTemplate);
-						if (!templateVPV) {
-							errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
+					newVP.save(function(err, vp) {
+						if (err) {
+							errorHandler(err, res, `DB: POST VP ${req.body.name} Save`, `Failed to create Project ${req.body.name}`);
 							return;
 						}
+						req.oneVP = vp;
+						logger4js.debug('Update VC %s with %d Projects ', req.oneVC.name, req.oneVC.vpCount);
+						updatePermAddVP(req.oneVP.vcid, req.oneVP._id); // async
+						updateVPCount(req.oneVP.vcid, 1); // async
+						if (req.oneVPVTemplate) {
+							// Transform the VPV
+							var templateVPV = helperVpv.initVPV(req.oneVPVTemplate);
+							if (!templateVPV) {
+								errorHandler(err, res, `DB: POST VP ${req.body.name} Problems with VPV Template {req.oneVPVTemplate._id}`, `Failed to create Project ${req.body.name}`);
+								return;
+							}
 
-						// calculate scale factor if possible
-						var scaleFactor = 1;
-						var bac = 0;
-						if (req.body.bac) {
-							bac = validate.validateNumber(req.body.bac);
-						}
-						// Transform Start & End Date & Budget
-						var startDate = new Date();
-						if (req.body.startDate && validate.validateDate(req.body.startDate)) {
-							startDate = new Date(req.body.startDate);
+							// calculate scale factor if possible
+							var scaleFactor = 1;
+							var bac = 0;
+							if (req.body.bac) {
+								bac = validate.validateNumber(req.body.bac);
+							}
+							// Transform Start & End Date & Budget
+							var startDate = new Date();
+							if (req.body.startDate && validate.validateDate(req.body.startDate)) {
+								startDate = new Date(req.body.startDate);
+							} else {
+								startDate.setDate(1);
+								startDate.setHours(0, 0, 0, 0);
+								startDate.setMonth(startDate.getMonth() + 1);
+							}
+							var endDate;
+							if (req.body.endDate && validate.validateDate(req.body.endDate)) {
+								endDate = new Date(req.body.endDate);
+							} else if (req.oneVPVTemplate.startDate && req.oneVPVTemplate.endDate) {
+								var diff = req.oneVPVTemplate.endDate.getTime() - req.oneVPVTemplate.startDate.getTime();
+								endDate = new Date();
+								endDate.setTime(startDate.getTime() + diff);
+							}
+							// reset the VPV and reset individual user roles to group roles
+							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
+							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
+							if (bac) {
+								var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
+								var costSum = 0;
+								if (costDetails && costDetails.length > 0) {
+									costDetails.forEach(item => { costSum += item.currentCost; });
+								}
+								if (costSum) {
+									scaleFactor = bac / costSum;
+								}
+							}
+							var newVPV = helperVpv.initVPV(templateVPV);
+							newVPV.VorlagenName = req.oneVPVTemplate.name;							
+							newVPV.name = req.oneVP.name;
+							newVPV.vpid = req.oneVP._id;
+							newVPV.description = req.oneVP.description;
+							newVPV.variantName = 'pfv'; // first Version is the pfv
+							newVPV.startDate = startDate;
+							newVPV.endDate = endDate;
+							if (req.body.rac && validate.validateNumber(req.body.rac)) {
+								newVPV.Erloes = req.body.rac;
+							}
+							newVPV.status = undefined;
+
+							newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
+							if (!newVPV) {
+								return res.status(400).send({
+									state: 'failure',
+									message: 'Project Version not consistent'
+								});
+							}
+							helperVpv.createInitialVersions(req, res, newVPV);
 						} else {
-							startDate.setDate(1);
-							startDate.setHours(0, 0, 0, 0);
-							startDate.setMonth(startDate.getMonth() + 1);
-						}
-						var endDate;
-						if (req.body.endDate && validate.validateDate(req.body.endDate)) {
-							endDate = new Date(req.body.endDate);
-						} else if (req.oneVPVTemplate.startDate && req.oneVPVTemplate.endDate) {
-							var diff = req.oneVPVTemplate.endDate.getTime() - req.oneVPVTemplate.startDate.getTime();
-							endDate = new Date();
-							endDate.setTime(startDate.getTime() + diff);
-						}
-						// reset the VPV and reset individual user roles to group roles
-						templateVPV = visboBusiness.resetStatusVPV(templateVPV);
-						templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
-						if (bac) {
-							var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
-							var costSum = 0;
-							if (costDetails && costDetails.length > 0) {
-								costDetails.forEach(item => { costSum += item.currentCost; });
-							}
-							if (costSum) {
-								scaleFactor = bac / costSum;
-							}
-						}
-						var newVPV = helperVpv.initVPV(templateVPV);
-						newVPV.VorlagenName = req.oneVPVTemplate.name;
-						newVPV.name = req.oneVP.name;
-						newVPV.vpid = req.oneVP._id;
-						newVPV.variantName = 'pfv'; // first Version is the pfv
-						newVPV.startDate = startDate;
-						newVPV.endDate = endDate;
-						if (req.body.rac && validate.validateNumber(req.body.rac)) {
-							newVPV.Erloes = req.body.rac;
-						}
-						newVPV.status = undefined;
-
-						newVPV = visboBusiness.scaleVPV(templateVPV, newVPV, scaleFactor);
-						if (!newVPV) {
-							return res.status(400).send({
-								state: 'failure',
-								message: 'Project Version not consistent'
+							return res.status(200).send({
+								state: 'success',
+								message: 'Successfully created new Project',
+								vp: [ vp ]
 							});
 						}
-						helperVpv.createInitialVersions(req, res, newVPV);
-					} else {
-						return res.status(200).send({
-							state: 'success',
-							message: 'Successfully created new Project',
-							vp: [ vp ]
-						});
-					}
+					});
 				});
 			});
 		});
@@ -2786,7 +2787,7 @@ router.route('/:vpid/portfolio')
 				delete req.body.allItems[i]._id;
 				newPortfolio.allItems.push(req.body.allItems[i]);
 			}
-			logger4js.warn('Replaced in List (%d) correct VP Names %s', newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
+			logger4js.info('Replaced in List (%d) correct VP Names %s', newPortfolio.allItems.length, JSON.stringify(newPortfolio.allItems));
 			newPortfolio.sortType = req.body.sortType;
 			newPortfolio.sortList = req.body.sortList;
 			newPortfolio.updatedFrom = {};
@@ -3038,7 +3039,7 @@ router.route('/:vpid/portfolio/:vpfid')
 					delete req.body.allItems[i]._id;
 					req.oneVPF.allItems.push(req.body.allItems[i]);
 				}
-				logger4js.warn('Replaced in List (%d) correct VP Names %s', req.oneVPF.allItems.length, JSON.stringify(req.oneVPF.allItems));
+				logger4js.info('Replaced in List (%d) correct VP Names %s', req.oneVPF.allItems.length, JSON.stringify(req.oneVPF.allItems));
 				if (req.body.sortType) req.oneVPF.sortType = req.body.sortType;
 				if (req.body.sortType) req.oneVPF.sortList = req.body.sortList;
 

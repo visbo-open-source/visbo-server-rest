@@ -9,6 +9,7 @@ var verifyVpv = require('./../components/verifyVpv');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
+var VCSetting = mongoose.model('VCSetting');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -133,6 +134,86 @@ function getVC(req, res, next, vcid) {
 	});
 }
 
+function checkSettingId(req, res, next, settingID) {
+	logger4js.debug('Check settingID %s for url %s ', settingID, req.url);
+	if (!validate.validateObjectId(settingID, false)) {
+		logger4js.warn('settingID Bad Parameter %s', settingID);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Setting'
+		});
+	}
+	var query = {};
+	var vcid;
+	if (req.oneVC) vcid = req.oneVC._id;
+	if (!vcid) {
+		logger4js.warn('No vcid found for settingID', settingID);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VISBO Center'
+		});
+	}
+	query._id = settingID;
+	query.vcid = vcid;
+	logger4js.trace('Search VC Settings %O', query);
+
+	var queryVCSetting = VCSetting.findOne(query);
+	queryVCSetting.exec(function (err, oneVCSetting) {
+		if (err) {
+			errorHandler(err, res, 'DB: Setting Find', 'Error getting Settings ');
+			return;
+		}
+		logger4js.trace('Found Settings %s', oneVCSetting != undefined);
+		// Convert the result to request
+		if (!oneVCSetting) {
+			logger4js.warn('SettingId %s for VC %s not found', settingID, vcid);
+			// do not accept requests without a group assignement especially to System Group
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Setting'
+			});
+		}
+		req.oneVCSetting = oneVCSetting;
+		return next();
+	});
+}
+
+function getVCSetting(req, res, next) {
+	var checkSetting = false;
+	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
+		checkSetting = true;
+	} else if (req.method == 'POST') {
+		checkSetting = true;
+	} else if (req.method == 'PUT') {
+		checkSetting = true;
+	}
+	var vcid;
+	if (req.oneVP) {
+		vcid = req.oneVP.vcid;
+	} else if (req.oneVC)  {
+		vcid = req.oneVC._id;
+	} else if (req.query.vcid) {
+		vcid = req.query.vcid;
+	}
+	if (checkSetting && vcid) {
+		logger4js.trace('GET VC Settings for VC %s and URL', vcid, req.url);
+		var query = {};
+		query.vcid = vcid;
+		query.type = '_VCConfig';
+		var queryVCSetting = VCSetting.find(query);
+		queryVCSetting.exec(function (err, listVCSetting) {
+			if (err) {
+				errorHandler(err, undefined, 'DB: Get VC Setting Select ', undefined);
+			}
+			logger4js.debug('Setting for VC %s Length %d', vcid, listVCSetting ? listVCSetting.length : undefined);
+			req.listVCSetting = listVCSetting;
+			return next();
+		});
+	} else {
+		return next();
+	}
+}
+
 function getVCVP(req, res, next) {
 	var query = {};
 	if (!req.oneVC) {
@@ -217,11 +298,35 @@ function checkVCOrgs(req, res, next) {
 	}
 }
 
+function isVCEnabled(req, name, level) {
+	var setting;
+	var result = false;
+	if (req.listVCSetting) {
+		setting = req.listVCSetting.find(item => item.name == name);
+		if (setting && setting.value) {
+			if (level == 0) {
+				result = setting.value.systemEnabled;
+			} else if (level == 1) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+			} else if (level == 2) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+				if (!setting.value.systemLimit && !setting.value.sysVCLimit && setting.value.VCEnabled != undefined) {
+					result = setting.value.VCEnabled != false;
+				}
+			}
+		}
+	}
+	return result;
+}
+
 module.exports = {
 	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
 	getVC: getVC,
 	getVCVP: getVCVP,
 	getSystemGroups: getSystemGroups,
-	checkVCOrgs: checkVCOrgs
+	checkVCOrgs: checkVCOrgs,
+	checkSettingId: checkSettingId,
+	getVCSetting: getVCSetting,
+	isVCEnabled: isVCEnabled
 };

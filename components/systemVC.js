@@ -19,12 +19,14 @@ var errorHandler = require('./../components/errorhandler').handler;
 
 var visboRedis = require('./../components/visboRedis');
 var crypt = require('./../components/encrypt');
+var path = require('path');
 
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
 var predictConfigured = undefined;
+var fsModell = undefined;
 
 // Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body, launchServer) {
@@ -106,7 +108,7 @@ var initSystemSettings = function(launchServer) {
 	}
 	var query = {};
 	query.vcid = vcSystem._id;
-	query.type = 'SysConfig';
+	query.type = {$in: ['SysConfig', '_VCConfig']};
 	var queryVCSetting = VCSetting.find(query);
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
@@ -125,19 +127,17 @@ var initSystemSettings = function(launchServer) {
 				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
 				redisClient.set('vcSystem', vcSystem._id.toString());
 			}
-			if (vcSystemSetting[i].name == 'Predict') {
+			if (vcSystemSetting[i].name == 'EnablePredict') {
 				if (predictConfigured == undefined) {
-					// MS TODO: Check if the Predict program is installed
-					if(vcSystemSetting[i].value && vcSystemSetting[i].value.cmd
-					&& fs.existsSync(vcSystemSetting[i].value.cmd)) {
-						logger4js.warn('Predict Configured:', vcSystemSetting[i].value.cmd);
+					// Check if the Predict Module is installed and the Model data is available
+					var fsModule = '../predictkm';
+					fsModell = (process.env.DATAPATH || path.join(__dirname, '../data')).concat('/predictkm');
+					if(fs.existsSync(fsModule) && fs.existsSync(fsModell)) {
+						logger4js.warn('Predict Configured', fsModule, fsModell);
 						predictConfigured = 1;
-			    } else {
-						logger4js.info('Predict not Configured', vcSystemSetting[i].value && vcSystemSetting[i].value.cmd);
-			    }
-				}
-				if (!predictConfigured) {
-					vcSystemSetting[i].value = undefined;
+					} else {
+						logger4js.warn('Predict not Configured', fsModule, fsModell);
+					}
 				}
 			}
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
@@ -246,6 +246,34 @@ var getSystemVCSetting = function (name) {
 	return undefined;
 };
 
+var getSystemSettingList = function (name, type) {
+	logger4js.trace('Get System VISBO Center Enable Setting: %s', name);
+	if (!vcSystemSetting) return undefined;
+
+	var list = vcSystemSetting.filter(item => (name && item.name == name) || (type && item.type == type));
+	var resultList = [];
+	list.forEach(item => resultList.push({
+		name: item.name,
+		vcid: item.vcid,
+		value: item.value,
+		type: item.type
+	}));
+	return resultList;
+};
+
+var checkSystemEnabled = function(name) {
+	var vcSetting = getSystemVCSetting(name);
+	if (!vcSetting || !vcSetting.value) {
+		logger4js.info('Check System VISBO Center Setting: %s not found', name);
+		return undefined;
+	} else if (vcSetting.value.systemLimit == true && vcSetting.value.systemEnabled != true) {
+		logger4js.info('Check System VISBO Center Setting: %s Limit Off', name);
+		return undefined;
+	} else {
+		return vcSetting;
+	}
+};
+
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');
 	var result = vcSetting ? vcSetting.value && vcSetting.value.UIUrl : false;
@@ -267,6 +295,14 @@ var getReSTUrl = function () {
 	return result;
 };
 
+var checkPredictConfigured = function () {
+	return predictConfigured;
+};
+
+var getPredictModel = function () {
+	return fsModell;
+}
+
 module.exports = {
 	createSystemVC: createSystemVC,
 	getSystemVC: getSystemVC,
@@ -274,5 +310,9 @@ module.exports = {
 	getSystemUrl: getSystemUrl,
 	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
-	reloadSystemSetting: reloadSystemSetting
+	reloadSystemSetting: reloadSystemSetting,
+	checkSystemEnabled: checkSystemEnabled,
+	getSystemSettingList: getSystemSettingList,
+	checkPredictConfigured: checkPredictConfigured,
+	getPredictModel: getPredictModel
 };
