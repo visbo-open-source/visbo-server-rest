@@ -107,6 +107,7 @@ function saveRecalcKM(req, res, message) {
 	}
 	// check if prediction is enabled and needed
 	var fsModell = systemVC.getPredictModel();
+	logger4js.info(`Recalc Predict? VPV ${req.oneVPV._id} VP: ${req.oneVPV.vpid} Enabled: ${verifyVc.isVCEnabled(req, 'EnablePredict', 2)} PredictModel: ${fsModell}`);
 	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
