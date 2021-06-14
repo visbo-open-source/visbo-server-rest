@@ -97,13 +97,14 @@ function saveRecalcKM(req, res, message) {
 	logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', req.oneVPV.vpid, req.oneVPV.name, req.oneVPV.timestamp);
 
 	// check if newVPV is a valid VPV
-	var validVPV = visboBusiness.ensureValidVPV(req.oneVPV);
-	if (!validVPV) {
-		logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
-		return res.status(400).send({
-			state: 'failure',
-			message: 'Project Version is an inconsistent VPV'
-		});
+	if (!req.query.noValidate) {
+		if (!visboBusiness.ensureValidVPV(req.oneVPV)) {
+			logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Version is an inconsistent VPV'
+			});
+		}
 	}
 	// check if prediction is enabled and needed
 	var fsModell = systemVC.getPredictModel();
