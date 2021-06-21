@@ -184,6 +184,8 @@ function getVCSetting(req, res, next) {
 		checkSetting = true;
 	} else if (req.method == 'POST') {
 		checkSetting = true;
+	} else if (req.method == 'PUT') {
+		checkSetting = true;
 	}
 	var vcid;
 	if (req.oneVP) {

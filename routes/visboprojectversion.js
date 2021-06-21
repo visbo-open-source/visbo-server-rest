@@ -97,16 +97,18 @@ function saveRecalcKM(req, res, message) {
 	logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', req.oneVPV.vpid, req.oneVPV.name, req.oneVPV.timestamp);
 
 	// check if newVPV is a valid VPV
-	var validVPV = visboBusiness.ensureValidVPV(req.oneVPV);
-	if (!validVPV) {
-		logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
-		return res.status(400).send({
-			state: 'failure',
-			message: 'Project Version is an inconsistent VPV'
-		});
+	if (!req.query.noValidate) {
+		if (!visboBusiness.ensureValidVPV(req.oneVPV)) {
+			logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Version is an inconsistent VPV'
+			});
+		}
 	}
 	// check if prediction is enabled and needed
 	var fsModell = systemVC.getPredictModel();
+	logger4js.info(`Recalc Predict? VPV ${req.oneVPV._id} VP: ${req.oneVPV.vpid} Enabled: ${verifyVc.isVCEnabled(req, 'EnablePredict', 2)} PredictModel: ${fsModell}`);
 	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
