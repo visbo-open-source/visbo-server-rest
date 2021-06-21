@@ -3150,9 +3150,17 @@ function ensureValidVPV(myVPV) {
 		}
 	}
 
-	// if actualData exists: set bruteForceHealing to false , because this would possibly change actualData values
+	// if actualData exists: set enforceHealing to false , because this would possibly change actualData values
+	// and if actualDataDate is a valid one: >= startDate tk changed: 13.06.21
+	// 
 	if (myVPV.actualDataUntil) {
-		enforceHealing = (enforceHealing && (myVPV.actualDataUntil < myVPV.startDate));
+		if (myVPV.actualDataUntil < myVPV.startDate) {
+			// then it is not a valid, reasonable ActualDataUntil
+			// may stem form Excel Client, because for a Date there is no undefined, it will always be Date.MinDate
+			myVPV.actualDataUntil = undefined;				
+		} else {
+			enforceHealing = false;
+		}		
 	}
 
 	// variable criterias is a array of boolean values, indicating which validity criterias are fulfilled / not fulfilled
