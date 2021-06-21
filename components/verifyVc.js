@@ -9,6 +9,7 @@ var verifyVpv = require('./../components/verifyVpv');
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
+var VCSetting = mongoose.model('VCSetting');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -28,13 +29,13 @@ function getAllGroups(req, res, next) {
 
 	// get the VC Groups the user is member of
 	// handle sysadmin and systemvc case
-	logger4js.trace('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
+	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
 
 	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
 	} else if (req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
-	} else if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'capacity') {
+	} else if (req.method == 'GET' && urlComponent.length >= 2) {
 		vcid = urlComponent[1];
 	}
 	if (!validate.validateObjectId(vcid, true)) {
@@ -48,7 +49,7 @@ function getAllGroups(req, res, next) {
 	var query = {};
 	query = {'users.userId': userId};	// search for VC groups where user is member
 
-	if (vcid) {
+	if (!isSysAdmin && vcid) {
 		query.vcid = vcid;
 	}
 	if (req.query.systemvc || isSysAdmin) {
@@ -62,12 +63,13 @@ function getAllGroups(req, res, next) {
 
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid groupType');
+	queryVG.lean();
 	queryVG.exec(function (err, listVG) {
 		if (err) {
 			errorHandler(err, res, 'DB: VC Groups get all', 'Error getting VISBO Centers');
 			return;
 		}
-		logger4js.trace('Found VGs %d', listVG.length);
+		logger4js.debug('Found VGs %d', listVG.length);
 		var listVCPerm = new VisboPermission();
 		for (var i=0; i < listVG.length; i++) {
 			var permGroup = listVG[i];
@@ -87,11 +89,11 @@ function getVC(req, res, next, vcid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
 
-	req.auditDescription = 'VISBO Center (Read)';
+	req.auditDescription = 'VISBO Center Read';
 	req.auditSysAdmin = isSysAdmin;
 	// get the VC Groups of this VC where the user is member of
 	// handle sysadmin case by getting the system groups
-	logger4js.debug('Generate VC Groups for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
+	logger4js.debug('Find VC for vcid %s user %s for url %s isSysAdmin %s', vcid, req.decoded.email, req.url, isSysAdmin);
 	var query = {};
 	if (!validate.validateObjectId(vcid, false)) {
 		logger4js.warn('getVC Bad Parameter vcid %s', vcid);
@@ -130,6 +132,86 @@ function getVC(req, res, next, vcid) {
 		logger4js.debug('Found VISBO Center %s Access Permission %O', vcid, req.listVCPerm.getPerm(isSysAdmin ? 0 : vcid));
 		return next();
 	});
+}
+
+function checkSettingId(req, res, next, settingID) {
+	logger4js.debug('Check settingID %s for url %s ', settingID, req.url);
+	if (!validate.validateObjectId(settingID, false)) {
+		logger4js.warn('settingID Bad Parameter %s', settingID);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Setting'
+		});
+	}
+	var query = {};
+	var vcid;
+	if (req.oneVC) vcid = req.oneVC._id;
+	if (!vcid) {
+		logger4js.warn('No vcid found for settingID', settingID);
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid VISBO Center'
+		});
+	}
+	query._id = settingID;
+	query.vcid = vcid;
+	logger4js.trace('Search VC Settings %O', query);
+
+	var queryVCSetting = VCSetting.findOne(query);
+	queryVCSetting.exec(function (err, oneVCSetting) {
+		if (err) {
+			errorHandler(err, res, 'DB: Setting Find', 'Error getting Settings ');
+			return;
+		}
+		logger4js.trace('Found Settings %s', oneVCSetting != undefined);
+		// Convert the result to request
+		if (!oneVCSetting) {
+			logger4js.warn('SettingId %s for VC %s not found', settingID, vcid);
+			// do not accept requests without a group assignement especially to System Group
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Setting'
+			});
+		}
+		req.oneVCSetting = oneVCSetting;
+		return next();
+	});
+}
+
+function getVCSetting(req, res, next) {
+	var checkSetting = false;
+	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
+		checkSetting = true;
+	} else if (req.method == 'POST') {
+		checkSetting = true;
+	} else if (req.method == 'PUT') {
+		checkSetting = true;
+	}
+	var vcid;
+	if (req.oneVP) {
+		vcid = req.oneVP.vcid;
+	} else if (req.oneVC)  {
+		vcid = req.oneVC._id;
+	} else if (req.query.vcid) {
+		vcid = req.query.vcid;
+	}
+	if (checkSetting && vcid) {
+		logger4js.trace('GET VC Settings for VC %s and URL', vcid, req.url);
+		var query = {};
+		query.vcid = vcid;
+		query.type = '_VCConfig';
+		var queryVCSetting = VCSetting.find(query);
+		queryVCSetting.exec(function (err, listVCSetting) {
+			if (err) {
+				errorHandler(err, undefined, 'DB: Get VC Setting Select ', undefined);
+			}
+			logger4js.debug('Setting for VC %s Length %d', vcid, listVCSetting ? listVCSetting.length : undefined);
+			req.listVCSetting = listVCSetting;
+			return next();
+		});
+	} else {
+		return next();
+	}
 }
 
 function getVCVP(req, res, next) {
@@ -216,11 +298,35 @@ function checkVCOrgs(req, res, next) {
 	}
 }
 
+function isVCEnabled(req, name, level) {
+	var setting;
+	var result = false;
+	if (req.listVCSetting) {
+		setting = req.listVCSetting.find(item => item.name == name);
+		if (setting && setting.value) {
+			if (level == 0) {
+				result = setting.value.systemEnabled;
+			} else if (level == 1) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+			} else if (level == 2) {
+				result = setting.value.systemLimit ? setting.value.systemEnabled : setting.value.sysVCEnabled;
+				if (!setting.value.systemLimit && !setting.value.sysVCLimit && setting.value.VCEnabled != undefined) {
+					result = setting.value.VCEnabled != false;
+				}
+			}
+		}
+	}
+	return result;
+}
+
 module.exports = {
 	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
 	getVC: getVC,
 	getVCVP: getVCVP,
 	getSystemGroups: getSystemGroups,
-	checkVCOrgs: checkVCOrgs
+	checkVCOrgs: checkVCOrgs,
+	checkSettingId: checkSettingId,
+	getVCSetting: getVCSetting,
+	isVCEnabled: isVCEnabled
 };

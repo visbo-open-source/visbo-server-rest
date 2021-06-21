@@ -7,3 +7,5 @@ public/ui/
 logging/
 dump.rdb
 package-lock.json
+postman/VCClone/exportJSON.json
+data/

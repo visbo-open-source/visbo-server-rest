@@ -1,7 +1,7 @@
 #!/bin/bash
 predictkm=$HOME/GitHub/predictkm
 // if prediction is installed update it
-if test -f "$predictkm"; then
+if test -d "$predictkm"; then
   cd $predictkm
   echo "01 Predict: Checking Local Status of Branch"
   git status
