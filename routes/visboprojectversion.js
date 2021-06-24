@@ -772,6 +772,10 @@ router.route('/')
 					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
+				if (req.oneVP && req.oneVP.customFieldDate) {
+					customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+					//if (customField) { newVPV.pmCommit = customField.value; }
+				}
 				req.oneVPV = newVPV;
 				saveRecalcKM(req, res, 'Successfully created new Project Version');
 			});
@@ -1281,7 +1285,10 @@ router.route('/:vpvid/copy')
 			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 			if (customField) { newVPV.StrategicFit = customField.value; }
 		}
-
+		if (req.oneVP && req.oneVP.customFieldDate) {
+			customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+			//if (customField) { newVPV.pmCommit = customField.value; }
+		}
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (variantName == 'pfv') {
 			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
