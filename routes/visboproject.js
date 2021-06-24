@@ -584,7 +584,7 @@ router.route('/')
 	*  'customFieldDouble': [
 	*		'name': '_risk', 'value': '5', 
 	*		'name': '_strategicFit', 'value': '10', 
-	*		'name': 'score', 'value': -5.5}
+	*		'name': 'score', 'value': -5.5
     *		],
     *  'customFieldDate': [
     *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'      
@@ -606,16 +606,16 @@ router.route('/')
 	*   'vpType': '0',
 	*   'kundennummer': 'customer project identifier'
 	*   'customFieldString': [
-	*		'name': '_businessUnit', 'value': 'BU1', 
-	*		'name': 'kundennummer', 'value': 'customer project identifier'
+	*		{'name': '_businessUnit', 'value': 'BU1',  'type': 'System'},
+	*		{'name': 'kundennummer', 'value': 'customer project identifier', 'type': 'System'},
 	*		],
 	*   'customFieldDouble': [
-	*		'name': '_risk', 'value': '5', 
-	*		'name': '_strategicFit', 'value': '10', 
-	*		'name': 'score', 'value': -5.5}
+	*		'name': '_risk', 'value': '5',  'type': 'System',
+	*		'name': '_strategicFit', 'value': '10',  'type': 'System',
+	*		'name': 'score', 'value': -5.5, 'type': 'VP'
     *		],
     *   'customFieldDate': [
-    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'      
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',     
     *		] 
 	*   'lock': []
 	*  }]
@@ -968,6 +968,18 @@ router.route('/:vpid')
 	*  'name':'My first Project Renamed',
 	*  'description': 'New Description for VP',
 	*  'kundennummer': 'Customer Project Identifier'
+	*  'customFieldString': [
+	*		'name': '_businessUnit', 'value': 'BU1', 
+	*		'name': 'kundennummer', 'value': 'customer project identifier'
+	*		],
+	*  'customFieldDouble': [
+	*		'name': '_risk', 'value': '5', 
+	*		'name': '_strategicFit', 'value': '10', 
+	*		'name': 'score', 'value': -5.5}
+    *		],
+    *  'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'      
+    *		] 
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -980,7 +992,19 @@ router.route('/:vpid')
 	*   'createdAt':'2018-03-19T11:04:12.094Z',
 	*   'name':'My first Project Renamed',
 	*   '_id':'vp5cf3da025',
-	*   'kundennummer': 'Customer Project Identifier'
+	*   'kundennummer': 'Customer Project Identifier',
+	*  'customFieldString': [
+	*		'name': '_businessUnit', 'value': 'BU1', 'type': 'System',
+	*		'name': 'kundennummer', 'value': 'customer project identifier', 'type': 'System',
+	*		],
+	*  'customFieldDouble': [
+	*		'name': '_risk', 'value': '5', 'type': 'System', 
+	*		'name': '_strategicFit', 'value': '10', 'type': 'System',
+	*		'name': 'score', 'value': -5.5, 'type': 'VP',}
+    *		],
+    *  'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',     
+    *		] 
 	*   'vcid': 'vc5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0'
