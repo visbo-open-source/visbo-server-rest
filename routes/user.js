@@ -3,6 +3,8 @@ var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
 var bCrypt = require('bcrypt-nodejs');
+var jwt = require('jsonwebtoken');
+var jwtSecret = require('./../secrets/jwt');
 
 // var assert = require('assert');
 var auth = require('./../components/auth');
@@ -347,6 +349,64 @@ router.route('/logout')
 			state: 'success',
 			message: 'You have successfully logged out'
 		});
+	});
+
+router.route('/ott')
+/**
+	* @api {post} /user/ott Generate a One Time Token
+	* @apiVersion 1.0.0
+	* @apiHeader {String} access-key User authentication token.
+	* @apiGroup Authentication
+	* @apiName Generate One Time Token
+	* @apiError {number} 401 user not authenticated
+	* @apiError {number} 500 Internal Server Error
+	* @apiExample Example usage:
+	*  url: https://my.visbo.net/api/user/ott
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*  'state':'success',
+	*  'message':'One Time Token successfully generated'
+	* }
+	*/
+	.get(function(req, res) {
+		req.auditDescription = 'Generate One Time Token';
+		req.auditTTLMode = 1;
+
+		logger4js.info('Generate One Time Token %s', req.decoded._id);
+		var userReduced = {};
+		userReduced._id = req.decoded._id;
+		userReduced.email = req.decoded.email;
+		userReduced.session = {};
+		userReduced.session.ip = req.headers['x-real-ip'] || req.ip;
+		var timestamp = new Date();
+		var expiresIn = 120;
+		userReduced.session.timestamp = timestamp;
+
+		logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
+		jwt.sign(userReduced, jwtSecret.user.secret,
+			{ expiresIn: expiresIn },
+			function(err, ott) {
+				if (err) {
+					logger4js.error('JWT Signing Error %s ', err.message);
+					return res.status(500)({
+						state: 'failure',
+						message: 'token generation failed',
+						error: err
+					});
+				}
+				logger4js.trace('JWT Signing Success ');
+				// add token to Redis
+				var redisClient = visboRedis.VisboRedisInit();
+				var ottID = ott.split('.')[2];
+				redisClient.set('ott.'+ottID, req.decoded._id, 'EX', expiresIn);
+				return res.status(200).send({
+					state: 'success',
+					message: 'One Time Token successfully generated',
+					ott: ott
+				});
+			}
+		);
 	});
 
 

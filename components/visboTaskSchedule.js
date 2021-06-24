@@ -16,6 +16,7 @@ var logger4js = log4js.getLogger(logModule);
 var visboRedis = require('./../components/visboRedis');
 var errorHandler = require('./../components/errorhandler').handler;
 var visboAudit = require('./../components/visboAudit');
+var visboPredict = require('./../components/visboPredict');
 var logging = require('./../components/logging');
 var lock = require('./../components/lock');
 var refreshSystemSetting = require('./../components/systemVC').refreshSystemSetting;
@@ -24,11 +25,12 @@ var vcSystemId = undefined;
 
 //Create an event handler:
 function finishedTask(task, ignoreAudit) {
-  logger4js.info('Task Finished, Task (%s/%s)', task && task.name, task && task._id);
+  logger4js.trace('Task Finished, Task (%s/%s)', task && task.name, task && task._id);
   if (!task || !task.value) {
     logger4js.warn('No Task available during Finish, Task %s', task._id);
     return;
   }
+  if (task.name == 'Predict Training') logger4js.trace('Task Finished, Task (%s/%s)', task.name, task._id);
   var updateQuery = {_id: task._id};
   var updateOption = {upsert: false};
   var currentDate = new Date();
@@ -64,11 +66,11 @@ function createTaskAudit(task, duration) {
   auditEntry.vc = {};
   auditEntry.vc.vcid = vcSystemId;
   auditEntry.vc.name = 'Visbo-System';
-  var vcjson = {'Info': task.value.taskSpecific.resultDescription};
+  var vcjson = {'Info': task.value.taskSpecific};
   auditEntry.vc.vcjson = JSON.stringify(vcjson);
 
   auditEntry.ttl = new Date();
-  auditEntry.ttl.setSeconds(auditEntry.ttl.getSeconds() + task.value.interval * 7);
+  auditEntry.ttl.setSeconds(auditEntry.ttl.getSeconds() + task.value.interval * 50);
   auditEntry.actionDescription = 'Task: ' + task.name;
   auditEntry.actionInfo = task.value.taskSpecific.result;
   auditEntry.result = {};
@@ -84,12 +86,13 @@ function createTaskAudit(task, duration) {
 }
 
 function checkNextRun() {
+  // mongoose.set('debug', true)
 	logger4js.trace('VISBO Task Schedule, check what to start');
 	// get all Tasks
   var redisClient = visboRedis.VisboRedisInit();
   redisClient.get('vcSystem', function(err, vcSystemIdRedis) {
     if (err) {
-      logger4js.warn('VISBO Redis System returned %O ', err);
+      logger4js.trace('VISBO Redis System returned %O ', err);
       return;
     }
     vcSystemId = vcSystemIdRedis;
@@ -97,7 +100,9 @@ function checkNextRun() {
     var query = {};
 		query.vcid = vcSystemId;
 		query.type = 'Task';
+    query['value.nextRun'] = {$lt: new Date()};
 		var queryVCSetting = VCSetting.find(query);
+    queryVCSetting.lean();
 		queryVCSetting.exec(function (err, listTask) {
 			if (err) {
 				errorHandler(err, undefined, 'DB: Get System Setting Task Select ', undefined);
@@ -108,58 +113,62 @@ function checkNextRun() {
         // loop through tasks and decided which one needs to run
         var actual = new Date();
         for (var i=0; i < listTask.length; i++) {
-          if (!listTask[i].value) {
-            logger4js.warn('CheckNextRun Task(%s/%s): %s has no valid Value %O ', listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i]);
+          var task = listTask[i];
+          if (!task.value) {
+            logger4js.trace('CheckNextRun Task(%s/%s): Has no valid Value %O ', task.name, task._id, task);
             continue;
           } else {
-            logger4js.trace('CheckNextRun Task(%s/%s): %s nextRun %s lockedUntil %s ', listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun, listTask[i].value.lockedUntil);
-            if (listTask[i].value.nextRun > actual) {  // nextRun has not expired
-              logger4js.trace('CheckNextRun Task(%s/%s): %s skip execution actual %s next %s', listTask[i].name, listTask[i]._id, listTask[i].name, actual.toISOString(), listTask[i].value.nextRun.toISOString());
+            logger4js.trace('CheckNextRun Task(%s/%s): Check %s nextRun %s actual %s ', task.name, task._id, task.value.nextRun.toISOString().substr(11, 8), actual.toISOString().substr(11, 8));
+            if (task.value.nextRun.getTime() > actual.getTime()) {  // nextRun has not expired
+              if (task.name == 'Predict Training') logger4js.trace('CheckNextRun Task(%s/%s): Skip execution actual %s next %s', task.name, task._id, actual.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
               continue;
             } else {  // nextRun has expired already
-              if (listTask[i].value.lockedUntil) {  // Task was locked
-                if (listTask[i].value.lockedUntil < actual) { // lock expired
-                  logger4js.debug('CheckNextRun Task(%s/%s): %s has an expired lock %s lastRun %s', listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
+              if (task.name == 'Predict Training' && task.value.lockedUntil) logger4js.trace('CheckNextRun Task(%s/%s): Is Locked %s next %s', task.name, task._id, task.value.lockedUntil.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
+              if (task.value.lockedUntil) {  // Task was locked
+                if (task.value.lockedUntil.getTime() < actual.getTime()) { // lock expired
+                  logger4js.info('CheckNextRun Task(%s/%s): Has an expired lock %s lastRun %s', task.name, task._id, task.value.lockedUntil.toISOString().substr(11, 8), task.value.lastRun.toISOString().substr(11, 8));
                 } else {
-                  logger4js.info('CheckNextRun Task(%s/%s): %s is locked %s lastRun %s ', listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.lockedUntil, listTask[i].value.lastRun);
+                  logger4js.info('CheckNextRun Task(%s/%s): Is locked %s lastRun %s ', task.name, task._id, task.value.lockedUntil.toISOString().substr(11, 8), task.value.lastRun.toISOString().substr(11, 8));
                   continue;
                 }
               }
             }
           }
+          if (task.name == 'Predict Training') logger4js.trace('CheckNextRun Task(%s/%s): process actual %s next %s', task.name, task._id, actual.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
           // update task entry lock & next run
-          listTask[i].value.nextRun = new Date(); // to guarantee that it is set
-          listTask[i].value.nextRun.setTime(actual.getTime() + listTask[i].value.interval * 1000);
-          if (listTask[i].value.interval == 60 * 60) { // start at the beginning of the hour
-            listTask[i].value.nextRun.setMinutes(0);
-            listTask[i].value.nextRun.setSeconds(0);
-          } else if (listTask[i].value.interval == 60 * 60 * 24) { // start at the beginning of the day
-            listTask[i].value.nextRun.setHours(0);
-            listTask[i].value.nextRun.setMinutes(0);
-            listTask[i].value.nextRun.setSeconds(0);
-          } else if (listTask[i].value.interval == 60 * 60 * 24 * 30) { // start at the beginning of the month
-            listTask[i].value.nextRun.setDate(0);
-            listTask[i].value.nextRun.setHours(0);
-            listTask[i].value.nextRun.setMinutes(0);
-            listTask[i].value.nextRun.setSeconds(0);
+          task.value.nextRun = new Date(); // to guarantee that it is set
+          task.value.nextRun.setTime(actual.getTime() + task.value.interval * 1000);
+          if (task.value.interval == 60 * 60) { // start at the beginning of the hour
+            task.value.nextRun.setMinutes(0);
+            task.value.nextRun.setSeconds(0);
+          } else if (task.value.interval == 60 * 60 * 24) { // start at the beginning of the day
+            task.value.nextRun.setHours(0);
+            task.value.nextRun.setMinutes(0);
+            task.value.nextRun.setSeconds(0);
+          } else if (task.value.interval == 60 * 60 * 24 * 30) { // start at the beginning of the month
+            task.value.nextRun.setDate(0);
+            task.value.nextRun.setHours(0);
+            task.value.nextRun.setMinutes(0);
+            task.value.nextRun.setSeconds(0);
           }
           var lockPeriod = 5*60;
-          lockPeriod = lockPeriod > listTask[i].value.interval ? listTask[i].value.interval / 2 : lockPeriod;
-          listTask[i].value.lockedUntil = new Date(actual);
-          listTask[i].value.lockedUntil.setTime(listTask[i].value.lockedUntil.getTime() + lockPeriod * 1000);
-          listTask[i].value.lastRun = new Date(); // now set it to current date as the last StartDate
-          logger4js.debug('CheckNextRun Task(%s/%s): %s needs execution next %s new lock %s', listTask[i].name, listTask[i]._id, listTask[i].name, listTask[i].value.nextRun.toISOString(), listTask[i].value.lockedUntil.toISOString());
+          if (task.name == 'Predict Training') { logger4js.trace('Prepare Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun && task.value.nextRun.toISOString(), task.value.lockedUntil && task.value.lockedUntil.toISOString()); }
+          lockPeriod = lockPeriod > task.value.interval ? task.value.interval / 2 : lockPeriod;
+          task.value.lockedUntil = new Date(actual);
+          task.value.lockedUntil.setTime(task.value.lockedUntil.getTime() + lockPeriod * 1000);
+          task.value.lastRun = new Date(); // now set it to current date as the last StartDate
+          logger4js.info('CheckNextRun Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun.toISOString().substr(11, 8), task.value.lockedUntil.toISOString().substr(11, 8));
           // Do not update if locked and check result that it has updated the item
-          var updateQuery = {_id: listTask[i]._id, '$or': [{'value.lockedUntil': {$exists: false}}, {'value.lockedUntil': {$lt: new Date()}}]};
+          var updateQuery = {_id: task._id, '$or': [{'value.lockedUntil': {$exists: false}}, {'value.lockedUntil': {$lt: new Date()}}]};
           var updateOption = {upsert: false};
-          var updateUpdate = {$set : {'value.lastRun' : listTask[i].value.lastRun, 'value.nextRun' : listTask[i].value.nextRun, 'value.lockedUntil' : listTask[i].value.lockedUntil} };
-          var task = listTask[i];
+          var updateUpdate = {$set : {'value.lastRun' : task.value.lastRun, 'value.nextRun' : task.value.nextRun, 'value.lockedUntil' : task.value.lockedUntil} };
 
           VCSetting.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
+            if (task.name == 'Predict Training') { logger4js.trace('Updated Task (%s/%s): updated last run/next run execute task now', task.name, task._id); }
             if (err) {
               errorHandler(err, undefined, 'DB: Update Task', undefined);
             }
-            logger4js.debug('CheckNextRun Task (%s/%s) Saved Items %s', task.name, task._id, result.nModified);
+            logger4js.trace('CheckNextRun Task (%s/%s) Saved Items %s', task.name, task._id, result.nModified);
             if (result.nModified == 1) {
               // call specific operation for task
               switch(task.name) {
@@ -183,6 +192,12 @@ function checkNextRun() {
                   break;
                 case 'System Config':
                   refreshSystemSetting(task, finishedTask);
+                  break;
+                case 'Predict Collect':
+                  visboPredict.kmCollect(task, finishedTask, vcSystemId);
+                  break;
+                case 'Predict Training':
+                  visboPredict.kmTraining(task, finishedTask, vcSystemId);
                   break;
                 case 'Task Test':
                   taskTest(task, finishedTask);
