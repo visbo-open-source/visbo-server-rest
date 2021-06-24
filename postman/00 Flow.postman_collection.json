@@ -1364,7 +1364,83 @@
 							"response": []
 						},
 						{
-							"name": "02-01-04f Enable Predict",
+							"name": "02-01-04f Enable Predict sysVC",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Check that VC Testname does not exist\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length >= 0).to.be.eql(true, \"No setting List found\");",
+											"    var searchName = \"EnablePredict\";",
+											"    var list = jsonData.vcsetting;",
+											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+											"    pm.expect(index >= 0).to.be.eql(true, \"EnablePredict not found\");",
+											"    var varPredict = pm.variables.get(\"varPredict\")",
+											"    pm.expect(list[index].value.sysVCEnabled).to.be.eql(varPredict, \"EnablePredict not set as expected\");",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var predict = pm.environment.get(\"Predict\") == '0' ? false : true;",
+											"pm.variables.set(\"varPredict\", predict);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"value\": {\n        \"sysVCEnabled\": {{varPredict}},\n        \"sysVCLimit\": false\n    }\n}   ",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/setting/{{settingID}}?sysadmin=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"setting",
+										"{{settingID}}"
+									],
+									"query": [
+										{
+											"key": "sysadmin",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "02-01-04g Enable Predict Copy",
 							"event": [
 								{
 									"listen": "test",
@@ -5523,7 +5599,6 @@
 								{
 									"listen": "test",
 									"script": {
-										"type": "text/javascript",
 										"exec": [
 											"pm.test(\"01 Login: Check Login Success\", function () {",
 											"    var jsonData = pm.response.json();",
@@ -5533,7 +5608,8 @@
 											"",
 											"",
 											""
-										]
+										],
+										"type": "text/javascript"
 									}
 								}
 							],
@@ -6041,7 +6117,12 @@
 											"    orgaValid.setDate(1);",
 											"    orgaValid.setHours(0,0,0,0);",
 											"    var timestamp = new Date(setting.timestamp);",
-											"    pm.expect(timestamp.toISOString()).to.be.equal(orgaValid.toISOString(), 'Incorrect Timestamp');",
+											"    // check that it is at the beginning of the month plus minus any timmezone diff",
+											"    var checkDate = orgaValid;",
+											"    var diff = checkDate.getTime() - timestamp.getTime();",
+											"    diff = diff / 1000 / 3600;",
+											"    console.log(\"Diff\", diff, Math.abs(diff), Math.trunc(diff))",
+											"    pm.expect(Math.abs(diff) <= 12 && Math.trunc(diff) == diff).to.be.equal(true, 'Incorrect timestamp ' + checkDate.toISOString() + ' Diff: ' + diff);",
 											"});",
 											""
 										],
@@ -6238,7 +6319,12 @@
 											"    timestamp = new Date(pm.variables.get(\"varOrgaValid\"));",
 											"    timestamp.setDate(1);",
 											"    timestamp.setHours(0,0,0,0);",
-											"    pm.expect(jsonData.vcsetting[0].timestamp).to.be.equal(timestamp.toISOString(), 'Incorrect timestamp');",
+											"    // check that it is at the beginning of the month plus minus any timmezone diff",
+											"    var checkDate = new Date(jsonData.vcsetting[0].timestamp);",
+											"    var diff = checkDate.getTime() - timestamp.getTime();",
+											"    diff = diff / 1000 / 3600;",
+											"    console.log(\"Diff\", diff, Math.abs(diff), Math.trunc(diff))",
+											"    pm.expect(Math.abs(diff) <= 12 && Math.trunc(diff) == diff).to.be.equal(true, 'Incorrect timestamp ' + checkDate.toISOString() + ' Diff: ' + diff);",
 											"});",
 											""
 										],
@@ -20288,10 +20374,8 @@
 											"",
 											"pm.test(\"Check Created VPVID\", function () {",
 											"    var jsonData = pm.response.json();",
-											"    var testName = pm.globals.get(\"vpActualName\");",
 											"    var vpID = pm.globals.get(\"vpID\");",
 											"",
-											"    pm.expect(jsonData.vpv[0].name).to.eql(testName);",
 											"    pm.expect(jsonData.vpv[0].vpid).to.eql(vpID);",
 											"    ",
 											"    var vpvMin = jsonData.vpv[0];",
@@ -20375,12 +20459,18 @@
 									"raw": "{{varVPV}}\n"
 								},
 								"url": {
-									"raw": "{{url}}/vpv",
+									"raw": "{{url}}/vpv?noValidate=1",
 									"host": [
 										"{{url}}"
 									],
 									"path": [
 										"vpv"
+									],
+									"query": [
+										{
+											"key": "noValidate",
+											"value": "1"
+										}
 									]
 								}
 							},
@@ -20475,6 +20565,12 @@
 											"    pm.expect(vpv.timestamp).to.eql(timestamp);",
 											"    pm.globals.set(\"DeleteID\", vpv._id);",
 											"});",
+											"",
+											"pm.test(\"Check Changed Status\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var vpv = jsonData.vpv[0];",
+											"    pm.expect(vpv.status).to.be.eql('New', \"vpv status was changed\");",
+											"});",
 											""
 										],
 										"type": "text/javascript"
@@ -20484,7 +20580,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"var vpv = JSON.parse(pm.globals.get(\"vpv\"));",
+											"var vpv = JSON.parse(pm.environment.get(\"vpvWithoutRoles\"));",
 											"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in globals missing\");",
 											"",
 											"var timestampString = pm.globals.get(\"timestamp\");",
@@ -20493,7 +20589,9 @@
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											"",
 											"vpv.timestamp = timestamp;",
+											"vpv.vpid = pm.globals.get(\"vpID\");",
 											"vpv.variantName = 'pfv'",
+											"vpv.status = 'New'",
 											"delete vpv.updatedAt;",
 											"",
 											"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
@@ -20541,6 +20639,12 @@
 											"pm.test(\"Status code Check\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
+											"",
+											"pm.test(\"Check Unchanged Status\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var vpv = jsonData.vpv[0];",
+											"    pm.expect(vpv.status).to.be.not.eql('Changed', \"vpv status was changed\");",
+											"});",
 											""
 										],
 										"type": "text/javascript"
@@ -20559,6 +20663,7 @@
 											"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 											"",
 											"vpv.timestamp = timestamp;",
+											"vpv.status = 'Changed'",
 											"delete vpv.updatedAt;",
 											"",
 											"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
@@ -28527,6 +28632,7 @@
 											"    var list = jsonData.vpv;",
 											"    var listItems = [];",
 											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
+											"    list.sort(function (a, b) { return (new Date(b.timestamp)).getTime() - (new Date(a.timestamp)).getTime() });",
 											"    list.forEach(item => listItems.push(item._id))",
 											"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
 											"    console.log(\"List Length:\", listItems.length);",
@@ -34904,7 +35010,7 @@
 					]
 				},
 				{
-					"name": "06-12 (UR) VPV for VC02/VP08 Delay-Ahead",
+					"name": "06-12 (UR) VPV for VC02/VP08 PFV from VPV",
 					"item": [
 						{
 							"name": "06-12-01 Login Admin",
@@ -35792,7 +35898,7 @@
 					]
 				},
 				{
-					"name": "06-13 (UR) Convert VPV to PFV VC02/VP09",
+					"name": "06-13 (UR) Convert VPV to PFV VC02/VP08",
 					"item": [
 						{
 							"name": "06-13-03 only ConvertVPV",
@@ -35810,13 +35916,17 @@
 													"    pm.expect(jsonData.state).to.eql(\"success\");",
 													"});",
 													"",
-													"pm.test(\"Skip for now\", function () {",
-													"    pm.expect(\"Skip 06-13\").to.be.eql(\"\", \"skipped until it works\");",
-													"    postman.setNextRequest(\"06-14-01 Login Admin\")",
-													"});",
-													"",
 													"",
 													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"pm.variables.clear();"
 												],
 												"type": "text/javascript"
 											}
@@ -35918,7 +36028,7 @@
 													"    var jsonData = pm.response.json();",
 													"    var list = jsonData.vp;",
 													"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-													"    var searchName = pm.environment.get(\"VPBaseName\") + '08 Delay-Ahead';",
+													"    var searchName = pm.environment.get(\"VPBaseName\") + '08 PFV from VPV';",
 													"    console.log(\"searchName = \", searchName);",
 													"    var index = list.findIndex(item => item.name.indexOf(searchName) === 0);",
 													"    if (index >= 0) {",
@@ -36621,7 +36731,7 @@
 													"var startDatestr = pm.globals.get(\"startDate\");",
 													"var startDate = new Date(startDatestr);",
 													"//startDate.setMonth(startDate.getMonth() + 10);",
-													"pm.variables.set('varStartDate', startDate);",
+													"pm.variables.set('startDate', startDate);",
 													"console.log(\"startDate: \", startDate.toISOString());",
 													"",
 													"",
@@ -36629,7 +36739,7 @@
 													"var endDate = new Date(endDatestr);",
 													"//var endDate = new Date(vpv.endDate);",
 													"//endDate.setMonth(startDate.getMonth() + 15);",
-													"pm.variables.set('varEndDate', endDate);",
+													"pm.variables.set('endDate', endDate);",
 													"console.log(\"endDate: \", endDate.toISOString());",
 													"",
 													""
@@ -36652,7 +36762,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n  \"vpid\": \"{{vpID}}\",\r\n  \"timestamp\": \"{{timestamp}}\",\r\n  \"startDate\": \"{{varStartDate}}\",\r\n  \"endDate\": \"{{varEndDate}}\",\r\n  \"earliestStartDate\": \"{{varStartDate}}\",\r\n  \"latestStartDate\": \"{{varStartDate}}\",\r\n  \"hierarchy\": {\r\n        \"allNodes\": [\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a2\",\r\n                \"hryNodeKey\": \"0\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"0§01 Preparation§\",\r\n                        \"0§02 Blueprints§\",\r\n                        \"0§03 Realization§\",\r\n                        \"0§04 Final Preparation / GoLive§\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a3\",\r\n                    \"elemName\": \".\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a4\",\r\n                \"hryNodeKey\": \"0§01 Preparation§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a5\",\r\n                    \"elemName\": \"01 Preparation\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 2,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a6\",\r\n                \"hryNodeKey\": \"0§02 Blueprints§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0002\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a7\",\r\n                    \"elemName\": \"02 Blueprints\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 3,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a8\",\r\n                \"hryNodeKey\": \"0§03 Realization§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0003\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a9\",\r\n                    \"elemName\": \"03 Realization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 4,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969aa\",\r\n                \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0004\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969ab\",\r\n                    \"elemName\": \"04 Final Preparation / GoLive\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 5,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969ac\",\r\n                \"hryNodeKey\": \"1§Finalization§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969ad\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§01 Preparation§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969ae\",\r\n                \"hryNodeKey\": \"1§Finalization§0002\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969af\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§02 Blueprints§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969b0\",\r\n                \"hryNodeKey\": \"1§Finalization§0003\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969b1\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§03 Realization§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969b2\",\r\n                \"hryNodeKey\": \"1§Finalization§0004\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969b3\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\r\n                }\r\n            }\r\n        ]\r\n    },\r\n  \"customDblFields\": [],\r\n  \"customStringFields\": [],\r\n  \"customBoolFields\": [],\r\n  \"AllPhases\": [\r\n        {\r\n            \"deliverables\": [\r\n                \"Ute Test1\",\r\n                \"Ute Test2\"\r\n            ],\r\n            \"_id\": \"5ffdd24c8e38716d38d9697d\",\r\n            \"AllRoles\": [],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d9697e\",\r\n                    \"key\": \"#Jan 01\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d9697f\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"0001-01-01T00:00:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 1,\r\n            \"relEnde\": 17,\r\n            \"startOffsetinDays\": 0,\r\n            \"dauerInDays\": 517,\r\n            \"name\": \"0§.§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"\",\r\n            \"originalName\": \".\",\r\n            \"appearance\": \"\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96980\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        9.9,\r\n                        3.1625\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96981\",\r\n                    \"RollenTyp\": 4,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        5.5,\r\n                        1.03125\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96982\",\r\n                    \"RollenTyp\": 7,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Kosten-/Nutzen Analyse\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96983\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d96984\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d96985\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 42,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 1\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d96986\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96987\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 1,\r\n            \"relEnde\": 2,\r\n            \"startOffsetinDays\": 0,\r\n            \"dauerInDays\": 44,\r\n            \"name\": \"0§01 Preparation§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"1\",\r\n            \"originalName\": \"01 Preparation\",\r\n            \"appearance\": \"V orange 1\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96988\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        5.5,\r\n                        11,\r\n                        9.625,\r\n                        0\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96989\",\r\n                    \"RollenTyp\": 24,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        15.400000000000002,\r\n                        15.400000000000002,\r\n                        0.6875\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698a\",\r\n                    \"RollenTyp\": 12,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        1.1,\r\n                        3.3000000000000003,\r\n                        2.13125,\r\n                        0\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698b\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Click-Prototyp\",\r\n                        \"Machbarkeits-Analyse\",\r\n                        \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698c\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d9698d\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d9698e\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0002\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 82,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.75\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698f\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96990\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 2,\r\n            \"relEnde\": 5,\r\n            \"startOffsetinDays\": 44,\r\n            \"dauerInDays\": 84,\r\n            \"name\": \"0§02 Blueprints§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"2\",\r\n            \"originalName\": \"02 Blueprints\",\r\n            \"appearance\": \"V orange 2\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96991\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        9.9,\r\n                        9.9,\r\n                        8.8,\r\n                        8.8,\r\n                        7.15\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96992\",\r\n                    \"RollenTyp\": 4,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        9.9,\r\n                        9.9,\r\n                        8.8,\r\n                        8.8,\r\n                        7.15\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96992\",\r\n                    \"RollenTyp\": 24,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        27.500000000000004,\r\n                        38.5,\r\n                        36.300000000000004,\r\n                        38.5,\r\n                        36.300000000000004,\r\n                        31.900000000000002\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96993\",\r\n                    \"RollenTyp\": 8,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        14.3,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        15.400000000000002\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96994\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"neu eingefügtes Deliverable(Ute)\",\r\n                        \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\r\n                        \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96995\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d96996\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d96997\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0003\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 171,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.5\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d96998\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96999\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 5,\r\n            \"relEnde\": 10,\r\n            \"startOffsetinDays\": 127,\r\n            \"dauerInDays\": 173,\r\n            \"name\": \"0§03 Realization§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"3\",\r\n            \"originalName\": \"03 Realization\",\r\n            \"appearance\": \"V orange 3\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d9699a\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        1.1,\r\n                        9.9,\r\n                        2.0625\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699b\",\r\n                    \"RollenTyp\": 11,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        2.2,\r\n                        40.7,\r\n                        9.350000000000001\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699c\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Rollout Plan \",\r\n                        \"Schulungspartner unter Vertrag\",\r\n                        \"Schulungstermine festgelegt\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699d\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d9699e\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d9699f\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0004\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 42,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.5\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a0\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d969a1\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 10,\r\n            \"relEnde\": 12,\r\n            \"startOffsetinDays\": 300,\r\n            \"dauerInDays\": 44,\r\n            \"name\": \"0§04 Final Preparation / GoLive§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"4\",\r\n            \"originalName\": \"04 Final Preparation / GoLive\",\r\n            \"appearance\": \"V orange 4\"\r\n        }\r\n    ],\r\n  \"variantDescription\": \"\",\r\n  \"Risiko\": 2,\r\n  \"StrategicFit\": 5,\r\n  \"Erloes\": 380,\r\n  \"leadPerson\": \"\",\r\n  \"earliestStart\": 0,\r\n  \"latestStart\": 0,\r\n  \"status\": \"beauftragt\",\r\n  \"ampelStatus\": 0,\r\n  \"ampelErlaeuterung\": \"\",\r\n  \"farbe\": 682978,\r\n  \"Schrift\": 10,\r\n  \"Schriftfarbe\": 16777215,\r\n  \"VorlagenName\": \"IM BP\",\r\n  \"Dauer\": 17,\r\n  \"volumen\": 0,\r\n  \"complexity\": 0,\r\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\r\n  \"businessUnit\": \"BU1\"\r\n}"
+											"raw": "{\r\n  \"vpid\": \"{{vpID}}\",\r\n  \"timestamp\": \"{{timestamp}}\",\r\n  \"startDate\": \"{{startDate}}\",\r\n  \"endDate\": \"{{endDate}}\",\r\n  \"earliestStartDate\": \"{{startDate}}\",\r\n  \"latestStartDate\": \"{{startDate}}\",\r\n  \"hierarchy\": {\r\n        \"allNodes\": [\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a2\",\r\n                \"hryNodeKey\": \"0\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"0§01 Preparation§\",\r\n                        \"0§02 Blueprints§\",\r\n                        \"0§03 Realization§\",\r\n                        \"0§04 Final Preparation / GoLive§\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a3\",\r\n                    \"elemName\": \".\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a4\",\r\n                \"hryNodeKey\": \"0§01 Preparation§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a5\",\r\n                    \"elemName\": \"01 Preparation\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 2,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a6\",\r\n                \"hryNodeKey\": \"0§02 Blueprints§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0002\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a7\",\r\n                    \"elemName\": \"02 Blueprints\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 3,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969a8\",\r\n                \"hryNodeKey\": \"0§03 Realization§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0003\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a9\",\r\n                    \"elemName\": \"03 Realization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 4,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969aa\",\r\n                \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [\r\n                        \"1§Finalization§0004\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969ab\",\r\n                    \"elemName\": \"04 Final Preparation / GoLive\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 5,\r\n                    \"parentNodeKey\": \"0§.§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969ac\",\r\n                \"hryNodeKey\": \"1§Finalization§\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969ad\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§01 Preparation§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969ae\",\r\n                \"hryNodeKey\": \"1§Finalization§0002\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969af\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§02 Blueprints§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969b0\",\r\n                \"hryNodeKey\": \"1§Finalization§0003\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969b1\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§03 Realization§\"\r\n                }\r\n            },\r\n            {\r\n                \"_id\": \"5ffdd24c8e38716d38d969b2\",\r\n                \"hryNodeKey\": \"1§Finalization§0004\",\r\n                \"hryNode\": {\r\n                    \"childNodeKeys\": [],\r\n                    \"_id\": \"5ffdd24c8e38716d38d969b3\",\r\n                    \"elemName\": \"Finalization\",\r\n                    \"origName\": null,\r\n                    \"indexOfElem\": 1,\r\n                    \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\r\n                }\r\n            }\r\n        ]\r\n    },\r\n  \"customDblFields\": [],\r\n  \"customStringFields\": [],\r\n  \"customBoolFields\": [],\r\n  \"AllPhases\": [\r\n        {\r\n            \"deliverables\": [\r\n                \"Ute Test1\",\r\n                \"Ute Test2\"\r\n            ],\r\n            \"_id\": \"5ffdd24c8e38716d38d9697d\",\r\n            \"AllRoles\": [],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d9697e\",\r\n                    \"key\": \"#Jan 01\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d9697f\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"0001-01-01T00:00:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 1,\r\n            \"relEnde\": 17,\r\n            \"startOffsetinDays\": 0,\r\n            \"dauerInDays\": 517,\r\n            \"name\": \"0§.§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"\",\r\n            \"originalName\": \".\",\r\n            \"appearance\": \"\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96980\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        9.9,\r\n                        3.1625\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96981\",\r\n                    \"RollenTyp\": 4,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        5.5,\r\n                        1.03125\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96982\",\r\n                    \"RollenTyp\": 7,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Kosten-/Nutzen Analyse\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96983\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d96984\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d96985\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 42,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 1\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d96986\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96987\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 1,\r\n            \"relEnde\": 2,\r\n            \"startOffsetinDays\": 0,\r\n            \"dauerInDays\": 44,\r\n            \"name\": \"0§01 Preparation§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"1\",\r\n            \"originalName\": \"01 Preparation\",\r\n            \"appearance\": \"V orange 1\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96988\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        5.5,\r\n                        11,\r\n                        9.625,\r\n                        0\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96989\",\r\n                    \"RollenTyp\": 24,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        15.400000000000002,\r\n                        15.400000000000002,\r\n                        0.6875\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698a\",\r\n                    \"RollenTyp\": 12,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        1.1,\r\n                        3.3000000000000003,\r\n                        2.13125,\r\n                        0\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698b\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Click-Prototyp\",\r\n                        \"Machbarkeits-Analyse\",\r\n                        \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698c\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d9698d\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d9698e\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0002\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 82,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.75\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d9698f\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96990\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 2,\r\n            \"relEnde\": 5,\r\n            \"startOffsetinDays\": 44,\r\n            \"dauerInDays\": 84,\r\n            \"name\": \"0§02 Blueprints§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"2\",\r\n            \"originalName\": \"02 Blueprints\",\r\n            \"appearance\": \"V orange 2\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d96991\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        9.9,\r\n                        9.9,\r\n                        8.8,\r\n                        8.8,\r\n                        7.15\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96992\",\r\n                    \"RollenTyp\": 4,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        7.700000000000001,\r\n                        9.9,\r\n                        9.9,\r\n                        8.8,\r\n                        8.8,\r\n                        7.15\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96992\",\r\n                    \"RollenTyp\": 24,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        27.500000000000004,\r\n                        38.5,\r\n                        36.300000000000004,\r\n                        38.5,\r\n                        36.300000000000004,\r\n                        31.900000000000002\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96993\",\r\n                    \"RollenTyp\": 8,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        14.3,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        18.700000000000003,\r\n                        15.400000000000002\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96994\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"neu eingefügtes Deliverable(Ute)\",\r\n                        \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\r\n                        \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d96995\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d96996\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d96997\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0003\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 171,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.5\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d96998\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d96999\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 5,\r\n            \"relEnde\": 10,\r\n            \"startOffsetinDays\": 127,\r\n            \"dauerInDays\": 173,\r\n            \"name\": \"0§03 Realization§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"3\",\r\n            \"originalName\": \"03 Realization\",\r\n            \"appearance\": \"V orange 3\"\r\n        },\r\n        {\r\n            \"deliverables\": [],\r\n            \"_id\": \"5ffdd24c8e38716d38d9699a\",\r\n            \"AllRoles\": [\r\n                {\r\n                    \"Bedarf\": [\r\n                        1.1,\r\n                        9.9,\r\n                        2.0625\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699b\",\r\n                    \"RollenTyp\": 11,\r\n                    \"teamID\": -1\r\n                },\r\n                {\r\n                    \"Bedarf\": [\r\n                        2.2,\r\n                        40.7,\r\n                        9.350000000000001\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699c\",\r\n                    \"RollenTyp\": 18,\r\n                    \"teamID\": -1\r\n                }\r\n            ],\r\n            \"AllCosts\": [],\r\n            \"AllResults\": [\r\n                {\r\n                    \"deliverables\": [\r\n                        \"Rollout Plan \",\r\n                        \"Schulungspartner unter Vertrag\",\r\n                        \"Schulungstermine festgelegt\"\r\n                    ],\r\n                    \"_id\": \"5ffdd24c8e38716d38d9699d\",\r\n                    \"bewertungen\": [\r\n                        {\r\n                            \"_id\": \"5ffdd24c8e38716d38d9699e\",\r\n                            \"key\": \"#Nov 19\",\r\n                            \"bewertung\": {\r\n                                \"_id\": \"5ffdd24c8e38716d38d9699f\",\r\n                                \"color\": 0,\r\n                                \"description\": \"\",\r\n                                \"deliverables\": \"\",\r\n                                \"bewerterName\": \"\",\r\n                                \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                            }\r\n                        }\r\n                    ],\r\n                    \"name\": \"1§Finalization§0004\",\r\n                    \"verantwortlich\": \"\",\r\n                    \"offset\": 42,\r\n                    \"alternativeColor\": 13959039,\r\n                    \"shortName\": \"Fi\",\r\n                    \"originalName\": \"Finalization\",\r\n                    \"appearance\": \"M Abschluss\",\r\n                    \"percentDone\": 0.5\r\n                }\r\n            ],\r\n            \"AllBewertungen\": [\r\n                {\r\n                    \"_id\": \"5ffdd24c8e38716d38d969a0\",\r\n                    \"key\": \"#Nov 19\",\r\n                    \"bewertung\": {\r\n                        \"_id\": \"5ffdd24c8e38716d38d969a1\",\r\n                        \"color\": 0,\r\n                        \"description\": \"\",\r\n                        \"deliverables\": \"\",\r\n                        \"bewerterName\": \"\",\r\n                        \"datum\": \"2019-11-26T09:06:24.8763656+01:00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"percentDone\": 0,\r\n            \"responsible\": \"\",\r\n            \"ampelStatus\": 0,\r\n            \"ampelErlaeuterung\": \"\",\r\n            \"earliestStart\": -999,\r\n            \"latestStart\": -999,\r\n            \"minDauer\": 0,\r\n            \"maxDauer\": 0,\r\n            \"relStart\": 10,\r\n            \"relEnde\": 12,\r\n            \"startOffsetinDays\": 300,\r\n            \"dauerInDays\": 44,\r\n            \"name\": \"0§04 Final Preparation / GoLive§\",\r\n            \"farbe\": 11119017,\r\n            \"shortName\": \"4\",\r\n            \"originalName\": \"04 Final Preparation / GoLive\",\r\n            \"appearance\": \"V orange 4\"\r\n        }\r\n    ],\r\n  \"variantDescription\": \"\",\r\n  \"Risiko\": 2,\r\n  \"StrategicFit\": 5,\r\n  \"Erloes\": 380,\r\n  \"leadPerson\": \"\",\r\n  \"earliestStart\": 0,\r\n  \"latestStart\": 0,\r\n  \"status\": \"beauftragt\",\r\n  \"ampelStatus\": 0,\r\n  \"ampelErlaeuterung\": \"\",\r\n  \"farbe\": 682978,\r\n  \"Schrift\": 10,\r\n  \"Schriftfarbe\": 16777215,\r\n  \"VorlagenName\": \"IM BP\",\r\n  \"Dauer\": 17,\r\n  \"volumen\": 0,\r\n  \"complexity\": 0,\r\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\r\n  \"businessUnit\": \"BU1\"\r\n}"
 										},
 										"url": {
 											"raw": "{{url}}/vpv",
@@ -37464,6 +37574,21 @@
 													"actualDataUntil.setDate(0);",
 													"actualDataUntil.setHours(23, 59, 59, 0);",
 													"pm.globals.set(\"actualDataUntil\", actualDataUntil.toISOString());",
+													"",
+													"var startDatestr = pm.globals.get(\"startDate\");",
+													"var startDate = new Date(startDatestr);",
+													"//startDate.setMonth(startDate.getMonth() + 10);",
+													"pm.variables.set('startDate', startDate);",
+													"console.log(\"startDate: \", startDate.toISOString());",
+													"",
+													"",
+													"var endDatestr = pm.globals.get(\"endDate\");",
+													"var endDate = new Date(endDatestr);",
+													"//var endDate = new Date(vpv.endDate);",
+													"//endDate.setMonth(startDate.getMonth() + 15);",
+													"pm.variables.set('endDate', endDate);",
+													"console.log(\"endDate: \", endDate.toISOString());",
+													"",
 													""
 												],
 												"type": "text/javascript"
@@ -38556,6 +38681,7 @@
 											"    var jsonData = pm.response.json();",
 											"    pm.globals.set(\"token\", jsonData.token);",
 											"    pm.expect(jsonData.state).to.eql(\"success\");",
+											"    //postman.setNextRequest(\"06-14-100 \");",
 											"});",
 											"",
 											"",
@@ -38568,7 +38694,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											""
+											"pm.variables.clear();"
 										],
 										"type": "text/javascript"
 									}
@@ -38611,29 +38737,40 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"console.log(\"aktueller globals Stand\");\r",
-											"console.log(\"startDate\", pm.globals.get(\"startDate\"));\r",
+											"console.log(\"06-14-02: aktueller globals Stand\");\r",
+											"\r",
 											"pm.globals.unset(\"startDate\");\r",
-											"console.log(\"endDate\", pm.globals.get(\"endDate\"));\r",
+											"console.log(\"startDate\", pm.globals.get(\"startDate\"));\r",
+											"\r",
 											"pm.globals.unset(\"endDate\");\r",
-											"console.log(\"vpID\", pm.globals.get(\"vpID\"));\r",
+											"console.log(\"endDate\", pm.globals.get(\"endDate\"));\r",
+											"\r",
 											"pm.globals.unset(\"vpID\");\r",
-											"console.log(\"actualDataUntil\", pm.globals.get(\"actualDataUntil\"));\r",
+											"console.log(\"vpID\", pm.globals.get(\"vpID\"));\r",
+											"\r",
 											"pm.globals.unset(\"actualDataUntil\");\r",
-											"console.log(\"vpvIDMain\", pm.globals.get(\"vpvIDMain\"));\r",
+											"console.log(\"actualDataUntil\", pm.globals.get(\"actualDataUntil\"));\r",
+											"\r",
 											"pm.globals.unset(\"vpvIDMain\");\r",
-											"console.log(\"vpvMain\", pm.globals.get(\"vpvMain\"));\r",
+											"console.log(\"vpvIDMain\", pm.globals.get(\"vpvIDMain\"));\r",
+											"\r",
 											"pm.globals.unset(\"vpvMain\");\r",
-											"console.log(\"vpv\", pm.globals.get(\"vpv\"));\r",
+											"console.log(\"vpvMain\", pm.globals.get(\"vpvMain\"));\r",
+											"\r",
 											"pm.globals.unset(\"vpv\"); \r",
-											"console.log(\"vName1\", pm.globals.get(\"vName1\"));\r",
+											"console.log(\"vpv\", pm.globals.get(\"vpv\"));\r",
+											"\r",
 											"pm.globals.unset(\"vName1\");\r",
-											"console.log(\"vName2\", pm.globals.get(\"vName2\"));\r",
+											"console.log(\"vName1\", pm.globals.get(\"vName1\"));\r",
+											"\r",
 											"pm.globals.unset(\"vName2\");\r",
-											"console.log(\"vName3\", pm.globals.get(\"vName3\"));\r",
+											"console.log(\"vName2\", pm.globals.get(\"vName2\"));\r",
+											"\r",
 											"pm.globals.unset(\"vName3\");\r",
-											"console.log(\"scaleFactor\", pm.globals.get(\"scaleFactor\"));\r",
-											"pm.globals.unset(\"scaleFactor\");"
+											"console.log(\"vName3\", pm.globals.get(\"vName3\"));\r",
+											"\r",
+											"pm.globals.unset(\"scaleFactor\");\r",
+											"console.log(\"scaleFactor\", pm.globals.get(\"scaleFactor\"));"
 										],
 										"type": "text/javascript"
 									}
@@ -39312,12 +39449,12 @@
 										"exec": [
 											"var vpv = JSON.parse(pm.globals.get(\"vpvMain\"));",
 											"",
-											"var endDate = new Date(vpv.endDate);",
-											"console.log(\"vpv.endDate\", endDate.toISOString());",
-											"endDate.setMonth(endDate.getMonth() - 3);",
-											"pm.globals.set(\"endDate\", endDate);",
+											"var newendDate = new Date(vpv.endDate);",
+											"console.log(\"vpv.endDate\", new Date(vpv.endDate).toISOString());",
+											"newendDate.setMonth(newendDate.getMonth() - 3);",
+											"pm.globals.set(\"endDate\", newendDate.toISOString());",
 											"",
-											"console.log(\"modify end Date: from\", vpv.endDate, \"to\", endDate.toISOString());",
+											"console.log(\"modify end Date: from\", vpv.endDate, \"to\", pm.globals.get(\"endDate\"));",
 											"// var endDate = new Date(vpv.endDate);",
 											"// endDate.setMonth(endDate.getMonth() - 6);",
 											"// console.log(\"endDate\", endDate.toISOString());",
@@ -39350,7 +39487,10 @@
 											"    var vpName = pm.globals.get(\"vpActualName\");",
 											"    var vName1 = pm.globals.get(\"vName1\");",
 											"    var inputendDate = pm.globals.get(\"endDate\");",
-											"",
+											"    ",
+											"    //var newVpv = jsonData.vpv[0];",
+											"    //pm.globals.set(\"newVpv\",JSON.stringify(newVpv));",
+											"    //console.info(\"newVpv\", newVpv);",
 											"",
 											"    pm.expect(jsonData.vpv[0].name).to.be.eql(vpName, \"Project Name MisMatch\");",
 											"    pm.expect(jsonData.vpv[0].variantName).to.be.eql(vName1, \"VariantName MisMatch\");",
@@ -39361,8 +39501,7 @@
 											"    var result = Math.round(jsonData.vpv[0].keyMetrics.costCurrentTotal*1000)/1000;",
 											"    var mainValue = Math.round(kmMain.costCurrentTotal*1000)/1000;    ",
 											"",
-											"    pm.expect(result).to.be.eql(mainValue, \"Total Cost MisMatch\");    ",
-											"    ",
+											"    pm.expect(result).to.be.eql(mainValue, \"Total Cost MisMatch\");   ",
 											"});",
 											""
 										],
@@ -39693,6 +39832,84 @@
 										"vpv"
 									]
 								}
+							},
+							"response": []
+						},
+						{
+							"name": "06-14-10a Get VPV Main with actualData",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);     ",
+											"});",
+											"",
+											"pm.test(\"set vpvIDMain and vpvMain\", function () {  ",
+											"        ",
+											"    var jsonData = pm.response.json();",
+											"    if (pm.response.code == 200) {",
+											"        var list = jsonData.vpv;    ",
+											"   ",
+											"        var vpv = list[0];",
+											"        var vpvIDMain = vpv._id;",
+											"        pm.globals.set(\"vpvIDMain\", vpvIDMain);",
+											"        console.log(\"vpvIDMain\", vpvIDMain);",
+											"        pm.globals.set(\"vpvMain\", JSON.stringify(vpv));",
+											"        console.log(\"vpvMain\", vpv);",
+											"        console.log(\"vpvMain.startDate\", vpv.startDate);",
+											"        console.log(\"vpvMain.endDate\", vpv.endDate);",
+											"        ",
+											"    } else {",
+											"        pm.globals.set(\"vpvIDMain\", undefined);",
+											"        pm.globals.set(\"vpvMain\", undefined); ",
+											"        postman.setNextRequest(\"06-14-99 Final\");",
+											"    }    ",
+											"    ",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vpv?vpid={{vpID}}&refDate=&variantName=&longList=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vpv"
+									],
+									"query": [
+										{
+											"key": "vpid",
+											"value": "{{vpID}}"
+										},
+										{
+											"key": "refDate",
+											"value": ""
+										},
+										{
+											"key": "variantName",
+											"value": ""
+										},
+										{
+											"key": "longList",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
 							},
 							"response": []
 						},
@@ -45270,6 +45487,253 @@
 						},
 						{
 							"name": "08-20-99 Final",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vpv/{{vpvID}}",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vpv",
+										"{{vpvID}}"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "08-90 VC Predict",
+					"item": [
+						{
+							"name": "08-90-01 Login Admin",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"01 Login: Check Login Success\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.globals.set(\"token\", jsonData.token);",
+											"    pm.expect(jsonData.state).to.eql(\"success\");",
+											"});",
+											"",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
+								},
+								"url": {
+									"raw": "{{url}}/token/user/login",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"token",
+										"user",
+										"login"
+									]
+								},
+								"description": "Successful Login Request  "
+							},
+							"response": []
+						},
+						{
+							"name": "08-90-02 Get VC",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check that VC Testname does not exist\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    var list = jsonData.vc;",
+											"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
+											"    var searchName = pm.environment.get(\"VCBaseName\") + '02';",
+											"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+											"    if (index >= 0) {",
+											"        console.log(\"Found:\", list[index].name)",
+											"        pm.globals.set(\"vcID\", list[index]._id);",
+											"    } else {",
+											"        console.log(\"Item not found\", searchName)",
+											"        postman.setNextRequest(\"08-20-99 Final\");",
+											"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
+											"    }",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc"
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-90-03 Get VC Predict Info",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check that Organisation exists\", function () {",
+											"    var jsonData = pm.response.json();",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/predict?sysadmin=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"predict"
+									],
+									"query": [
+										{
+											"key": "sysadmin",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-90-10 Delete VC Predict Training",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code Check\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Check that Organisation exists\", function () {",
+											"    var jsonData = pm.response.json();",
+											"});",
+											"",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "access-key",
+										"value": "{{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{url}}/vc/{{vcID}}/predict?sysadmin=1",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"vc",
+										"{{vcID}}",
+										"predict"
+									],
+									"query": [
+										{
+											"key": "sysadmin",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+							},
+							"response": []
+						},
+						{
+							"name": "08-90-99 Final",
 							"event": [
 								{
 									"listen": "test",
