@@ -961,7 +961,7 @@ if (currentVersion < dateBlock) {
   var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldString.name': {$nin: ['_businessUnit']}}, {_id: 1}).toArray()
   var vpidList = [];
   vpList.forEach(vp => vpidList.push(vp._id));
-  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', businessUnit: {$exists: true}, businessUnit: {$ne: ''}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, businessUnit: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', businessUnit: {$exists: true}, businessUnit: {$ne: ''}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, businessUnit: 1, timestamp: 1}).sort({vpid: 1, variantName: 1, timestamp: -1}).toArray();
   print("Found VPV", vpList.length, vpvList.length);
   // print("VPV List", JSON.stringify(vpvList));
   var vpIDLast, count = 0;
@@ -981,7 +981,7 @@ if (currentVersion < dateBlock) {
   var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldDouble.name': {$nin: ['_risk']}}, {_id: 1}).toArray()
   var vpidList = [];
   vpList.forEach(vp => vpidList.push(vp._id));
-  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', Risiko: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, Risiko: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', Risiko: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, Risiko: 1, timestamp: 1}).sort({vpid: 1, variantName: 1, timestamp: -1}).toArray();
   print("Found VPV", vpList.length, vpvList.length);
   // print("VPV List", JSON.stringify(vpvList));
   vpIDLast = undefined; count = 0;
@@ -1002,7 +1002,7 @@ if (currentVersion < dateBlock) {
   var vpList = db.visboprojects.find({deletedAt: {$exists: false}, 'customFieldDouble.name': {$nin: ['_strategicFit']}}, {_id: 1}).toArray()
   var vpidList = [];
   vpList.forEach(vp => vpidList.push(vp._id));
-  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', StrategicFit: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, StrategicFit: 1, timestamp: 1}).sort({vpid: 1, timestamp: -1}).toArray();
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', StrategicFit: {$gte: 0}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, StrategicFit: 1, timestamp: 1}).sort({vpid: 1, variantName: 1, timestamp: -1}).toArray();
   print("Found VPV", vpList.length, vpvList.length);
   // print("VPV List", JSON.stringify(vpvList));
   vpIDLast = undefined; count = 0;

@@ -201,7 +201,7 @@ function calcCosts(vpv, pfv, organisations) {
 		timeZones.forEach( tz => {
 			let newOrga = convertOrganisation(tz.orga);
 			tz.orga = newOrga;
-		})
+		});
 
 		if  (vpv){
 			logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s ', vpv.startDate, vpv.startDate.toISOString());
@@ -1290,10 +1290,10 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, startDate, endDate
 				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
 				capaVPV[item] = {};
 				capaVPV[item].vpid = capaPFV[item].vpid;
-				capaVPV[item].name = capaPFV[item].name;
+				capaVPV[item].name = capaPFV[item].name;				
 				capaVPV[item].currentDate = capaPFV[item].currentDate;
 				capaVPV[item].roleID = capaPFV[item].roleID;
-				capaVPV[item].roleName = capaPFV[item].roleName
+				capaVPV[item].roleName = capaPFV[item].roleName;
 				capaVPV[item].actualCost_PT = 0;
 				capaVPV[item].plannedCost_PT = 0;
 				capaVPV[item].actualCost = 0;
@@ -2808,7 +2808,7 @@ function moveTheNeeds (newPFV, phase, parent) {
 			for ( n = 0; n < role.Bedarf.length; n++){
 				parentNeeds.push(role.Bedarf[n]);
 			}
-			for (p = phase.relEnde; p < parent.relEnde; p++){
+			for ( p = phase.relEnde; p < parent.relEnde; p++){
 				parentNeeds.push(0);
 			}
 			role.Bedarf = parentNeeds;
