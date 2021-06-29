@@ -138,7 +138,7 @@ function detectChangeCustomFieldDate(original, update) {
 }
 
 function convertCustomFieldDouble(customFieldDouble) {
-	var result;	
+	var result;
 	if (customFieldDouble) {
 		customFieldDouble.forEach(item => {
 			if (!validateName(item.name, false)
@@ -162,19 +162,19 @@ function convertCustomFieldDate(customFieldDate) {
 	if (customFieldDate) {
 		customFieldDate.forEach(item => {
 			if (!validateName(item.name, false)
-			|| !validateDate(item.value, true)) {				
-				invalidDates=true				
+			|| !validateDate(item.value, true)) {
+				invalidDates=true
 				return result;
 			}
-			if (item.type && !((item.type == 'System') &&  (constSystemCustomName.find(element => element == item.name)))) {				
+			if (item.type && !((item.type == 'System') &&  (constSystemCustomName.find(element => element == item.name)))) {
 				invalidDates=true
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
 				item.type = 'System';
-			} else {				
+			} else {
 				item.type = 'VP';
-			}		
+			}
 		});
 		if (!invalidDates) {
 			result = customFieldDate.filter(item => item.value != undefined);
@@ -578,17 +578,17 @@ router.route('/')
 	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
 	*  'customFieldString': [
-	*		'name': '_businessUnit', 'value': 'BU1', 
+	*		'name': '_businessUnit', 'value': 'BU1',
 	*		'name': 'kundennummer', 'value': 'customer project identifier'
 	*		],
 	*  'customFieldDouble': [
-	*		'name': '_risk', 'value': '5', 
-	*		'name': '_strategicFit', 'value': '10', 
+	*		'name': '_risk', 'value': '5',
+	*		'name': '_strategicFit', 'value': '10',
 	*		'name': 'score', 'value': -5.5
     *		],
     *  'customFieldDate': [
-    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'      
-    *		] 
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'
+    *		]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -615,8 +615,8 @@ router.route('/')
 	*		'name': 'score', 'value': -5.5, 'type': 'VP'
     *		],
     *   'customFieldDate': [
-    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',     
-    *		] 
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
+    *		]
 	*   'lock': []
 	*  }]
 	* }
@@ -640,7 +640,14 @@ router.route('/')
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
+		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer;
+
+		if (vpType == 1) {
+			req.auditDescription = 'Portfolio Create';
+		} else if (vpType == 2) {
+			req.auditDescription = 'Project Template Create';
+		}
 		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace('Post a new Project body %O', req.body);
 
@@ -739,11 +746,7 @@ router.route('/')
 				if (customFieldDate) {
 					newVP.customFieldDate = customFieldDate;
 				}
-				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
-					newVP.vpType = 0;
-				} else {
-					newVP.vpType = req.body.vpType;
-				}
+				newVP.vpType = vpType;
 				newVP.vpvCount = 0;
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
@@ -833,7 +836,7 @@ router.route('/')
 								}
 							}
 							var newVPV = helperVpv.initVPV(templateVPV);
-							newVPV.VorlagenName = req.oneVPVTemplate.name;							
+							newVPV.VorlagenName = req.oneVPVTemplate.name;
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
@@ -969,17 +972,17 @@ router.route('/:vpid')
 	*  'description': 'New Description for VP',
 	*  'kundennummer': 'Customer Project Identifier'
 	*  'customFieldString': [
-	*		'name': '_businessUnit', 'value': 'BU1', 
+	*		'name': '_businessUnit', 'value': 'BU1',
 	*		'name': 'kundennummer', 'value': 'customer project identifier'
 	*		],
 	*  'customFieldDouble': [
-	*		'name': '_risk', 'value': '5', 
-	*		'name': '_strategicFit', 'value': '10', 
+	*		'name': '_risk', 'value': '5',
+	*		'name': '_strategicFit', 'value': '10',
 	*		'name': 'score', 'value': -5.5}
     *		],
     *  'customFieldDate': [
-    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'      
-    *		] 
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'
+    *		]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -998,13 +1001,13 @@ router.route('/:vpid')
 	*		'name': 'kundennummer', 'value': 'customer project identifier', 'type': 'System',
 	*		],
 	*  'customFieldDouble': [
-	*		'name': '_risk', 'value': '5', 'type': 'System', 
+	*		'name': '_risk', 'value': '5', 'type': 'System',
 	*		'name': '_strategicFit', 'value': '10', 'type': 'System',
 	*		'name': 'score', 'value': -5.5, 'type': 'VP',}
     *		],
     *  'customFieldDate': [
-    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',     
-    *		] 
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
+    *		]
 	*   'vcid': 'vc5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0'
@@ -1057,7 +1060,7 @@ router.route('/:vpid')
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDouble'
-				});				
+				});
 			}
 		}
 
@@ -1069,7 +1072,7 @@ router.route('/:vpid')
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDate'
 				});
-				
+
 			}
 		}
 
