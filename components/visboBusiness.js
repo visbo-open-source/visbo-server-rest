@@ -2114,6 +2114,7 @@ function convertOrganisation(organisation_new) {
 function buildOrgaList (orga) {
 	var organisation = [];
 	var organisationItem = {};
+	var aggreID = undefined;	
 	for (let i = 0; orga.value.allRoles && i < orga.value.allRoles.length; i++) {
 		const role = orga.value.allRoles[i];
 		const id = role.uid;
@@ -2137,6 +2138,13 @@ function buildOrgaList (orga) {
 			organisation[id].exitDate = role.exitDate;
 		}
 		organisation[id].aliases = role.aliases;
+		organisation[id].isAggregationRole = role.isAggregationRole;
+		if (role.isAggregationRole){
+			aggreID = id;
+			organisation[id].aggreID = aggreID;
+		}
+		organisation[id].isSummaryRole = role.isSummaryRole;
+		organisation[id].isActDataRelevant = role.issActDataRelevant;
 
 		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
 		if (role.isTeam) {
@@ -2147,7 +2155,7 @@ function buildOrgaList (orga) {
 			organisation[id].type = 1;
 		}
 		// role is a summary role
-		if (role.subRoleIDs.length > 0) {
+		if (role.isSummaryRole || role.subRoleIDs.length > 0) {
 			organisation[id].sumRole = true;
 		} else {
 			organisation[id].sumRole = false;
@@ -2170,6 +2178,9 @@ function buildOrgaList (orga) {
 			}
 			if (!organisation[index].pid) {
 				organisation[index].pid = id;
+			}
+			if (!organisation[index].aggreID) {
+				organisation[index].aggreID = aggreID;
 			}
 		}
 	}
