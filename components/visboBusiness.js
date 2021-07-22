@@ -6,6 +6,7 @@ var log4js = require('log4js');
 const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
 const { min } = require('moment');
+const { any } = require('bluebird');
 const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
 
@@ -2144,7 +2145,7 @@ function buildOrgaList (orga) {
 			organisation[id].aggreID = aggreID;
 		}
 		organisation[id].isSummaryRole = role.isSummaryRole;
-		organisation[id].isActDataRelevant = role.issActDataRelevant;
+		organisation[id].isActDataRelevant = role.isActDataRelevant;
 
 		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
 		if (role.isTeam) {
@@ -2180,7 +2181,7 @@ function buildOrgaList (orga) {
 				organisation[index].pid = id;
 			}
 			if (!organisation[index].aggreID) {
-				organisation[index].aggreID = aggreID;
+				organisation[index].aggreID = organisation[role.uid] && organisation[role.uid].aggreID;
 			}
 		}
 	}
@@ -2884,32 +2885,8 @@ function aggregateRoles(phase, orgalist){
 		var role = phase.AllRoles[ir];
 		// Step one: replace the role with its parent with uid = pid, if role is a person
 		var roleSett = orgalist[role.RollenTyp];
-		if (roleSett && !roleSett.sumRole) {
-			oneRole.RollenTyp = roleSett.pid;
-			oneRole.teamID = role.teamID;
-			// oneRole.name = roleSett.name;
-			// oneRole.farbe = role.farbe;
-			// oneRole.startkapa = role.startkapa;
-			// oneRole.tagessatzIntern = role.tagessatzIntern;
 
-			if (( role.teamID === -1 ) || ( !role.teamID)) {
-				// Badarf has to be adopted in € according to the defaultDayCost of the role
-				// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole
-				// and the PT will be calculated in the same relation.
-				oneRole.Bedarf = [];
-				var actTagessatz = roleSett.tagessatz;
-				var newTagessatz = orgalist[roleSett.pid].tagessatz;
-				var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
-				for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
-					oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
-				}
-			} else {
-				// the needs for teams are always calculated with the tagessatz of the team
-
-				oneRole.Bedarf = role.Bedarf;
-			}
-
-		} else {
+		if (roleSett &&  roleSett.sumRole && (roleSett.aggreID == role.RollenTyp)) {
 			oneRole.RollenTyp = role.RollenTyp;
 			oneRole.teamID = role.teamID;
 			oneRole.Bedarf = role.Bedarf;
@@ -2918,35 +2895,88 @@ function aggregateRoles(phase, orgalist){
 			// oneRole.startkapa = role.startkapa;
 			// oneRole.tagessatzIntern = role.tagessatzIntern;
 			// oneRole.isCalculated = role.isCalculated;
+			newAllRoles.push(oneRole);
+			continue;
+		}
+		
+		if (roleSett && roleSett.aggreID){
+			oneRole.RollenTyp = roleSett.aggreID;
+			oneRole.teamID = role.teamID;
+			// oneRole.name = roleSett.name;
+			// oneRole.farbe = role.farbe;
+			// oneRole.startkapa = role.startkapa;
+			// oneRole.tagessatzIntern = role.tagessatzIntern;
+		}
+		// there is no aggregation role defined; the needs will be added to the parentID
+		if (roleSett && !roleSett.aggreID && !roleSett.sumRole) {
+			oneRole.RollenTyp = roleSett.pid;
+			oneRole.teamID = role.teamID;
+			// oneRole.name = roleSett.name;
+			// oneRole.farbe = role.farbe;
+			// oneRole.startkapa = role.startkapa;
+			// oneRole.tagessatzIntern = role.tagessatzIntern;
+		}
+
+		if (( role.teamID === -1 ) || ( !role.teamID)) {
+			// Badarf has to be adopted in € according to the defaultDayCost of the role
+			// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole
+			// and the PT will be calculated in the same relation.
+			oneRole.Bedarf = [];
+			var actTagessatz = roleSett.tagessatz;
+			var newTagessatz = orgalist[oneRole.RollenTyp].tagessatz;
+			var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
+			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
+				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
+			}
+		} else {
+			// the needs for teams are always calculated with the tagessatz of the team
+			oneRole.Bedarf = role.Bedarf;
 		}
 		newAllRoles.push(oneRole);
 	}
 
-	var lastNewRoles = [];
+	var groupBy = function (xs, key1, key2) {
+		return xs.reduce(function (rv, x) {
+			(rv[x[key1] + ',' + x[key2]] = rv[x[key1] + ',' + x[key2]] || []).push(x);
+			return rv;
+		}, {});
+	};
+	// group the used roles 
+	var groupedRoles = groupBy(newAllRoles, 'RollenTyp','teamID');
+	//console.log(groupedRoles);
+	
+	// make an array of the grouped roles
+	const arrayOfGroupedRoles = Object.entries(groupedRoles);
+	//console.log(arrayOfGroupedRoles);
+	
+	// sum the needs of the groupedRoles
 	var resultNewRoles = [];
-	for ( ir = 0; newAllRoles && ir < newAllRoles.length; ir++){
-		var actUID = newAllRoles[ir].RollenTyp;
-		var actTeamID = newAllRoles[ir].teamID;
+	if (!arrayOfGroupedRoles || arrayOfGroupedRoles.length <= 0)	{
+		return resultNewRoles;
+	}
+	for (var iarr= 0; arrayOfGroupedRoles && iarr < arrayOfGroupedRoles.length; iarr++) {
+		var elem = arrayOfGroupedRoles[iarr];
+		var aggrRole = elem[1];			// there is the role and their ressources in the second member
 		var sumRole = {};
-		sumRole.RollenTyp = actUID;
-		sumRole.teamID = actTeamID;
-		sumRole.Bedarf = newAllRoles[ir].Bedarf;
-		// check all others role, if they are existing once more. then the bedarf has to be added
-		for (var newir = ir + 1; newAllRoles && newir < newAllRoles.length; newir++){
-			var newRole = newAllRoles[newir];
-			if ((actUID == newRole.RollenTyp) && (actTeamID == newRole.teamID)) {
-				for (var m = 0; newRole && m < newRole.Bedarf.length; m++) {
-					sumRole.Bedarf[m] = sumRole.Bedarf[m] + newRole.Bedarf[m];
+		for (ir= 0; aggrRole && ir < aggrRole.length; ir++) {							
+				sumRole.RollenTyp = aggrRole[ir].RollenTyp;
+				sumRole.teamID = aggrRole[ir].teamID;
+				if (!sumRole.Bedarf) {
+					sumRole.Bedarf = [];
+					for (var m = 0; aggrRole[ir] && m < aggrRole[ir].Bedarf.length; m++) {
+						sumRole.Bedarf.push(aggrRole[ir].Bedarf[m]);
+					}
+				} else {				
+					for (m = 0; aggrRole[ir] && m < aggrRole[ir].Bedarf.length; m++) {
+						sumRole.Bedarf[m] = sumRole.Bedarf[m] +aggrRole[ir].Bedarf[m];
+					}
 				}
-			}
-		}
-		if  ( !(lastNewRoles[actUID] && (lastNewRoles[actUID].teamID == actTeamID)) )  {
-			lastNewRoles[actUID]=sumRole;
-			resultNewRoles.push(sumRole);
-		}
+		}			
+		resultNewRoles.push(sumRole);
 	}
 	return resultNewRoles;
-}
+}	
+
 
 // function calculates the distribution of values in a array
 function calcPhArValues(arStartDate, arEndDate, arSum) {
