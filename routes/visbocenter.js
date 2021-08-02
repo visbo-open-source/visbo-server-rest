@@ -163,6 +163,15 @@ function generateNewRole(item) {
 	if (item.isExternRole) {
 		newRole.isExternRole = item.isExternRole;
 	}
+	if (item.isAggregationRole) {
+		newRole.isAggregationRole = item.isAggregationRole;
+	}
+	if (item.isSummaryRole) {
+		newRole.isSummaryRole = item.isSummaryRole;
+	}
+	if (item.isActDataRelevant) {
+		newRole.isActDataRelevant = item.isActDataRelevant;
+	}
 	if (item.startOfCal) {
 		var startOfCal = validate.validateDate(item.startOfCal, false);
 		if (startOfCal) {

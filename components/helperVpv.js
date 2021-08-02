@@ -191,7 +191,7 @@ function createInitialVersions(req, res, newVPV) {
 				errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
 				return;
 			}
-			// req.oneVPV = oneVPV;
+			// req.visboPFV = oneVPV;
 			updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 			return res.status(200).send({
 				state: 'success',
