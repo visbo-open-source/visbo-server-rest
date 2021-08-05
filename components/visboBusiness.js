@@ -96,7 +96,22 @@ function getAllPersonalKosten(vpv, organisation) {
 				for (var j = 0; phase && phase.AllRoles && j < phase.AllRoles.length; j++) {
 					// logger4js.trace('Calculate Phase %s Roles %s', i, phase.AllRoles.length);
 					var role = phase.AllRoles[j];
-					var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatz : 0;
+					// look for the tagessatz
+					var actRoleID = role.RollenTyp;
+					logger4js.trace('Calculate Intersect %s Role %s', i, actRoleID);
+					var teamID = role.teamID;
+					// tagessatz of orga-unit
+					var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
+					// tagessatz of teamID
+					if (teamID && teamID != -1) {
+						tagessatz = allRoles[teamID] ? allRoles[teamID].tagessatz : tagessatz;
+					}
+					// tagessatz of person
+					if (allRoles[actRoleID] && allRoles[actRoleID].subRoleIDs && allRoles[actRoleID].subRoleIDs.length <= 0) {
+						tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
+					}
+					// var tagessatz = allRoles[role.RollenTyp] ? allRoles[role.RollenTyp].tagessatz : 0;
+
 					// logger4js.trace('Calculate Bedarf of Role %O', role.Bedarf);
 					if (role &&  role.Bedarf) {
 						var dimension = role.Bedarf.length;
@@ -1727,8 +1742,18 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, allRoles, startIndex
 
 				actRoleID = intersectArray[i].role;
 				logger4js.trace('Calculate Intersect %s Role %s', i, actRoleID);
-				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
 				teamID = intersectArray[i].teamID;
+				// tagessatz of orga-unit
+				var tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
+				// tagessatz of teamID
+				if (teamID && teamID != -1) {
+					tagessatz = allRoles[teamID] ? allRoles[teamID].tagessatz : tagessatz;
+				}
+				// tagessatz of person
+				if (allRoles[actRoleID] && allRoles[actRoleID].subRoleIDs && allRoles[actRoleID].subRoleIDs.length <= 0) {
+					tagessatz = allRoles[actRoleID] ? allRoles[actRoleID].tagessatz : 0;
+				}
+
 				var phasesWithActRole = intersectArray[i].phases;
 
 				// calculate the needs of this Role with faktor always 1.0
@@ -2886,6 +2911,19 @@ function aggregateRoles(phase, orgalist){
 		// Step one: replace the role with its parent with uid = pid, if role is a person
 		var roleSett = orgalist[role.RollenTyp];
 
+		if (roleSett &&  roleSett.sumRole && !roleSett.aggreID) {
+			oneRole.RollenTyp = role.RollenTyp;
+			oneRole.teamID = role.teamID;
+			oneRole.Bedarf = role.Bedarf;
+			// oneRole.name = role.name;
+			// oneRole.farbe = role.farbe;
+			// oneRole.startkapa = role.startkapa;
+			// oneRole.tagessatzIntern = role.tagessatzIntern;
+			// oneRole.isCalculated = role.isCalculated;
+			newAllRoles.push(oneRole);
+			continue;
+		}
+
 		if (roleSett &&  roleSett.sumRole && (roleSett.aggreID == role.RollenTyp)) {
 			oneRole.RollenTyp = role.RollenTyp;
 			oneRole.teamID = role.teamID;
@@ -2923,8 +2961,8 @@ function aggregateRoles(phase, orgalist){
 			// and the PT will be calculated in the same relation.
 			oneRole.Bedarf = [];
 			var actTagessatz = roleSett.tagessatz;
-			var newTagessatz = orgalist[oneRole.RollenTyp].tagessatz;
-			var ptFaktor = (newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
+			var newTagessatz = orgalist && orgalist[oneRole.RollenTyp] && orgalist[oneRole.RollenTyp].tagessatz;
+			var ptFaktor = (newTagessatz && newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
 			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
 				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
 			}
