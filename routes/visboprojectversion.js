@@ -1389,6 +1389,7 @@ router.route('/:vpvid/capacity')
 			perm.vc = perm.vc | permVC.vc;
 		}
 		var roleID = req.query.roleID;
+		var parentID = req.query.parentID;
 
 		req.auditDescription = 'Project Version Capacity Read';
 		req.auditSysAdmin = sysAdmin;
@@ -1422,7 +1423,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
