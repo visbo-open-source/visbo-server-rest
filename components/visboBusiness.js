@@ -5,6 +5,7 @@ var logModule = 'VPV';
 var log4js = require('log4js');
 const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
+const { validateNumber } = require('./validate');
 const { min } = require('moment');
 const { any } = require('bluebird');
 const rootPhaseName = '0§.§';
@@ -1083,8 +1084,13 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate
 		return [];
 	}
 
-	logger4js.debug('Calculate Capacities %s', roleIdentifier);
+	logger4js.debug('Calculate Capacities %s/%s', roleIdentifier, parentID);
 	var startTimer = new Date();
+
+	parentID = validateNumber(Number(parentID), false);
+	if (parentID == 0){
+		parentID = undefined;
+	}
 
 	startDate = validateDate(startDate,false);
 	if (!startDate) {
@@ -1616,11 +1622,17 @@ function getCapacityFromTimeZone( vpvs, roleIdentifier, parentID, timeZone) {
 	if (!roleID || !allRoles[roleID]) {
 		// given roleIdentifier isn't defined in this organisation
 		return undefined;
+		
+	}
+	if (parentID && isNaN(parentID) && !allRoles[parentID]) {
+		// given parent isn't defined in this organisation
+		logger4js.warn('given parentID is not defined in this organisation roleID/parentID  %s/%s',  roleID, parentID);
+		return undefined;
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
 	var concerningRoles = getConcerningRoles(allRoles, allTeams, roleID, parentID);
-	logger4js.debug('getting capacities for the related roleID given organisation %s',  roleID);
+	logger4js.debug('getting capacities for the related roleID/parentID given organisation %s/%s',  roleID, parentID);
 	var tz_capaValues = getCapaValues(tz_startIndex, tz_dauer, concerningRoles, allRoles);
 
 	var costValues = [];
@@ -2143,43 +2155,23 @@ function getConcerningRoles(allRoles, allTeams, roleID, parentID) {
 			}
 		}
 	}
-	
-	// if (!parentID) {
-	// 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
-	// 	if (roleID || roleID != ''){
-	// 		var actRole = allRoles[roleID];
-	// 		crElem = {};
-	// 		crElem.actRole = allRoles[roleID];
-	// 		crElem.teamID = -1;
-	// 		crElem.faktor = 1;
-	// 		concerningRoles.push(crElem);
+	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
+	if (roleID || roleID != ''){
+		var actRole = allRoles[roleID];
+		crElem = {};
+		crElem.actRole = allRoles[roleID];
+		crElem.teamID = -1;
+		if (allRoles[parentID] && allRoles[parentID].isTeam) 	crElem.teamID = parentID;					
+		crElem.faktor = 1;
+		concerningRoles.push(crElem);
 
-	// 		if (actRole) {
-	// 			var subRoles = actRole.subRoleIDs;
-	// 			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
-	// 				findConcerningRoles(subRoles[sr], actRole);
-	// 			}
-	// 		}
-	// 	}
-	// } else {
-		// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
-		if (roleID || roleID != ''){
-			var actRole = allRoles[roleID];
-			crElem = {};
-			crElem.actRole = allRoles[roleID];
-			crElem.teamID = -1;
-			if (allRoles[parentID] && allRoles[parentID].isTeam) 	crElem.teamID = parentID;					
-			crElem.faktor = 1;
-			concerningRoles.push(crElem);
-
-			if (actRole) {
-				var subRoles = actRole.subRoleIDs;
-				for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
-					findConcerningRoles(subRoles[sr], actRole);
-				}
+		if (actRole) {
+			var subRoles = actRole.subRoleIDs;
+			for (var sr = 0; subRoles && sr < subRoles.length; sr++) {
+				findConcerningRoles(subRoles[sr], actRole);
 			}
 		}
-	// }
+	}
 	
 	return concerningRoles;
 }
