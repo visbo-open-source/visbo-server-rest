@@ -6,6 +6,8 @@ var exec = require('child_process').exec;
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
+
+var systemVC = require('./../components/systemVC');
 var lockVP = require('./../components/lock');
 var verifyVc = require('./../components/verifyVc');
 var verifyVpv = require('./../components/verifyVpv');
@@ -95,21 +97,25 @@ function saveRecalcKM(req, res, message) {
 	logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', req.oneVPV.vpid, req.oneVPV.name, req.oneVPV.timestamp);
 
 	// check if newVPV is a valid VPV
-	var validVPV = visboBusiness.ensureValidVPV(req.oneVPV);
-	if (!validVPV) {
-		logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
-		return res.status(400).send({
-			state: 'failure',
-			message: 'Project Version is an inconsistent VPV'
-		});
+	if (!req.query.noValidate) {
+		if (!visboBusiness.ensureValidVPV(req.oneVPV)) {
+			logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Version is an inconsistent VPV'
+			});
+		}
 	}
 	// check if prediction is enabled and needed
-	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
+	var fsModell = systemVC.getPredictModel();
+	logger4js.info(`Recalc Predict? VPV ${req.oneVPV._id} VP: ${req.oneVPV.vpid} Enabled: ${verifyVc.isVCEnabled(req, 'EnablePredict', 2)} PredictModel: ${fsModell}`);
+	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
 		if (req.oneVPV.keyMetrics && req.oneVPV.keyMetrics.costBaseLastTotal && req.oneVPV.keyMetrics.endDateBaseLast) {
 			var tmpVPV = {};
 			tmpVPV._id = req.oneVPV._id;
+			tmpVPV.vpid = req.oneVPV.vpid;
 			tmpVPV.timestamp = req.oneVPV.timestamp;
 			tmpVPV.costCurrentActual = req.oneVPV.keyMetrics.costCurrentActual || 0;
 			tmpVPV.costCurrentTotal = req.oneVPV.keyMetrics.costCurrentTotal || 0;
@@ -119,7 +125,7 @@ function saveRecalcKM(req, res, message) {
 			tmpVPV.endDateBaseLast = req.oneVPV.keyMetrics.endDateBaseLast;
 			reducedKM.push(tmpVPV);
 		}
-		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
 		if (reducedKM.length) {
 			logger4js.warn('POST VPV calculate Prediction for Version', req.oneVPV._id, req.oneVPV.variantName || 'Standard');
 			exec(cmd, function callback(error, stdout, stderr) {
@@ -211,13 +217,15 @@ function getRecalcKM(req, res, message) {
 		return;
 	}
 	// check if prediction is enabled and needed
-	if (verifyVc.isVCEnabled(req, 'EnablePredict', 2)) {
+	var fsModell = systemVC.getPredictModel();
+	if (verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
 		var cmd = './PredictKM';
 		var reducedKM = [];
 		req.listVPV.forEach(vpv => {
 			if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
 				var newVPV = {};
 				newVPV._id = vpv._id;
+				newVPV.vpid = vpv.vpid;
 				newVPV.timestamp = vpv.timestamp;
 				newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
 				newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
@@ -228,7 +236,7 @@ function getRecalcKM(req, res, message) {
 				reducedKM.push(newVPV);
 			}
 		});
-		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\'');
+		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
 		if (reducedKM.length) {
 			logger4js.warn('Recalc %d Versions for Prediction', reducedKM.length, cmd.length);
 			exec(cmd, function callback(error, stdout, stderr) {
@@ -764,6 +772,10 @@ router.route('/')
 					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
+				if (req.oneVP && req.oneVP.customFieldDate) {
+					customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+					//if (customField) { newVPV.pmCommit = customField.value; }
+				}
 				req.oneVPV = newVPV;
 				saveRecalcKM(req, res, 'Successfully created new Project Version');
 			});
@@ -1273,7 +1285,10 @@ router.route('/:vpvid/copy')
 			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 			if (customField) { newVPV.StrategicFit = customField.value; }
 		}
-
+		if (req.oneVP && req.oneVP.customFieldDate) {
+			customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+			//if (customField) { newVPV.pmCommit = customField.value; }
+		}
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (variantName == 'pfv') {
 			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
@@ -1374,6 +1389,7 @@ router.route('/:vpvid/capacity')
 			perm.vc = perm.vc | permVC.vc;
 		}
 		var roleID = req.query.roleID;
+		var parentID = req.query.parentID;
 
 		req.auditDescription = 'Project Version Capacity Read';
 		req.auditSysAdmin = sysAdmin;
@@ -1407,7 +1423,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',

@@ -7,11 +7,11 @@ var logger4js = log4js.getLogger(logModule);
 var handler = function(err, res, logMesage, restMessage) {
 	var error, httpcode;
 	if (!err) {
-		logger4js.mark('Unknown Error: %s ReST error %s err %s', logMesage, restMessage, error);
+		logger4js.warn('Unknown Error: %s ReST error %s err %s', logMesage, restMessage, error);
 		httpcode = 500;
 	} else if (err.name == 'ValidationError') {
 		error = err.message;
-		logger4js.mark('Mongo Validation Error: %s ReST error %s err %O', logMesage, restMessage, error);
+		logger4js.warn('Mongo Validation Error: %s ReST error %s err %O', logMesage, restMessage, error);
 		httpcode = 400;
 	} else if (err.name == 'CastError') {
 		error = err.message;
@@ -19,7 +19,7 @@ var handler = function(err, res, logMesage, restMessage) {
 		httpcode = 400;
 	} else if (err.name == 'MongoTimeoutError') {
 		error = err.name;
-		logger4js.mark('Mongo Timeout Error: %s ReST error %s err %s', logMesage, restMessage, error);
+		logger4js.warn('Mongo Timeout Error: %s ReST error %s err %s', logMesage, restMessage, error);
 		httpcode = 500;
 		throw 'Lost Mongo connection, please restart';
 	} else if (err.code == 11000){

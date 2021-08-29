@@ -3,8 +3,10 @@ require('../models/visboprojectversion');
 require('../models/vcsetting');
 require('../models/predictkm');
 
+var exec = require('child_process').exec;
 var fs = require('fs');
 
+var systemVC = require('./../components/systemVC');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VCSetting = mongoose.model('VCSetting');
 var PredictKM = mongoose.model('PredictKM');
@@ -67,7 +69,6 @@ function kmCollect(task, finishedTask, vcSystemId) {
 		var queryVPV = VisboProjectVersion.aggregate(query);
 		queryVPV.exec(function (err, listVPV) {
 			if (err){
-				errorHandler(err, undefined, 'DB: Find kmCollect VPVs', undefined);
 				task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: Find kmCollect VPVs'};
 				finishedTask(task, false);
 				return;
@@ -78,12 +79,14 @@ function kmCollect(task, finishedTask, vcSystemId) {
 			// now we have the list of VPVs with keymetrics that we want to insert into predictkms
 			PredictKM.insertMany(listVPV, function (err, resultList) {
 				if (err){
-					errorHandler(err, undefined, 'DB: Insert PredictKM', undefined);
+					task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: Insert PredictKM'};
+					finishedTask(task, false);
+					return;
 				}
 				logger4js.debug('Task: kmCollect Inserted %d', resultList.length);
 				var endDate = new Date();
 				var duration = endDate.getTime() - startDate.getTime();
-				task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`};
+				task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} new VPVs for Training from ${endDate.toISOString()}`};
 				logger4js.info('Task: kmCollect Result %d Duration %d ms', listVPV.length, duration);
 				finishedTask(task, false);
 			});
@@ -138,7 +141,6 @@ function kmTraining(task, finishedTask, vcSystemId) {
 	var queryVCSetting = VCSetting.find(querySetting);
 	queryVCSetting.exec(function (err, vcSettings) {
 		if (err){
-			errorHandler(err, undefined, 'DB: Find kmTraining VC Settings', undefined);
 			var actual = new Date();
 			task.value.taskSpecific = {result: -1, resultDescription: 'Err: DB: Find kmTraining VC Settings', updated: actual.toISOString()};
 			finishedTask(task, false);
@@ -156,7 +158,7 @@ function kmTraining(task, finishedTask, vcSystemId) {
 		queryPredict.sort({vpid:1, timestamp: -1});
 		queryPredict.lean();
 		queryPredict.exec(function (err, listVPV) {
-			logger4js.warn('Task: kmTraining Starting Training for', listVPV.length);
+			logger4js.debug('Task: kmTraining Starting Training for', listVPV.length);
 			// filter duplicate entries same vpid and same day
 			var oldVPV = {vpid: '', timestamp: new Date()};
 			var reducedVPV = [];
@@ -177,29 +179,41 @@ function kmTraining(task, finishedTask, vcSystemId) {
 				finishedTask(task, false);
 				return;
 			}
-			logger4js.warn('Task: kmTraining Starting Training for', reducedVPV.length);
+			logger4js.debug('Task: kmTraining Starting Training for', reducedVPV.length);
 
-			var tmpdir = '/var/tmp';
-			if (!fs.existsSync(tmpdir)) {
-				logger4js.warn('Task: kmTraining Tmp Folder does not exists', tmpdir);
-				task.value.taskSpecific = {result: 0, resultDescription: `Temp Folder for Training does not exists ${tmpdir}`};
-				logger4js.warn('Task: kmTraining Folder %s missing', tmpdir);
+			var dir = systemVC.getPredictModel();
+			if (!dir || !fs.existsSync(dir)) {
+				task.value.taskSpecific = {result: 0, resultDescription: `Temp Folder for Training does not exists ${dir}`};
+				logger4js.warn('Task: kmTraining Folder %s missing', dir);
 				finishedTask(task, false);
 				return;
 			}
-			var tmpfile = tmpdir.concat('/predictkms');
+			var tmpfile = dir.concat('/predictkms.json');
 			var content = JSON.stringify(reducedVPV);
-			logger4js.warn('Task: kmTraining Converted to JSON %d kB', Math.round(content.length / 1024));
+			logger4js.debug('Task: kmTraining Converted to JSON %d kB', Math.round(content.length / 1024));
 			fs.writeFileSync(tmpfile, content, {
 													encoding: 'utf8',
 													flag: 'w'
 												});
+			// export finished now run the training
+			var cmd = './PredictKMTraining';
+			cmd = cmd.concat(' \'', tmpfile, '\' ', dir);
+			exec(cmd, function callback(error, stdout, stderr) {
+				if (error) {
+					logger4js.warn('Task: Error running Prediction Training', stderr);
+					task.value.taskSpecific = {result: -1, resultDescription: 'Task: Error running Prediction Training'};
+					finishedTask(task, false);
+					return;
+				}
+				// var result = JSON.parse(stdout);
+				var result = stdout;
+				endDate = new Date();
+				duration = endDate.getTime() - startDate.getTime();
+				task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`, detail: `${result}`};
+				logger4js.info('Task: kmTraining Result %d Duration %d ms Output %s', listVPV.length, duration, result);
+				finishedTask(task, false);
+			});
 
-			endDate = new Date();
-			duration = endDate.getTime() - startDate.getTime();
-			task.value.taskSpecific = {result: listVPV.length, resultDescription: `Found ${listVPV.length} VPVs for Training from ${endDate.toISOString()}`};
-			logger4js.info('Task: kmTraining Result %d Duration %d ms', listVPV.length, duration);
-			finishedTask(task, false);
 		});
 	});
 }

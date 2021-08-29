@@ -178,21 +178,21 @@ function createInitialVersions(req, res, newVPV) {
 			errorHandler(err, res, 'DB: Create VP Template VPV(pfv) Save', 'Error creating Project Version ');
 			return;
 		}
-		req.visboPFV = oneVPV;
+		// req.visboPFV = oneVPV;
 		// update the version count of the base version or the variant
-		updateVPVCount(req.visboPFV.vpid, req.visboPFV.variantName, 1);
+		updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 		// now create a copy of the pfv version as the first version of the project
 		var baseVPV = initVPV(oneVPV);
 		baseVPV.variantName = '';
 		baseVPV.timestamp = new Date();
-		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, req.visboPFV, req.visboOrganisations);
+		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations);
 		baseVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
 				return;
 			}
-			req.oneVPV = oneVPV;
-			updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+			// req.visboPFV = oneVPV;
+			updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Successfully created new Project',

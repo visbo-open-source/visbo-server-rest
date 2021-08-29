@@ -45,6 +45,11 @@ var visboProjectSchema = new mongoose.Schema({
 		name: {type: String, required: true},
 		value: {type: String, required: true},
 		type: {type: String, required: false}
+	}],	
+	customFieldDate: [{
+		name: {type: String, required: true},
+		value: {type: Date, required: true},
+		type: {type: String, required: false}
 	}],
 	vc: {
 		name: { type: String, required: false, maxlength: 256},
@@ -61,7 +66,7 @@ var visboProjectSchema = new mongoose.Schema({
 visboProjectSchema.set('timestamps', true);
 
 var constSystemCustomName = Object.freeze([
-	'_businessUnit', '_risk', '_strategicFit', '_customerID'
+	'_businessUnit', '_risk', '_strategicFit', '_customerID', '_PMCommit'
 ]);
 
 // declare a model
