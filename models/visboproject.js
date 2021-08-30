@@ -34,6 +34,7 @@ var visboProjectSchema = new mongoose.Schema({
 	name: { type: String, required: true, maxlength: 256},
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
 	vpType: {type: Number, required: false},					// vpType: Project, Portfolio, ProjectTemplate
+	vpStatus: { type: String, required: false, maxlength: 50 },
 	description: { type: String, required: false, maxlength: 4096 },
 	kundennummer: { type: String, required: false, maxlength: 256 }, // customer project identifier
 	customFieldDouble: [{
@@ -45,7 +46,7 @@ var visboProjectSchema = new mongoose.Schema({
 		name: {type: String, required: true},
 		value: {type: String, required: true},
 		type: {type: String, required: false}
-	}],	
+	}],
 	customFieldDate: [{
 		name: {type: String, required: true},
 		value: {type: Date, required: true},
@@ -69,10 +70,17 @@ var constSystemCustomName = Object.freeze([
 	'_businessUnit', '_risk', '_strategicFit', '_customerID', '_PMCommit'
 ]);
 
+var constVPStatus = Object.freeze([
+	'initialized', 'proposed', 'ordered', 'paused', 'finished', 'stopped'
+]);
+
 // declare a model
 mongoose.model('VisboProject', visboProjectSchema);
 mongoose.model('Lock', lockSchema);
 mongoose.model('Variant', variantSchema);
 mongoose.model('Restrict', restrictSchema);
 
-module.exports = { constSystemCustomName: constSystemCustomName };
+module.exports = {
+	constSystemCustomName: constSystemCustomName,
+	constVPStatus: constVPStatus 
+};

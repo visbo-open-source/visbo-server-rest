@@ -98,7 +98,7 @@ function initVPV(vpv) {
 	newVPV.earliestStartDate = vpv.earliestStartDate;
 	newVPV.latestStart = vpv.latestStart;
 	newVPV.latestStartDate = vpv.latestStartDate;
-	newVPV.status = vpv.status;
+	newVPV.vpStatus = vpv.vpStatus;
 	newVPV.ampelStatus = vpv.ampelStatus;
 	newVPV.ampelErlaeuterung = vpv.ampelErlaeuterung;
 	newVPV.VorlagenName = vpv.VorlagenName;
