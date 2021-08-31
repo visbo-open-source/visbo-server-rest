@@ -141,7 +141,7 @@ function detectChangeCustomFieldDate(original, update) {
 function detectChangeVPStatus(original, update) {
 	var result = [];
 	if (original != update) {
-		result.push({action: 'Project Status Change', name: 'vpStatus', oldValue: original.toString(), newValue: (update || '').toString()});
+		result.push({action: 'Project Status Change', name: 'vpStatus', oldValue: (original || '').toString(), newValue: (update || '').toString()});
 	}
 	return result;
 }
