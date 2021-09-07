@@ -3877,6 +3877,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a modified oldVPV and returns it to the caller
 	// the function scales the oldVPV (valid vpv) that contains old start & endDate and Bedarfe
 	// the newVPV contains nothing but the new start & endDate (not necessarily a valid vpv)
+	// the newVPV.actualDataUntil is the scaleFromDate, from this month on, including this month all resource and cost needs are being scaled, i.e changed
 	// the oldVPV-Values are changed according to the values in newVPV resp scaleFactor
 	//
 	// the scaleFactor defines the scale for the total costs, the distribution has to be calculated from prpject range from oldVPV to the newVPV
@@ -3895,37 +3896,46 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// determin the scaleFromDate
 	let scaleFromDate = undefined;
 
-	//if (!oldVPV.actualDataUntil && !newVPV.actualDataUntil) { };
+	// there is no actualdata, but newVPV provides a ScaleFromDate
 	if (!oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 				scaleFromDate = new Date(newVPV.actualDataUntil);
 				newVPV.actualDataUntil = undefined;
 	}
 
+	
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
+		// there is actualDataUntil, but noScaleFromDate was given 
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
 		scaleFromDate = new Date (oldVPV.actualDataUntil);
-		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
-	}
-	if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
-		if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
-			scaleFromDate = new Date(oldVPV.actualDataUntil);
-		} else {
-			scaleFromDate = new Date(newVPV.actualDataUntil);
-			// in the next command scaleFromDate is moved one to the right , that is why it is here increased
-			scaleFromDate.setMonth(scaleFromDate.getMonth() - 1);
-		}
 
-		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
-	}
-	let scaleFromDateColumn = -1;
-
-	if (scaleFromDate) {
-		// scaleFromDate should be the month after actualDataUntil - all values upt o ActualDataUntil should not be scaled
 		scaleFromDate.setDate(15);
 		scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 		scaleFromDate.setDate(1);
-	}
 
+		newVPV.actualDataUntil = new Date(scaleFromDate);
+	} else {
+		if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
+			// there was given a actualDataUntil and a scaleFromDate 
+			if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
+				scaleFromDate = new Date(oldVPV.actualDataUntil);
+
+				scaleFromDate.setDate(15);
+				scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
+				scaleFromDate.setDate(1);
+
+				newVPV.actualDataUntil = new Date(scaleFromDate);
+
+			} else {
+				// scaleFromDate is later than actualDataUntil, then it is just ok 
+				scaleFromDate = new Date(newVPV.actualDataUntil);
+				
+			}
+				
+		}
+	}
+	
+	let scaleFromDateColumn = -1;
+	
 	if (!newVPV) {
 		return undefined;
 	}
@@ -3937,14 +3947,16 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// if a scaleFromDate has been provided: startDates have to be the same ...
 	// use case preserve actualData : in this case a project must not start later or earlier -
 	// this would make all actualData information Nonsense.
+
+	// in this case this must be true: oldVPV.StartDate = newVPV.StartDate .. otherwise Exit
+	if ((oldVPV.actualDataUntil) && (diffDays(oldVPV.startDate, newVPV.startDate) != 0)) {
+		logger4js.warn('scaleVPV: when scaleFromDate is given start-Dates of oldVPV and newVPV need to be identical ', oldVPV.startDate, 'vs. newVPV:', newVPV.startDate);
+		return undefined;
+	}
+
 	if (scaleFromDate) {
 		scaleFromDateColumn = getColumnOfDate(scaleFromDate);
-
-		// in this case this must be true: oldVPV.StartDate = newVPV.StartDate .. otherwise Exit
-		if (diffDays(oldVPV.startDate, newVPV.startDate) != 0) {
-			logger4js.warn('scaleVPV: when scaleFromDate is given start-Dates of oldVPV and newVPV need to be identical ', oldVPV.startDate, 'vs. newVPV:', newVPV.startDate);
-			return undefined;
-		}
+		
 
 		// check whether anything needs to be done
 		if (scaleFromDate < oldVPV.startDate) {
