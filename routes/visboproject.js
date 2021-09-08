@@ -44,6 +44,7 @@ var logger4js = log4js.getLogger(logModule);
 
 var validateName = validate.validateName;
 var validateNumber = validate.validateNumber;
+var validateDate = validate.validateDate;
 
 var constVPTypes = Object.freeze({'project':0, 'portfolio':1, 'projecttemplate':2});
 
@@ -114,6 +115,28 @@ function detectChangeCustomFieldString(original, update) {
 	return result;
 }
 
+
+function detectChangeCustomFieldDate(original, update) {
+	var result = [];
+	original = original || [];
+	update = update || [];
+	original.forEach(item => {
+			var updateItem = update.find(element => element.name == item.name);
+			if (!updateItem) {
+				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value.toString()});
+			} else if (item.value != updateItem.value) {
+				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: (updateItem.value || '').toString()});
+			}
+	});
+	update.forEach(item => {
+			var originalItem = original.find(element => element.name == item.name);
+			if (!originalItem) {
+				result.push({action: 'Project Property Add', name: item.name, newValue: (item.value || '').toString()});
+			}
+	});
+	return result;
+}
+
 function convertCustomFieldDouble(customFieldDouble) {
 	var result;
 	if (customFieldDouble) {
@@ -129,6 +152,33 @@ function convertCustomFieldDouble(customFieldDouble) {
 			}
 		});
 		result = customFieldDouble.filter(item => item.value != undefined);
+	}
+	return result;
+}
+
+function convertCustomFieldDate(customFieldDate) {
+	var result;
+	var invalidDates = false;
+	if (customFieldDate) {
+		customFieldDate.forEach(item => {
+			if (!validateName(item.name, false)
+			|| !validateDate(item.value, true)) {
+				invalidDates=true
+				return result;
+			}
+			if (item.type && !((item.type == 'System') &&  (constSystemCustomName.find(element => element == item.name)))) {
+				invalidDates=true
+				return result;
+			}
+			if (constSystemCustomName.find(element => element == item.name)) {
+				item.type = 'System';
+			} else {
+				item.type = 'VP';
+			}
+		});
+		if (!invalidDates) {
+			result = customFieldDate.filter(item => item.value != undefined);
+		}
 	}
 	return result;
 }
@@ -527,6 +577,18 @@ router.route('/')
 	*  'startDate': '2021-02-08',
 	*  'endDate': '2021-08-31T22:00:00:000Z',
 	*  'kundennummer': 'customer project identifier'
+	*  'customFieldString': [
+	*		'name': '_businessUnit', 'value': 'BU1',
+	*		'name': 'kundennummer', 'value': 'customer project identifier'
+	*		],
+	*  'customFieldDouble': [
+	*		'name': '_risk', 'value': '5',
+	*		'name': '_strategicFit', 'value': '10',
+	*		'name': 'score', 'value': -5.5
+    *		],
+    *  'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'
+    *		]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -543,6 +605,18 @@ router.route('/')
 	*   'vpvCount': '0',
 	*   'vpType': '0',
 	*   'kundennummer': 'customer project identifier'
+	*   'customFieldString': [
+	*		{'name': '_businessUnit', 'value': 'BU1',  'type': 'System'},
+	*		{'name': 'kundennummer', 'value': 'customer project identifier', 'type': 'System'},
+	*		],
+	*   'customFieldDouble': [
+	*		'name': '_risk', 'value': '5',  'type': 'System',
+	*		'name': '_strategicFit', 'value': '10',  'type': 'System',
+	*		'name': 'score', 'value': -5.5, 'type': 'VP'
+    *		],
+    *   'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
+    *		]
 	*   'lock': []
 	*  }]
 	* }
@@ -565,8 +639,15 @@ router.route('/')
 		var vcid = req.body.vcid;
 		var vpname = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
-		var customFieldString, customFieldDouble;
+		var customFieldString, customFieldDouble, customFieldDate;
+		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer;
+
+		if (vpType == 1) {
+			req.auditDescription = 'Portfolio Create';
+		} else if (vpType == 2) {
+			req.auditDescription = 'Project Template Create';
+		}
 		logger4js.info('Post a new Project for user %s with name %s in VISBO Center %s. Perm: %O', useremail, req.body.name, vcid, req.listVPPerm.getPerm(req.params.vpid));
 		logger4js.trace('Post a new Project body %O', req.body);
 
@@ -596,6 +677,16 @@ router.route('/')
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Project Body contains invalid custom doubles'
+				});
+			}
+		}
+		if (req.body.customFieldDate) {
+			customFieldDate =  convertCustomFieldDate(req.body.customFieldDate);
+			if (!customFieldDate) {
+				logger4js.info('POST Project contains illegal values in customFieldDate %O', req.body.customFieldDate);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid custom dates'
 				});
 			}
 		}
@@ -652,11 +743,10 @@ router.route('/')
 				if (customFieldDouble) {
 					newVP.customFieldDouble = customFieldDouble;
 				}
-				if (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) {
-					newVP.vpType = 0;
-				} else {
-					newVP.vpType = req.body.vpType;
+				if (customFieldDate) {
+					newVP.customFieldDate = customFieldDate;
 				}
+				newVP.vpType = vpType;
 				newVP.vpvCount = 0;
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
@@ -746,7 +836,7 @@ router.route('/')
 								}
 							}
 							var newVPV = helperVpv.initVPV(templateVPV);
-							newVPV.VorlagenName = req.oneVPVTemplate.name;							
+							newVPV.VorlagenName = req.oneVPVTemplate.name;
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
@@ -881,6 +971,18 @@ router.route('/:vpid')
 	*  'name':'My first Project Renamed',
 	*  'description': 'New Description for VP',
 	*  'kundennummer': 'Customer Project Identifier'
+	*  'customFieldString': [
+	*		'name': '_businessUnit', 'value': 'BU1',
+	*		'name': 'kundennummer', 'value': 'customer project identifier'
+	*		],
+	*  'customFieldDouble': [
+	*		'name': '_risk', 'value': '5',
+	*		'name': '_strategicFit', 'value': '10',
+	*		'name': 'score', 'value': -5.5}
+    *		],
+    *  'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z'
+    *		]
 	* }
 	* @apiSuccessExample {json} Success-Response:
 	*     HTTP/1.1 200 OK
@@ -893,7 +995,19 @@ router.route('/:vpid')
 	*   'createdAt':'2018-03-19T11:04:12.094Z',
 	*   'name':'My first Project Renamed',
 	*   '_id':'vp5cf3da025',
-	*   'kundennummer': 'Customer Project Identifier'
+	*   'kundennummer': 'Customer Project Identifier',
+	*  'customFieldString': [
+	*		'name': '_businessUnit', 'value': 'BU1', 'type': 'System',
+	*		'name': 'kundennummer', 'value': 'customer project identifier', 'type': 'System',
+	*		],
+	*  'customFieldDouble': [
+	*		'name': '_risk', 'value': '5', 'type': 'System',
+	*		'name': '_strategicFit', 'value': '10', 'type': 'System',
+	*		'name': 'score', 'value': -5.5, 'type': 'VP',}
+    *		],
+    *  'customFieldDate': [
+    *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
+    *		]
 	*   'vcid': 'vc5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0'
@@ -918,7 +1032,7 @@ router.route('/:vpid')
 		var name = (req.body.name || '').trim();
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
-		var customFieldString, customFieldDouble;
+		var customFieldString, customFieldDouble, customFieldDate;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -947,6 +1061,18 @@ router.route('/:vpid')
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDouble'
 				});
+			}
+		}
+
+		if (req.body.customFieldDate) {
+			customFieldDate =  convertCustomFieldDate(req.body.customFieldDate);
+			if (!customFieldDate) {
+				logger4js.info('PUT Project contains illegal values in customFieldDate %O', req.body.customFieldDate.toString);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid values in customFieldDate'
+				});
+
 			}
 		}
 
@@ -993,6 +1119,10 @@ router.route('/:vpid')
 		if (customFieldDouble) {
 			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDouble(req.oneVP.customFieldDouble, customFieldDouble));
 			req.oneVP.customFieldDouble =  customFieldDouble.filter(item => item.value != undefined);
+		}
+		if (customFieldDate) {
+			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDate(req.oneVP.customFieldDate, customFieldDate));
+			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=="System" && constSystemCustomName.find(element => element == item.name)));
 		}
 		// check duplicate Name
 		var query = {};
@@ -3215,6 +3345,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
+			var parentID = req.query.parentID;
 			var hierarchy = req.query.hierarchy == true;
 			var perProject = req.query.perProject == true;
 
@@ -3271,9 +3402,9 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
 			}
 
 			req.auditInfo = '';

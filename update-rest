@@ -81,7 +81,7 @@ find /var/www/apidoc -type f -exec chmod 644 {} +
 echo "05: Run Upgrade Script against DB"
 # get the DB Connection string
 if [ -f update-db.js ]; then
-    echo "Upgrade Script Found!"
+    echo `date` "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
     mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
@@ -90,6 +90,7 @@ if [ -f update-db.js ]; then
       echo "FATAL: Database Update Script Failed."
       exit 1
     fi
+    echo `date` "Upgrade Script Executed & Finished"
 else
   echo "No Upgrade Script available!"
 fi
