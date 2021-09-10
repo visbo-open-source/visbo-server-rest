@@ -968,7 +968,6 @@ if (currentVersion < dateBlock) {
   vpvList.forEach(vpv => {
     if (vpv.vpid.toString() != vpIDLast && vpv.businessUnit) {
       // update VP with businessUnit
-      print("Update VP businessUnit", vpv.vpid.toString(), vpv.businessUnit);
       db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldString: {
         name: '_businessUnit',
         value: vpv.businessUnit

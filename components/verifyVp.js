@@ -272,7 +272,11 @@ function getVPTemplate(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 
+	// evaluate VP Template from query string only for create project
 	if (req.method != 'POST'|| urlComponent.length > 2 || req.query.vpid == undefined) {
+		return next();
+	}
+	if (req.body.vpType == 1 || req.body.vpType == 2) {
 		return next();
 	}
 	logger4js.debug('Check if we need VP Template', baseUrl, req.query.vpid);

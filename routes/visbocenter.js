@@ -163,6 +163,15 @@ function generateNewRole(item) {
 	if (item.isExternRole) {
 		newRole.isExternRole = item.isExternRole;
 	}
+	if (item.isAggregationRole) {
+		newRole.isAggregationRole = item.isAggregationRole;
+	}
+	if (item.isSummaryRole) {
+		newRole.isSummaryRole = item.isSummaryRole;
+	}
+	if (item.isActDataRelevant) {
+		newRole.isActDataRelevant = item.isActDataRelevant;
+	}
 	if (item.startOfCal) {
 		var startOfCal = validate.validateDate(item.startOfCal, false);
 		if (startOfCal) {
@@ -2751,6 +2760,7 @@ router.route('/:vcid/group/:groupid')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var roleID = req.query.roleID;
+			var parentID = req.query.parentID;
 			var hierarchy = req.query.hierarchy == true;
 			var perProject = req.query.perProject == true;
 
@@ -2801,9 +2811,9 @@ router.route('/:vcid/group/:groupid')
 
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
 			}
 
 			var filteredCapacity = [];
