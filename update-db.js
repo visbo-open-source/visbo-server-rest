@@ -1127,7 +1127,9 @@ if (currentVersion < dateBlock) {
       // update VP with vpStatus
       var vpStatus;
       if (vpv.status == 'beauftragt') vpStatus = 'ordered';
+      else if (vpv.status == 'beauftragt, Änderung noch nicht freigegeben') vpStatus = 'ordered'
       else if (vpv.status == 'geplant') vpStatus = 'proposed'
+      else if (vpv.status == 'planning') vpStatus = 'proposed'
       db.visboprojects.updateOne({_id: vpv.vpid}, {$set: { vpStatus: vpStatus}})
       vpIDLast = vpv.vpid.toString();
       count += 1;
