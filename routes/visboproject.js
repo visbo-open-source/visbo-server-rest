@@ -651,6 +651,7 @@ router.route('/')
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer;
+		var isPMO = false;
 
 		if (vpType == 1) {
 			req.auditDescription = 'Portfolio Create';
@@ -708,6 +709,10 @@ router.route('/')
 				state: 'failure',
 				message: 'No Permission to create Project'
 			});
+		}
+		var permPMO = constPermVC.View + constPermVC.Modify;
+		if ((req.listVCPerm.getPerm(vcid).vc & permPMO) == permPMO) {
+			isPMO = true;
 		}
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
@@ -852,7 +857,8 @@ router.route('/')
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
-							newVPV.variantName = 'pfv'; // first Version is the pfv
+
+							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
 							if (req.body.rac && validate.validateNumber(req.body.rac)) {
