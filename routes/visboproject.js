@@ -32,6 +32,7 @@ var Const = require('../models/constants');
 var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
 var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
+var constVPStatus = require('../models/visboproject').constVPStatus;
 
 var mail = require('./../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -134,6 +135,14 @@ function detectChangeCustomFieldDate(original, update) {
 				result.push({action: 'Project Property Add', name: item.name, newValue: (item.value || '').toString()});
 			}
 	});
+	return result;
+}
+
+function detectChangeVPStatus(original, update) {
+	var result = [];
+	if (original != update) {
+		result.push({action: 'Project Status Change', name: 'vpStatus', oldValue: (original || '').toString(), newValue: (update || '').toString()});
+	}
 	return result;
 }
 
@@ -642,6 +651,7 @@ router.route('/')
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer;
+		var isPMO = false;
 
 		if (vpType == 1) {
 			req.auditDescription = 'Portfolio Create';
@@ -700,6 +710,10 @@ router.route('/')
 				message: 'No Permission to create Project'
 			});
 		}
+		var permPMO = constPermVC.View + constPermVC.Modify;
+		if ((req.listVCPerm.getPerm(vcid).vc & permPMO) == permPMO) {
+			isPMO = true;
+		}
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
 			if (err) {
@@ -750,6 +764,9 @@ router.route('/')
 				newVP.vpvCount = 0;
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
+				}
+				if (newVP.vpType == 0) { // Project
+					newVP.vpStatus = constVPStatus[0];
 				}
 				if (req.oneVPTemplate) {
 					newVP.variant = [];
@@ -840,7 +857,8 @@ router.route('/')
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
-							newVPV.variantName = 'pfv'; // first Version is the pfv
+
+							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
 							if (req.body.rac && validate.validateNumber(req.body.rac)) {
@@ -1033,6 +1051,7 @@ router.route('/:vpid')
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
+		var vpStatus;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -1073,6 +1092,31 @@ router.route('/:vpid')
 					message: 'Project Body contains invalid values in customFieldDate'
 				});
 
+			}
+		}
+		if (req.body.vpStatus) {
+			if (constVPStatus.find(element => element == req.body.vpStatus)) {
+				vpStatus = req.body.vpStatus;
+				if (vpStatus != constVPStatus[0] && req.oneVP.vpvCount == 0) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Project does not have any version, status could not be changed'
+					});
+				}
+				if (vpStatus == 'ordered') {
+					var variantIndex = req.oneVP.variant.findIndex(element => element.variantName == 'pfv')
+					if (variantIndex < 0 || req.oneVP.variant[variantIndex].vpvCount <= 0) {
+						return res.status(400).send({
+							state: 'failure',
+							message: 'Project does not have a pfv variant, status could not be changed to ordered'
+						});
+					}
+				}
+			} else {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid value vpStatus'
+				});
 			}
 		}
 
@@ -1123,6 +1167,10 @@ router.route('/:vpid')
 		if (customFieldDate) {
 			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDate(req.oneVP.customFieldDate, customFieldDate));
 			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=="System" && constSystemCustomName.find(element => element == item.name)));
+		}
+		if (vpStatus) {
+			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatus));
+			req.oneVP.vpStatus = vpStatus;
 		}
 		// check duplicate Name
 		var query = {};

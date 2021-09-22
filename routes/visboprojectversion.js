@@ -316,7 +316,7 @@ router.route('/')
 	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
 	* @apiParam {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
 	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
-	* @apiParam {String} status Deliver only versions with the specified status
+	* @apiParam {String} vpStatus Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
 	*
@@ -412,8 +412,8 @@ router.route('/')
 		logger4js.trace('Get VPV vpid List %O ', vpidList);
 
 		if (req.query) {
-			if (req.query.status) {
-				queryvpv.status = req.query.status;
+			if (req.query.vpStatus) {
+				queryvpv.vpStatus = req.query.vpStatus;
 			}
 			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
@@ -758,7 +758,6 @@ router.route('/')
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
 				if (req.visboPFV) {
-					newVPV.status = req.visboPFV.status;
 					newVPV.Erloes = req.visboPFV.Erloes;
 				}
 				var customField;
@@ -772,10 +771,15 @@ router.route('/')
 					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
 					if (customField) { newVPV.StrategicFit = customField.value; }
 				}
-				if (req.oneVP && req.oneVP.customFieldDate) {
-					customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
-					//if (customField) { newVPV.pmCommit = customField.value; }
+				// if (req.oneVP && req.oneVP.customFieldDate) {
+				// 	customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+				// 	if (customField) { newVPV.pmCommit = customField.value; }
+				// }
+				newVPV.status = undefined;
+				if (req.oneVP && req.oneVP.vpStatus) {
+					newVPV.vpStatus = req.oneVP.vpStatus;
 				}
+
 				req.oneVPV = newVPV;
 				saveRecalcKM(req, res, 'Successfully created new Project Version');
 			});
@@ -1269,8 +1273,11 @@ router.route('/:vpvid/copy')
 		// change variantName if defined in body
 		newVPV.variantName = variantName;
 		newVPV.timestamp = timestamp;
+		newVPV.status = undefined;
+		if (req.oneVP && req.oneVP.vpStatus) {
+			newVPV.vpStatus = req.oneVP.vpStatus;
+		}
 		if (req.visboPFV) {
-			newVPV.status = req.visboPFV.status;
 			newVPV.Erloes = req.visboPFV.Erloes;
 			newVPV.Risiko = req.visboPFV.Risiko;
 			newVPV.StrategicFit = req.visboPFV.StrategicFit;

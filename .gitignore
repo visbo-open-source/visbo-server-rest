@@ -1,6 +1,7 @@
 node_modules/
 bin/
 apidoc/
+data/
 .DS_Store
 public/ui/
 .env
