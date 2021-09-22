@@ -3360,6 +3360,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		* @apiParam {String} parentID Deliver the capacity planning for the specified organisaion with the specified parentID, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
 		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
