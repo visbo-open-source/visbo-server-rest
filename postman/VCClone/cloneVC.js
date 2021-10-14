@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 VCName='InstartGroup';
-// VCName='Test-MS-VC Small';
+VCName='Test-MS-VC01';
 VPName='^';
 
 print('STDERR: Export VC: ', VCName);
@@ -17,6 +17,31 @@ function annonymise(value) {
   }
 }
 
+function namePart(origName) {
+    if (!origName) return origName;
+    var first = origName.indexOf("§");
+    if (first >= 0) {
+        var last = origName.lastIndexOf("§");
+        name = origName.slice(first + 1, last-first + 1);
+    } else {
+        name = origName;
+    }
+    return name;
+}
+
+function changeNamePart(origName, newName) {
+    if (!origName) return origName;
+    var first = origName.indexOf("§");
+    var name = undefined;
+    if (first >= 0) {
+        var last = origName.lastIndexOf("§");
+        name = origName.substr(0, first + 1) + newName + origName.substr(last, 10);
+    } else {
+        name = origName;
+    }
+    return name;
+}
+
 var exportList = [];
 var vc = db.visbocenters.findOne({name: VCName, deletedAt: {$exists: false}});
 if (vc) {
@@ -26,7 +51,7 @@ if (vc) {
   item.exportType = 'VC';
   item._id = '' + vc._id;
   item.name = '' + vc._id
-  item.description = annonymise(vc.description);
+  item.description = '' + vc._id + annonymise(vc.description);
   item.detail = undefined;
   exportList.push(item);
 }
@@ -46,7 +71,7 @@ vcSettingList.forEach(setting => {
     })
   }
   item.value = JSON.stringify(setting.value);
-  if (setting.type != 'customroles' && !setting.userId) {
+  if (setting.type != '_VCConfig' && setting.type != 'customroles' && !setting.userId) {
     exportList.push(item);
   }
 })
@@ -81,20 +106,55 @@ vpvList.forEach(vpv => {
   item.vpid = '' + vpv.vpid;
   item.name = '' + vpv.vpid;
   item.timestamp = vpv.timestamp;
+
   // strAnonymise VPV
+  var mappingName = [];
+  var index = 0;
   delete vpv.updatedAt;
   if (vpv.hierarchy && vpv.hierarchy.allNodes) {
+    // collect Hieararchy Mapping
+    vpv.hierarchy.allNodes.forEach( node => {
+        var shortName = namePart(node.hryNodeKey);
+        var name = '';
+        if (shortName.length != node.hryNodeKey.length) {
+            var sequencer = ('0000' + index.toString()).slice(-4);
+            name = shortName.concat('_', sequencer);
+        }
+        mappingName[shortName] = name;
+        index++;
+    })
+    //annonymisie and map the entries so that the hierarchy ist still valid
     vpv.hierarchy.allNodes.forEach(node => {
+      var oldName, newName;
       delete node._id;
-      if (node.hryNodeKey) node.hryNodeKey = annonymise(node.hryNodeKey);
+      if (node.hryNodeKey) {
+        oldName = namePart(node.hryNodeKey);
+        newName = mappingName[oldName];
+        if (newName) {
+            node.hryNodeKey = changeNamePart(node.hryNodeKey, newName);
+        }
+        node.hryNodeKey = annonymise(node.hryNodeKey);
+      }
       if (node.hryNode) {
         delete node.hryNode._id;
-        node.hryNode.childNodeKeys.forEach((key, index) => {
-          node.hryNode.childNodeKeys[index] = annonymise(key);
+        node.hryNode.childNodeKeys.forEach((key, i) => {
+          oldName = namePart(key);
+          newName = mappingName[oldName];
+          if (oldName.length != 0 && newName) {
+              node.hryNode.childNodeKeys[i] = changeNamePart(key, newName);
+          }
+          node.hryNode.childNodeKeys[i] = annonymise(node.hryNode.childNodeKeys[i]);
         })
         if (node.hryNode.elemName) node.hryNode.elemName = annonymise(node.hryNode.elemName);
         if (node.hryNode.origName) node.hryNode.origName = annonymise(node.hryNode.origName);
-        if (node.hryNode.parentNodeKey) node.hryNode.parentNodeKey = annonymise(node.hryNode.parentNodeKey);
+        if (node.hryNode.parentNodeKey) {
+          oldName = namePart(node.hryNode.parentNodeKey);
+          newName = mappingName[oldName];
+          if (oldName.length != 0 && newName) {
+              node.hryNode.parentNodeKey = changeNamePart(node.hryNode.parentNodeKey, newName);
+          }
+          node.hryNode.parentNodeKey = annonymise(node.hryNode.parentNodeKey);
+        }
       }
     })
   }
@@ -135,7 +195,16 @@ vpvList.forEach(vpv => {
             if (item.bewertung.bewerterName) item.bewertung.bewerterName = annonymise(item.bewertung.bewerterName);
           }
         });
-        if (result.name) result.name = annonymise(result.name);
+
+        if (result.name) {
+            var oldName = namePart(result.name);
+            newName = mappingName[oldName];
+            if (oldName.length > 0 && newName) {
+                result.name = changeNamePart(result.name, newName);
+            }
+            result.name = annonymise(result.name);
+        }
+
         if (result.verantwortlich) result.verantwortlich = annonymise(result.verantwortlich);
         if (result.shortName) result.shortName = annonymise(result.shortName);
         if (result.originalName) result.originalName = annonymise(result.originalName);
@@ -151,7 +220,14 @@ vpvList.forEach(vpv => {
       });
       if (phase.responsible) phase.responsible = annonymise(phase.responsible)
       if (phase.ampelErlaeuterung) phase.ampelErlaeuterung = annonymise(phase.ampelErlaeuterung)
-      if (phase.name) phase.name = annonymise(phase.name)
+      if (phase.name) {
+        var oldName = namePart(phase.name);
+        var newName = mappingName[oldName];
+        if (oldName.length > 0 && newName) {
+            phase.name = changeNamePart(phase.name, newName);
+        }
+        phase.name = annonymise(phase.name)
+      }
       if (phase.shortName) phase.shortName = annonymise(phase.shortName)
       if (phase.originalName) phase.originalName = annonymise(phase.originalName)
   });
