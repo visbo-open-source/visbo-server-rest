@@ -26,6 +26,8 @@ var logger4js = log4js.getLogger(logModule);
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
+// register the VPV middleware to get the latest VPV without Permission Check
+router.use('/', verifyVpv.getVPVwoPerm);
 // register the VPV middleware to generate the Group List to check permission
 router.use('/', verifyVpv.getAllVPVGroups);
 // register the VPV middleware to check that the user has access to the VPV
@@ -99,7 +101,7 @@ function saveRecalcKM(req, res, message) {
 	// check if newVPV is a valid VPV
 	if (!req.query.noValidate) {
 		if (!visboBusiness.ensureValidVPV(req.oneVPV)) {
-			logger4js.info('POST Project Version - inconsistent VPV - %O', req.oneVPV);
+			logger4js.info('POST Project Version - inconsistent VPV - %s', JSON.stringify(req.oneVPV));
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project Version is an inconsistent VPV'
