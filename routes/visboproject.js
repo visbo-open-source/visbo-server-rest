@@ -172,11 +172,11 @@ function convertCustomFieldDate(customFieldDate) {
 		customFieldDate.forEach(item => {
 			if (!validateName(item.name, false)
 			|| !validateDate(item.value, true)) {
-				invalidDates=true
+				invalidDates=true;
 				return result;
 			}
 			if (item.type && !((item.type == 'System') &&  (constSystemCustomName.find(element => element == item.name)))) {
-				invalidDates=true
+				invalidDates=true;
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -978,7 +978,7 @@ router.route('/:vpid')
 	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Project.
 	* In case of undelete a Project the user needs to have VP.Delete Permission in addition.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 no Data provided in Body for updating the Visbp Project
+	* @apiError {number} 400 no Data provided in Body for updating the Visbo Project
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
 	* @apiError {number} 423 Project is locked by another user

@@ -2542,9 +2542,7 @@ function checkUIDs(newOrga, oldOrga) {
 function checkRule123(newOrga) {
 	logger4js.info('');
 	var result = true;
-	// criterium of an intern person: 
-	// - newOrga.allRoles[i].isExtern = false 
-	// - newOrga.allRoles[i].subRoleIDs.length <= 0
+	
 	for ( var j = 0; newOrga && newOrga.allRoles && j < newOrga.allRoles.length; j++) {
 		var actRole = newOrga.allRoles[j];
 		var actRoleOK = false;
@@ -2559,7 +2557,6 @@ function checkRule123(newOrga) {
 		// Rule 1	
 		if (isInternPerson(actRole)) {
 			actRoleOK = ((actRole && !actRole.defaultDayCapa && actRole.kapazitaet && actRole.kapazitaet.length == 241));
-			//logger4js.warn(' actRoleOK = %s', actRoleOK);
 			actRoleOK = actRoleOK || (( actRole && actRole.defaultDayCapa >= 0 ) && ( actRole.defaultKapa > 0 ));
 			if (!actRoleOK) {
 				logger4js.error('intern person (%s) does not have all necessary properties: defaultDayCapa = %s hrs, defaultKapa = %s PT', actRole.name, actRole.defaultDayCapa, actRole.defaultKapa);
@@ -2581,6 +2578,11 @@ function checkRule123(newOrga) {
 
 
 function isInternPerson(actRole) {
+	// criterium of an intern person: 
+	// - role.isExternRole = false 
+	// - role.isTeam = false
+	// - role.isSummaryRole = false
+	// - role.subRoleIDs.length <= 0
 	return (!actRole.isExternRole && !actRole.isTeam  && !actRole.isSummaryRole && actRole.subRoleIDs && actRole.subRoleIDs.length <= 0);
 }
 
