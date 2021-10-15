@@ -946,9 +946,16 @@ function diffDays(date1, date2) {
 	var differenceInDays = undefined;
 	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
 	var firstDate = new Date(date1);
+	firstDate.setHours(12);
+	firstDate.setMinutes(0);
+	firstDate.setMilliseconds(0);
 	var secondDate = new Date(date2);
+	secondDate.setHours(12);
+	secondDate.setMinutes(0);
+	secondDate.setMilliseconds(0);
+	// var firstDate = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+	// var secondDate = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
 	if (!isNaN(firstDate) && !isNaN(secondDate)) {
-		// differenceInDays = Math.round(Math.abs((firstDate.getTime() - secondDate.getTime())/(oneDay)));
 		differenceInDays = Math.round((firstDate.getTime() - secondDate.getTime())/(oneDay));
 	}
 	return differenceInDays;
@@ -2532,6 +2539,61 @@ function checkUIDs(newOrga, oldOrga) {
 	return result;
 }
 
+function checkRule123(newOrga) {
+	logger4js.info('');
+	var result = true;
+	
+	for ( var j = 0; newOrga && newOrga.allRoles && j < newOrga.allRoles.length; j++) {
+		var actRole = newOrga.allRoles[j];
+		var actRoleOK = false;
+		// Rule 3	
+		if (isPerson(actRole)) {				
+			actRoleOK = (actRole.tagessatz > 0 );
+			if (!actRoleOK) {
+				logger4js.error('person (%s) has to have a tagessatz', actRole.name);
+			}
+			result = result && actRoleOK;
+		}
+		// Rule 1	
+		if (isInternPerson(actRole)) {
+			actRoleOK = ((actRole && !actRole.defaultDayCapa && actRole.kapazitaet && actRole.kapazitaet.length == 241));
+			actRoleOK = actRoleOK || (( actRole && actRole.defaultDayCapa >= 0 ) && ( actRole.defaultKapa > 0 ));
+			if (!actRoleOK) {
+				logger4js.error('intern person (%s) does not have all necessary properties: defaultDayCapa = %s hrs, defaultKapa = %s PT', actRole.name, actRole.defaultDayCapa, actRole.defaultKapa);
+			}
+			result = result && actRoleOK;
+		}
+		// Rule 2		
+		if (isGroup(actRole)) {
+			actRoleOK = ( actRole && (actRole.defaultKapa && actRole.defaultKapa <= 0)|| !actRole.defaultKapa);
+			if (!actRoleOK) {
+				logger4js.error('Group (%s) may not have a defaultKapa > 0', actRole.name);
+			}				
+			result = result && actRoleOK;
+		}	
+
+	}
+	return result;			
+}
+
+
+function isInternPerson(actRole) {
+	// criterium of an intern person: 
+	// - role.isExternRole = false 
+	// - role.isTeam = false
+	// - role.isSummaryRole = false
+	// - role.subRoleIDs.length <= 0
+	return (!actRole.isExternRole && !actRole.isTeam  && !actRole.isSummaryRole && actRole.subRoleIDs && actRole.subRoleIDs.length <= 0);
+}
+
+function isPerson(actRole) {
+	return ( !actRole.isTeam  && !actRole.isSummaryRole && actRole.subRoleIDs && actRole.subRoleIDs.length <= 0 );
+}
+
+function isGroup(actRole) {
+	return !isPerson(actRole);
+}
+
 function verifyOrganisation(newOrga, oldOrga) {
 	// updates newOrga if possible and returns true/false if the orga could be used
 	// newOrga is the pure Orga Value
@@ -2546,7 +2608,13 @@ function verifyOrganisation(newOrga, oldOrga) {
 			return result;
 		}
 		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
+		
+		logger4js.info('every uid of the oldOrga is included in the newOrga');
 		result =  checkUIDs(newOrga, oldOrga.value);
+	}
+	if (newOrga && result) {			
+		logger4js.info('each intern Person need to have a default capa per month > 0 and a default capa per Day >= 0 in hours');
+		result = result && checkRule123(newOrga);
 	}
 
 	logger4js.debug('Verification of the new organisation:  ', result);

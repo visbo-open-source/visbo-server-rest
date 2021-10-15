@@ -592,6 +592,7 @@ router.route('/')
 	* @apiError {number} 403 No Permission to Create Project Version
 	* @apiError {number} 409 Project Variant does not exists
 	* @apiError {number} 409 Project (Portfolio) Version was alreaddy updated in between (Checked updatedAt Flag)
+	* @apiError {number} 412 Project status does not allow any new version
 	* @apiError {number} 423 Project (Portfolio) is locked by another user
 	*
   * @apiExample Example usage:
@@ -711,6 +712,15 @@ router.route('/')
 				return res.status(423).send({
 					state: 'failure',
 					message: 'Project locked',
+					vp: [req.oneVP]
+				});
+			}
+			// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+			if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
+				logger4js.warn('VPV Post VP status %s %s %s', vpid, req.oneVP.name, req.oneVP.vpStatus);
+				return res.status(412).send({
+					state: 'failure',
+					message: 'Project status does not allow any new version',
 					vp: [req.oneVP]
 				});
 			}
@@ -1082,6 +1092,17 @@ router.route('/:vpvid')
 				vp: [req.oneVP]
 			});
 		}
+	
+		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+		if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
+			logger4js.warn('VPV Post VP status %s %s', req.oneVPV.vpid, req.oneVP.vpStatus);
+			return res.status(412).send({
+				state: 'failure',
+				message: 'Project status does not allow to delete a version',
+				vp: [req.oneVP]
+			});
+		}
+
 		var destroyVPV = req.oneVPV.deletedAt;
 
 		if (!destroyVPV) {
@@ -1157,6 +1178,7 @@ router.route('/:vpvid/copy')
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create Project Version
+		* @apiError {number} 412 Project status does not allow any new version
 		*
 	  * @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
@@ -1244,6 +1266,16 @@ router.route('/:vpvid/copy')
 				});
 			}
 		}
+		
+		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+		if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
+			logger4js.warn('VPV Post Copy: VP status %s %s %s', vpid, req.oneVP.name, req.oneVP.vpStatus);
+			return res.status(412).send({
+				state: 'failure',
+				message: 'Project status does not allow any new project version',
+				vp: [req.oneVP]
+			});
+		}
 
 		logger4js.info('Post a copy Project Version for user %s with name %s variant :%s: in Project %s updatedAt %s with Perm %O', userId, req.body.name, variantName, vpid, req.body.updatedAt, req.listVPPerm.getPerm(vpid));
 		var permCreateVersion = false;
@@ -1267,6 +1299,7 @@ router.route('/:vpvid/copy')
 				perm: perm
 			});
 		}
+
 		var newVPV = helperVpv.initVPV(req.oneVPV);
 		if (!newVPV) {
 			errorHandler(undefined, res, 'DB: POST VPV Copy of ${req.oneVPV._id}', 'Error creating Project Versions during copy ');
