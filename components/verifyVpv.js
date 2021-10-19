@@ -268,6 +268,9 @@ function getVPV(req, res, next, vpvid) {
 	// we dont need it to save back to DB
 	if (req.method == 'GET') {
 		queryVPV.lean();
+	} else if (req.method == 'DELETE' || req.method == 'PUT') {
+		// we don't need the full VPV for PUT/DELETE
+		queryVPV.select('-hierarchy -AllPhases');
 	}
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {

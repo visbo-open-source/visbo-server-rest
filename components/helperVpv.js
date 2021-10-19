@@ -112,16 +112,25 @@ function initVPV(vpv) {
 	return newVPV;
 }
 
+// cleanup properties that the client sets as default but are not used
+// candidates are:
+//		phase.invoice: if not used the client sets it to 0
+//		phase.penalty: if not used the client sets it to 9999-12-31
+//		latestStart/earliestStart: if not used client sets it to -999
+//		minDauer/maxDauer: if not used the client sets it to 0
+//
+// the cleanup has to be verified with the client that the client could handle it if no value is set
+
 function cleanupVPV(vpv) {
 	if (!vpv) {
 		return;
 	}
-	if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
-	if (vpv.earliestStart == -999) { vpv.earliestStart = undefined; }
+	// if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
+	// if (vpv.earliestStart == -999) { vpv.earliestStart = undefined; }
 	if (vpv.AllPhases) {
 		vpv.AllPhases.forEach(phase => {
-			if (phase.latestStart == -999) { phase.latestStart = undefined; }
-			if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
+			// if (phase.latestStart == -999) { phase.latestStart = undefined; }
+			// if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
 			if (phase.invoice && phase.invoice.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
 			if (phase.penalty && phase.penalty.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
 			if (phase.AllResults) {

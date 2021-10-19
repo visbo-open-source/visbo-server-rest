@@ -3,6 +3,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var logModule = 'VPV';
 var log4js = require('log4js');
+var helperVpv = require('./../components/helperVpv');
 const { toNamespacedPath } = require('path');
 const { validateDate } = require('./validate');
 const { validateNumber } = require('./validate');
@@ -2553,13 +2554,70 @@ function verifyOrganisation(newOrga, oldOrga) {
 	return result;
 }
 
-function convertVPV(oldVPV, oldPFV, orga) {
+function reduceVPV(originalVPV, level) {
+	var reducedVPV = originalVPV;
+	if (level > 0) {
+		// reduce the level of the new PFV to max levels
+		reducedVPV = helperVpv.initVPV(originalVPV);
+		var hry = convertHierarchy(originalVPV), reducedHry;
+		var allNodes = originalVPV?.hierarchy?.allNodes
+		if (allNodes) {
+			// cleanup hierarchy
+			reducedVPV.hierarchy.allNodes = [];
+			allNodes.forEach( node => {
+				var breadCrumb = getBreadCrumb(node.hryNodeKey, hry)
+				if (breadCrumb && breadCrumb.length <= level) {
+					var newNode = {};
+					newNode.hryNodeKey = node.hryNodeKey;
+					newNode.hryNode = {};
+					newNode.hryNode.elemName = node.hryNode.elemName;
+					newNode.hryNode.origName = node.hryNode.origName;
+					// newNode.hryNode.indexOfElem = node.hryNode.indexOfElem;
+					newNode.hryNode.parentNodeKey = node.hryNode.parentNodeKey;
+					if (breadCrumb.length < level) {
+						newNode.hryNode.childNodeKeys = node.hryNode.childNodeKeys;
+					} else if (breadCrumb.length == level) {
+						// only Milestones as Childs
+						newNode.hryNode.childNodeKeys = [];
+						node.hryNode.childNodeKeys.forEach(item => {
+							if (item.indexOf('1§') == 0) {
+								logger4js.debug('Add Milestone (Name/Level):', item, breadCrumb.length, breadCrumb);
+								newNode.hryNode.childNodeKeys.push(item)
+							}
+						})
+					}
+					reducedVPV.hierarchy.allNodes.push(newNode);
+				}
+			})
+			logger4js.debug('generate reduced VPV hierarchy from/to', allNodes.length, reducedVPV.hierarchy.allNodes.length);
+		}
+		reducedHry = convertHierarchy(reducedVPV);
+
+		// reduce the Phases and Milestones/Results
+		var allPhases = originalVPV?.AllPhases
+		if (allPhases) {
+			reducedVPV.AllPhases = [];
+			allPhases.forEach(item => {
+				if (reducedHry[item.name]) {
+					logger4js.trace('Add Phase to reducedPFV', item.name);
+					reducedVPV.AllPhases.push(item);
+				}
+			});
+			logger4js.debug('generate reduced VPV Phase from/to', allPhases.length, reducedVPV.AllPhases.length);
+		}
+	}
+	reducedVPV = createIndices(reducedVPV);
+	return reducedVPV;
+}
+
+function convertVPV(oldVPV, oldPFV, orga, level) {
 
 	// this function converts an oldVPV to a newVPV and returns it to the caller
 	// if an orga is delivered all individual roles will be replaced by the parent orga unit
 	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
+	// if a level is specified, the new pfv is reduced to the top hierarchy max levels deep
 
-	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined);
+	logger4js.debug('convertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined, level);
 
 	var newPFV = new VisboProjectVersion();
 
@@ -2718,14 +2776,19 @@ function convertVPV(oldVPV, oldPFV, orga) {
 		newPFV.AllPhases = newpfvAllPhases;
 	}
 
-	logger4js.debug('newPFV now with aggregated resources');
+	var reducedPFV = oldPFV || newPFV;
+	if (level > 0) {
+		// generate the new PFV from the oldVPV reduced to a specific level
+		reducedPFV = reduceVPV(oldVPV, level);
+	}
+	reducedPFV.variantName = 'pfv';
 
-	if ( oldVPV && oldPFV  ) {
-		// oldVPV is to be squeezed to the deadlines and deliveries of the oldPFV
-		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the oldPFV');
+	if ( oldVPV && reducedPFV  ) {
+		// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
+		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the reducedVPV');
 
-		newPFV = checkAndChangeDeliverables(oldVPV, oldPFV, newPFV);
-		newPFV = checkAndChangeDeadlines(oldVPV, oldPFV, newPFV);
+		newPFV = checkAndChangeDeliverables(oldVPV, reducedPFV, newPFV);
+		newPFV = checkAndChangeDeadlines(oldVPV, reducedPFV, newPFV);
 		newPFV = createIndices(newPFV);
 
 		//var correct = ensureValidVPV(newPFV);
@@ -2742,7 +2805,7 @@ function convertVPV(oldVPV, oldPFV, orga) {
 	// 	sumVPV = sumVPV + allPersCostVPV[c];
 	// 	sumPFV = sumPFV + allPersCost[c];
 	// }
-	logger4js.debug('creation of a new PFV based on a special VPV:  ', newPFV);
+	logger4js.debug('creation of a new PFV based on a special VPV:  ', JSON.stringify(newPFV).substr(0,300));
 
 	return newPFV;
 }
@@ -2836,7 +2899,7 @@ function checkAndChangeDeadlines(oldVPV, oldPFV, newPFV) {
 			remPhaseList[actDeadline.nameID]= remPhase;
 		}
 	}
-	logger4js.debug('remove the phases in remPhaseList AllPhases');
+	logger4js.trace('remove the phases in remPhaseList AllPhases');
 	var newPhaseList = [];
 	for (var j=0; newPFV && newPFV.AllPhases && j < newPFV.AllPhases.length; j++) {
 		if (remPhaseList[newPFV.AllPhases[j].name]){
@@ -2896,7 +2959,7 @@ function createIndices(newPFV) {
 
 function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 
-	logger4js.debug('Delete one Milestone from Phase of VPV');
+	logger4js.trace('Delete one Milestone from Phase of VPV');
 	var elemID = elem ? elem.nameID : undefined;
 	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
 	var parentElem = elem ? elem.phasePFV: undefined;
@@ -2914,7 +2977,7 @@ function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 		}
 	}
 	parPhase.AllResults = newResults;
-	logger4js.debug('Delete one Milestone from hierarchy of VPV');
+	logger4js.trace('Delete one Milestone from hierarchy of VPV');
 	var vpvHrchyNodes = newPFV.hierarchy.allNodes;
 	newPFV.hierarchy.allNodes = deleteElemIDFromHrchy(hrchy_vpv, vpvHrchyNodes, elemID);
 	return newPFV;
@@ -2924,7 +2987,7 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 	if ( !hrchy_vpv || !newPFV || !elem) {
 		return newPFV;
 	}
-	logger4js.debug('Delete the phase %s from VPV and if there are milestones in the phase, put them in the phase´s parent', elem.nameID);
+	logger4js.trace('Delete the phase %s from VPV and if there are milestones in the phase, put them in the phase´s parent', elem.nameID);
 	var elemID = elem.nameID;
 	var phase = getPhaseByID(hrchy_vpv, newPFV, elemID);
 	var parentID = (hrchy_vpv && hrchy_vpv[elemID]) ? hrchy_vpv[elemID].hryNode.parentNodeKey: undefined;
@@ -2950,7 +3013,7 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 		phase.AllResults = [];
 	}
 
-	logger4js.debug('take the needs of the phase an add them into the parentPhase');
+	logger4js.trace('take the needs of the phase an add them into the parentPhase');
 
 	newPFV = moveTheNeeds(newPFV, phase, parent);
 	newPFV = moveTheCosts(newPFV, phase, parent);
@@ -2979,7 +3042,7 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 	var rootKey = '0';
 	var rootphaseID = '0§.§';
 
-	logger4js.debug('Delete one elemID from hierarchy of VPV');
+	logger4js.trace('Delete one elemID from hierarchy of VPV', elemID);
 
 	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
 	var hrchy_node = hrchy_vpv[elemID];
@@ -3013,9 +3076,9 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 
 function moveTheNeeds (newPFV, phase, parent) {
 
-	logger4js.debug('Move the needs from phase to its parent');
+	logger4js.trace('Move the needs from phase to its parent');
 
-	logger4js.debug('Check startdates and enddates of the phase and the parent phase');
+	logger4js.trace('Check startdates and enddates of the phase and the parent phase');
 	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
 		logger4js.error('parent %s isn not the parent of phase %s', parent.name, phase.name);
 		return newPFV;
@@ -3060,9 +3123,9 @@ function moveTheNeeds (newPFV, phase, parent) {
 
 function moveTheCosts (newPFV, phase, parent) {
 
-	logger4js.debug('Move the costss from phase to its parent');
+	logger4js.trace('Move the costss from phase to its parent');
 
-	logger4js.debug('Check startdates and enddates of the phase and the parent phase');
+	logger4js.trace('Check startdates and enddates of the phase and the parent phase');
 	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
 		logger4js.error('parent %s isn not the parent of phase %s', parent.name, phase.name);
 		return newPFV;
@@ -3901,9 +3964,9 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 				newVPV.actualDataUntil = undefined;
 	}
 
-	
+
 	if (oldVPV.actualDataUntil && !newVPV.actualDataUntil) {
-		// there is actualDataUntil, but noScaleFromDate was given 
+		// there is actualDataUntil, but noScaleFromDate was given
 		// take the oldVPV.actualDataUntil and add one month for scaleFromDate
 		scaleFromDate = new Date (oldVPV.actualDataUntil);
 
@@ -3914,7 +3977,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		newVPV.actualDataUntil = new Date(scaleFromDate);
 	} else {
 		if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
-			// there was given a actualDataUntil and a scaleFromDate 
+			// there was given a actualDataUntil and a scaleFromDate
 			if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
 				scaleFromDate = new Date(oldVPV.actualDataUntil);
 
@@ -3925,16 +3988,16 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 				newVPV.actualDataUntil = new Date(scaleFromDate);
 
 			} else {
-				// scaleFromDate is later than actualDataUntil, then it is just ok 
+				// scaleFromDate is later than actualDataUntil, then it is just ok
 				scaleFromDate = new Date(newVPV.actualDataUntil);
-				
+
 			}
-				
+
 		}
 	}
-	
+
 	let scaleFromDateColumn = -1;
-	
+
 	if (!newVPV) {
 		return undefined;
 	}
@@ -3955,7 +4018,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	if (scaleFromDate) {
 		scaleFromDateColumn = getColumnOfDate(scaleFromDate);
-		
+
 
 		// check whether anything needs to be done
 		if (scaleFromDate < oldVPV.startDate) {

@@ -745,8 +745,7 @@ router.route('/')
 				}
 
 				var newVPV = helperVpv.initVPV(req.body);
-				// ur: 210406: cleanupVPV will not be called, because the excelClient is not adopted therefore
-				// helperVpv.cleanupVPV(newVPV);
+				helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
 					return res.status(400).send({
@@ -1147,7 +1146,7 @@ router.route('/:vpvid/copy')
 		* The user needs to have Modify permission in the referenced Project or Create Variant Permission and is the owner of the Variant, where he wants to store the VPV.
 		* Project Version Properties like _id, name and timestamp are overwritten by the system
 		*
-		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is redced to the previous PFV
+		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is reduced to the previous PFV
 		*
  		* @apiHeader {String} access-key User authentication token.
 		*
@@ -1218,7 +1217,7 @@ router.route('/:vpvid/copy')
 		if (req.body.variantName || req.body.variantName == '') {
 			variantName = req.body.variantName;
 		}
-		var timestamp;
+		var timestamp, level;
 		if (!validate.validateDate(req.body.timestamp, true)
 		|| !validate.validateDate(req.body.startDate, true)
 		|| !validate.validateDate(req.body.endDate, true)
@@ -1233,6 +1232,8 @@ router.route('/:vpvid/copy')
 		} else {
 			timestamp = new Date();
 		}
+		level = validate.validateNumber(req.query.level, true);
+
 		if (variantName != '') {
 			// check that the Variant exists
 			if (req.oneVP.variant.findIndex(variant => variant.variantName == variantName) < 0) {
@@ -1300,7 +1301,7 @@ router.route('/:vpvid/copy')
 		}
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (variantName == 'pfv') {
-			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations);
+			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations, level);
 			if (!tmpVPV) {
 				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisations ? req.visboOrganisations.length : 0);
 			} else {
