@@ -63,7 +63,7 @@
 			]
 		},
 		{
-			"name": "60-10 Clone",
+			"name": "60-10 Copy",
 			"item": [
 				{
 					"name": "60-10-01 Get VC",
@@ -557,7 +557,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-15 Create VC Groups",
+					"name": "60-10-21 Create VC Groups",
 					"event": [
 						{
 							"listen": "test",
@@ -571,6 +571,7 @@
 									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
 									"    }",
 									"    pm.response.to.have.status(200);",
+									"    pm.globals.set(\"groupID\", jsonData.groups[0]._id);",
 									"});",
 									"",
 									""
@@ -586,14 +587,23 @@
 									"pm.expect(list.length > 0).to.be.eql(true, \"No more groups\");",
 									"var vcGroup = list[0];",
 									"list.shift();",
+									"var vcUsers = vcGroup.users.filter(user => (user.email.indexOf('@visbo') > 0 || user.email.indexOf('@seyfried') > 0));",
+									"console.log(\"Found Users in Group\", vcUsers.length)",
+									"pm.globals.set(\"vcUsers\", JSON.stringify(vcUsers));",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"Groups remaining\", list.length);",
-									"if (list.length == 0) {",
-									"    postman.setNextRequest(\"60-10-30 Get VP\");",
-									"} else {",
-									"    postman.setNextRequest(\"60-10-15 Create VC Groups\");",
-									"    ",
+									"",
+									"if (vcUsers.length == 0) {",
+									"    // no users to create",
+									"    if (list.length == 0) {",
+									"        // no more groups to create",
+									"        postman.setNextRequest(\"60-10-30 Get VP\");",
+									"    } else {",
+									"        // continue create next group",
+									"        postman.setNextRequest(\"60-10-21 Create VC Groups\"); ",
+									"    }",
 									"}",
+									"",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"",
 									"delete vcGroup._id;",
@@ -636,6 +646,121 @@
 								"group"
 							]
 						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-10-25 Create VC User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"vcUsers\"));",
+									"pm.expect(list.length > 0).to.be.eql(true, \"No more Users\");",
+									"var vcUser = list[0];",
+									"list.shift();",
+									"pm.globals.set(\"vcUsers\", JSON.stringify(list));",
+									"groupID = pm.globals.get(\"groupID\");",
+									"console.log(\"Users remaining\", list.length);",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-10-25 Create VC User\");",
+									"}",
+									"pm.variables.set(\"varEMail\", vcUser.email)",
+									"",
+									"console.log(\"Start Create User\", groupID, vcUser.email);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{varEMail}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDNew}}/group/{{groupID}}/user",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDNew}}",
+								"group",
+								"{{groupID}}",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-10-29 Get Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"if (list.length > 0) {",
+									"    // still groups remaining to create",
+									"    postman.setNextRequest(\"60-10-21 Create VC Groups\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
 					},
 					"response": []
 				},
@@ -931,9 +1056,7 @@
 									"    var jsonData = pm.response.json();",
 									"    var list = jsonData.groups;",
 									"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No VP Group List found\");",
-									"    var groups = list.filter(item => {",
-									"        item.groupType != \"VC\" && !item.internal ",
-									"    });",
+									"    var groups = list.filter(item => item.groupType == \"VP\" && item.internal != true );",
 									"    console.log(\"VP Groups found:\", groups.length)",
 									"    pm.globals.set(\"copyJSON\", JSON.stringify(groups));",
 									"    if (groups.length == 0) {",
@@ -983,6 +1106,7 @@
 									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
 									"    }",
 									"    pm.response.to.have.status(200);",
+									"    pm.globals.set(\"groupID\", jsonData.groups[0]._id);",
 									"});",
 									"",
 									""
@@ -998,15 +1122,21 @@
 									"pm.expect(list.length > 0).to.be.eql(true, \"No more groups\");",
 									"var vcGroup = list[0];",
 									"list.shift();",
+									"var vcUsers = vcGroup.users.filter(user => (user.email.indexOf('@visbo') > 0 || user.email.indexOf('@seyfried') > 0));",
+									"console.log(\"Found Users in Group\", vcUsers.length)",
+									"pm.globals.set(\"vcUsers\", JSON.stringify(vcUsers));",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"Groups remaining\", list.length);",
-									"if (list.length == 0) {",
-									"    postman.setNextRequest(\"60-10-50 Get VPV\");",
-									"} else {",
-									"    postman.setNextRequest(\"60-10-15 Create VC Groups\");",
-									"    ",
+									"if (vcUsers.length == 0) {",
+									"    // no users to create",
+									"    if (list.length == 0) {",
+									"        // no more groups to create",
+									"        postman.setNextRequest(\"60-10-50 Get VPV\");",
+									"    } else {",
+									"        // continue create next group",
+									"        postman.setNextRequest(\"60-10-35 Create VP Groups\"); ",
+									"    }",
 									"}",
-									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"",
 									"delete vcGroup._id;",
 									"delete vcGroup.users;",
@@ -1038,16 +1168,131 @@
 							"raw": "{{vcGroup}}"
 						},
 						"url": {
-							"raw": "{{url}}/vc/{{vcIDNew}}/group",
+							"raw": "{{url}}/vp/{{vpIDNew}}/group",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
-								"vc",
-								"{{vcIDNew}}",
+								"vp",
+								"{{vpIDNew}}",
 								"group"
 							]
 						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-10-36 Create VP User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"vcUsers\"));",
+									"pm.expect(list.length > 0).to.be.eql(true, \"No more Users\");",
+									"var vcUser = list[0];",
+									"list.shift();",
+									"pm.globals.set(\"vcUsers\", JSON.stringify(list));",
+									"groupID = pm.globals.get(\"groupID\");",
+									"console.log(\"Users remaining\", list.length);",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-10-36 Create VP User\");",
+									"}",
+									"pm.variables.set(\"varEMail\", vcUser.email)",
+									"",
+									"console.log(\"Start Create VP User\", groupID, vcUser.email);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{varEMail}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/vp/{{vpIDNew}}/group/{{groupID}}/user",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vp",
+								"{{vpIDNew}}",
+								"group",
+								"{{groupID}}",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-10-39 Get Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"if (list.length > 0) {",
+									"    // still groups remaining to create",
+									"    postman.setNextRequest(\"60-10-35 Create VP Groups\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
 					},
 					"response": []
 				},
@@ -1115,24 +1360,6 @@
 					"name": "60-10-51 Create VPV",
 					"event": [
 						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    if (jsonData.state != 'success') {",
-									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
-									"        varRunErrors += 1;",
-									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
-									"    }",
-									"    pm.response.to.have.status(200);",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
 							"listen": "prerequest",
 							"script": {
 								"exec": [
@@ -1154,6 +1381,24 @@
 									"vpv.vpid = vpIDNew",
 									"console.log(\"Start Create Setting\", vpv.name, vpv.variantName, \"Timestamp\", vpv.timestamp);",
 									"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
 									""
 								],
 								"type": "text/javascript"
