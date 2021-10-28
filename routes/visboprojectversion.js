@@ -715,7 +715,7 @@ router.route('/')
 					vp: [req.oneVP]
 				});
 			}
-			// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+			// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
 			if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
 				logger4js.warn('VPV Post VP status %s %s %s', vpid, req.oneVP.name, req.oneVP.vpStatus);
 				return res.status(412).send({
@@ -1091,8 +1091,8 @@ router.route('/:vpvid')
 				vp: [req.oneVP]
 			});
 		}
-	
-		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+
+		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
 		if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
 			logger4js.warn('VPV Post VP status %s %s', req.oneVPV.vpid, req.oneVP.vpStatus);
 			return res.status(412).send({
@@ -1267,8 +1267,8 @@ router.route('/:vpvid/copy')
 				});
 			}
 		}
-		
-		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped' 
+
+		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
 		if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
 			logger4js.warn('VPV Post Copy: VP status %s %s %s', vpid, req.oneVP.name, req.oneVP.vpStatus);
 			return res.status(412).send({
@@ -1548,21 +1548,6 @@ router.route('/:vpvid/keyMetrics')
 		}
 		req.listVPV = [req.oneVPV];
 		getRecalcKM(req, res, 'Returned VISBO Project Version');
-
-		// return res.status(200).send({
-		// 	state: 'success',
-		// 	message: 'Returned Project Version',
-		// 	count: 1,
-		// 	vpv: [ {
-		// 		_id: req.oneVPV._id,
-		// 		timestamp: req.oneVPV.timestamp,
-		// 		actualDataUntil: req.oneVPV.actualDataUntil,
-		// 		vpid: req.oneVPV.vpid,
-		// 		name: req.oneVPV.name,
-		// 		keyMetrics: keyMetrics
-		// 	} ],
-		// 	perm: perm
-		// });
 	});
 
 
