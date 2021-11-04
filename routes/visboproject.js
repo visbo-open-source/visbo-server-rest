@@ -873,7 +873,7 @@ router.route('/')
 									message: 'Project Version not consistent'
 								});
 							}
-							helperVpv.createInitialVersions(req, res, newVPV);
+							helperVpv.createInitialVersions(req, res, newVPV, visboBusiness.calcKeyMetrics);
 						} else {
 							return res.status(200).send({
 								state: 'success',
@@ -1088,11 +1088,8 @@ router.route('/:vpid')
 				});
 			}
 		}
-		var changeOfVP_PMCommitOK = (vpStatus == 'proposed') || (vpStatus == 'ordered');
-		var changeOfVPPropertiesOK = (vpStatus == 'initialized' || vpStatus == 'proposed' || vpStatus == 'ordered');
-
 		if (req.body.customFieldString) {
-			customFieldString =  convertCustomFieldString(req.body.customFieldString);			
+			customFieldString =  convertCustomFieldString(req.body.customFieldString);
 			if (!customFieldString ) {
 				logger4js.info('PUT Project contains illegal strings in customFieldString %O', req.body.customFieldString);
 				return res.status(400).send({
@@ -1100,55 +1097,16 @@ router.route('/:vpid')
 					message: 'Project Body contains invalid values in customFieldString'
 				});
 			}
-			
-			if (req.oneVP && req.oneVP.customFieldString) {
-				const oldCustomField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');				
-				const newCustomField = customFieldString.find(item => item.name == '_businessUnit');
-				const differentBU = newCustomField && ((oldCustomField && newCustomField && oldCustomField.value != newCustomField.value)
-									|| (!oldCustomField && newCustomField) || (!oldCustomField.value && newCustomField.value));
-				if (!changeOfVPPropertiesOK && differentBU) {
-					logger4js.info('PUT Project contains illegal strings in customFieldString %O - wrong vpStatus %1', req.body.customFieldString.name, vpStatus);
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Project Body contains invalid values in customFieldString'
-					});
-				}
-			}
 		}
 
 		if (req.body.customFieldDouble) {
-			customFieldDouble =  convertCustomFieldString(req.body.customFieldDouble);			
+			customFieldDouble =  convertCustomFieldString(req.body.customFieldDouble);
 			if (!customFieldDouble ) {
 				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble.name);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDouble'
 				});
-			}
-			
-			if (req.oneVP && req.oneVP.customFieldDouble) {
-				const oldCustomFieldRisk = req.oneVP.customFieldDouble.find(item => item.name == '_risk');	
-				const newCustomFieldRisk = customFieldDouble.find(item => item.name == '_risk');
-				const differentRisk = newCustomFieldRisk && ((oldCustomFieldRisk && newCustomFieldRisk && oldCustomFieldRisk.value != newCustomFieldRisk.value)
-									|| (!oldCustomFieldRisk && newCustomFieldRisk) || (!oldCustomFieldRisk.value && newCustomFieldRisk.value));
-				if (!changeOfVPPropertiesOK && differentRisk) {
-					logger4js.info('PUT Project contains illegal values in customFieldDouble %O - wrong vpStatus %1', req.body.customFieldDouble.name, vpStatus);
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Project Body contains invalid values in customFieldDouble'
-					});
-				}
-				const oldCustomFieldStratFit = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');	
-				const newCustomFieldStratFit = customFieldDouble.find(item => item.name == '_strategicFit');
-				const differentStratFit = newCustomFieldStratFit && ((oldCustomFieldStratFit && newCustomFieldStratFit && oldCustomFieldStratFit.value != newCustomFieldStratFit.value)
-									|| (!oldCustomFieldStratFit && newCustomFieldStratFit) || (!oldCustomFieldStratFit.value && newCustomFieldStratFit.value));
-				if (!changeOfVPPropertiesOK && differentStratFit) {
-					logger4js.info('PUT Project contains illegal values in customFieldDouble %O - wrong vpStatus %1', req.body.customFieldDouble.name, vpStatus);
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Project Body contains invalid values in customFieldDouble'
-					});
-				}
 			}
 		}
 
@@ -1160,25 +1118,8 @@ router.route('/:vpid')
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDate'
 				});
-
-			}
-			if (req.oneVP && req.oneVP.customFieldDate) {
-				const oldCustomFieldPMCommit = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');	
-				const newCustomFieldPMCommit = customFieldDate.find(item => item.name == '_PMCommit');
-				var oldPMCommit = oldCustomFieldPMCommit ? new Date(oldCustomFieldPMCommit.value) : undefined;
-				var newPMCommit = newCustomFieldPMCommit ? new Date(newCustomFieldPMCommit.value) : undefined;
-				const differentPMCommit = newCustomFieldPMCommit && ((oldCustomFieldPMCommit && newCustomFieldPMCommit && oldPMCommit.getTime() < newPMCommit.getTime())
-									|| (!oldCustomFieldPMCommit && newCustomFieldPMCommit) || (!oldCustomFieldPMCommit.value && newCustomFieldPMCommit.value));
-				if (!changeOfVP_PMCommitOK && differentPMCommit) {
-					logger4js.info('PUT Project contains illegal values in customFieldDate %O - wrong vpStatus %1',  req.body.customFieldDate.toString);
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Project Body contains invalid values in customFieldDate'
-					});
-				}
 			}
 		}
-
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
@@ -1212,8 +1153,11 @@ router.route('/:vpid')
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
 		}
-		if (req.body.kundennummer != undefined) {
+		let propertyChange = false;
+		let statusChange = false;
+		if (req.body.kundennummer != undefined && req.body.kundennummer != req.oneVP.kundennummer) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
+			propertyChange = true;
 		}
 		req.auditProperty = [];
 		if (customFieldString) {
@@ -1228,9 +1172,30 @@ router.route('/:vpid')
 			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDate(req.oneVP.customFieldDate, customFieldDate));
 			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=='System' && constSystemCustomName.find(element => element == item.name)));
 		}
-		if (vpStatus) {
+		propertyChange = propertyChange || (req.auditProperty.length ? true : false);
+		if (vpStatus && vpStatus != req.oneVP.vpStatus) {
 			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatus));
 			req.oneVP.vpStatus = vpStatus;
+			statusChange = true;
+		}
+
+		var changeOfVP_PMCommitOK = (req.oneVP.vpStatus == 'proposed') || (req.oneVP.vpStatus == 'ordered');
+		var changeOfVPPropertiesOK = (req.oneVP.vpStatus == 'initialized' || req.oneVP.vpStatus == 'proposed' || req.oneVP.vpStatus == 'ordered');
+
+		if (!changeOfVPPropertiesOK && propertyChange) {
+			logger4js.info('PUT Project %s could not update properties because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Properties could not be changed for Status ' + vpStatus
+			});
+		}
+		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
+		if (!changeOfVP_PMCommitOK && changeCommit) {
+			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project could not be commited by PL for Status ' + vpStatus
+			});
 		}
 		// check duplicate Name
 		var query = {};

@@ -1,14 +1,13 @@
 var mongoose = require('mongoose');
 // var Const = require('../models/constants');
 
+var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
+
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 // var VisboPortfolio = mongoose.model('VisboPortfolio');
 // var VCSetting = mongoose.model('VCSetting');
-
-var validate = require('./../components/validate');
-var errorHandler = require('./../components/errorhandler').handler;
-var visboBusiness = require('./../components/visboBusiness');
 
 var logModule = 'VPV';
 var log4js = require('log4js');
@@ -179,7 +178,7 @@ function setKeyAttributes(newVPV, keyVPV) {
 	return newVPV;
 }
 
-function createInitialVersions(req, res, newVPV) {
+function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 	logger4js.debug('Store VPV for vpid %s/%s ', newVPV.vpid.toString(), newVPV.name);
 	newVPV.timestamp = new Date();
 	newVPV.save(function(err, oneVPV) {
@@ -195,7 +194,7 @@ function createInitialVersions(req, res, newVPV) {
 			var baseVPV = initVPV(oneVPV);
 			baseVPV.variantName = '';
 			baseVPV.timestamp = new Date();
-			baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations);
+			baseVPV.keyMetrics = calcKeyMetrics ? calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations) : undefined;
 			baseVPV.save(function(err, oneVPV) {
 				if (err) {
 					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');

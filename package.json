@@ -8,9 +8,12 @@
     "lint": "eslint --ignore-path .gitignore .",
     "maillint": "ejslint emailTemplates "
   },
+  "engines": {
+    "node": ">=16"
+  },
   "dependencies": {
     "assert": "^2.0.0",
-    "bcrypt-nodejs": "0.0.3",
+    "bcrypt-nodejs": "^0.0.3",
     "bluebird": "^3.7.2",
     "body-parser": "^1.19.0",
     "bson": "^4.2.0",
