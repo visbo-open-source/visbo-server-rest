@@ -9,6 +9,7 @@
   "Mail.Subject.UserLocked": "Ihr Benutzer-Konto wurde gesperrt!",
   "Mail.Subject.NewLogin": "Eine neue Anmeldung von einem neuen Gerät oder neuen Anwendung",
   "Mail.Subject.VCInvite": "Sie wurden eingeladen in das Visbo Center:",
+  "Mail.Subject.VCMessage": "Nachricht für das Visbo Center:",
   "Mail.Subject.VPInvite": "Sie wurden eingeladen in das Visbo Projekt:",
   "Hello": "Hallo Deutsch"
 }
