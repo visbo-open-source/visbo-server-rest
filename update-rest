@@ -1,4 +1,5 @@
 #!/bin/bash
+rest=$HOME/GitHub/visbo-server-rest
 predictkm=$HOME/GitHub/predictkm
 // if prediction is installed update it
 if test -d "$predictkm"; then
@@ -20,7 +21,7 @@ if test -d "$predictkm"; then
   fi
 fi
 
-cd $HOME/GitHub/visbo-server-rest
+cd $rest
 continueOnEmptyPull=0
 if [ $# -gt 0 -a "$1" = "force" ]
 then
@@ -52,6 +53,20 @@ then
   exit 0
 fi
 
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
+then
+  echo "WARN: Update Script has changed in between, please restart update again."
+  exit 2
+fi
+
+nodeversion=$rest/nodeversion
+// if nodeversion exists, check that it is the active one
+if test -f "$nodeversion"; then
+  eval $nodeversion
+  echo "INFO: verify that node version is installed" $NODE_VERSION
+fi
+
 updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updatePackageOrg" != "$updatePackageAct" ]
 then
@@ -62,13 +77,6 @@ then
     echo "FATAL: Install of NODE components failed."
     exit 1
   fi
-fi
-
-updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
-if [ "$updateCmdOrg" != "$updateCmdAct" ]
-then
-  echo "WARN: Update Script has changed in between, please restart update again."
-  exit 2
 fi
 
 echo "04: Update API Documentation"
