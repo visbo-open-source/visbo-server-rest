@@ -66,7 +66,7 @@ nodeversion=$rest/nodeversion
 if test -f "$nodeversion"; then
   eval `cat $nodeversion`
   echo "INFO: verify that node version is installed" $NODE_VERSION
-  n $NODE_VERSION
+  sudo n $NODE_VERSION
 fi
 
 updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
