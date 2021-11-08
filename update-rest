@@ -56,16 +56,17 @@ fi
 updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
-  echo "WARN: Update Script has changed in between, please restart update again."
-  exit 2
+  echo "WARN: Update Script has changed in between, restart update again."
+  update-rest force
+  exit $?
 fi
 
 nodeversion=$rest/nodeversion
 # if nodeversion exists, check that it is the active one
-echo "Node Config" $nodeversion
 if test -f "$nodeversion"; then
   eval `cat $nodeversion`
   echo "INFO: verify that node version is installed" $NODE_VERSION
+  n $NODE_VERSION
 fi
 
 updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
