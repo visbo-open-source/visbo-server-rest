@@ -61,10 +61,10 @@ then
 fi
 
 nodeversion=$rest/nodeversion
-// if nodeversion exists, check that it is the active one
+# if nodeversion exists, check that it is the active one
 echo "Node Config" $nodeversion
 if test -f "$nodeversion"; then
-  eval $nodeversion
+  eval `cat $nodeversion`
   echo "INFO: verify that node version is installed" $NODE_VERSION
 fi
 
