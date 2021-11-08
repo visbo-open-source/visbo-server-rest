@@ -56,7 +56,7 @@ fi
 updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
-  echo "WARN: Update Script has changed in between, restart update again."
+  echo "INFO: Update Script has changed in between, restart update again."
   update-rest force
   exit $?
 fi
