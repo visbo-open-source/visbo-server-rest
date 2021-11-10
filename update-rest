@@ -73,7 +73,7 @@ updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updatePackageOrg" != "$updatePackageAct" ]
 then
   echo "03: Install subcomponents from NODE environment"
-  npm ci
+  npm ci --production
   if [ $? -ne 0 ]
   then
     echo "FATAL: Install of NODE components failed."
