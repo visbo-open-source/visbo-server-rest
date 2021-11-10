@@ -1337,6 +1337,11 @@ router.route('/:vpvid/copy')
 			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations, level);
 			if (!tmpVPV) {
 				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisations ? req.visboOrganisations.length : 0);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Visbo Project Version inconsistent after conversion',
+					perm: perm
+				});
 			} else {
 				newVPV = tmpVPV;
 			}
