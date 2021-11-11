@@ -96,7 +96,6 @@ if [ -f update-db.js ]; then
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
     version="var VERSION_REST='V"$VERSION_REST"'"
-    echo "upgrade ReST:"$version":"
     mongo --quiet "$NODE_VISBODB" --eval "$version" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
