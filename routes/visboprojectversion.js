@@ -1171,7 +1171,8 @@ router.route('/:vpvid/copy')
 		*
  		* @apiHeader {String} access-key User authentication token.
 		*
-		* @apiParam {number} scaleFactor scale "bedarf" related to the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
+		* @apiParam {number} scaleFactor scale planned ressources with the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
+		* @apiParam {number} level in case the vpv is copied to a pfv, the level specifies on what level the hierarchy of the pfv should be reduced (0: no reduction, 1: reduce to the project only, 2: reduce to all Phases directly below project, etc.)
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -1180,7 +1181,7 @@ router.route('/:vpvid/copy')
 		* @apiError {number} 412 Project status does not allow any new version
 		*
 	  * @apiExample Example usage:
-		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy?squeezeOrga=true
+		*   url: https://my.visbo.net/api/vpv/vpv5c754feaa/copy
 		* {
 		*  'timestamp': '2019-03-19T11:04:12.094Z',
 		*  'variantName': 'pfv',

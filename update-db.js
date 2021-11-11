@@ -1151,6 +1151,7 @@ if (currentVersion < dateBlock) {
 // }
 
 // Add an System Update Audit Entry
+print("update to version: ", $VERSION_REST)
 var auditUpgrade = {};
 auditUpgrade.action = "PUT";
 if (oldVersion != currentVersion) {

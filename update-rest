@@ -88,13 +88,14 @@ cp -r public/apidoc/* /var/www/apidoc
 find /var/www/apidoc -type d -exec chmod 755 {} +
 find /var/www/apidoc -type f -exec chmod 644 {} +
 
-echo "05: Run Upgrade Script against DB"
+VERSION_REST=`git show -s --pretty=format:"%cI" | head -1`
+echo "05: Run Upgrade Script against DB: " $VERSION_REST
 # get the DB Connection string
 if [ -f update-db.js ]; then
     echo `date` "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
+    mongo --quiet "$NODE_VISBODB" --eval "var VERSION_REST=$VERSION_REST" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."
