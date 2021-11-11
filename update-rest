@@ -95,7 +95,8 @@ if [ -f update-db.js ]; then
     echo `date` "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo --quiet "$NODE_VISBODB" --eval "var VERSION_REST="$VERSION_REST update-db.js | grep --invert "I NETWORK"
+    version="var Version_REST="$VERSION_REST
+    mongo --quiet "$NODE_VISBODB" --eval "$version" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."
