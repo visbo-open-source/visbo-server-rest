@@ -1159,6 +1159,7 @@ if (oldVersion != currentVersion) {
 } else {
   auditUpgrade.actionInfo = "Without DB Changes";
 }
+auditUpgrade.actionInfo = "ReST Version " + VERSION_REST + " " + auditUpgrade.actionInfo;
 auditUpgrade.actionDescription = "System Upgrade";
 auditUpgrade.user = {"email": "System"};
 auditUpgrade.createdAt = new Date();
