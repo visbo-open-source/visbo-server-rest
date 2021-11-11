@@ -95,7 +95,7 @@ if [ -f update-db.js ]; then
     echo `date` "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    version="var Version_REST=V"$VERSION_REST
+    version="var Version_REST=V'"$VERSION_REST"'"
     mongo --quiet "$NODE_VISBODB" --eval "$version" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
