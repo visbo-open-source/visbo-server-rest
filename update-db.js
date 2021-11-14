@@ -1151,6 +1151,7 @@ if (currentVersion < dateBlock) {
 // }
 
 // Add an System Update Audit Entry
+print("update to version: ", VERSION_REST)
 var auditUpgrade = {};
 auditUpgrade.action = "PUT";
 if (oldVersion != currentVersion) {
@@ -1158,6 +1159,7 @@ if (oldVersion != currentVersion) {
 } else {
   auditUpgrade.actionInfo = "Without DB Changes";
 }
+auditUpgrade.actionInfo = "ReST Version " + VERSION_REST + " " + auditUpgrade.actionInfo;
 auditUpgrade.actionDescription = "System Upgrade";
 auditUpgrade.user = {"email": "System"};
 auditUpgrade.createdAt = new Date();

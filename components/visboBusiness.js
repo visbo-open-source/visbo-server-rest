@@ -2384,7 +2384,7 @@ function buildOrgaList (orga) {
 
 		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
 		if (role.isTeam) {
-			logger4js.info('Skip Handling of Team Members');
+			logger4js.trace('Skip Handling of Team Members');
 			organisation[id].type = 2;
 			organisation[id].isTeam = true;
 		} else {
@@ -2410,7 +2410,7 @@ function buildOrgaList (orga) {
 				organisation[index].uid = index;
 				organisation[index].calcid = index;
 			} else {
-				logger4js.debug(`SubRole already exists ${id} SubRole ${index}`);
+				logger4js.trace(`SubRole already exists ${id} SubRole ${index}`);
 			}
 			if (!organisation[index].pid) {
 				organisation[index].pid = id;
@@ -2543,19 +2543,19 @@ function checkUIDs(newOrga, oldOrga) {
 function checkRule123(newOrga) {
 	logger4js.info('');
 	var result = true;
-	
+
 	for ( var j = 0; newOrga && newOrga.allRoles && j < newOrga.allRoles.length; j++) {
 		var actRole = newOrga.allRoles[j];
 		var actRoleOK = false;
-		// Rule 3	
-		if (isPerson(actRole)) {				
+		// Rule 3
+		if (isPerson(actRole)) {
 			actRoleOK = (actRole.tagessatz > 0 );
 			if (!actRoleOK) {
 				logger4js.error('person (%s) has to have a tagessatz', actRole.name);
 			}
 			result = result && actRoleOK;
 		}
-		// Rule 1	
+		// Rule 1
 		if (isInternPerson(actRole)) {
 			actRoleOK = ((actRole && !actRole.defaultDayCapa && actRole.kapazitaet && actRole.kapazitaet.length == 241));
 			actRoleOK = actRoleOK || (( actRole && actRole.defaultDayCapa >= 0 ) && ( actRole.defaultKapa > 0 ));
@@ -2564,23 +2564,23 @@ function checkRule123(newOrga) {
 			}
 			result = result && actRoleOK;
 		}
-		// Rule 2		
+		// Rule 2
 		if (isGroup(actRole)) {
 			actRoleOK = ( actRole && (actRole.defaultKapa && actRole.defaultKapa <= 0)|| !actRole.defaultKapa);
 			if (!actRoleOK) {
 				logger4js.error('Group (%s) may not have a defaultKapa > 0', actRole.name);
-			}				
+			}
 			result = result && actRoleOK;
-		}	
+		}
 
 	}
-	return result;			
+	return result;
 }
 
 
 function isInternPerson(actRole) {
-	// criterium of an intern person: 
-	// - role.isExternRole = false 
+	// criterium of an intern person:
+	// - role.isExternRole = false
 	// - role.isTeam = false
 	// - role.isSummaryRole = false
 	// - role.subRoleIDs.length <= 0
@@ -2609,11 +2609,11 @@ function verifyOrganisation(newOrga, oldOrga) {
 			return result;
 		}
 		logger4js.debug('newOrga and oldOrga are given and there timestamps are convenient!', doldO , dnewO);
-		
+
 		logger4js.info('every uid of the oldOrga is included in the newOrga');
 		result =  checkUIDs(newOrga, oldOrga.value);
 	}
-	if (newOrga && result) {			
+	if (newOrga && result) {
 		logger4js.info('each intern Person need to have a default capa per month > 0 and a default capa per Day >= 0 in hours');
 		result = result && checkRule123(newOrga);
 	}
@@ -2666,7 +2666,7 @@ function reduceVPV(originalVPV, level) {
 		if (allPhases) {
 			reducedVPV.AllPhases = [];
 			allPhases.forEach(item => {
-				if (reducedHry[item.name]) {
+				if (reducedHry[item.name] || (item.name == '0§.§' && reducedHry['0'])) {
 					logger4js.trace('Add Phase to reducedPFV', item.name);
 					reducedVPV.AllPhases.push(item);
 				}
@@ -2770,7 +2770,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 				if (i == 0 ) {
 					allPersCostVPV = getAllPersonalKosten(oldVPV, actOrga);
 				}
-				logger4js.debug('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
+				logger4js.trace('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, actOrga.name);
 				onePhase.AllRoles  = aggregateRoles(phase, orgalist);
 			} else {
 				onePhase.AllRoles = phase.AllRoles;
@@ -2850,6 +2850,10 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		reducedPFV = reduceVPV(oldVPV, level);
 	}
 	reducedPFV.variantName = 'pfv';
+	if (!ensureValidVPV(reducedPFV)) {
+		logger4js.warn('generated a newPFV is inconsistent');
+		return undefined;
+	}
 
 	if ( oldVPV && reducedPFV  ) {
 		// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
