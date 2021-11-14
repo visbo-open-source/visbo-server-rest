@@ -3110,6 +3110,12 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 	var rootKey = '0';
 	var rootphaseID = '0§.§';
 
+
+	if (elemID === rootphaseID ) {
+		logger4js.trace('elemID %s may not be deleted from hierarchy of VPV', elemID);
+		return origHrchyNodes;
+	}
+
 	logger4js.trace('Delete one elemID from hierarchy of VPV', elemID);
 
 	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
@@ -3135,7 +3141,8 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 			}
 			origHrchyNodes[an].hryNode.childNodeKeys = newChildNodeKeys;
 		}
-		if (origHrchyNodes[an].hryNodeKey != elemID) {
+		if (origHrchyNodes[an].hryNodeKey != elemID) {	
+			logger4js.warn('Deleted one elemID from hierarchy of VPV', elemID);
 			newHryAllNodes.push(origHrchyNodes[an]);
 		}
 	}
