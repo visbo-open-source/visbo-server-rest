@@ -300,7 +300,7 @@ var checkPredictConfigured = function () {
 };
 
 var getPredictModel = function () {
-	return fsModell;
+	return predictConfigured ? fsModell : undefined;
 }
 
 module.exports = {
