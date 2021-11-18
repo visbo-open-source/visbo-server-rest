@@ -57,7 +57,7 @@ updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updateCmdOrg" != "$updateCmdAct" ]
 then
   echo "INFO: Update Script has changed in between, update restarts automatically."
-  update-rest force
+  bash ./update-rest force
   exit $?
 fi
 
