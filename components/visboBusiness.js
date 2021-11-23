@@ -3085,11 +3085,10 @@ function deletePhaseFromVPV(hrchy_vpv, newPFV, elem) {
 		phase.AllResults = [];
 	}
 
-	logger4js.trace('take the needs of the phase an add them into the parentPhase');
+	logger4js.trace('take the needs of the phase %s and add them into the parentPhase %s ', phase.name, parent.name);
 
 	newPFV = moveTheNeeds(newPFV, phase, parent);
 	newPFV = moveTheCosts(newPFV, phase, parent);
-
 
 	logger4js.debug('remove the phase %s from hierarchy', elemID);
 	vpvHrchyNodes = newPFV.hierarchy.allNodes;
@@ -3114,7 +3113,11 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 	var rootKey = '0';
 	var rootphaseID = '0§.§';
 
-	logger4js.trace('Delete one elemID from hierarchy of VPV', elemID);
+
+	if (elemID === rootphaseID ) {
+		logger4js.trace('elemID %s may not be deleted from hierarchy of VPV', elemID);
+		return origHrchyNodes;
+	}
 
 	// elemID has to be removed from Hierarchy.allNodes and from childNodeKeys-Array of the parent
 	var hrchy_node = hrchy_vpv[elemID];
@@ -3148,7 +3151,7 @@ function deleteElemIDFromHrchy(hrchy_vpv, origHrchyNodes, elemID){
 
 function moveTheNeeds (newPFV, phase, parent) {
 
-	logger4js.trace('Move the needs from phase to its parent');
+	logger4js.trace('Move the needs from phase %s to its parent %s', phase.name, parent.name);
 
 	logger4js.trace('Check startdates and enddates of the phase and the parent phase');
 	if (!(parent.relStart <= phase.relStart) && (parent.relEnde <= phase.relEnde)) {
@@ -3163,7 +3166,7 @@ function moveTheNeeds (newPFV, phase, parent) {
 			if ( !(parent.AllRoles[i].RollenTyp == role.RollenTyp) && (parent.AllRoles[i].teamID == role.teamID))  { continue; }
 			logger4js.debug( 'move needs of %s in his parent %s', role.RollenTyp, parent.name);
 			var parentNeeds = parent.AllRoles[i].Bedarf;
-			for ( var n = 0; n < role.Bedarf.length || n < parentNeeds.length; n++){
+			for ( var n = 0; n < role.Bedarf.length && n < parentNeeds.length; n++){
 				var index = phase.relStart - parent.relStart;
 				var parentNeed = (parentNeeds[index + n]) ? parentNeeds[index + n] : 0;
 				var phaseNeed = (role.Bedarf[n]) ? role.Bedarf[n] : 0;
@@ -3210,7 +3213,7 @@ function moveTheCosts (newPFV, phase, parent) {
 			if ( !(parent.AllCosts[i].KostenTyp == cost.KostenTyp))  { continue; }
 			logger4js.debug( 'move costs of %s in his parent %s', cost.KostenTyp, parent.name);
 			var parentCosts = parent.AllCosts[i].Bedarf;
-			for ( var n = 0; n < cost.Bedarf.length || n < parentCosts.length; n++){
+			for ( var n = 0; n < cost.Bedarf.length && n < parentCosts.length; n++){
 				parentCosts[phase.relStart - parent.relStart + n] = parentCosts[phase.relStart - parent.relStart + n] + cost.Bedarf[n];
 				found = true;
 			}
