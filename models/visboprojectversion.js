@@ -119,6 +119,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	earliestStartDate: { type: Date, required: false},
 	latestStart: { type: Number, required: false},
 	latestStartDate: { type: Date, required: false},
+	vpStatus: { type: String, required: false, maxlength: 50},
 	status: { type: String, required: false, maxlength: 256},
 	ampelStatus: { type: Number, required: false},
 	ampelErlaeuterung: { type: String, required: false, maxlength: 4096},

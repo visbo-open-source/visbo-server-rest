@@ -1,4 +1,5 @@
 #!/bin/bash
+rest=$HOME/GitHub/visbo-server-rest
 predictkm=$HOME/GitHub/predictkm
 // if prediction is installed update it
 if test -d "$predictkm"; then
@@ -20,7 +21,7 @@ if test -d "$predictkm"; then
   fi
 fi
 
-cd $HOME/GitHub/visbo-server-rest
+cd $rest
 continueOnEmptyPull=0
 if [ $# -gt 0 -a "$1" = "force" ]
 then
@@ -52,23 +53,32 @@ then
   exit 0
 fi
 
+updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
+if [ "$updateCmdOrg" != "$updateCmdAct" ]
+then
+  echo "INFO: Update Script has changed in between, update restarts automatically."
+  bash ./update-rest force
+  exit $?
+fi
+
+nodeversion=$rest/nodeversion
+# if nodeversion exists, check that it is the active one
+if test -f "$nodeversion"; then
+  eval `cat $nodeversion`
+  echo "INFO: verify that node version is installed" $NODE_VERSION
+  sudo n $NODE_VERSION
+fi
+
 updatePackageAct=`date -r package.json '+%Y-%m-%dT%H:%M:%S'`
 if [ "$updatePackageOrg" != "$updatePackageAct" ]
 then
   echo "03: Install subcomponents from NODE environment"
-  npm install
+  npm ci --production
   if [ $? -ne 0 ]
   then
     echo "FATAL: Install of NODE components failed."
     exit 1
   fi
-fi
-
-updateCmdAct=`date -r update-rest '+%Y-%m-%dT%H:%M:%S'`
-if [ "$updateCmdOrg" != "$updateCmdAct" ]
-then
-  echo "WARN: Update Script has changed in between, please restart update again."
-  exit 2
 fi
 
 echo "04: Update API Documentation"
@@ -78,13 +88,15 @@ cp -r public/apidoc/* /var/www/apidoc
 find /var/www/apidoc -type d -exec chmod 755 {} +
 find /var/www/apidoc -type f -exec chmod 644 {} +
 
-echo "05: Run Upgrade Script against DB"
+VERSION_REST=`git show -s --pretty=format:"%cI" | head -1`
+echo "05: Run Upgrade Script against DB: " $VERSION_REST
 # get the DB Connection string
 if [ -f update-db.js ]; then
     echo `date` "Upgrade Script Found!"
     CONF=`grep '^ *NODE_VISBODB' .env`
     eval $CONF
-    mongo --quiet "$NODE_VISBODB" update-db.js | grep --invert "I NETWORK"
+    version="var VERSION_REST='V"$VERSION_REST"'"
+    mongo --quiet "$NODE_VISBODB" --eval "$version" update-db.js | grep --invert "I NETWORK"
     if [ $? -ne 0 ]
     then
       echo "FATAL: Database Update Script Failed."

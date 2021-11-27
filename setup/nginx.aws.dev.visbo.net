@@ -72,6 +72,7 @@ server {
 		proxy_set_header X-Real-IP $http_x_forwarded_for;
    	# proxy_set_header X-Real-IP $remote_addr;
     proxy_cache_bypass $http_upgrade;
+		client_max_body_size 5m;
   }
 	location /apidoc {
     root /var/www/;

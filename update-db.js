@@ -987,7 +987,7 @@ if (currentVersion < dateBlock) {
   vpIDLast = undefined; count = 0;
   vpvList.forEach(vpv => {
     if (vpv.vpid.toString() != vpIDLast) {
-      // update VP with businessUnit
+      // update VP with risk
       // print("Update VP _risk", vpv.vpid.toString(), vpv._id.toString(), vpv.Risiko);
       db.visboprojects.updateOne({_id: vpv.vpid}, {$push: { customFieldDouble: {
         name: '_risk',
@@ -1111,6 +1111,37 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2021-08-31T00:00:00"
+if (currentVersion < dateBlock) {
+  // Migrate status from vpv to vpStatus of VP
+
+  db.visboprojects.update({vpStatus: {$exists: false}}, {$set: {vpStatus: 'initialized'}}, {multi: true});
+  var vpList = db.visboprojects.find({deletedAt: {$exists: false}, vpStatus: 'initialized'}, {_id: 1}).toArray()
+  var vpidList = [];
+  vpList.forEach(vp => vpidList.push(vp._id));
+  var vpvList = db.visboprojectversions.find({deletedAt: {$exists: false}, variantName: '', status: {$exists: true}, status: {$ne: ''}, vpid: {$in: vpidList}}, {_id: 1, vpid: 1, status: 1, timestamp: 1}).sort({vpid: 1, variantName: 1, timestamp: -1}).toArray();
+  print("Found VPV", vpList.length, vpvList.length);
+  var vpIDLast, count = 0;
+  vpvList.forEach(vpv => {
+    if (vpv.vpid.toString() != vpIDLast) {
+      // update VP with vpStatus
+      var vpStatus;
+      if (vpv.status == 'beauftragt') vpStatus = 'ordered';
+      else if (vpv.status == 'beauftragt, Änderung noch nicht freigegeben') vpStatus = 'ordered'
+      else if (vpv.status == 'geplant') vpStatus = 'proposed'
+      else if (vpv.status == 'planning') vpStatus = 'proposed'
+      db.visboprojects.updateOne({_id: vpv.vpid}, {$set: { vpStatus: vpStatus}})
+      vpIDLast = vpv.vpid.toString();
+      count += 1;
+    }
+  })
+  print("Updated VP Status", count);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
@@ -1120,6 +1151,7 @@ if (currentVersion < dateBlock) {
 // }
 
 // Add an System Update Audit Entry
+print("update to version: ", VERSION_REST)
 var auditUpgrade = {};
 auditUpgrade.action = "PUT";
 if (oldVersion != currentVersion) {
@@ -1127,6 +1159,7 @@ if (oldVersion != currentVersion) {
 } else {
   auditUpgrade.actionInfo = "Without DB Changes";
 }
+auditUpgrade.actionInfo = "ReST Version " + VERSION_REST + " " + auditUpgrade.actionInfo;
 auditUpgrade.actionDescription = "System Upgrade";
 auditUpgrade.user = {"email": "System"};
 auditUpgrade.createdAt = new Date();

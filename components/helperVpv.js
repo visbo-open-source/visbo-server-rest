@@ -1,14 +1,13 @@
 var mongoose = require('mongoose');
 // var Const = require('../models/constants');
 
+var validate = require('./../components/validate');
+var errorHandler = require('./../components/errorhandler').handler;
+
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 // var VisboPortfolio = mongoose.model('VisboPortfolio');
 // var VCSetting = mongoose.model('VCSetting');
-
-var validate = require('./../components/validate');
-var errorHandler = require('./../components/errorhandler').handler;
-var visboBusiness = require('./../components/visboBusiness');
 
 var logModule = 'VPV';
 var log4js = require('log4js');
@@ -98,7 +97,7 @@ function initVPV(vpv) {
 	newVPV.earliestStartDate = vpv.earliestStartDate;
 	newVPV.latestStart = vpv.latestStart;
 	newVPV.latestStartDate = vpv.latestStartDate;
-	newVPV.status = vpv.status;
+	newVPV.vpStatus = vpv.vpStatus;
 	newVPV.ampelStatus = vpv.ampelStatus;
 	newVPV.ampelErlaeuterung = vpv.ampelErlaeuterung;
 	newVPV.VorlagenName = vpv.VorlagenName;
@@ -112,16 +111,25 @@ function initVPV(vpv) {
 	return newVPV;
 }
 
+// cleanup properties that the client sets as default but are not used
+// candidates are:
+//		phase.invoice: if not used the client sets it to 0
+//		phase.penalty: if not used the client sets it to 9999-12-31
+//		latestStart/earliestStart: if not used client sets it to -999
+//		minDauer/maxDauer: if not used the client sets it to 0
+//
+// the cleanup has to be verified with the client that the client could handle it if no value is set
+
 function cleanupVPV(vpv) {
 	if (!vpv) {
 		return;
 	}
-	if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
-	if (vpv.earliestStart == -999) { vpv.earliestStart = undefined; }
+	// if (vpv.latestStart == -999) { vpv.latestStart = undefined; }
+	// if (vpv.earliestStart == -999) { vpv.earliestStart = undefined; }
 	if (vpv.AllPhases) {
 		vpv.AllPhases.forEach(phase => {
-			if (phase.latestStart == -999) { phase.latestStart = undefined; }
-			if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
+			// if (phase.latestStart == -999) { phase.latestStart = undefined; }
+			// if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
 			if (phase.invoice && phase.invoice.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
 			if (phase.penalty && phase.penalty.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
 			if (phase.AllResults) {
@@ -170,7 +178,7 @@ function setKeyAttributes(newVPV, keyVPV) {
 	return newVPV;
 }
 
-function createInitialVersions(req, res, newVPV) {
+function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 	logger4js.debug('Store VPV for vpid %s/%s ', newVPV.vpid.toString(), newVPV.name);
 	newVPV.timestamp = new Date();
 	newVPV.save(function(err, oneVPV) {
@@ -181,24 +189,32 @@ function createInitialVersions(req, res, newVPV) {
 		// req.visboPFV = oneVPV;
 		// update the version count of the base version or the variant
 		updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
-		// now create a copy of the pfv version as the first version of the project
-		var baseVPV = initVPV(oneVPV);
-		baseVPV.variantName = '';
-		baseVPV.timestamp = new Date();
-		baseVPV.keyMetrics = visboBusiness.calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations);
-		baseVPV.save(function(err, oneVPV) {
-			if (err) {
-				errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
-				return;
-			}
-			// req.visboPFV = oneVPV;
-			updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
+		if (oneVPV.variantName == 'pfv') {
+			// now create a copy of the pfv version as the first version of the project
+			var baseVPV = initVPV(oneVPV);
+			baseVPV.variantName = '';
+			baseVPV.timestamp = new Date();
+			baseVPV.keyMetrics = calcKeyMetrics ? calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations) : undefined;
+			baseVPV.save(function(err, oneVPV) {
+				if (err) {
+					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
+					return;
+				}
+				// req.visboPFV = oneVPV;
+				updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Successfully created new Project',
+					vp: [ req.oneVP ]
+				});
+			});
+		} else {
 			return res.status(200).send({
 				state: 'success',
 				message: 'Successfully created new Project',
 				vp: [ req.oneVP ]
 			});
-		});
+		}
 	});
 }
 

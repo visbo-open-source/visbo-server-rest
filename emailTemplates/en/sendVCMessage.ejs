@@ -1,0 +1,34 @@
+<head>
+    <% include('partials/head') %>
+</head>
+<header>
+    <% include('partials/header') %>
+</header>
+<h1>
+  You have received a message for VISBO Center
+</h1>
+<p>
+  <%if (userFrom.profile && userFrom.profile.firstName ) { %>
+    <%= userFrom.profile.firstName %>
+  <% } %>
+  <%if (userFrom.profile && userFrom.profile.lastName ) { %>
+    <%= userFrom.profile.lastName %>
+  <% } %>
+  (<%= userFrom.email %>) has sent you a Message for Visbo Center: <b><%= vc.name %></b>
+</p>
+<p>
+  Message: <br>
+</p>
+<h4>
+  <%- message.replace(/\n/g, '<br/>')  %>
+</h4>
+<br>
+<p>
+  To access the Visbo Center you have to follow this link: <b><a href="<%= url %>">View VISBO Center</a></b>
+</p>
+<p>
+  Use your e-Mail address <%= userTo.email %> to Login.
+</p>
+<footer>
+    <% include('partials/footer') %>
+</footer>

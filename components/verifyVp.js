@@ -68,6 +68,7 @@ function getAllGroups(req, res, next) {
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid vpids groupType');
+	queryVG.lean();
 	queryVG.exec(function (err, listVG) {
 		if (err) {
 			errorHandler(err, res, 'DB: VP Group all Find', 'Error getting Groups ');
@@ -132,6 +133,7 @@ function getVPGroupsOfVC(req, res, next) {
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
 	var queryVG = VisboGroup.find(query);
 	queryVG.select('name permission vcid vpids groupType');
+	queryVG.lean();
 	queryVG.exec(function (err, listVG) {
 		if (err) {
 			errorHandler(err, res, 'DB: VP Group all Find', 'Error getting Groups ');

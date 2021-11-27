@@ -5,15 +5,19 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "audit": "npm audit >rest-audit-log.txt",
     "lint": "eslint --ignore-path .gitignore .",
     "maillint": "ejslint emailTemplates "
   },
+  "engines": {
+    "node": ">=16"
+  },
   "dependencies": {
     "assert": "^2.0.0",
-    "bcrypt-nodejs": "0.0.3",
+    "bcrypt-nodejs": "^0.0.3",
     "bluebird": "^3.7.2",
     "body-parser": "^1.19.0",
-    "bson": "^4.2.0",
+    "bson": "^4.5.4",
     "cors": "^2.8.5",
     "debug": "^4.2.0",
     "delay": "^5.0.0",
@@ -24,7 +28,7 @@
     "jsonwebtoken": "^8.5.1",
     "log4js": "^6.3.0",
     "moment": "^2.29.1",
-    "mongoose": "^5.11.14",
+    "mongoose": "^5.13.13",
     "morgan": "^1.10.0",
     "nodemailer": "^6.4.17",
     "passport": "^0.4.1",
@@ -32,7 +36,7 @@
     "path": "^0.12.7",
     "q": "^1.5.0",
     "redis": "^3.0.2",
-    "sanitize-html": "^2.4.0",
+    "sanitize-html": "^2.5.3",
     "serve-favicon": "^2.5.0",
     "useragent": "^2.3.0"
   },
