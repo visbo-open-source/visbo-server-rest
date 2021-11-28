@@ -32,6 +32,7 @@ var Const = require('../models/constants');
 var constPermVC = Const.constPermVC;
 var constPermVP = Const.constPermVP;
 var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
+var constVPStatus = require('../models/visboproject').constVPStatus;
 
 var mail = require('./../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -137,6 +138,14 @@ function detectChangeCustomFieldDate(original, update) {
 	return result;
 }
 
+function detectChangeVPStatus(original, update) {
+	var result = [];
+	if (original != update) {
+		result.push({action: 'Project Status Change', name: 'vpStatus', oldValue: (original || '').toString(), newValue: (update || '').toString()});
+	}
+	return result;
+}
+
 function convertCustomFieldDouble(customFieldDouble) {
 	var result;
 	if (customFieldDouble) {
@@ -163,11 +172,11 @@ function convertCustomFieldDate(customFieldDate) {
 		customFieldDate.forEach(item => {
 			if (!validateName(item.name, false)
 			|| !validateDate(item.value, true)) {
-				invalidDates=true
+				invalidDates=true;
 				return result;
 			}
 			if (item.type && !((item.type == 'System') &&  (constSystemCustomName.find(element => element == item.name)))) {
-				invalidDates=true
+				invalidDates=true;
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -642,6 +651,7 @@ router.route('/')
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer;
+		var isPMO = false;
 
 		if (vpType == 1) {
 			req.auditDescription = 'Portfolio Create';
@@ -700,6 +710,10 @@ router.route('/')
 				message: 'No Permission to create Project'
 			});
 		}
+		var permPMO = constPermVC.View + constPermVC.Modify;
+		if ((req.listVCPerm.getPerm(vcid).vc & permPMO) == permPMO) {
+			isPMO = true;
+		}
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
 			if (err) {
@@ -750,6 +764,9 @@ router.route('/')
 				newVP.vpvCount = 0;
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
+				}
+				if (newVP.vpType == 0) { // Project
+					newVP.vpStatus = constVPStatus[0];
 				}
 				if (req.oneVPTemplate) {
 					newVP.variant = [];
@@ -840,7 +857,8 @@ router.route('/')
 							newVPV.name = req.oneVP.name;
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
-							newVPV.variantName = 'pfv'; // first Version is the pfv
+
+							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
 							if (req.body.rac && validate.validateNumber(req.body.rac)) {
@@ -855,7 +873,7 @@ router.route('/')
 									message: 'Project Version not consistent'
 								});
 							}
-							helperVpv.createInitialVersions(req, res, newVPV);
+							helperVpv.createInitialVersions(req, res, newVPV, visboBusiness.calcKeyMetrics);
 						} else {
 							return res.status(200).send({
 								state: 'success',
@@ -960,7 +978,7 @@ router.route('/:vpid')
 	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Project.
 	* In case of undelete a Project the user needs to have VP.Delete Permission in addition.
 	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 no Data provided in Body for updating the Visbp Project
+	* @apiError {number} 400 no Data provided in Body for updating the Visbo Project
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
 	* @apiError {number} 423 Project is locked by another user
@@ -1033,6 +1051,7 @@ router.route('/:vpid')
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
+		var vpStatus;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -1043,9 +1062,35 @@ router.route('/:vpid')
 				message: 'Project Body contains invalid strings'
 			});
 		}
+
+		if (req.body.vpStatus) {
+			if (constVPStatus.find(element => element == req.body.vpStatus)) {
+				vpStatus = req.body.vpStatus;
+				if (vpStatus != constVPStatus[0] && req.oneVP.vpvCount == 0) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Project does not have any version, status could not be changed'
+					});
+				}
+				if (vpStatus == 'ordered') {
+					var variantIndex = req.oneVP.variant.findIndex(element => element.variantName == 'pfv');
+					if (variantIndex < 0 || req.oneVP.variant[variantIndex].vpvCount <= 0) {
+						return res.status(400).send({
+							state: 'failure',
+							message: 'Project does not have a pfv variant, status could not be changed to ordered'
+						});
+					}
+				}
+			} else {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Body contains invalid value vpStatus'
+				});
+			}
+		}
 		if (req.body.customFieldString) {
 			customFieldString =  convertCustomFieldString(req.body.customFieldString);
-			if (!customFieldString) {
+			if (!customFieldString ) {
 				logger4js.info('PUT Project contains illegal strings in customFieldString %O', req.body.customFieldString);
 				return res.status(400).send({
 					state: 'failure',
@@ -1053,10 +1098,11 @@ router.route('/:vpid')
 				});
 			}
 		}
+
 		if (req.body.customFieldDouble) {
-			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
-			if (!customFieldDouble) {
-				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble);
+			customFieldDouble =  convertCustomFieldString(req.body.customFieldDouble);
+			if (!customFieldDouble ) {
+				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble.name);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDouble'
@@ -1072,7 +1118,6 @@ router.route('/:vpid')
 					state: 'failure',
 					message: 'Project Body contains invalid values in customFieldDate'
 				});
-
 			}
 		}
 
@@ -1108,8 +1153,11 @@ router.route('/:vpid')
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
 		}
-		if (req.body.kundennummer != undefined) {
+		let propertyChange = false;
+		let statusChange = false;
+		if (req.body.kundennummer != undefined && req.body.kundennummer != req.oneVP.kundennummer) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
+			propertyChange = true;
 		}
 		req.auditProperty = [];
 		if (customFieldString) {
@@ -1122,7 +1170,32 @@ router.route('/:vpid')
 		}
 		if (customFieldDate) {
 			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldDate(req.oneVP.customFieldDate, customFieldDate));
-			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=="System" && constSystemCustomName.find(element => element == item.name)));
+			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=='System' && constSystemCustomName.find(element => element == item.name)));
+		}
+		propertyChange = propertyChange || (req.auditProperty.length ? true : false);
+		if (vpStatus && vpStatus != req.oneVP.vpStatus) {
+			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatus));
+			req.oneVP.vpStatus = vpStatus;
+			statusChange = true;
+		}
+
+		var changeOfVP_PMCommitOK = (req.oneVP.vpStatus == 'proposed') || (req.oneVP.vpStatus == 'ordered');
+		var changeOfVPPropertiesOK = (req.oneVP.vpStatus == 'initialized' || req.oneVP.vpStatus == 'proposed' || req.oneVP.vpStatus == 'ordered');
+
+		if (!changeOfVPPropertiesOK && propertyChange) {
+			logger4js.info('PUT Project %s could not update properties because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Properties could not be changed for Status ' + vpStatus
+			});
+		}
+		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
+		if (!changeOfVP_PMCommitOK && changeCommit) {
+			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project could not be commited by PL for Status ' + vpStatus
+			});
 		}
 		// check duplicate Name
 		var query = {};
@@ -3312,6 +3385,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
 		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		* @apiParam {String} parentID Deliver the capacity planning for the specified organisaion with the specified parentID, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
 		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative

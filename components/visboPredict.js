@@ -158,7 +158,7 @@ function kmTraining(task, finishedTask, vcSystemId) {
 		queryPredict.sort({vpid:1, timestamp: -1});
 		queryPredict.lean();
 		queryPredict.exec(function (err, listVPV) {
-			logger4js.debug('Task: kmTraining Starting Training for', listVPV.length);
+			logger4js.debug('Task: kmTraining Starting Training for', listVPV && listVPV.length);
 			// filter duplicate entries same vpid and same day
 			var oldVPV = {vpid: '', timestamp: new Date()};
 			var reducedVPV = [];

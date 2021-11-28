@@ -1904,6 +1904,115 @@ router.route('/:vcid/group/:groupid')
 		});
 	});
 
+router.route('/:vcid/message')
+	/**
+		* @api {post} /vc/:vcid/message Send Mail to User
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center
+		* @apiName SendMessageToUserOfVISBOCenter
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Sends a message to specified user
+		*
+		* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
+		* @apiError {number} 400 missing user name to send message
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 409 receiving user is not member of VC
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/vc/:vcid/message
+		*  {
+	  *    'email':'existing.user@visbo.de',
+		*    'message': 'Message'
+	  *  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Message was sent to VISBO Center User'
+		* }
+		*/
+
+		// Sent Message to VC User
+		.post(function(req, res) {
+			// User is authenticated already
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+
+			logger4js.info('Sent a message to VISBO Center User with name %s executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
+			req.auditDescription = 'VISBO Center Send Message';
+
+			if (req.body.email) req.body.email = req.body.email.trim().toLowerCase();
+			if (!validate.validateEmail(req.body.email, false)) {
+				logger4js.warn('Post Message a not allowed UserName %s to VISBO Center executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
+				return res.status(400).send({
+					state: 'failure',
+					message: 'VISBO Center User Name not allowed'
+				});
+			}
+
+			var eMailMessage = undefined;
+			var recipient = req.body.email;
+			req.auditInfo = recipient;
+
+			if (req.body.message) {
+				eMailMessage = sanitizeHtml(req.body.message, {allowedTags: [], allowedAttributes: {}});
+			}
+
+			// check if the user is member of the VC
+			// {"users.email": 'visbotest@seyfried.bayern', "permission.vc": { $bitsAllSet: 1 }}
+			var query = {};
+			query.vcid = req.oneVC._id;
+			query.groupType = req.oneVC.system ? 'System' : 'VC';
+			query['users.email'] = recipient;
+			query['permission.vc'] = { $bitsAllSet: 1 };
+
+			var queryVCGroup = VisboGroup.find(query);
+			queryVCGroup.select('-vpids');
+			queryVCGroup.lean();
+			queryVCGroup.exec(function (err, listVCGroup) {
+				if (err) {
+					errorHandler(err, res, `DB: POST Message to VC ${recipient} Find User `, `Error User not member of VISBO Center ${recipient} `);
+					return;
+				}
+				if (listVCGroup?.length > 0) {
+					var user = new User();
+					user.email = recipient;
+					var lang = validate.evaluateLanguage(req);
+					var template = __dirname.concat(eMailTemplates, lang, '/sendVCMessage.ejs');
+					var uiUrl =  getSystemUrl();
+					uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
+					var eMailSubject = res.__('Mail.Subject.VCMessage') + ' ' + req.oneVC.name;
+					ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+						if (err) {
+							logger4js.warn('E-Mail Rendering failed %s', err.message);
+							return res.status(500).send({
+								state: 'failure',
+								message: 'E-Mail Rendering failed',
+								error: err
+							});
+						}
+						var message = {
+								from: useremail,
+								to: user.email,
+								subject: eMailSubject,
+								html: '<p> '.concat(emailHtml, ' </p>')
+						};
+						logger4js.info('Now send mail from %s to %s', message.from, message.to);
+						mail.VisboSendMail(message);
+						return res.status(200).send({
+							state: 'success',
+							message: 'Successfully sent message to User of VISBO Center'
+						});
+					});
+				} else {
+					logger4js.info('Try to send to unknown user from %s to %s', userId, recipient);
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Unknown Recipient of VISBO Center: '.concat(recipient)
+					});
+				}
+			});
+		});
+
 	router.route('/:vcid/organisation')
 
 	/**

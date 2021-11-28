@@ -1,11 +1,11 @@
 node_modules/
 bin/
 apidoc/
+data/
 .DS_Store
 public/ui/
 .env
 logging/
 dump.rdb
-package-lock.json
 postman/VCClone/exportJSON.json
 data/

@@ -156,7 +156,7 @@ function getAllVPVGroups(req, res, next) {
 			}
 		}
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getAllVPVGroups Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -218,7 +218,7 @@ function getVCGroups(req, res, next) {
 			});
 		}
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getVCGroups Perm All Groups %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -250,10 +250,28 @@ function getVPV(req, res, next, vpvid) {
 			message: 'No valid Project or no Permission'
 		});
 	} else {
-		query.vpid = {$in: req.listVPPerm.getVPIDs(constPermVP.View, true)};
+		var vpList = req.listVPPerm.getVPIDs(constPermVP.View, true);
+		// if a vpvid was specified we have the short VPV already and can check the vpid access direct
+		if (req.oneVPV) {
+			if (vpList.findIndex(item => item.toString() == req.oneVPV.vpid.toString()) < 0) {
+				return res.status(403).send({
+					state: 'failure',
+					message: 'No valid Project Version or no Permission'
+				});
+			}
+		} else {
+			query.vpid = {$in: vpList};
+		}
 	}
 	var queryVPV = VisboProjectVersion.findOne(query);
 
+	// we dont need it to save back to DB
+	if (req.method == 'GET') {
+		queryVPV.lean();
+	} else if (req.method == 'DELETE' || req.method == 'PUT') {
+		// we don't need the full VPV for PUT/DELETE
+		queryVPV.select('-hierarchy -AllPhases');
+	}
 	queryVPV.exec(function (err, oneVPV) {
 		if (err) {
 			errorHandler(err, res, 'DB: VPV specific find', 'Error getting Project Version ');
@@ -266,6 +284,9 @@ function getVPV(req, res, next, vpvid) {
 			});
 		}
 		req.oneVPV = oneVPV;
+		var endCalc = new Date();
+		logger4js.debug('Calculate getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
+
 		var query = {};
 		query._id = oneVPV.vpid;
 		// prevent that the user gets access to Versions of Deleted VPs or Deleted VCs
@@ -273,6 +294,7 @@ function getVPV(req, res, next, vpvid) {
 		query['vc.deletedAt'] = {$exists: false};
 		logger4js.trace('Get Project Query %O', query);
 		var queryVP = VisboProject.findOne(query);
+		queryVP.lean();
 		queryVP.exec(function (err, oneVP) {
 			if (err) {
 				errorHandler(err, res, 'DB: GET VP specific from VPV find', 'Error getting Project Version ');
@@ -295,7 +317,7 @@ function getVPV(req, res, next, vpvid) {
 
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
-			logger4js.debug('Calculate verifyVPV getVPV %s ms ', endCalc.getTime() - startCalc.getTime());
+			logger4js.debug('Calculate getVPV with VP %s ms ', endCalc.getTime() - startCalc.getTime());
 			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
 				getVCOrganisation(oneVP.vcid, req, res, next);
 			} else {
@@ -337,6 +359,7 @@ function getPortfolioVPs(req, res, next) {
 	// get the Project List from VPF
 	var queryVPF = VisboPortfolio.findOne(query);
 	queryVPF.select('_id vpid variantName allItems');
+	queryVPF.lean();
 	queryVPF.exec(function (err, oneVPF) {
 		if (err) {
 			errorHandler(err, res, 'DB: listVPF find', 'Error getting Project Versions ');
@@ -374,7 +397,7 @@ function getPortfolioVPs(req, res, next) {
 		req.listPortfolioVP = listVP;
 		req.listPortfolioVPVariant = listVPVariant;
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -439,7 +462,7 @@ function getVCOrganisation(vcid, req, res, next) {
 			}
 		}
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -489,7 +512,47 @@ function getVPVpfv(req, res, next) {
 		logger4js.debug('VPV getVPVpfv: Found a pfv Version %s ', pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV getVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
+		return next();
+	});
+}
+
+function getVPVwoPerm(req, res, next) {
+	var startCalc = new Date();
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+
+	logger4js.trace('GET getVPVwoPerm baseUrl', baseUrl, urlComponent);
+	var vpvid = urlComponent.length >= 2 ? urlComponent[1] : undefined;
+	if (!vpvid) {
+		return next();
+	}
+	if (!validate.validateObjectId(vpvid, true)) {
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No valid Project Version ID:' + vpvid
+		});
+		return;
+	}
+	logger4js.trace('GET getVPVwoPerm vpvid', vpvid);
+	var queryvpv = {};
+	queryvpv.deletedAt = {$exists: false};
+	queryvpv.deletedByParent = {$exists: false};
+	queryvpv._id = vpvid;
+	var queryVPV = VisboProjectVersion.find(queryvpv);
+	queryVPV.select('_id vpid variantName timestamp');
+	queryVPV.lean();
+	queryVPV.exec(function (err, listVPV) {
+		if (err) {
+			errorHandler(err, res, 'DB: GET VPV during getVPVwoPerm', 'Error getting Project Versions ');
+			return;
+		}
+		logger4js.debug('VPV getVPVwoPerm: Found VPVs %s ', listVPV && listVPV.length);
+		// set the vpid if not set before to speed up the query for permissions
+		if (!req.query.vpid && listVPV[0]) {
+			req.query.vpid = listVPV[0].vpid;
+		}
+		req.oneVPV = listVPV[0];
 		return next();
 	});
 }
@@ -562,7 +625,7 @@ function getCurrentVPVpfv(req, res, next) {
 		logger4js.debug('VPV getVPVpfv: Found a pfv Version %s ', pfvVPV && pfvVPV._id);
 		req.visboPFV = pfvVPV;
 		var endCalc = new Date();
-		logger4js.debug('Calculate verifyVPV getCurrentVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
+		logger4js.debug('Calculate getCurrentVPVpfv %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
 	});
 }
@@ -851,5 +914,6 @@ module.exports = {
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs,
 	getVCOrganisation: getVCOrganisation,
-	getAllVPVsShort: getAllVPVsShort
+	getAllVPVsShort: getAllVPVsShort,
+	getVPVwoPerm: getVPVwoPerm
 };
