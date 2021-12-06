@@ -1051,7 +1051,7 @@ router.route('/:vpid')
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
-		var vpStatus;
+		var vpStatusNew, vpStatusOrg;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -1063,16 +1063,17 @@ router.route('/:vpid')
 			});
 		}
 
-		if (req.body.vpStatus) {
-			if (constVPStatus.find(element => element == req.body.vpStatus)) {
-				vpStatus = req.body.vpStatus;
-				if (vpStatus != constVPStatus[0] && req.oneVP.vpvCount == 0) {
+		vpStatusNew = req.body.vpStatus;
+		vpStatusOrg = req.oneVP.vpStatus;
+		if (vpStatusNew) {
+			if (constVPStatus.find(element => element == vpStatusNew)) {
+				if (vpStatusNew != constVPStatus[0] && req.oneVP.vpvCount == 0) {
 					return res.status(400).send({
 						state: 'failure',
 						message: 'Project does not have any version, status could not be changed'
 					});
 				}
-				if (vpStatus == 'ordered') {
+				if (vpStatusNew == 'ordered') {
 					var variantIndex = req.oneVP.variant.findIndex(element => element.variantName == 'pfv');
 					if (variantIndex < 0 || req.oneVP.variant[variantIndex].vpvCount <= 0) {
 						return res.status(400).send({
@@ -1084,7 +1085,7 @@ router.route('/:vpid')
 			} else {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Project Body contains invalid value vpStatus'
+					message: 'New vpStatus value not allowed: '.concat(vpStatusNew || '', ':')
 				});
 			}
 		}
@@ -1173,28 +1174,30 @@ router.route('/:vpid')
 			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=='System' && constSystemCustomName.find(element => element == item.name)));
 		}
 		propertyChange = propertyChange || (req.auditProperty.length ? true : false);
-		if (vpStatus && vpStatus != req.oneVP.vpStatus) {
-			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatus));
-			req.oneVP.vpStatus = vpStatus;
+		if (vpStatusNew && vpStatusNew != vpStatusOrg) {
+			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatusNew));
+			req.oneVP.vpStatus = vpStatusNew;
 			statusChange = true;
 		}
 
-		var changeOfVP_PMCommitOK = (req.oneVP.vpStatus == 'proposed') || (req.oneVP.vpStatus == 'ordered');
-		var changeOfVPPropertiesOK = (req.oneVP.vpStatus == 'initialized' || req.oneVP.vpStatus == 'proposed' || req.oneVP.vpStatus == 'ordered');
+		var changeOfVP_PMCommitOK = (vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
+																	|| vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
+		var changeOfVPPropertiesOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
+																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 
 		if (!changeOfVPPropertiesOK && propertyChange) {
-			logger4js.info('PUT Project %s could not update properties because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			logger4js.info('PUT Project %s could not update properties because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Project Properties could not be changed for Status ' + vpStatus
+				message: 'Project Properties could not be changed for Status '.concat(vpStatusOrg, '/', vpStatusNew)
 			});
 		}
 		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
 		if (!changeOfVP_PMCommitOK && changeCommit) {
-			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Project could not be commited by PL for Status ' + vpStatus
+				message: 'Project could not be commited by PL for Status '.concat(vpStatusOrg, '/', vpStatusNew)
 			});
 		}
 		// check duplicate Name
