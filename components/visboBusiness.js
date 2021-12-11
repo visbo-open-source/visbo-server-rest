@@ -24,7 +24,7 @@ function getColumnOfDate(value) {
 		refMonth = d.getFullYear() * 12;
 	}
 	var valueMonth = value.getFullYear() * 12 + value.getMonth();
-	logger4js.trace('Calculate Month Column ref %s value %s diff %s ', refMonth, valueMonth, valueMonth - refMonth);
+	// logger4js.trace('Calculate Month Column ref %s value %s diff %s ', refMonth, valueMonth, valueMonth - refMonth);
 	return valueMonth - refMonth;
 }
 
@@ -2634,7 +2634,8 @@ function reduceVPV(originalVPV, level) {
 			reducedVPV.hierarchy.allNodes = [];
 			allNodes.forEach( node => {
 				var breadCrumb = getBreadCrumb(node.hryNodeKey, hry)
-				if (breadCrumb && breadCrumb.length <= level) {
+				var checkLevel = elemIdIsMilestone(node.hryNodeKey) ? level + 1 : level;
+				if (breadCrumb && breadCrumb.length <= checkLevel) {
 					var newNode = {};
 					newNode.hryNodeKey = node.hryNodeKey;
 					newNode.hryNode = {};
@@ -2642,13 +2643,12 @@ function reduceVPV(originalVPV, level) {
 					newNode.hryNode.origName = node.hryNode.origName;
 					// newNode.hryNode.indexOfElem = node.hryNode.indexOfElem;
 					newNode.hryNode.parentNodeKey = node.hryNode.parentNodeKey;
-					if (breadCrumb.length < level) {
-						newNode.hryNode.childNodeKeys = node.hryNode.childNodeKeys;
-					} else if (breadCrumb.length == level) {
+					newNode.hryNode.childNodeKeys = node.hryNode.childNodeKeys;
+					if (breadCrumb.length == checkLevel) {
 						// only Milestones as Childs
 						newNode.hryNode.childNodeKeys = [];
 						node.hryNode.childNodeKeys.forEach(item => {
-							if (item.indexOf('1§') == 0) {
+							if (elemIdIsMilestone(item)) {
 								logger4js.debug('Add Milestone (Name/Level):', item, breadCrumb.length, breadCrumb);
 								newNode.hryNode.childNodeKeys.push(item)
 							}
@@ -2667,7 +2667,7 @@ function reduceVPV(originalVPV, level) {
 			reducedVPV.AllPhases = [];
 			allPhases.forEach(item => {
 				if (reducedHry[item.name] || (item.name == '0§.§' && reducedHry['0'])) {
-					logger4js.trace('Add Phase to reducedPFV', item.name);
+					logger4js.debug('Add Phase to reducedPFV', item.name);
 					reducedVPV.AllPhases.push(item);
 				}
 			});
@@ -2852,7 +2852,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 	reducedPFV.variantName = 'pfv';
 	if (!ensureValidVPV(reducedPFV)) {
 		logger4js.warn('generated a newPFV is inconsistent');
-		return undefined;
+		// return undefined;
 	}
 
 	if ( oldVPV && reducedPFV  ) {
@@ -3299,8 +3299,8 @@ function aggregateRoles(phase, orgalist){
 			// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole
 			// and the PT will be calculated in the same relation.
 			oneRole.Bedarf = [];
-			var actTagessatz = roleSett.tagessatz;
 			var newTagessatz = orgalist && orgalist[oneRole.RollenTyp] && orgalist[oneRole.RollenTyp].tagessatz;
+			var actTagessatz = roleSett ? roleSett.tagessatz : newTagessatz;
 			var ptFaktor = (newTagessatz && newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
 			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
 				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
