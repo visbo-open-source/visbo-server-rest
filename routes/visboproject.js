@@ -1180,8 +1180,8 @@ router.route('/:vpid')
 			statusChange = true;
 		}
 
-		var changeOfVP_PMCommitOK = (vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
-																	|| vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
+		var changeOfVP_PMCommitOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
+																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 		var changeOfVPPropertiesOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
 																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 
@@ -1195,9 +1195,10 @@ router.route('/:vpid')
 		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
 		if (!changeOfVP_PMCommitOK && changeCommit) {
 			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
+			var detail = vpStatusOrg != vpStatusNew ? vpStatusOrg.concat('/', vpStatusNew) : vpStatusOrg
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Project could not be commited by PL for Status '.concat(vpStatusOrg, '/', vpStatusNew)
+				message: 'Project could not be commited by PL for Status '.concat(detail)
 			});
 		}
 		// check duplicate Name

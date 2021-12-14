@@ -318,7 +318,6 @@ router.route('/')
 	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
 	* @apiParam {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
 	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
-	* @apiParam {String} vpStatus Deliver only versions with the specified status
 	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
 	* @apiParam {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
 	*
@@ -414,9 +413,6 @@ router.route('/')
 		logger4js.trace('Get VPV vpid List %O ', vpidList);
 
 		if (req.query) {
-			if (req.query.vpStatus) {
-				queryvpv.vpStatus = req.query.vpStatus;
-			}
 			if (req.query.refDate && Date.parse(req.query.refDate)){
 				var refDate = new Date(req.query.refDate);
 				queryvpv.timestamp =  req.query.refNext ? {$gt: refDate} : {$lt: refDate};
