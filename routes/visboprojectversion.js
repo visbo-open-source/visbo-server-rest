@@ -16,9 +16,9 @@ var visboBusiness = require('./../components/visboBusiness');
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
-var Const = require('../models/constants');
-var constPermVP = Const.constPermVP;
-var constPermVC = Const.constPermVC;
+var ConstPerm = require('../models/constPerm');
+var constPermVP = ConstPerm.constPermVP;
+var constPermVC = ConstPerm.constPermVC;
 
 var logModule = 'VPV';
 var log4js = require('log4js');

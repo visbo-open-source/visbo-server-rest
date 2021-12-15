@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants');
-var constPermSystem = Const.constPermSystem;
-var constPermVC = Const.constPermVC;
+var ConstPerm = require('../models/constPerm');
+var constPermSystem = ConstPerm.constPermSystem;
+var constPermVC = ConstPerm.constPermVC;
 
 var systemVC = require('./../components/systemVC');
 var verifyVpv = require('./../components/verifyVpv');
@@ -17,7 +17,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var logModule = 'VC';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var VisboPermission = Const.VisboPermission;
+var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of System / VC depending on the case
 function getAllGroups(req, res, next) {

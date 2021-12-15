@@ -8,8 +8,8 @@ var VisboAudit = mongoose.model('VisboAudit');
 var verifyVc = require('./../components/verifyVc');
 var errorHandler = require('./../components/errorhandler').handler;
 
-var Const = require('../models/constants');
-var constPermSystem = Const.constPermSystem;
+var ConstPerm = require('../models/constPerm');
+var constPermSystem = ConstPerm.constPermSystem;
 
 var logModule = 'OTHER';
 var log4js = require('log4js');

@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants');
-var constPermVP = Const.constPermVP;
-var constPermVC = Const.constPermVC;
+var ConstPerm = require('../models/constPerm');
+var constPermVP = ConstPerm.constPermVP;
+var constPermVC = ConstPerm.constPermVC;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
@@ -15,7 +15,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var logModule = 'VPV';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var VisboPermission = Const.VisboPermission;
+var VisboPermission = ConstPerm.VisboPermission;
 
 // Calculate the oneVP if a vpid is specified
 function getOneVP(req, res, next) {

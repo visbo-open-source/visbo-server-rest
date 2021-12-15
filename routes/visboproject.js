@@ -28,9 +28,9 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var Const = require('../models/constants');
-var constPermVC = Const.constPermVC;
-var constPermVP = Const.constPermVP;
+var ConstPerm = require('../models/constPerm');
+var constPermVC = ConstPerm.constPermVC;
+var constPermVP = ConstPerm.constPermVP;
 var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
 var constVPStatus = require('../models/visboproject').constVPStatus;
 
@@ -783,7 +783,7 @@ router.route('/')
 				newVG.name = 'VISBO Project Admin';
 				newVG.groupType = 'VP';
 				newVG.internal = true;
-				newVG.permission = {vp: Const.constPermVPFull };
+				newVG.permission = {vp: ConstPerm.constPermVPFull };
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
@@ -1656,11 +1656,11 @@ router.route('/:vpid/audit')
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & ConstPerm.constPermVPAll;
 			}
 			if (newPerm.vp & constPermVP.View) {
 				// remove View Restricted if View is set
-				newPerm.vp = newPerm.vp & Const.constPermVPFull;
+				newPerm.vp = newPerm.vp & ConstPerm.constPermVPFull;
 			}
 
 			req.auditDescription = 'Project Group Create';
@@ -1846,7 +1846,7 @@ router.route('/:vpid/audit')
 				vgGlobal = req.body.global == true;
 			logger4js.debug('Get Global Flag %s process %s', req.body.global, vgGlobal);
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & ConstPerm.constPermVPAll;
 			}
 
 			logger4js.info('PUT Project Group for userid %s email %s and vc %s group %s perm %O', userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));

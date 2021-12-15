@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-// var Const = require('../models/constants');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;

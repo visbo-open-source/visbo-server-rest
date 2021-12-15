@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants');
-var constPermVP = Const.constPermVP;
+var ConstPerm = require('../models/constPerm');
+var constPermVP = ConstPerm.constPermVP;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -14,7 +14,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var logModule = 'VP';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var VisboPermission = Const.VisboPermission;
+var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of and has VP Permission
 function getAllGroups(req, res, next) {
