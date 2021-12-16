@@ -28,10 +28,10 @@ var VCSetting = mongoose.model('VCSetting');
 var PredictKM = mongoose.model('PredictKM');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var Const = require('../models/constants');
-var constPermVC = Const.constPermVC;
-var constPermVP = Const.constPermVP;
-var constPermSystem = Const.constPermSystem;
+var ConstPerm = require('../models/constPerm');
+var constPermVC = ConstPerm.constPermVC;
+var constPermVP = ConstPerm.constPermVP;
+var constPermSystem = ConstPerm.constPermSystem;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -506,7 +506,7 @@ router.route('/')
 				newVG.groupType = 'VC';
 				newVG.internal = true;
 				newVG.global = true;
-				newVG.permission = {vc: Const.constPermVCAll };
+				newVG.permission = {vc: ConstPerm.constPermVCAll };
 				newVG.vcid = newVC._id;
 				newVG.users = [];
 				newVG.users.push({email: useremail, userId: userId});
@@ -1242,9 +1242,9 @@ router.route('/:vcid/group')
 		var vgGlobal = req.body.global == true;
 		groupType = req.oneVC.system ? 'System' : 'VC';
 		if ( req.body.permission ) {
-			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll;
-			if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll;
-			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+			if (groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & ConstPerm.constPermSystemAll;
+			if (groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & ConstPerm.constPermVCAll;
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & ConstPerm.constPermVPAll;
 		}
 		if (req.body.name) req.body.name = req.body.name.trim();
 
@@ -1466,9 +1466,9 @@ router.route('/:vcid/group/:groupid')
 			vgGlobal = req.body.global == true;
 		logger4js.debug('Get Global Flag %s process %s', req.body.global, vgGlobal);
 		if ( req.body.permission ) {
-			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & Const.constPermSystemAll;
-			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & Const.constPermVCAll;
-			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+			if (req.oneGroup.groupType == 'System') newPerm.system = (parseInt(req.body.permission.system) || undefined) & ConstPerm.constPermSystemAll;
+			if (req.oneGroup.groupType == 'VC' || vgGlobal) newPerm.vc = (parseInt(req.body.permission.vc) || undefined) & ConstPerm.constPermVCAll;
+			if (vgGlobal) newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & ConstPerm.constPermVPAll;
 		}
 
 		logger4js.info('PUT VISBO Center Group for userid %s email %s and vc %s group %s perm %O', userId, useremail, req.params.vcid, req.params.groupid, req.listVCPerm.getPerm(req.params.vcid));
@@ -2387,7 +2387,8 @@ router.route('/:vcid/message')
 				var oldOrga = undefined;
 				if (req.visboOrganisations && req.visboOrganisations.length > 0) {
 					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
-					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
+					// MS TODO: activate this check against to compare against the old Orga
+					// oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
 				}
 				// use validFrom if timestamp is not set and validFrom is set
 				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
