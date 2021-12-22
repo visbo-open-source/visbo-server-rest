@@ -30,6 +30,7 @@ require('./models/visboproject');
 require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcsetting');
+require('./models/vccapacities');
 
 var systemVC = require('./components/systemVC');
 var visboAudit = require('./components/visboAudit');

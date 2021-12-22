@@ -25,8 +25,11 @@ var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VCSetting = mongoose.model('VCSetting');
+var VCCapacity = mongoose.model('VCCapacity');
 var PredictKM = mongoose.model('PredictKM');
 var VisboAudit = mongoose.model('VisboAudit');
+
+var helperOrga = require('./../components/helperOrga');
 
 var ConstPerm = require('../models/constPerm');
 var constPermVC = ConstPerm.constPermVC;
@@ -62,6 +65,9 @@ router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVpv.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
+router.use('/:vcid/organisation', verifyVpv.getVCOrgs);
+// get details for capa per role
+router.use('/:vcid/capa', verifyVpv.getVCOrgs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 
@@ -87,133 +93,6 @@ function squeezeSetting(item, email) {
 			item.value.customUserRoles = item.value.customUserRoles.filter(role => role.userName == email);
 		}
 	}
-}
-
-function generateNewRole(item) {
-	var statusOk = true;
-	var minDate = new Date('0001-01-01T00:00:00.000Z');
-	var maxDate = new Date('2200-01-01');
-	if (!item) {
-		statusOk = false;
-	}
-	var newRole = {};
-	if (item.uid >= 0) {
-		newRole.uid = item.uid;
-	} else {
-		statusOk = false;
-	}
-	if (item.name) {
-		newRole.name = item.name;
-	} else {
-		statusOk = false;
-	}
-	if (item.employeeNr) {
-		newRole.employeeNr = item.employeeNr;
-	}
-	if (item.entryDate) {
-		var entryDate = validate.validateDate(item.entryDate, false);
-		if (entryDate) {
-			entryDate = new Date(entryDate);
-			if (entryDate.getTime() > minDate.getTime()) {
-				newRole.entryDate = new Date(entryDate);
-			}
-		}
-	}
-	if (item.exitDate) {
-		var exitDate = validate.validateDate(item.exitDate, false);
-		if (exitDate) {
-			exitDate = new Date(exitDate);
-			if (exitDate.getTime() < maxDate.getTime()) {
-				newRole.exitDate = new Date(exitDate);
-			}
-		}
-	}
-	if (item.aliases) {
-		newRole.aliases = item.aliases;
-	}
-
-	newRole.subRoleIDs = [];
-	if (item.subRoleIDs && item.subRoleIDs.length > 0) {
-		item.subRoleIDs.forEach(item => newRole.subRoleIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-	}
-	newRole.teamIDs = [];
-	if (item.teamIDs && item.teamIDs.length > 0) {
-		item.teamIDs.forEach(item => newRole.teamIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-	}
-
-	if (item.farbe >= 0) {
-		newRole.farbe = item.farbe;
-	}
-	if (item.isTeam || item.isTeamParent) {
-		newRole.isTeam = item.isTeam;
-	}
-	if (item.tagessatzIntern >= 0) {
-		newRole.tagessatzIntern = item.tagessatzIntern;
-		newRole.tagessatz = item.tagessatzIntern;
-	}
-	if (item.tagessatz >= 0) {
-		newRole.tagessatz = item.tagessatz;
-	}
-	if (item.defaultKapa >= 0) {
-		newRole.defaultKapa = item.defaultKapa;
-	}
-	if (item.defaultDayCapa >= 0) {
-		newRole.defaultDayCapa = item.defaultDayCapa;
-	}
-	if (item.isExternRole) {
-		newRole.isExternRole = item.isExternRole;
-	}
-	if (item.isAggregationRole) {
-		newRole.isAggregationRole = item.isAggregationRole;
-	}
-	if (item.isSummaryRole) {
-		newRole.isSummaryRole = item.isSummaryRole;
-	}
-	if (item.isActDataRelevant) {
-		newRole.isActDataRelevant = item.isActDataRelevant;
-	}
-	if (item.startOfCal) {
-		var startOfCal = validate.validateDate(item.startOfCal, false);
-		if (startOfCal) {
-			startOfCal = new Date(startOfCal);
-			if (startOfCal.getTime() > minDate.getTime()) {
-				newRole.startOfCal = startOfCal;
-			}
-		}
-	}
-	if (item.kapazitaet) {
-		newRole.kapazitaet = item.kapazitaet;
-	}
-	if (!statusOk) newRole = undefined;
-	return newRole;
-}
-
-function generateNewCost(item) {
-	var statusOk = true;
-	if (!item) {
-		statusOk = false;
-	}
-	var newCost = {};
-	if (item.uid >= 0) {
-		newCost.uid = item.uid;
-	} else {
-		statusOk = false;
-	}
-	if (item.name) {
-		newCost.name = item.name;
-	} else {
-		statusOk = false;
-	}
-	if (item.farbe >= 0) {
-		newCost.farbe = item.farbe;
-	}
-	// newCost.subCostIDs = item.subCostIDs || [];
-	newCost.subCostIDs = [];
-	if (item.subCostIDs && item.subCostIDs.length > 0) {
-		item.subCostIDs.forEach(item => newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-	}
-	if (!statusOk) newCost = undefined;
-	return newCost;
 }
 
 // Generates hash using bCrypt
@@ -2057,6 +1936,7 @@ router.route('/:vcid/message')
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
 			var latestOnly = false; 	// as default show all settings
+			var shortList = req.query.shortList == true;
 
 			req.auditDescription = 'VISBO Center Organisation Read';
 			req.auditTTLMode = 1;
@@ -2064,8 +1944,8 @@ router.route('/:vcid/message')
 			logger4js.info('Get VISBO Center Organisation for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			var query = {};
-			if (req.query.refDate && Date.parse(req.query.refDate)){
-				var refDate = new Date(req.query.refDate);
+			if (req.query.refDate != undefined){
+				var refDate = validate.validateDate(req.query.refDate, true);
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				query.timestamp = compare;
 				latestOnly = true;
@@ -2081,7 +1961,7 @@ router.route('/:vcid/message')
 			} else {
 				queryVCSetting.sort({vcid:1, timestamp: -1});
 			}
-			if (req.query.shortList) {
+			if (shortList) {
 				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
 			} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
 				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
@@ -2094,6 +1974,9 @@ router.route('/:vcid/message')
 						return;
 					}
 					logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
+					if (VCSetting && !shortList) {
+						helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
+					}
 					req.auditInfo = VCSetting ? 1 : 0;
 					return res.status(200).send({
 						state: 'success',
@@ -2260,6 +2143,12 @@ router.route('/:vcid/message')
 				if (!isSysAdmin) {
 					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level == 2);
 				}
+				// join the capacity to the orga if it is available
+				listVCSettingfiltered.forEach(setting => {
+					if (setting.type == 'organisation') {
+						helperOrga.joinCapacity(setting, req.visboVCCapacity);
+					}
+				});
 				req.auditInfo = listVCSettingfiltered.length;
 				return res.status(200).send({
 					state: 'success',
@@ -2368,27 +2257,22 @@ router.route('/:vcid/message')
 			var newTimeStamp = req.body.timestamp;
 			if (vcSetting.type == 'organisation') {
 				// normalize the organisaion to defined values
-				var value = req.body.value;
-				var orga = {};
-				orga.allRoles = [];
-				value.allRoles.forEach(item => {
-					var newRole = generateNewRole(item);
-					orga.allRoles.push(newRole);
-				});
-
-				orga.allCosts = [];
-				value.allCosts.forEach(item => {
-					var newCost = generateNewCost(item);
-					orga.allCosts.push(newCost);
-				});
-
-				orga.validFrom = new Date(value.validFrom);
+				var errorList = [];
+				var orga = helperOrga.initOrga(req.body.value, errorList);
+				if (!orga) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Incorrect Information in organisation',
+						organisation: orga,
+						error: errorList
+					});
+				}
 
 				var oldOrga = undefined;
 				if (req.visboOrganisations && req.visboOrganisations.length > 0) {
 					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
-					// MS TODO: activate this check against to compare against the old Orga
-					// oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
+					// MS TODO: activate this check again to compare against the old Orga
+					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
 				}
 				// use validFrom if timestamp is not set and validFrom is set
 				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
@@ -2398,7 +2282,7 @@ router.route('/:vcid/message')
 				newTimeStamp.setHours(0,0,0,0);
 				orga.validFrom = newTimeStamp;
 				logger4js.debug('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
-				if (!visboBusiness.verifyOrganisation(orga, oldOrga)) {
+				if (!helperOrga.verifyOrga(orga, oldOrga)) {
 					return res.status(400).send({
 						state: 'failure',
 						message: 'Incorrect Information in organisation',
@@ -2725,23 +2609,16 @@ router.route('/:vcid/message')
 			} else {
 				if (req.oneVCSetting.type == 'organisation' && req.body.value) {
 					// normalize the organisaion to defined values
-					var value = req.body.value;
-					var orga = {};
-					orga.allRoles = [];
-					value.allRoles.forEach(item => {
-						var newRole = generateNewRole(item);
-						orga.allRoles.push(newRole);
-					});
+					var orga = helperOrga.initOrga(req.body.value);
+					if (!orga) {
+						return res.status(400).send({
+							state: 'failure',
+							message: 'Incorrect Information in organisation',
+							organisation: orga
+						});
+					}
 
-					orga.allCosts = [];
-					value.allCosts.forEach(item => {
-						var newCost = generateNewCost(item);
-						orga.allCosts.push(newCost);
-					});
-
-					orga.validFrom = value.validFrom;
-
-					if (!visboBusiness.verifyOrganisation(orga, req.oneVCSetting)) {
+					if (!helperOrga.verifyOrga(orga, req.oneVCSetting)) {
 						return res.status(400).send({
 							state: 'failure',
 							message: 'Incorrect Information in organisation',
@@ -2921,9 +2798,9 @@ router.route('/:vcid/message')
 
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, hierarchy, onlyPT);
 			}
 
 			var filteredCapacity = [];
@@ -2959,7 +2836,354 @@ router.route('/:vcid/message')
 					capacity: filteredCapacity
 				} ]
 			});
+		})
+
+	router.route('/:vcid/capa')
+
+	/**
+		* @api {get} /vc/:vcid/capa Get all capacities of persons
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName GetVISBOCenterCapa
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all capa records of the specified VISBO Center there the user has permission to.
+		*
+		* With additional query paramteters the amount of settings can be restricted. Available Restirctions are: roleID.
+		*
+		* @apiParam {Number} roleID only capa values for a specific user
+		* @apiParam {Date} startOfYear only capa values for this date or later
+		*
+		* @apiPermission Authenticated and VC.View & (VC.Audit || VC.Modify) Permission for the VISBO Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View the VISBO Center Capacities
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/capa
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Settings',
+		*   'vcsetting':[{
+		*     '_id':'vcsetting5c754feaa',
+		*     'vcid': 'vc5c754feaa',
+		*     'name':'Setting Name',
+		*     'userId': 'us5c754feab',
+		*     'type': 'Type of Setting',
+		*     'timestamp': '2018-12-01',
+		*     'value': {'any name': 'any value'}
+		*   }]
+		* }
+		*/
+
+	// get VC Capa
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+
+			req.auditDescription = 'VISBO Center User Capacity Read';
+			req.auditTTLMode = 1;
+
+			logger4js.info('Get VISBO Center User Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+			var query = {};
+			query.vcid = req.oneVC._id;
+			var roleID = validate.validateNumber(req.query.roleID, false);
+			if (roleID >= 0) {
+				query.roleID = roleID;
+			}
+
+			var queryVCCapacity = VCCapacity.find(query);
+			queryVCCapacity.sort('roleID startOfYear');
+			queryVCCapacity.lean();
+			queryVCCapacity.exec(function (err, listVCCapacity) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				req.auditInfo = listVCCapacity.length;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Center User Capacities',
+					count: listVCCapacity.length,
+					capacity: listVCCapacity
+				});
+			})
+		})
+
+	/**
+		* @api {post} /vc/:vcid/capa Create Capacity Entry for OrgaUnit of Visbo Center
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName CreateVISBOCenterCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Creates a new capacity entry for an organization unit for a calendar year.
+		* A roleID and the startOfYear must be specified.
+		*
+		* @apiPermission Authenticated and VC.View and VC.Modify for the VISBO Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to create capacity for the VISBO Center
+		* @apiError {number} 400 Unknown roleID or no valid startOfYear
+		* @apiError {number} 409 No Organisation configured in the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/capa
+		* {
+ 	  *  'roleID': 11,
+ 	  *  'startOfYear': '2021-01-01',
+		*  'capaPerMonth': [10, 12, 8]
+ 	  * }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Successfully created new capacity definition',
+		*   'capacity':[{
+		*     '_id':'vccapa5c754feaa',
+		*     'roleID': 11,
+		*     'startOfYear': '2021-01-01T00:00:00.000Z'
+		*     'capaPerMonth': [10, 12, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		*   }]
+		* }
+		*/
+
+// post VC Capacity
+	.post(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+
+		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
+
+		req.auditDescription = 'VISBO Center Capacity Create';
+		logger4js.info('Post VISBO Center Capacity for userid %s email %s and vc %s RoleID %s', userId, useremail, req.params.vcid, roleID);
+
+		if ((perm.vc & constPermVC.Modify) == 0) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to create Capacity',
+				perm: perm
+			});
+		}
+
+		var roleID = validate.validateNumber(req.body.roleID, false);
+		var startOfYear = validate.validateDate(req.body.startOfYear, true, true);
+		if (!startOfYear || roleID == undefined) {
+			logger4js.debug('Post a new VISBO Center Capacity body not accepted %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid capacity definition'
+			});
+		}
+		startOfYear.setMonth(0);
+		startOfYear.setDate(1);
+		startOfYear.setHours(0, 0, 0, 0);
+
+		if (!req.visboOrganisations) {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'No VISBO Center Organisation',
+				perm: perm
+			});
+		}
+
+		// check if roleID is defined in the latest organisation
+		var allRoles = req.visboOrganisations[0].value.allRoles;
+		var role = allRoles.find(role => role.uid == roleID);
+		if (!role || role.isSummaryRole || role.isTeam) {
+			return res.status(400).send({
+				state: 'failure',
+				message: `RoleID ${roleID} unknonw in actual Organisation`,
+				perm: perm
+			});
+		}
+
+		var newCapacity = new VCCapacity();
+		newCapacity.vcid = req.oneVC._id;
+		newCapacity.roleID = roleID;
+		newCapacity.startOfYear = startOfYear;
+		newCapacity.capaPerMonth = [];
+
+		if (!req.body.capaPerMonth || req.body.capaPerMonth.length != 12) {
+			return res.status(400).send({
+				state: 'failure',
+				message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`,
+				perm: perm
+			});
+		}
+		req.body.capaPerMonth.forEach(item => {
+			var capaPerMonth = validate.validateNumber(item, true)
+			if (newCapacity.capaPerMonth.length < 12) {
+				newCapacity.capaPerMonth.push(capaPerMonth);
+			}
 		});
+
+		logger4js.debug('Save VISBO Center Capacity %s %s %s', newCapacity.vcid, newCapacity.roleID, newCapacity.startOfCal);
+		newCapacity.save(function(err, capacity) {
+			if (err) {
+				errorHandler(err, res, `DB: POST VC Capacity ${req.oneVC._id} Save`, `Failed to create VISBO Center Capacity ${req.oneVC._id}`);
+				return;
+			}
+
+			req.auditInfo = '';
+			return res.status(200).send({
+				state: 'success',
+				message: 'Successfully created new capacity definition',
+				capacity: [ capacity ]
+			});
+		});
+	});
+
+router.route('/:vcid/capa/:capaid')
+/**
+	* @api {put} /vc/:vcid/capa/:capaid Update a User capacity
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Center Properties
+	* @apiName UpdateVISBOCenterUserCapacity
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Updates the capaPerMonth for a specific roleID and calendar year
+	*
+	* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to Update a VISBO Center User Capacity
+	* @apiError {number} 409 VISBO Center User Capacity does not exists
+	*
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vc/:vcid/capa/:capaid
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'VISBO Center User Capacity updated'
+	* }
+	*/
+// Update VISBO Center User Capa
+.put(function(req, res) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+
+	req.auditDescription = 'VISBO Center User Capacicty Update';
+	req.auditInfo = '';
+
+	var reqPermVC = constPermVC.View + constPermVC.Modify;
+	if ((req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC) != reqPermVC) {
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to update VISBO Center User Capacity',
+			perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+		});
+	}
+	if (!req.body.capaPerMonth || req.body.capaPerMonth.length != 12) {
+		return res.status(400).send({
+			state: 'failure',
+			message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`,
+			perm: perm
+		});
+	}
+
+	var query = {};
+	query.vcid = req.oneVC._id;
+	query._id = req.params.capaid;
+	var queryVCCapa = VCCapacity.findOne(query);
+	queryVCCapa.exec(function (err, capa) {
+		if (err) {
+			errorHandler(err, res, `DB: Get VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
+			return;
+		}
+		if (capa) {
+			req.auditInfo = capa.roleID.toString().concat(' / ', capa.startOfYear.toISOString().substr(0, 10));
+			capa.capaPerMonth = [];
+			req.body.capaPerMonth.forEach(item => {
+				capa.capaPerMonth.push(validate.validateNumber(item, true));
+			});
+			capa.save(function(err, oneCapa) {
+				if (err) {
+					errorHandler(err, res, `DB: Update VC User Capacity ${req.params.capaid} Update`, `Error updating VISBO Center User Capacity ${req.params.capaid}`);
+					return;
+				}
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated VISBO Center User Capacity',
+					capacity: [oneCapa]
+				});
+			});
+		} else {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'VISBO Center User Capacity does not exists',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+	})
+
+})
+
+	/**
+		* @api {delete} /vc/:vcid/capa/:capaid Delete a User capacity
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName DeleteVISBOCenterUserCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes a specific user capacity for a specific roleID and calendar year
+		*
+		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a VISBO Center User Capacity
+		* @apiError {number} 409 VISBO Center User Capacity does not exists
+		*
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/capa/:capaid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'VISBO Center User Capacity deleted'
+		* }
+		*/
+	// Delete VISBO Center User Capa
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+
+		req.auditDescription = 'VISBO Center User Capacity Delete';
+		req.auditInfo = '';
+
+		logger4js.info('DELETE VISBO Center User Capacity for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.capaid);
+
+		var reqPermVC = constPermVC.View + constPermVC.Modify;
+		if ((req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC) != reqPermVC) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to delete VISBO Center User Capacity',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+		var query = {};
+		query.vcid = req.oneVC._id;
+		query._id = req.params.capaid;
+		var queryVCCapa = VCCapacity.findOne(query);
+		queryVCCapa.exec(function (err, capa) {
+			if (err) {
+				errorHandler(err, res, `DB: GET VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
+				return;
+			}
+			if (capa) {
+				req.auditInfo = capa.roleID.toString().concat(' / ', capa.startOfYear.toISOString().substr(0, 10));
+				capa.remove(function(err) {
+					if (err) {
+						errorHandler(err, res, `DB: DELETE VC User Capacity ${req.params.capaid} Delete`, `Error deleting VISBO Center User Capacity ${req.params.capaid}`);
+						return;
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Deleted VISBO Center User Capacity'
+					});
+				});
+			} else {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'VISBO Center User Capacity does not exists',
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
+			}
+		})
+	})
 
 router.route('/:vcid/predict')
 
@@ -3102,7 +3326,5 @@ router.route('/:vcid/predict')
 			});
 		});
 	})
-
-
 
 module.exports = router;

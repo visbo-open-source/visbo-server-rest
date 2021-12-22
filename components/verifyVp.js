@@ -352,6 +352,7 @@ function getVPOrgs(req, res, next) {
 	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
 
 	let skip = true;
+	let withCapa = false;
 	if (req.method == 'POST' && baseUrl == '/vp') {	// create VP request
 		if (req.query.vpid) { // with a VP Template that requires keyMetrics calculation
 			skip = false;
@@ -368,7 +369,7 @@ function getVPOrgs(req, res, next) {
 			message: 'No VISBO Center specified'
 		});
 	}
-	verifyVpv.getVCOrganisation(req.body.vcid, req, res, next);
+	verifyVpv.getVCOrganisation(req.body.vcid, withCapa, req, res, next);
 }
 
 

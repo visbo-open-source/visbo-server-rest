@@ -151,7 +151,7 @@ function convertCustomFieldDouble(customFieldDouble) {
 	if (customFieldDouble) {
 		customFieldDouble.forEach(item => {
 			if (!validateName(item.name, false)
-			|| !validateNumber(item.value, true)) {
+			|| validateNumber(item.value, true) == undefined) {
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -818,10 +818,8 @@ router.route('/')
 
 							// calculate scale factor if possible
 							var scaleFactor = 1;
-							var bac = 0;
-							if (req.body.bac) {
-								bac = validate.validateNumber(req.body.bac);
-							}
+							var bac = validate.validateNumber(req.body.bac, true);
+
 							// Transform Start & End Date & Budget
 							var startDate = new Date();
 							if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -861,7 +859,7 @@ router.route('/')
 							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
-							if (req.body.rac && validate.validateNumber(req.body.rac)) {
+							if (req.body.rac && validate.validateNumber(req.body.rac) != undefined ) {
 								newVPV.Erloes = req.body.rac;
 							}
 							newVPV.status = undefined;
@@ -2695,7 +2693,7 @@ router.route('/:vpid/variant/:vid')
 
 router.route('/:vpid/portfolio')
 /**
-	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
+	* @api {get} /vp/:vpid/portfolio Get Portfolio Lists
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName GetPortfolio
@@ -2723,7 +2721,7 @@ router.route('/:vpid/portfolio')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Returned Portfolio Lists',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -2750,7 +2748,7 @@ router.route('/:vpid/portfolio')
 	*   }]
   * }
 	*/
-// Get Portfolio Versions
+// Get Portfolio Lists
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 
@@ -2793,7 +2791,7 @@ router.route('/:vpid/portfolio')
 		}
 		query.deletedAt = {$exists: checkDeleted};
 
-		logger4js.debug('Get Portfolio Version for user %s with query parameters %O', userId, query);
+		logger4js.debug('Get Portfolio Lists for user %s with query parameters %O', userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
 		if (req.query.refNext)
@@ -2826,7 +2824,7 @@ router.route('/:vpid/portfolio')
 				verifyVp.squeezePortfolio(listVPFfiltered);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Portfolios',
+					message: 'Returned Portfolio Lists',
 					count: listVPFfiltered.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
@@ -2836,7 +2834,7 @@ router.route('/:vpid/portfolio')
 				verifyVp.squeezePortfolio(req, listVPF);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Portfolios',
+					message: 'Returned Portfolio Lists',
 					count: listVPF.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
@@ -2847,7 +2845,7 @@ router.route('/:vpid/portfolio')
 	})
 
 /**
-	* @api {post} /vp/:vpid/portfolio Create a Portfolio Version
+	* @api {post} /vp/:vpid/portfolio Create a Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName CreatePortfolio
@@ -3011,7 +3009,7 @@ router.route('/:vpid/portfolio')
 				updateVPFCount(req.oneVPF.vpid, variantName, 1);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Created Portfolio Version',
+					message: 'Created Portfolio List',
 					vpf: [onePortfolio]
 				});
 			});
@@ -3020,12 +3018,12 @@ router.route('/:vpid/portfolio')
 
 router.route('/:vpid/portfolio/:vpfid')
 /**
-	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
+	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName GetVISBOPortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Project
+	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Lists in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
 	* @apiParam (Parameter) {Boolean} [deletedVPF=false]  Request Deleted VPFs, only allowed for users with DeleteVP Permission.
@@ -3039,7 +3037,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Returned Portfolio Lists',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -3066,7 +3064,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
-// Get specific portfolio version
+// Get specific portfolio list
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		var isSysAdmin = req.query.sysadmin ? true : false;
@@ -3075,7 +3073,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
-		logger4js.trace('Get Portfolio Versions');
+		logger4js.trace('Get Portfolio Lists');
 		var query = {};
 		query._id = req.params.vpfid;
 		query.vpid = req.oneVP._id;
@@ -3101,7 +3099,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			verifyVp.squeezePortfolio(req, listVPF);
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Portfolio',
+				message: 'Returned Portfolio Lists',
 				vpid: req.oneVP._id,
 				name: req.oneVP.name,
 				vpf: listVPF
@@ -3110,15 +3108,15 @@ router.route('/:vpid/portfolio/:vpfid')
 	})
 
 /**
-	* @api {put} /vp/:vpid/portfolio/:vpfid Update Portfolio Version
+	* @api {put} /vp/:vpid/portfolio/:vpfid Update Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName UpdateVISBOPortfolio
-	* @apiDescription Put updates a specific Portfolio Version can also be used for undelete
+	* @apiDescription Put updates a specific Portfolio List can also be used for undelete
 	* the system checks if the user has VP.Modify permission to the Project and in case of Undelete the user needs to have the VP.Delete Permission.
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
-	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
+	* @apiError {number} 400 not allowed to change Portfolio List or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Un-Delete Portfolio
 	* @apiExample Example usage:
@@ -3127,7 +3125,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Updated Portfolio List',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -3154,7 +3152,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
-// Update Portfolio Version including undelete
+// Update Portfolio List including undelete
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -3269,11 +3267,11 @@ router.route('/:vpid/portfolio/:vpfid')
 	})
 
 /**
-	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
+	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName DeleteVISBOPortfolio
-	* @apiDescription Deletes a specific Portfolio List Version
+	* @apiDescription Deletes a specific Portfolio List
 	* the user needs to have Delete Project Permission to the Project
 	* @apiHeader {String} access-key User authentication token.
 	*
@@ -3288,11 +3286,11 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Portfolio Version',
+	*   'message':'Deleted Portfolio List',
 	*   'vp': [vpList]
 	* }
 	*/
-// Delete Portfolio Version
+// Delete Portfolio List
 	.delete(function(req, res) {
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
@@ -3352,7 +3350,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				logger4js.warn('VP Portfolio List Delete no Permission %s %s', req.params.vpid, variantName);
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No permission to delete Portfolio List Version'
+					message: 'No permission to delete Portfolio List'
 				});
 			}
 			oneVPF.deletedAt = new Date();
@@ -3380,7 +3378,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiGroup VISBO Project Properties
 		* @apiName GetVISBOPortfolioCapacity
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version.
+		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio List.
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
 		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
@@ -3480,9 +3478,9 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, hierarchy, onlyPT);
 			}
 
 			req.auditInfo = '';

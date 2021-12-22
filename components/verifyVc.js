@@ -286,10 +286,20 @@ function checkVCOrgs(req, res, next) {
 	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
 		// User does a POST of a setting, check if it is an organisation
 		if (req.body.type == 'organisation') {
-			logger4js.debug('Check old Organisation');
-			verifyVpv.getVCOrganisation(req.oneVC._id, req, res, next);
+			logger4js.debug('Check old Organisation without Capacity');
+			verifyVpv.getVCOrganisation(req.oneVC._id, false, req, res, next);
 		} else {
 			logger4js.debug('No POST Setting', req.method, 'urlComponent', urlComponent);
+			return next();
+		}
+	} else if ((req.method == 'GET')
+	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
+		// User does a POST of a setting, check if it is an organisation
+		if (req.originalUrl.indexOf('type=organisation') >= 0) {
+			logger4js.debug('Get Organisation with Capacity');
+			verifyVpv.getVCOrganisation(req.oneVC._id, true, req, res, next);
+		} else {
+			logger4js.debug('No GET Setting of organisation', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
 	} else {

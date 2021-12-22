@@ -8,6 +8,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VCSetting = mongoose.model('VCSetting');
+var VCCapacity = mongoose.model('VCCapacity');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -73,7 +74,7 @@ function getAllVPVGroups(req, res, next) {
 	// independent of the delete Flag the VP (or the related groups) must be undeleted
 	query.deletedByParent = {$exists: false};
 	if (!validate.validateObjectId(req.query.vcid, true) || !validate.validateObjectId(req.query.vpid, true)) {
-		logger4js.warn('VC Bad Query Parameter vcid %s vpid %s', req.query.vcid, req.query.vpid);
+		logger4js.info('VC Bad Query Parameter vcid %s vpid %s', req.query.vcid, req.query.vpid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Parameter for VISBO Center / Project'
@@ -233,7 +234,7 @@ function getVPV(req, res, next, vpvid) {
 	var startCalc = new Date();
 
 	if (!validate.validateObjectId(vpvid, false)) {
-		logger4js.warn('VPV Bad Parameter vpvid %s', vpvid);
+		logger4js.info('VPV Bad Parameter vpvid %s', vpvid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Project Version'
@@ -319,7 +320,8 @@ function getVPV(req, res, next, vpvid) {
 			var endCalc = new Date();
 			logger4js.debug('Calculate getVPV with VP %s ms ', endCalc.getTime() - startCalc.getTime());
 			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
-				getVCOrganisation(oneVP.vcid, req, res, next);
+				var withCapa = urlComponent[2] == 'capacity';
+				getVCOrganisation(oneVP.vcid, withCapa, req, res, next);
 			} else {
 				return next();
 			}
@@ -345,7 +347,7 @@ function getPortfolioVPs(req, res, next) {
 	// get the VP List of a VPF
 	logger4js.debug('Generate Project List of Portfolio for user %s for url %s', req.decoded.email, req.url);
 	if (!validate.validateObjectId(vpfid, false)) {
-		logger4js.warn('VC Bad Query Parameter vpfid %s ', vpfid);
+		logger4js.info('VC Bad Query Parameter vpfid %s ', vpfid);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No valid Parameter for Portfolio Version'
@@ -402,7 +404,7 @@ function getPortfolioVPs(req, res, next) {
 	});
 }
 
-// Get the organisations for keyMetrics calculation
+// Get the organisations for calculation
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -410,32 +412,39 @@ function getVCOrgs(req, res, next) {
 	// or in case of capacity calculation
 
 	let skip = true;
+	let withCapa = false;
 	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
 		skip = false;
 	}
-	if (req.method == 'GET' && urlComponent.findIndex(comp => comp == 'capacity') >= 0) {
+	if (urlComponent.findIndex(comp => comp.indexOf('capa') == 0) >= 0) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
 		} else if (req.oneVP) {
 			req.oneVCID = req.oneVP.vcid;
 		}
 		skip = false;
+		withCapa = true;
+	}
+	if (urlComponent.findIndex(comp => comp == 'organisation') >= 0) {
+		skip = false;
+		withCapa = true;
 	}
 	if (skip) {
 		return next();
 	}
 
-	if (!req.oneVCID) {
+	let vcid = req.oneVC?._id || req.oneVCID;
+	if (!vcid) {
 		logger4js.warn('No VISBO Center identified');
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No VISBO Center or Organization'
+			message: 'No VISBO Center'
 		});
 	}
-	getVCOrganisation(req.oneVCID, req, res, next);
+	getVCOrganisation(vcid, withCapa, req, res, next);
 }
 
-function getVCOrganisation(vcid, req, res, next) {
+function getVCOrganisation(vcid, withCapa, req, res, next) {
 	logger4js.debug('VPV getVCOrgs organization for VCID %s', vcid);
 	var startCalc = new Date();
 	var query = {};
@@ -455,15 +464,34 @@ function getVCOrganisation(vcid, req, res, next) {
 			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 			return;
 		}
+		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
 		if (listVCSetting.length > 0) {
 			req.visboOrganisations = listVCSetting;
-			for (var i = 0; i < listVCSetting.length; i++) {
-				logger4js.debug('getVCOrgs: Organisations(%d) found: id: %s, name %s, type %s vcid: %s', i, listVCSetting[i]._id, listVCSetting[i].name, listVCSetting[i].type, listVCSetting[i].vcid);
-			}
 		}
-		var endCalc = new Date();
-		logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
-		return next();
+		if (withCapa) {
+			var query = {};
+			query.vcid = vcid;
+			var queryVCCapacity = VCCapacity.find(query);
+			queryVCCapacity.sort('vcid roleID startOfYear');
+			queryVCCapacity.lean();
+			queryVCCapacity.exec(function (err, listVCCapacity) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC Capacity ${req.oneVC._id} Find`, `Error getting Capacity for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				logger4js.debug('getVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
+				if (listVCCapacity.length > 0) {
+					req.visboVCCapacity = listVCCapacity;
+				}
+				var endCalc = new Date();
+				logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+				return next();
+			});
+		} else {
+			var endCalc = new Date();
+			logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+			return next();
+		}
 	});
 }
 
@@ -482,7 +510,7 @@ function getVPVpfv(req, res, next) {
 	// check that vpid is present and is a valid ObjectID
 	if (!validate.validateObjectId(vpid, false)
 	|| !validate.validateDate(timestamp, true)) {
-		logger4js.warn('Get VPV mal formed or missing vpid %s or timestamp %s', vpid, timestamp);
+		logger4js.info('Get VPV mal formed or missing vpid %s or timestamp %s', vpid, timestamp);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Project ID missing'
@@ -594,7 +622,7 @@ function getCurrentVPVpfv(req, res, next) {
 	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
-		logger4js.warn('GET VPF for VPV mal formed timestamp %s', timestamp);
+		logger4js.info('GET VPF for VPV mal formed timestamp %s', timestamp);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Timestamp not recognised'
@@ -640,7 +668,7 @@ function getVPFVPVs(req, res, next) {
 	var nowDate = new Date();
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
-		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
+		logger4js.info('Get VC Capacity mal formed query parameter %O ', req.query);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
@@ -720,7 +748,7 @@ function getVPFVPVs(req, res, next) {
 			}
 			req.auditInfo = listVPV.length;
 			req.listVPV = listVPV;
-			logger4js.debug('Found %d Project Version for VC Calculation ', vpvidsList.length);
+			logger4js.debug('Found %d Project Version for Portfolio Calculation ', vpvidsList.length);
 			return next();
 		});
 	});
@@ -740,7 +768,7 @@ function getVPFPFVs(req, res, next) {
 		return next();
 	}
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
-		logger4js.warn('Get VPF Capacity mal formed query parameter %O ', req.query);
+		logger4js.info('Get VPF Capacity mal formed query parameter %O ', req.query);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
@@ -826,7 +854,7 @@ function getVCVPVs(req, res, next) {
 	var vcvpids = [];
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
-		logger4js.warn('Get VC Capacity mal formed query parameter %O ', req.query);
+		logger4js.info('Get VC Capacity mal formed query parameter %O ', req.query);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
