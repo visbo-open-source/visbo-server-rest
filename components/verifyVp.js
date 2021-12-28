@@ -8,6 +8,7 @@ var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
+var verifyVc = require('./../components/verifyVc');
 var verifyVpv = require('./../components/verifyVpv');
 var errorHandler = require('./../components/errorhandler').handler;
 
@@ -369,7 +370,7 @@ function getVPOrgs(req, res, next) {
 			message: 'No VISBO Center specified'
 		});
 	}
-	verifyVpv.getVCOrganisation(req.body.vcid, withCapa, req, res, next);
+	verifyVc.getVCOrganisation(req.body.vcid, withCapa, req, res, next);
 }
 
 

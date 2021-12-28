@@ -8,6 +8,7 @@ var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
+var verifyVc = require('./../components/verifyVc');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
 var verifyVpv = require('./../components/verifyVpv');
@@ -427,7 +428,7 @@ router.param('groupid', verifyVg.getGroupId);
 router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
 router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
-router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVc.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFPFVs);

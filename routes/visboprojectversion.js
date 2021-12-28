@@ -36,7 +36,7 @@ router.use('/:vpvid', verifyVpv.getAllVPVsShort);
 // register the middleware to collect get the related VP if required
 router.use('/', verifyVpv.getOneVP);
 // register the organisation middleware to get the related organisation
-router.use('/', verifyVpv.getVCOrgs);
+router.use('/', verifyVc.getVCOrgs);
 // register the base line middleware to get the related base line version
 router.use('/', verifyVpv.getVPVpfv);
 

@@ -7,8 +7,8 @@ var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboGroup = mongoose.model('VisboGroup');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
-var VCSetting = mongoose.model('VCSetting');
-var VCCapacity = mongoose.model('VCCapacity');
+
+var verifyVc = require('./../components/verifyVc');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -321,7 +321,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Calculate getVPV with VP %s ms ', endCalc.getTime() - startCalc.getTime());
 			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
 				var withCapa = urlComponent[2] == 'capacity';
-				getVCOrganisation(oneVP.vcid, withCapa, req, res, next);
+				verifyVc.getVCOrganisation(oneVP.vcid, withCapa, req, res, next);
 			} else {
 				return next();
 			}
@@ -401,97 +401,6 @@ function getPortfolioVPs(req, res, next) {
 		var endCalc = new Date();
 		logger4js.debug('Calculate getPortfolioVPs %s ms', endCalc.getTime() - startCalc.getTime());
 		return next();
-	});
-}
-
-// Get the organisations for calculation
-function getVCOrgs(req, res, next) {
-	var baseUrl = req.originalUrl.split('?')[0];
-	var urlComponent = baseUrl.split('/');
-	// fetch the organization in case of POST VPV to calculate keyMetrics
-	// or in case of capacity calculation
-
-	let skip = true;
-	let withCapa = false;
-	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
-		skip = false;
-	}
-	if (urlComponent.findIndex(comp => comp.indexOf('capa') == 0) >= 0) {
-		if ( req.oneVC ) {
-			req.oneVCID = req.oneVC._id;
-		} else if (req.oneVP) {
-			req.oneVCID = req.oneVP.vcid;
-		}
-		skip = false;
-		withCapa = true;
-	}
-	if (urlComponent.findIndex(comp => comp == 'organisation') >= 0) {
-		skip = false;
-		withCapa = true;
-	}
-	if (skip) {
-		return next();
-	}
-
-	let vcid = req.oneVC?._id || req.oneVCID;
-	if (!vcid) {
-		logger4js.warn('No VISBO Center identified');
-		return res.status(400).send({
-			state: 'failure',
-			message: 'No VISBO Center'
-		});
-	}
-	getVCOrganisation(vcid, withCapa, req, res, next);
-}
-
-function getVCOrganisation(vcid, withCapa, req, res, next) {
-	logger4js.debug('VPV getVCOrgs organization for VCID %s', vcid);
-	var startCalc = new Date();
-	var query = {};
-	query.vcid = vcid;
-	query.type = 'organisation';
-
-	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
-	var queryVCSetting = VCSetting.find(query);
-	// do not get the big capa array, to reduce load, it is not necessary to get in case of keyMetrics calculation
-	if (req.method == 'POST' || req.method == 'PUT') {
-		queryVCSetting.select('-value.allRoles.kapazitaet');
-	}
-	queryVCSetting.sort('+timestamp');
-	queryVCSetting.lean();
-	queryVCSetting.exec(function (err, listVCSetting) {
-		if (err) {
-			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
-			return;
-		}
-		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
-		if (listVCSetting.length > 0) {
-			req.visboOrganisations = listVCSetting;
-		}
-		if (withCapa) {
-			var query = {};
-			query.vcid = vcid;
-			var queryVCCapacity = VCCapacity.find(query);
-			queryVCCapacity.sort('vcid roleID startOfYear');
-			queryVCCapacity.lean();
-			queryVCCapacity.exec(function (err, listVCCapacity) {
-				if (err) {
-					errorHandler(err, res, `DB: GET VC Capacity ${req.oneVC._id} Find`, `Error getting Capacity for VISBO Center ${req.oneVC.name}`);
-					return;
-				}
-				logger4js.debug('getVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
-				if (listVCCapacity.length > 0) {
-					req.visboVCCapacity = listVCCapacity;
-				}
-				var endCalc = new Date();
-				logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
-				return next();
-			});
-		} else {
-			var endCalc = new Date();
-			logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
-			return next();
-		}
 	});
 }
 
@@ -934,14 +843,12 @@ module.exports = {
 	getVCGroups: getVCGroups,
 	getVPV: getVPV,
 	getPortfolioVPs: getPortfolioVPs,
-	getVCOrgs: getVCOrgs,
 	getVPVpfv: getVPVpfv,
 	getCurrentVPVpfv: getCurrentVPVpfv,
 	getVPFVPVs: getVPFVPVs,
 	getVPFPFVs: getVPFPFVs,
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs,
-	getVCOrganisation: getVCOrganisation,
 	getAllVPVsShort: getAllVPVsShort,
 	getVPVwoPerm: getVPVwoPerm
 };
