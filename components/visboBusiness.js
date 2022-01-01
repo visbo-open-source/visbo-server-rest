@@ -3299,9 +3299,10 @@ function aggregateRoles(phase, orgalist){
 			// therefore it will be considered the relation between tagessatz of each person versus the tagessatz of the summaryRole
 			// and the PT will be calculated in the same relation.
 			oneRole.Bedarf = [];
-			var actTagessatz = roleSett.tagessatz;
+			var actTagessatz = roleSett ? roleSett.tagessatz : undefined;
 			var newTagessatz = orgalist && orgalist[oneRole.RollenTyp] && orgalist[oneRole.RollenTyp].tagessatz;
-			var ptFaktor = (newTagessatz && newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
+			logger4js.warn( 'rolesett-Tagessatz of %s parent-Tagessatz %s', actTagessatz, newTagessatz);
+			var ptFaktor = (actTagessatz && newTagessatz && newTagessatz !== 0) ? actTagessatz/newTagessatz : 1;
 			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
 				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);
 			}

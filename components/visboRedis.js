@@ -17,7 +17,7 @@ function VisboRedisInit(host, port) {
 
 	host = host || currentHost;
 	port = port || currentPort;
-	// logger4js.info('Redis Client Setup Host %s:%d', host, port);
+	//logger4js.info('Redis Client Setup Host %s:%d', host, port);
 
 	if (redisClient) {
 		// redis Client already initialised check if host or port Changes
@@ -33,6 +33,7 @@ function VisboRedisInit(host, port) {
 		logger4js.trace('Redis Client  Init');
 		currentHost = host;
 		currentPort = port;
+		logger4js.trace('Redis createClient Setup Host %s:%d', host, port);
 		redisClient = redis.createClient({host : currentHost, port : currentPort});
 
 		// Check if Redis is up and running
@@ -44,7 +45,7 @@ function VisboRedisInit(host, port) {
 
 			if (maxErrorLog > 0) {
 				maxErrorLog -= 1;
-				logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
+				logger4js.warn('Error in Redis %s : Take care that the redis server is installed and up and running', host);
 			}
 			if (host != 'localhost') throw Error('Error connecting to Redis Server');
 		});
