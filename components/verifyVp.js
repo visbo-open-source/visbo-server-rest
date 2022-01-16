@@ -9,7 +9,6 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
 var verifyVc = require('./../components/verifyVc');
-var verifyVpv = require('./../components/verifyVpv');
 var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = 'VP';

@@ -840,9 +840,9 @@ router.route('/')
 							}
 							// reset the VPV and reset individual user roles to group roles
 							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
-							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
+							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisation);
 							if (bac) {
-								var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
+								var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisation);
 								var costSum = 0;
 								if (costDetails && costDetails.length > 0) {
 									costDetails.forEach(item => { costSum += item.currentCost; });
@@ -1154,7 +1154,6 @@ router.route('/:vpid')
 			req.oneVP.description = req.body.description.trim();
 		}
 		let propertyChange = false;
-		let statusChange = false;
 		if (req.body.kundennummer != undefined && req.body.kundennummer != req.oneVP.kundennummer) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
 			propertyChange = true;
@@ -1176,7 +1175,6 @@ router.route('/:vpid')
 		if (vpStatusNew && vpStatusNew != vpStatusOrg) {
 			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatusNew));
 			req.oneVP.vpStatus = vpStatusNew;
-			statusChange = true;
 		}
 
 		var changeOfVP_PMCommitOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
@@ -1194,7 +1192,7 @@ router.route('/:vpid')
 		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
 		if (!changeOfVP_PMCommitOK && changeCommit) {
 			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
-			var detail = vpStatusOrg != vpStatusNew ? vpStatusOrg.concat('/', vpStatusNew) : vpStatusOrg
+			var detail = vpStatusOrg != vpStatusNew ? vpStatusOrg.concat('/', vpStatusNew) : vpStatusOrg;
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project could not be commited by PL for Status '.concat(detail)
@@ -3434,6 +3432,14 @@ router.route('/:vpid/portfolio/:vpfid')
 					message: 'No Permission to calculate Portfolio Capacity'
 				});
 			}
+			if (!validate.validateDate(req.query.startDate, true)
+			|| !validate.validateDate(req.query.endDate, true)) {
+				logger4js.warn('Get VPF mal formed query parameter %O ', req.query);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Bad Content in Query Parameters'
+				});
+			}
 
 			var onlyPT = false;
 			var vpCalc = 0;
@@ -3479,9 +3485,9 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
 			}
 
 			req.auditInfo = '';

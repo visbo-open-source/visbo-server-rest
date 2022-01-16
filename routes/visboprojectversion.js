@@ -79,7 +79,7 @@ function saveRecalcKM(req, res, message) {
 		return;
 	}
 	if (req.oneVPV.variantName != 'pfv' && req.visboPFV) {
-		var obj = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations);
+		var obj = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisation);
 		if (!obj || Object.keys(obj).length < 1) {
 			// no valid key Metrics delivered
 			if (req.body.keyMetrics && req.oneVPV.variantName != 'pfv' && helperVpv.checkValidKeyMetrics(req.body.keyMetrics)) {
@@ -1331,9 +1331,9 @@ router.route('/:vpvid/copy')
 		}
 		var keyVPV = helperVpv.getKeyAttributes(newVPV);
 		if (variantName == 'pfv') {
-			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisations, level);
+			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisation, level);
 			if (!tmpVPV) {
-				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisations ? req.visboOrganisations.length : 0);
+				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisation?.length || 0);
 				return res.status(400).send({
 					state: 'failure',
 					message: 'Visbo Project Version inconsistent after conversion',
@@ -1440,7 +1440,7 @@ router.route('/:vpvid/capacity')
 		req.auditSysAdmin = sysAdmin;
 		req.auditTTLMode = 1;
 
-		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisations) {
+		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisation) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Organisation or no Permission to get Organisation from VISBO Center',
@@ -1455,6 +1455,15 @@ router.route('/:vpvid/capacity')
 				perm: perm
 			});
 		}
+		if (!validate.validateDate(req.query.startDate, true)
+		|| !validate.validateDate(req.query.endDate, true)) {
+			logger4js.warn('Get VPF mal formed query parameter %O ', req.query);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Bad Content in Query Parameters'
+			});
+		}
+
 		var onlyPT = true;
 		if (perm.vp & constPermVP.ViewAudit ) {
 			onlyPT = false;
@@ -1468,7 +1477,7 @@ router.route('/:vpvid/capacity')
 		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, req.query.hierarchy == true, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
@@ -1543,7 +1552,7 @@ router.route('/:vpvid/keyMetrics')
 		}
 		logger4js.info('Get Project Version KeyMetrics for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-		var keyMetrics = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisations);
+		var keyMetrics = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisation);
 		if (keyMetrics && req.visboPFV) {
 			keyMetrics.baselineDate = req.visboPFV.timestamp;
 			keyMetrics.baselineVPVID = req.visboPFV._id;
@@ -1603,7 +1612,7 @@ router.route('/:vpvid/cost')
 		req.auditTTLMode = 1;
 		req.auditSysAdmin = sysAdmin;
 
-		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisations) {
+		if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisation) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Organisation or no Permission to get Organisation from VISBO Center',
@@ -1619,7 +1628,7 @@ router.route('/:vpvid/cost')
 		}
 		logger4js.info('Get Project Version Cost for userid %s email %s and vpv %s/%s pfv %s/%s', userId, useremail, req.oneVPV._id, req.oneVPV.timestamp.toISOString(), req.visboPFV && req.visboPFV._id, req.visboPFV && req.visboPFV.timestamp.toISOString());
 
-		var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisations);
+		var costVPV = visboBusiness.calcCosts(req.oneVPV, req.visboPFV, req.visboOrganisation);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',

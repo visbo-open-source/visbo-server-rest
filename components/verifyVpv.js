@@ -455,7 +455,6 @@ function getVPVpfv(req, res, next) {
 }
 
 function getVPVwoPerm(req, res, next) {
-	var startCalc = new Date();
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 
@@ -469,7 +468,6 @@ function getVPVwoPerm(req, res, next) {
 			state: 'failure',
 			message: 'No valid Project Version ID:' + vpvid
 		});
-		return;
 	}
 	logger4js.trace('GET getVPVwoPerm vpvid', vpvid);
 	var queryvpv = {};

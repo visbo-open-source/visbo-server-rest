@@ -1141,6 +1141,104 @@ if (currentVersion < dateBlock) {
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
 }
+dateBlock = "2022-01-16T00:00:00"
+if (currentVersion < dateBlock) {
+  // DB Collection and Index Checks
+  print ("Upgrade DB: Migrate Split Orga & Capacity")
+  var collectionName = 'vccapacities';
+  var collection = db.getCollectionInfos({name: collectionName});
+  if (!collection || collection.length == 0) {
+    // print ("Need to Create Visbo Capacity Collection ", collectionName)
+    db.createCollection( collectionName );
+    db.vccapacities.createIndex( { vcid: 1, roleID: 1, startOfYear: -1 }, { name: "vcid" } );
+    print ("Visbo Capacity Collection Created")
+  }
+  // migrate capacity from latest orga per VC to vccapacities
+  var vcList = db.visbocenters.find(
+    {
+      system: {$exists: false},
+      name: {$in: ['Test-MS-VC02', 'Test-MS-VC01']},
+      deletedAt: {$exists: false}
+    }).toArray();
+  print ("VC List for capacity conversion", vcList.length)
+  var vcIDList = [];
+  vcList.forEach(vc => {vcIDList.push(vc._id);});
+
+  var vcOrgaList = db.vcsettings.find({type: 'organisation', vcid: {$in: vcIDList}, 'value.allRoles.kapazitaet': {$exists: true}}).toArray();
+  print ("VC Orga List for capacity conversion", vcOrgaList.length)
+
+  vcList.forEach(vc => {
+    // print ("VC capacity conversion", vc.name, vc._id);
+    var orga = vcOrgaList.find(item => item.vcid.toString() == vc._id.toString());
+    if (!orga) {
+      print ("VC has no capacity to convert", vc.name);
+      return;
+    }
+    // print ("VC has orga", vc.name, orga.name, orga.type, orga.timestamp.toISOString());
+    orgaHasCapacity = 0;
+    if (orga.value && orga.value.allRoles) {
+      orga.value.allRoles.forEach(role => {
+        if (role.kapazitaet && role.kapazitaet.length > 0) {
+          // print ("Role Add kapazitaet", role.name, role.kapazitaet.length, role.startOfCal.toISOString());
+          orgaHasCapacity += 1;
+        }
+      });
+    }
+    if (orgaHasCapacity) {
+      print ("VC has orga with old capacity", vc.name, orgaHasCapacity);
+      // remove capacity information from vccapacities
+      result = db.vccapacities.deleteMany({vcid: vc._id});
+      if (result.deletedCount) print ("VC old capacity deleted", result.deletedCount);
+      var allRoles = orga.value.allRoles;
+      var newCapacities = 0;
+      allRoles.forEach(role => {
+        if (role.kapazitaet && role.kapazitaet.length > 0) {
+          role.kapazitaet.shift(); // first element is unused
+          var startOfCal = new Date(role.startOfCal);
+          var startMonth = startOfCal.getMonth();
+          var startOfYear = new Date(startOfCal);
+          startOfYear.setMonth(0);
+          startOfYear.setDate(1);
+          startOfYear.setHours(0, 0, 0, 0);
+          while (role.kapazitaet.length > 0) {
+            var capaPerMonth = [role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa
+                                ];
+            // print ("Role Add kapazitaet", role.name, role.kapazitaet.length, role.startOfCal.toISOString(), startMonth);
+            for (var i = startMonth; i < 12 && role.kapazitaet.length > 0; i++) {
+              capaPerMonth[i] = role.kapazitaet.shift();
+            }
+            // create the new capacity entry for one year
+            db.vccapacities.insertOne({vcid: vc._id, roleID: role.uid, startOfYear: startOfYear, capaPerMonth: capaPerMonth, createdAt: new Date(), updatedAt: new Date()})
+            startMonth = 0;
+            startOfYear.setFullYear(startOfYear.getFullYear() + 1);
+            newCapacities++;
+          }
+        }
+      });
+      print ("VC new capacity created", newCapacities);
+    }
+    // remove the old kapazitaet & startOfCal
+    var result = db.vcsettings.updateMany(
+        {vcid: vc._id, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].kapazitaet': true}},
+        {arrayFilters: [ { "elem.kapazitaet": { $exists: true } } ] }
+      )
+    db.vcsettings.updateMany(
+        {vcid: vc._id, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].startOfCal': true}},
+        {arrayFilters: [ { "elem.startOfCal": { $exists: true } } ] }
+      )
+    print ("VC updated Orgas for VC", vc.name, result.matchedCount, result.modifiedCount);
+  });
+  
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {

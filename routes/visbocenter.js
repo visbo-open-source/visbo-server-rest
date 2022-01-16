@@ -1980,37 +1980,54 @@ router.route('/:vcid/message')
 						helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
 					}
 					req.auditInfo = VCSetting ? 1 : 0;
-					if (getReducedOrga) {
+					if (!VCSetting) {
+						return res.status(403).send({
+							state: 'failure',
+							message: 'No VISBO Center Organisation found or no permission',
+							count: req.auditInfo
+						});
+					} else if (getReducedOrga) {
 						var reducedOrga = helperOrga.reduceOrga(VCSetting.value);
 						return res.status(200).send({
 							state: 'success',
 							message: 'Returned VISBO Center Organisation',
 							count: req.auditInfo,
+							_id: VCSetting._id,
+							name: VCSetting.name,
 							timestamp: VCSetting.timestamp,
-							reducedOrga: reducedOrga
+							reducedOrga: [reducedOrga]
 						});
 					} else {
+						VCSetting.value._id = VCSetting._id;
+						VCSetting.value.name = VCSetting.name;
 						return res.status(200).send({
 							state: 'success',
 							message: 'Returned VISBO Center Organisation',
 							count: req.auditInfo,
-							vcsetting: [VCSetting]
+							timestamp: VCSetting.timestamp,
+							organisation: [VCSetting.value]
 						});
 					}
 				});
 			} else {
 				queryVCSetting.exec(function (err, listVCSetting) {
 					if (err) {
-						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+						errorHandler(err, res, `DB: GET VC Organisations ${req.oneVC._id} Find`, `Error getting Organisations for VISBO Center ${req.oneVC.name}`);
 						return;
 					}
 					logger4js.debug('Found %d VC Organisation', listVCSetting.length);
 					req.auditInfo = listVCSetting.length;
+					var listOrganisation = [];
+					listVCSetting.forEach(item => {
+						item.value.name = item.name;
+						item.value._id = item._id;
+						listOrganisation.push(item.value);
+					});
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned VISBO Center Settings',
+						message: 'Returned VISBO Center Organisations',
 						count: listVCSetting.length,
-						vcsetting: listVCSetting
+						organisation: listOrganisation
 					});
 				});
 			}
@@ -2073,7 +2090,7 @@ router.route('/:vcid/message')
 			logger4js.info('Post a new VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
 
 			if (req.body.name) req.body.name = (req.body.name || '').trim();
-			if (!validate.validateName(req.body.name, false) || !req.body.reducedOrga
+			if (!validate.validateName(req.body.name, false)
 			|| !validate.validateDate(req.body.timestamp, true)) {
 				logger4js.debug('Post a new VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
 				return res.status(400).send({
@@ -2081,17 +2098,36 @@ router.route('/:vcid/message')
 					message: 'No valid name or timestamp in Organisation definition'
 				});
 			}
-			var oldOrga = undefined;
-			if (req.visboOrganisations && req.visboOrganisations.length > 0) {
-				// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
-				oldOrga = req.visboOrganisations[0];
+			if (!req.body.reducedOrga && !req.body.organisation) {
+				logger4js.debug('Post a new VISBO Center Organisation orga definition missing %O', req.body);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Organisation definition missing'
+				});
 			}
 			var newTimeStamp = req.body.timestamp;
 			newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
 			newTimeStamp.setDate(1);
 			newTimeStamp.setHours(0,0,0,0);
+			var oldOrga = undefined;
+			if (req.visboOrganisation?.length > 0) {
+				// req.visboOrganisation.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
+				oldOrga = req.visboOrganisation[0];
+				var oldTimeStamp = new Date(oldOrga.timestamp);
+				if (newTimeStamp.getTime() <= oldTimeStamp.getTime()) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Newer Organisation exists already'
+					});
+				}
+			}
 			var errorList = [];
-			var orga = helperOrga.initOrgaReduced(req.body.reducedOrga, newTimeStamp, oldOrga.value, errorList);
+			var orga;
+			if (req.body.reducedOrga) {
+				orga = helperOrga.initOrgaReduced(req.body.reducedOrga, newTimeStamp, oldOrga?.value, errorList);
+			} else if (req.body.organisation) {
+				orga = helperOrga.initOrga(req.body.organisation, newTimeStamp, oldOrga?.value, errorList);
+			}
 			if (!orga) {
 				return res.status(400).send({
 					state: 'failure',
@@ -2108,13 +2144,29 @@ router.route('/:vcid/message')
 					organisation: orga
 				});
 			}
-			return res.status(200).send({
-				state: 'success',
-				message: 'Inserted VISBO Center Organisation',
-				organisation: [ orga ],
-				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			// now create the Setting that gets saved
+			var vcSetting = new VCSetting();
+			vcSetting.name = req.body.name;
+			vcSetting.vcid = req.params.vcid;
+			vcSetting.value = orga;
+			vcSetting.timestamp = newTimeStamp;
+			vcSetting.type = 'organisation';
+			vcSetting.save(function(err, oneVCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: POST VC Organisation ${req.params.vcid} save`, `Error creating VISBO Center Organisation ${req.oneVC.name}`);
+					return;
+				}
+				req.oneVCSetting = oneVCSetting;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Inserted VISBO Center Organisation',
+					timestamp: newTimeStamp,
+					_id: oneVCSetting._id,
+					organisation: [ orga ],
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
 			});
-		})
+		});
 
 
 	router.route('/:vcid/setting')
@@ -2182,9 +2234,13 @@ router.route('/:vcid/message')
 			logger4js.info('Get VISBO Center Setting for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
 			var query = {};
-			var refDate = new Date();
+			var refDate;
 			if (req.query.refDate != undefined) {
-				if (Date.parse(req.query.refDate)) refDate = new Date(req.query.refDate);
+				if (Date.parse(req.query.refDate)) {
+					refDate = new Date(req.query.refDate);
+				} else {
+					refDate = new Date();
+				}
 				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
 				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
 				latestOnly = true;
@@ -2261,6 +2317,7 @@ router.route('/:vcid/message')
 				listVCSettingfiltered.forEach(setting => {
 					if (setting.type == 'organisation') {
 						helperOrga.joinCapacity(setting, req.visboVCCapacity);
+						helperOrga.compatibilityOldOrga(setting);
 					}
 				});
 				req.auditInfo = listVCSettingfiltered.length;
@@ -2370,43 +2427,13 @@ router.route('/:vcid/message')
 			// var newTimeStamp = req.body.timestamp || (req.body.value && req.body.value.validFrom);
 			var newTimeStamp = req.body.timestamp;
 			if (vcSetting.type == 'organisation') {
-				// normalize the organisaion to defined values
-				var errorList = [];
-				var orga = helperOrga.initOrga(req.body.value, errorList);
-				if (!orga) {
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Incorrect Information in organisation',
-						organisation: orga,
-						error: errorList
-					});
-				}
-
-				var oldOrga = undefined;
-				if (req.visboOrganisations && req.visboOrganisations.length > 0) {
-					// req.visboOrganisations.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
-					// MS TODO: activate this check again to compare against the old Orga
-					oldOrga = req.visboOrganisations[req.visboOrganisations.length - 1];
-				}
-				// use validFrom if timestamp is not set and validFrom is set
-				newTimeStamp = req.body.timestamp || req.body.value.validFrom;
-				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
-				// set timestamp to beginning of month
-				newTimeStamp.setDate(1);
-				newTimeStamp.setHours(0,0,0,0);
-				orga.validFrom = newTimeStamp;
-				logger4js.debug('Post Setting Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
-				if (!helperOrga.verifyOrga(orga, oldOrga)) {
-					return res.status(400).send({
-						state: 'failure',
-						message: 'Incorrect Information in organisation',
-						organisation: orga
-					});
-				}
-				vcSetting.value = orga;
-			} else {
-				newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
+				// no longer allowed to change organisation through setting POST/PUT
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Organisation change only through separate ReST Call'
+				});
 			}
+			newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 			vcSetting.timestamp = newTimeStamp;
 
 			vcSetting.save(function(err, oneVCSetting) {
@@ -2721,33 +2748,15 @@ router.route('/:vcid/message')
 					}
 				}
 			} else {
-				if (req.oneVCSetting.type == 'organisation' && req.body.value) {
-					// normalize the organisaion to defined values
-					var orga = helperOrga.initOrga(req.body.value);
-					if (!orga) {
-						return res.status(400).send({
-							state: 'failure',
-							message: 'Incorrect Information in organisation',
-							organisation: orga
-						});
-					}
-
-					if (!helperOrga.verifyOrga(orga, req.oneVCSetting)) {
-						return res.status(400).send({
-							state: 'failure',
-							message: 'Incorrect Information in organisation',
-							organisation: orga
-						});
-					}
-					req.oneVCSetting.value = orga;
-				} else {
-					if (req.body.value) req.oneVCSetting.value = req.body.value;
+				if (req.oneVCSetting.type == 'organisation') {
+					// no longer allowed to change organisation through setting POST/PUT
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Organisation change only through separate ReST Call'
+					});
 				}
 				// allow to change all beside userId and type
 				if (req.body.name) req.oneVCSetting.name = req.body.name;
-				var dateValue = (req.body.timestamp && Date.parse(req.body.timestamp)) ? new Date(req.body.timestamp) : new Date();
-				// ignore new timestamp during PUT for organisation
-				if (req.oneVCSetting.type != 'organisation' && req.body.timestamp) req.oneVCSetting.timestamp = dateValue;
 			}
 			req.oneVCSetting.save(function(err, resultVCSetting) {
 				if (err) {
@@ -2878,7 +2887,7 @@ router.route('/:vcid/message')
 			}
 
 			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			if (!req.visboOrganisations) {
+			if (!req.visboOrganisation) {
 				return res.status(409).send({
 					state: 'failure',
 					message: 'No VISBO Center Organisation',
@@ -2912,9 +2921,9 @@ router.route('/:vcid/message')
 
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, req.visboVCCapacity, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
 			}
 
 			var filteredCapacity = [];
@@ -2950,7 +2959,7 @@ router.route('/:vcid/message')
 					capacity: filteredCapacity
 				} ]
 			});
-		})
+		});
 
 	router.route('/:vcid/capa')
 
@@ -3020,7 +3029,7 @@ router.route('/:vcid/message')
 					count: listVCCapacity.length,
 					capacity: listVCCapacity
 				});
-			})
+			});
 		})
 
 	/**
@@ -3089,7 +3098,7 @@ router.route('/:vcid/message')
 		startOfYear.setDate(1);
 		startOfYear.setHours(0, 0, 0, 0);
 
-		if (!req.visboOrganisations) {
+		if (!req.visboOrganisation) {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'No VISBO Center Organisation',
@@ -3098,7 +3107,7 @@ router.route('/:vcid/message')
 		}
 
 		// check if roleID is defined in the latest organisation
-		var allRoles = req.visboOrganisations[0].value.allRoles;
+		var allRoles = req.visboOrganisation[0].value.allRoles;
 		var role = allRoles.find(role => role.uid == roleID);
 		if (!role || role.isSummaryRole || role.isTeam) {
 			return res.status(400).send({
@@ -3122,7 +3131,7 @@ router.route('/:vcid/message')
 			});
 		}
 		req.body.capaPerMonth.forEach(item => {
-			var capaPerMonth = validate.validateNumber(item, true)
+			var capaPerMonth = validate.validateNumber(item, true);
 			if (newCapacity.capaPerMonth.length < 12) {
 				newCapacity.capaPerMonth.push(capaPerMonth);
 			}
@@ -3169,9 +3178,6 @@ router.route('/:vcid/capa/:capaid')
 	*/
 // Update VISBO Center User Capa
 .put(function(req, res) {
-	var userId = req.decoded._id;
-	var useremail = req.decoded.email;
-
 	req.auditDescription = 'VISBO Center User Capacicty Update';
 	req.auditInfo = '';
 
@@ -3186,8 +3192,7 @@ router.route('/:vcid/capa/:capaid')
 	if (!req.body.capaPerMonth || req.body.capaPerMonth.length != 12) {
 		return res.status(400).send({
 			state: 'failure',
-			message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`,
-			perm: perm
+			message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`
 		});
 	}
 
@@ -3224,8 +3229,7 @@ router.route('/:vcid/capa/:capaid')
 				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
 		}
-	})
-
+	});
 })
 
 	/**
@@ -3296,8 +3300,8 @@ router.route('/:vcid/capa/:capaid')
 					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 				});
 			}
-		})
-	})
+		});
+	});
 
 router.route('/:vcid/predict')
 
@@ -3385,7 +3389,7 @@ router.route('/:vcid/predict')
 				count: totalVersions,
 				vp: list
 			});
-		})
+		});
 	})
 
 /**
@@ -3412,8 +3416,6 @@ router.route('/:vcid/predict')
 
 // Delete VISBO Center Predict Training
 	.delete(function(req, res) {
-		var userId = req.decoded._id;
-		var useremail = req.decoded.email;
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
@@ -3439,6 +3441,6 @@ router.route('/:vcid/predict')
 				message: 'Deleted VISBO Center Predict Training'
 			});
 		});
-	})
+	});
 
 module.exports = router;

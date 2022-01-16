@@ -370,7 +370,7 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 		}
 		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
 		if (listVCSetting.length > 0) {
-			req.visboOrganisations = listVCSetting;
+			req.visboOrganisation = listVCSetting;
 		}
 		if (withCapa) {
 			var query = {};

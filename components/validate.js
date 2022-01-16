@@ -63,7 +63,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 		logger4js.trace('validate Number: String contains no Number %s', numberValue);
 		return 0;
 	}
-	return numberValue;
+	return Number(numberValue);
 };
 
 // check if string has invalid content
