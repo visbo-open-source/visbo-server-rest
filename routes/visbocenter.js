@@ -236,59 +236,59 @@ router.route('/')
 	*/
 	// Get VISBO Centers
 	.get(function(req, res) {
-			// no need to check authentication, already done centrally
-			var userId = req.decoded._id;
-			var isSysAdmin = req.query.sysadmin ? true : false;
+		// no need to check authentication, already done centrally
+		var userId = req.decoded._id;
+		var isSysAdmin = req.query.sysadmin ? true : false;
 
-			req.auditDescription = 'VISBO Center Read';
-			req.auditSysAdmin = isSysAdmin;
-			req.auditTTLMode = 1;
+		req.auditDescription = 'VISBO Center Read';
+		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
-			logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
+		logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
 
-			var query = {};
-			// Get all VCs where the user Group is assigned to
-			if (!isSysAdmin && !req.query.systemvc) {
-				query._id = {$in: req.listVCPerm.getVCIDs(constPermVC.View)};
+		var query = {};
+		// Get all VCs where the user Group is assigned to
+		if (!isSysAdmin && !req.query.systemvc) {
+			query._id = {$in: req.listVCPerm.getVCIDs(constPermVC.View)};
+		}
+
+		// check for deleted only for sysAdmins
+		if (isSysAdmin && req.query.deleted) {
+			query.deletedAt = {$exists: true};				//  deleted
+		} else {
+			query.deletedAt = {$exists: false};				// Not deleted
+		}
+		query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
+		logger4js.trace('Check for VC query %O', query);
+
+		var queryVC = VisboCenter.find(query);
+		queryVC.select('-users');
+		queryVC.exec(function (err, listVC) {
+			if (err) {
+				errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
+				return;
 			}
+			logger4js.debug('Found VCs %d', listVC.length);
+			req.auditInfo = listVC.length;
 
-			// check for deleted only for sysAdmins
-			if (isSysAdmin && req.query.deleted) {
-				query.deletedAt = {$exists: true};				//  deleted
+			if (isSysAdmin) {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Centers',
+					count: listVC.length,
+					vc: listVC,
+					perm: req.listVCPerm.getPerm(0)
+				});
 			} else {
-				query.deletedAt = {$exists: false};				// Not deleted
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Centers',
+					count: listVC.length,
+					vc: listVC
+				});
 			}
-			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
-			logger4js.trace('Check for VC query %O', query);
-
-			var queryVC = VisboCenter.find(query);
-			queryVC.select('-users');
-			queryVC.exec(function (err, listVC) {
-				if (err) {
-					errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
-					return;
-				}
-				logger4js.debug('Found VCs %d', listVC.length);
-				req.auditInfo = listVC.length;
-
-				if (isSysAdmin) {
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Centers',
-						count: listVC.length,
-						vc: listVC,
-						perm: req.listVCPerm.getPerm(0)
-					});
-				} else {
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Centers',
-						count: listVC.length,
-						vc: listVC
-					});
-				}
-			});
-		})
+		});
+	})
 
 	/**
 	 * @api {post} /vc Create a VISBO Center
@@ -325,7 +325,8 @@ router.route('/')
 	 *    'vpCount': 0
 	 * }
 	 */
-// Create a VISBO Center
+
+	// Create a VISBO Center
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
@@ -417,40 +418,40 @@ router.route('/')
 	});
 
 router.route('/:vcid')
- /**
- 	* @api {get} /vc/:vcid Get a VISBO Center
- 	* @apiVersion 1.0.0
- 	* @apiGroup VISBO Center
- 	* @apiName GetVISBOCenter
-	* @apiDescription Gets a specific VISBO Center including the permission to the VC as User
-	* the system checks if the user has access permission to it.
-	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
- 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and VC.View for the VISBO Center.
- 	* @apiError NotAuthenticated no valid token HTTP 401
-	* In case of AppAdmin Parameters the User needs to have View VISBO Center Permission on System Level.
-	* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View VISBO Center
- 	* @apiExample Example usage:
- 	* url: https://my.visbo.net/api/vc/vc5aada025
- 	* @apiSuccessExample {json} Success-Response:
- 	* HTTP/1.1 200 OK
- 	* {
- 	*   'state':'success',
- 	*   'message':'Returned VISBO Centers',
- 	*   'vc': [{
- 	*     '_id':'vc541c754feaa',
- 	*     'updatedAt':'2018-03-16T12:39:54.042Z',
- 	*     'createdAt':'2018-03-12T09:54:56.411Z',
- 	*     'name':'My new VisobCenter',
-	*     'vpCount': '0'
- 	*   }],
-	*   'perm': {'vc': 307}
- 	* }
-	*/
-// Get a specific VC
+	 /**
+	 	* @api {get} /vc/:vcid Get a VISBO Center
+	 	* @apiVersion 1.0.0
+	 	* @apiGroup VISBO Center
+	 	* @apiName GetVISBOCenter
+		* @apiDescription Gets a specific VISBO Center including the permission to the VC as User
+		* the system checks if the user has access permission to it.
+		* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
+	 	* @apiHeader {String} access-key User authentication token.
+		* @apiPermission Authenticated and VC.View for the VISBO Center.
+	 	* @apiError NotAuthenticated no valid token HTTP 401
+		* In case of AppAdmin Parameters the User needs to have View VISBO Center Permission on System Level.
+		* @apiParam (Parameter AppAdmin) {Boolean} [deleted=false]  Request Deleted VCs
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View VISBO Center
+	 	* @apiExample Example usage:
+	 	* url: https://my.visbo.net/api/vc/vc5aada025
+	 	* @apiSuccessExample {json} Success-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Returned VISBO Centers',
+	 	*   'vc': [{
+	 	*     '_id':'vc541c754feaa',
+	 	*     'updatedAt':'2018-03-16T12:39:54.042Z',
+	 	*     'createdAt':'2018-03-12T09:54:56.411Z',
+	 	*     'name':'My new VisobCenter',
+		*     'vpCount': '0'
+	 	*   }],
+		*   'perm': {'vc': 307}
+	 	* }
+		*/
+	// Get a specific VC
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -486,48 +487,48 @@ router.route('/:vcid')
 		}
 	})
 
-/**
-	* @api {put} /vc/:vcid Update VISBO Center
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center
-	* @apiName UpdateVISBOCenters
-	* @apiDescription Put updates a specific VISBO Center.
-	* the system checks if the user has access permission to it.
-	* Only basic properties of the VISBO Centers can be changed. The modification of users is done with special calls to add/delete users to groups
-	* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
-	*
-	* If the VC Name is changed, the VC Name is populated to the VISBO Center Projects.
-	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and VC.View and VC.Modify Permissionfor the VISBO Center.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 no Data provided in Body for updating the VISBO Center
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Modify VISBO Center
-	* @apiError {number} 409 VISBO Center with same name exists already or VISBO Center was updatd in between
-	* @apiHeader {String} access-key User authentication token.
-	* @apiExample Example usage:
-	* url: https://my.visbo.net/api/vc/vc5aada025
-	* {
-	*  'name':'My first VISBO Center Renamed',
-	*  'description': 'Changed Description'
-	* }
-	* @apiSuccessExample {json} Success-Response:
-	*     HTTP/1.1 200 OK
-	* {
-	*  'state':'success',
-	*  'message':'Successfully updated VISBO Center Renamed',
-	*  'vc':[{
-	*    '__v':0,
-	*    'updatedAt':'2018-03-19T11:04:12.094Z',
-	*    'createdAt':'2018-03-19T11:04:12.094Z',
-	*    'name':'My first VISBO Center',
-	*    '_id':'vc541c754feaa',
-	*    'vpCount': '0'
-	*  }]
-	* }
-	*/
+	/**
+		* @api {put} /vc/:vcid Update VISBO Center
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center
+		* @apiName UpdateVISBOCenters
+		* @apiDescription Put updates a specific VISBO Center.
+		* the system checks if the user has access permission to it.
+		* Only basic properties of the VISBO Centers can be changed. The modification of users is done with special calls to add/delete users to groups
+		* In case of success, the system delivers an array of VCs, with one element in the array that is the info about the VC
+		*
+		* If the VC Name is changed, the VC Name is populated to the VISBO Center Projects.
+		* @apiHeader {String} access-key User authentication token.
+		* @apiPermission Authenticated and VC.View and VC.Modify Permissionfor the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 no Data provided in Body for updating the VISBO Center
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Modify VISBO Center
+		* @apiError {number} 409 VISBO Center with same name exists already or VISBO Center was updatd in between
+		* @apiHeader {String} access-key User authentication token.
+		* @apiExample Example usage:
+		* url: https://my.visbo.net/api/vc/vc5aada025
+		* {
+		*  'name':'My first VISBO Center Renamed',
+		*  'description': 'Changed Description'
+		* }
+		* @apiSuccessExample {json} Success-Response:
+		*     HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Successfully updated VISBO Center Renamed',
+		*  'vc':[{
+		*    '__v':0,
+		*    'updatedAt':'2018-03-19T11:04:12.094Z',
+		*    'createdAt':'2018-03-19T11:04:12.094Z',
+		*    'name':'My first VISBO Center',
+		*    '_id':'vc541c754feaa',
+		*    'vpCount': '0'
+		*  }]
+		* }
+		*/
 
-// Change VISBO Center
+	// Change VISBO Center
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 
@@ -619,29 +620,29 @@ router.route('/:vcid')
 		});
 	})
 
-/**
-	* @api {delete} /vc/:vcid Delete a VISBO Centers
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center
-	* @apiName DeleteVISBOCenter
-	* @apiDescription Deletes a specific VISBO Center.
-	* the system checks if the user has Delete VISBO Center permission to it.
-	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and System.ViewVC and System.Delete Permission for the VISBO System.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Modify VISBO Center or VISBO Center does not exists
-	* @apiExample Example usage:
-	* url: https://my.visbo.net/api/vc/vc5aada025
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Deleted VISBO Centers'
-	* }
-	*/
+	/**
+		* @api {delete} /vc/:vcid Delete a VISBO Centers
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center
+		* @apiName DeleteVISBOCenter
+		* @apiDescription Deletes a specific VISBO Center.
+		* the system checks if the user has Delete VISBO Center permission to it.
+		* @apiHeader {String} access-key User authentication token.
+		* @apiPermission Authenticated and System.ViewVC and System.Delete Permission for the VISBO System.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Modify VISBO Center or VISBO Center does not exists
+		* @apiExample Example usage:
+		* url: https://my.visbo.net/api/vc/vc5aada025
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Deleted VISBO Centers'
+		* }
+		*/
 
-// Delete VISBO Center
+	// Delete VISBO Center
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -789,41 +790,41 @@ router.route('/:vcid')
 	});
 
 router.route('/:vcid/audit')
- /**
- 	* @api {get} /vc/:vcid/audit Get VISBO Center Audit Trail
- 	* @apiVersion 1.0.0
- 	* @apiGroup VISBO Center
- 	* @apiName GetVISBOCenterAudit
-	* @apiDescription Get Audit Trail for a specific VISBO Center
-	* the system checks if the user has access permission to it.
-	* In case of success, the system delivers an array of Audit Trail Activities
- 	* @apiHeader {String} access-key User authentication token.
-	* @apiPermission Authenticated and VC.View and VC.ViewAudit Permission for the VISBO Center.
-	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
-	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
-	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
-	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
-	* @apiParam (Parameter) {text} [area] Request Audit Trail only for specific Area (vc, vp).
-	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View VISBO Center Audit or VISBO Center does not exists
- 	* @apiExample Example usage:
- 	* url: https://my.visbo.net/api/vc/vc5aada025/audit
- 	* @apiSuccessExample {json} Success-Response:
- 	* HTTP/1.1 200 OK
- 	* {
- 	*   'state':'success',
- 	*   'message':'Audit Trail delivered',
- 	*   'audit': [{
- 	*     '_id':'vc541c754feaa',
- 	*     'updatedAt':'2018-03-16T12:39:54.042Z',
- 	*     'createdAt':'2018-03-12T09:54:56.411Z',
-	*			'XXXXXXXX': 'XXXXXXXX'
- 	*   }]
- 	* }
-	*/
-// Get audit trail for a specific VC
+	/**
+	 	* @api {get} /vc/:vcid/audit Get VISBO Center Audit Trail
+	 	* @apiVersion 1.0.0
+	 	* @apiGroup VISBO Center
+	 	* @apiName GetVISBOCenterAudit
+		* @apiDescription Get Audit Trail for a specific VISBO Center
+		* the system checks if the user has access permission to it.
+		* In case of success, the system delivers an array of Audit Trail Activities
+	 	* @apiHeader {String} access-key User authentication token.
+		* @apiPermission Authenticated and VC.View and VC.ViewAudit Permission for the VISBO Center.
+		* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
+		* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+		* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+		* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+		* @apiParam (Parameter) {text} [area] Request Audit Trail only for specific Area (vc, vp).
+		* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View VISBO Center Audit or VISBO Center does not exists
+	 	* @apiExample Example usage:
+	 	* url: https://my.visbo.net/api/vc/vc5aada025/audit
+	 	* @apiSuccessExample {json} Success-Response:
+	 	* HTTP/1.1 200 OK
+	 	* {
+	 	*   'state':'success',
+	 	*   'message':'Audit Trail delivered',
+	 	*   'audit': [{
+	 	*     '_id':'vc541c754feaa',
+	 	*     'updatedAt':'2018-03-16T12:39:54.042Z',
+	 	*     'createdAt':'2018-03-12T09:54:56.411Z',
+		*			'XXXXXXXX': 'XXXXXXXX'
+	 	*   }]
+	 	* }
+		*/
+	// Get audit trail for a specific VC
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -944,43 +945,43 @@ router.route('/:vcid/audit')
 
 router.route('/:vcid/group')
 
-/**
-	* @api {get} /vc/:vcid/group Get Groups
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Permission
-	* @apiName GetVISBOCenterGroup
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Gets all groups of the specified VISBO Center
-	*
-	* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
-	* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/group
-	*   url: https://my.visbo.net/api/vc/:vcid/group?userlist=true
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Returned VISBO Center Groups',
-	*   'count': 1,
-	*   'groups':[{
-	*     '_id':'vcgroup5c754feaa',
-	*     'name':'Group Name',
-	*     'vcid': 'vc5c754feaa',
-	*     'global': true,
-	*     'permission': {vc: 307 },
-	*    'users':[
-	*     {'userId':'us5aaf992', 'email':'example@visbo.de'},
-	*     {'userId':'us5aaf993', 'email':'example2@visbo.de'}
-	*    ]
-	*   }]
-	* }
-	*/
+	/**
+		* @api {get} /vc/:vcid/group Get Groups
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Permission
+		* @apiName GetVISBOCenterGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all groups of the specified VISBO Center
+		*
+		* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
+		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/group
+		*   url: https://my.visbo.net/api/vc/:vcid/group?userlist=true
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Groups',
+		*   'count': 1,
+		*   'groups':[{
+		*     '_id':'vcgroup5c754feaa',
+		*     'name':'Group Name',
+		*     'vcid': 'vc5c754feaa',
+		*     'global': true,
+		*     'permission': {vc: 307 },
+		*    'users':[
+		*     {'userId':'us5aaf992', 'email':'example@visbo.de'},
+		*     {'userId':'us5aaf993', 'email':'example2@visbo.de'}
+		*    ]
+		*   }]
+		* }
+		*/
 
-// Get VC Groups
+	// Get VC Groups
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1067,41 +1068,41 @@ router.route('/:vcid/group')
 		});
 	})
 
-/**
-	* @api {post} /vc/:vcid/group Create a Group
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Permission
-	* @apiName PostVISBOCenterGroup
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Post creates a new group inside the VISBO Center
-	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 missing name of VISBO Center Group during Creation
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Create a VISBO Center Group
-	* @apiError {number} 409 VISBO Center Group with same name exists already
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/groups
-	*  {
-	*     'name':'Group Name',
-	*     'global': true,
-	*     'permission': {vc: 307 }
-	*  }
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Returned VISBO Center Group',
-	*   'groups':[{
-	*     '_id':'vcgroup5c754feaa',
-	*     'name':'My first Group',
-	*     'vcid': 'vc5c754feaa',
-	*     'global': true
-	*   }]
-	* }
-	*/
+	/**
+		* @api {post} /vc/:vcid/group Create a Group
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Permission
+		* @apiName PostVISBOCenterGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Post creates a new group inside the VISBO Center
+		* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 missing name of VISBO Center Group during Creation
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a VISBO Center Group
+		* @apiError {number} 409 VISBO Center Group with same name exists already
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/groups
+		*  {
+		*     'name':'Group Name',
+		*     'global': true,
+		*     'permission': {vc: 307 }
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Group',
+		*   'groups':[{
+		*     '_id':'vcgroup5c754feaa',
+		*     'name':'My first Group',
+		*     'vcid': 'vc5c754feaa',
+		*     'global': true
+		*   }]
+		* }
+		*/
 
-// Create a VISBO Center Group
+	// Create a VISBO Center Group
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
@@ -1219,30 +1220,30 @@ router.route('/:vcid/group')
 
 router.route('/:vcid/group/:groupid')
 
-/**
-	* @api {delete} /vc/:vcid/group/:groupid Delete a Group
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Permission
-	* @apiName DeleteVISBOCenterGroup
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Deletes the specified group in the VISBO Center
-	*
-	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 delete of internal VISBO Center Group not allowed
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Delete a VISBO Center Group
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'VISBO Center Group deleted'
-	* }
-	*/
+	/**
+		* @api {delete} /vc/:vcid/group/:groupid Delete a Group
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Permission
+		* @apiName DeleteVISBOCenterGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the specified group in the VISBO Center
+		*
+		* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 delete of internal VISBO Center Group not allowed
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete a VISBO Center Group
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'VISBO Center Group deleted'
+		* }
+		*/
 
-// Delete VISBO Center Group
+	// Delete VISBO Center Group
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1284,42 +1285,42 @@ router.route('/:vcid/group/:groupid')
 		});
 	})
 
-/**
-	* @api {put} /vc/:vcid/group/:groupid Update a Group
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Permission
-	* @apiName PutVISBOCenterGroup
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Put updates a group inside the VISBO Center
-	*
-	* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 400 name of internal group can not be changed or new permission does not meet the minimal permission for internal group.
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Create a VISBO Center Group
-	* @apiError {number} 409 VISBO Center Group with same name exists already
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
-	*  {
-  *    'name':'My first Group Renamed',
-	*    'global': true,
-	*    'permission': {vc: 3, vp: 1 }
-  *   }
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Returned VISBO Center Group',
-	*   'groups':[{
-	*     '_id':'vcgroup5c754feaa',
-	*     'name':'My first Group Renamed',
-	*     'vcid': 'vc5c754feaa',
-	*     'global': true
-	*   }]
-	* }
-	*/
+	/**
+		* @api {put} /vc/:vcid/group/:groupid Update a Group
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Permission
+		* @apiName PutVISBOCenterGroup
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Put updates a group inside the VISBO Center
+		*
+		* @apiPermission Authenticated and VC.View and VC.ManagePerm Permission for the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 name of internal group can not be changed or new permission does not meet the minimal permission for internal group.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create a VISBO Center Group
+		* @apiError {number} 409 VISBO Center Group with same name exists already
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/group/:groupid
+		*  {
+	  *    'name':'My first Group Renamed',
+		*    'global': true,
+		*    'permission': {vc: 3, vp: 1 }
+	  *   }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Group',
+		*   'groups':[{
+		*     '_id':'vcgroup5c754feaa',
+		*     'name':'My first Group Renamed',
+		*     'vcid': 'vc5c754feaa',
+		*     'global': true
+		*   }]
+		* }
+		*/
 
-// Change Group
+	// Change Group
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1462,8 +1463,7 @@ router.route('/:vcid/group/:groupid')
 		});
 	});
 
-	router.route('/:vcid/group/:groupid/user')
-
+router.route('/:vcid/group/:groupid/user')
 	/**
 		* @api {post} /vc/:vcid/group/:groupid/user Add User to Group
 		* @apiVersion 1.0.0
@@ -1693,8 +1693,7 @@ router.route('/:vcid/group/:groupid')
 		});
 	});
 
-	router.route('/:vcid/group/:groupid/user/:userid')
-
+router.route('/:vcid/group/:groupid/user/:userid')
 	/**
 		* @api {delete} /vc/:vcid/group/:groupid/user/:userid Delete User from Group
 		* @apiVersion 1.0.0
@@ -1719,7 +1718,7 @@ router.route('/:vcid/group/:groupid')
 		* }
 		*/
 
-// Delete VISBO Center User
+	// Delete VISBO Center User
 	.delete(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -1810,90 +1809,89 @@ router.route('/:vcid/message')
 		* }
 		*/
 
-		// Sent Message to VC User
-		.post(function(req, res) {
-			// User is authenticated already
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
+	// Sent Message to VC User
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
-			logger4js.info('Sent a message to VISBO Center User with name %s executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
-			req.auditDescription = 'VISBO Center Send Message';
+		logger4js.info('Sent a message to VISBO Center User with name %s executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
+		req.auditDescription = 'VISBO Center Send Message';
 
-			if (req.body.email) req.body.email = req.body.email.trim().toLowerCase();
-			if (!validate.validateEmail(req.body.email, false)) {
-				logger4js.warn('Post Message a not allowed UserName %s to VISBO Center executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
-				return res.status(400).send({
+		if (req.body.email) req.body.email = req.body.email.trim().toLowerCase();
+		if (!validate.validateEmail(req.body.email, false)) {
+			logger4js.warn('Post Message a not allowed UserName %s to VISBO Center executed by user %s with perm %s ', req.body.email, userId, req.listVCPerm.getPerm(req.params.vcid));
+			return res.status(400).send({
+				state: 'failure',
+				message: 'VISBO Center User Name not allowed'
+			});
+		}
+
+		var eMailMessage = undefined;
+		var recipient = req.body.email;
+		req.auditInfo = recipient;
+
+		if (req.body.message) {
+			eMailMessage = sanitizeHtml(req.body.message, {allowedTags: [], allowedAttributes: {}});
+		}
+
+		// check if the user is member of the VC
+		// {"users.email": 'visbotest@seyfried.bayern', "permission.vc": { $bitsAllSet: 1 }}
+		var query = {};
+		query.vcid = req.oneVC._id;
+		query.groupType = req.oneVC.system ? 'System' : 'VC';
+		query['users.email'] = recipient;
+		query['permission.vc'] = { $bitsAllSet: 1 };
+
+		var queryVCGroup = VisboGroup.find(query);
+		queryVCGroup.select('-vpids');
+		queryVCGroup.lean();
+		queryVCGroup.exec(function (err, listVCGroup) {
+			if (err) {
+				errorHandler(err, res, `DB: POST Message to VC ${recipient} Find User `, `Error User not member of VISBO Center ${recipient} `);
+				return;
+			}
+			if (listVCGroup?.length > 0) {
+				var user = new User();
+				user.email = recipient;
+				var lang = validate.evaluateLanguage(req);
+				var template = __dirname.concat(eMailTemplates, lang, '/sendVCMessage.ejs');
+				var uiUrl =  getSystemUrl();
+				uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
+				var eMailSubject = res.__('Mail.Subject.VCMessage') + ' ' + req.oneVC.name;
+				ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
+					if (err) {
+						logger4js.warn('E-Mail Rendering failed %s', err.message);
+						return res.status(500).send({
+							state: 'failure',
+							message: 'E-Mail Rendering failed',
+							error: err
+						});
+					}
+					var message = {
+							from: useremail,
+							to: user.email,
+							subject: eMailSubject,
+							html: '<p> '.concat(emailHtml, ' </p>')
+					};
+					logger4js.info('Now send mail from %s to %s', message.from, message.to);
+					mail.VisboSendMail(message);
+					return res.status(200).send({
+						state: 'success',
+						message: 'Successfully sent message to User of VISBO Center'
+					});
+				});
+			} else {
+				logger4js.info('Try to send to unknown user from %s to %s', userId, recipient);
+				return res.status(409).send({
 					state: 'failure',
-					message: 'VISBO Center User Name not allowed'
+					message: 'Unknown Recipient of VISBO Center: '.concat(recipient)
 				});
 			}
-
-			var eMailMessage = undefined;
-			var recipient = req.body.email;
-			req.auditInfo = recipient;
-
-			if (req.body.message) {
-				eMailMessage = sanitizeHtml(req.body.message, {allowedTags: [], allowedAttributes: {}});
-			}
-
-			// check if the user is member of the VC
-			// {"users.email": 'visbotest@seyfried.bayern', "permission.vc": { $bitsAllSet: 1 }}
-			var query = {};
-			query.vcid = req.oneVC._id;
-			query.groupType = req.oneVC.system ? 'System' : 'VC';
-			query['users.email'] = recipient;
-			query['permission.vc'] = { $bitsAllSet: 1 };
-
-			var queryVCGroup = VisboGroup.find(query);
-			queryVCGroup.select('-vpids');
-			queryVCGroup.lean();
-			queryVCGroup.exec(function (err, listVCGroup) {
-				if (err) {
-					errorHandler(err, res, `DB: POST Message to VC ${recipient} Find User `, `Error User not member of VISBO Center ${recipient} `);
-					return;
-				}
-				if (listVCGroup?.length > 0) {
-					var user = new User();
-					user.email = recipient;
-					var lang = validate.evaluateLanguage(req);
-					var template = __dirname.concat(eMailTemplates, lang, '/sendVCMessage.ejs');
-					var uiUrl =  getSystemUrl();
-					uiUrl = uiUrl.concat('/vp/', req.oneVC._id);
-					var eMailSubject = res.__('Mail.Subject.VCMessage') + ' ' + req.oneVC.name;
-					ejs.renderFile(template, {userFrom: req.decoded, userTo: user, url: uiUrl, vc: req.oneVC, message: eMailMessage}, function(err, emailHtml) {
-						if (err) {
-							logger4js.warn('E-Mail Rendering failed %s', err.message);
-							return res.status(500).send({
-								state: 'failure',
-								message: 'E-Mail Rendering failed',
-								error: err
-							});
-						}
-						var message = {
-								from: useremail,
-								to: user.email,
-								subject: eMailSubject,
-								html: '<p> '.concat(emailHtml, ' </p>')
-						};
-						logger4js.info('Now send mail from %s to %s', message.from, message.to);
-						mail.VisboSendMail(message);
-						return res.status(200).send({
-							state: 'success',
-							message: 'Successfully sent message to User of VISBO Center'
-						});
-					});
-				} else {
-					logger4js.info('Try to send to unknown user from %s to %s', userId, recipient);
-					return res.status(409).send({
-						state: 'failure',
-						message: 'Unknown Recipient of VISBO Center: '.concat(recipient)
-					});
-				}
-			});
 		});
+	});
 
-	router.route('/:vcid/organisation')
-
+router.route('/:vcid/organisation')
 	/**
 		* @api {get} /vc/:vcid/organisation Get Organisation
 		* @apiVersion 1.0.0
@@ -1933,105 +1931,105 @@ router.route('/:vcid/message')
 		*/
 
 	// get VC Organisation
-		.get(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var latestOnly = false; 	// as default show all settings
-			var shortList = req.query.shortList == true;
-			var getReducedOrga = req.query.reducedOrga == true;
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var latestOnly = false; 	// as default show all settings
+		var shortList = req.query.shortList == true;
+		var getReducedOrga = req.query.reducedOrga == true;
 
-			req.auditDescription = 'VISBO Center Organisation Read';
-			req.auditTTLMode = 1;
+		req.auditDescription = 'VISBO Center Organisation Read';
+		req.auditTTLMode = 1;
 
-			logger4js.info('Get VISBO Center Organisation for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+		logger4js.info('Get VISBO Center Organisation for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
-			var query = {};
-			if (req.query.refDate != undefined){
-				var refDate = validate.validateDate(req.query.refDate, true);
-				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
-				query.timestamp = compare;
-				latestOnly = true;
-			}
-			query.vcid = req.oneVC._id;
-			query.type = 'organisation';
+		var query = {};
+		if (req.query.refDate != undefined){
+			var refDate = validate.validateDate(req.query.refDate, true);
+			var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
+			query.timestamp = compare;
+			latestOnly = true;
+		}
+		query.vcid = req.oneVC._id;
+		query.type = 'organisation';
 
-			logger4js.debug('Find VC Organisation with query %O', query);
-			var queryVCSetting = latestOnly ? VCSetting.findOne(query) : VCSetting.find(query);
-			// queryVCSetting.select('_id vcid name');
-			if (req.query.refNext) {
-				queryVCSetting.sort({vcid:1, timestamp: 1});
-			} else {
-				queryVCSetting.sort({vcid:1, timestamp: -1});
-			}
-			if (shortList) {
-				queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-			} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
-				queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-			}
-			queryVCSetting.lean();
-			if (latestOnly) {
-				queryVCSetting.exec(function (err, VCSetting) {
-					if (err) {
-						errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
-						return;
-					}
-					logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
-					if (VCSetting && !getReducedOrga && !shortList) {
-						helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
-					}
-					req.auditInfo = VCSetting ? 1 : 0;
-					if (!VCSetting) {
-						return res.status(403).send({
-							state: 'failure',
-							message: 'No VISBO Center Organisation found or no permission',
-							count: req.auditInfo
-						});
-					} else if (getReducedOrga) {
-						var reducedOrga = helperOrga.reduceOrga(VCSetting.value);
-						return res.status(200).send({
-							state: 'success',
-							message: 'Returned VISBO Center Organisation',
-							count: req.auditInfo,
-							_id: VCSetting._id,
-							name: VCSetting.name,
-							timestamp: VCSetting.timestamp,
-							reducedOrga: [reducedOrga]
-						});
-					} else {
-						VCSetting.value._id = VCSetting._id;
-						VCSetting.value.name = VCSetting.name;
-						return res.status(200).send({
-							state: 'success',
-							message: 'Returned VISBO Center Organisation',
-							count: req.auditInfo,
-							timestamp: VCSetting.timestamp,
-							organisation: [VCSetting.value]
-						});
-					}
-				});
-			} else {
-				queryVCSetting.exec(function (err, listVCSetting) {
-					if (err) {
-						errorHandler(err, res, `DB: GET VC Organisations ${req.oneVC._id} Find`, `Error getting Organisations for VISBO Center ${req.oneVC.name}`);
-						return;
-					}
-					logger4js.debug('Found %d VC Organisation', listVCSetting.length);
-					req.auditInfo = listVCSetting.length;
-					var listOrganisation = [];
-					listVCSetting.forEach(item => {
-						item.value.name = item.name;
-						item.value._id = item._id;
-						listOrganisation.push(item.value);
+		logger4js.debug('Find VC Organisation with query %O', query);
+		var queryVCSetting = latestOnly ? VCSetting.findOne(query) : VCSetting.find(query);
+		// queryVCSetting.select('_id vcid name');
+		if (req.query.refNext) {
+			queryVCSetting.sort({vcid:1, timestamp: 1});
+		} else {
+			queryVCSetting.sort({vcid:1, timestamp: -1});
+		}
+		if (shortList) {
+			queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
+		} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+			queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
+		}
+		queryVCSetting.lean();
+		if (latestOnly) {
+			queryVCSetting.exec(function (err, VCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
+				if (VCSetting && !getReducedOrga && !shortList) {
+					helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
+				}
+				req.auditInfo = VCSetting ? 1 : 0;
+				if (!VCSetting) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No VISBO Center Organisation found or no permission',
+						count: req.auditInfo
 					});
+				} else if (getReducedOrga) {
+					var reducedOrga = helperOrga.reduceOrga(VCSetting.value);
 					return res.status(200).send({
 						state: 'success',
-						message: 'Returned VISBO Center Organisations',
-						count: listVCSetting.length,
-						organisation: listOrganisation
+						message: 'Returned VISBO Center Organisation',
+						count: req.auditInfo,
+						_id: VCSetting._id,
+						name: VCSetting.name,
+						timestamp: VCSetting.timestamp,
+						reducedOrga: [reducedOrga]
 					});
+				} else {
+					VCSetting.value._id = VCSetting._id;
+					VCSetting.value.name = VCSetting.name;
+					return res.status(200).send({
+						state: 'success',
+						message: 'Returned VISBO Center Organisation',
+						count: req.auditInfo,
+						timestamp: VCSetting.timestamp,
+						organisation: [VCSetting.value]
+					});
+				}
+			});
+		} else {
+			queryVCSetting.exec(function (err, listVCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC Organisations ${req.oneVC._id} Find`, `Error getting Organisations for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				logger4js.debug('Found %d VC Organisation', listVCSetting.length);
+				req.auditInfo = listVCSetting.length;
+				var listOrganisation = [];
+				listVCSetting.forEach(item => {
+					item.value.name = item.name;
+					item.value._id = item._id;
+					listOrganisation.push(item.value);
 				});
-			}
-		})
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Center Organisations',
+					count: listVCSetting.length,
+					organisation: listOrganisation
+				});
+			});
+		}
+	})
 
 	/**
 		* @api {post} /vc/:vcid/organisation Create a new organisation
@@ -2041,7 +2039,7 @@ router.route('/:vcid/message')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Creates a new VISBO Center Organisation
 		*
-		* @apiPermission Authenticated and VC.View Permission for the VISBO Center.
+		* @apiPermission Authenticated and VC.View & VC.Manage Permission for the VISBO Center.
 		* @apiError {number} 400 inconsistent information inside the new organisation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 409 an organisation with the same time stamp already exists
@@ -2064,7 +2062,6 @@ router.route('/:vcid/message')
 		*      'employeeNr': 'U4711',
 		*      'aliases': ['Alias1', 'Alias2'],
 		*      'isAggregationRole': false,
-		*      'isAggregationRole': false,
 		*      'isSummaryRole': false,
 		*      'percent': 0.25
 	  *    ]
@@ -2081,82 +2078,102 @@ router.route('/:vcid/message')
 		*/
 
 	// Create VC Organisation
-		.post(function(req, res) {
-			var userId = req.decoded._id;
-			req.auditDescription = 'VISBO Center Organisation Create';
-			req.auditInfo = req.body.name;
+	.post(function(req, res) {
+		var userId = req.decoded._id;
+		req.auditDescription = 'VISBO Center Organisation Create';
+		req.auditInfo = req.body.name;
 
-			logger4js.trace('Post a new VISBO Center Organisation Req Body: %O Name %s', req.body, req.body.name);
-			logger4js.info('Post a new VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
+		logger4js.trace('Post a new VISBO Center Organisation Req Body: %O Name %s', req.body, req.body.name);
+		logger4js.info('Post a new VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
 
-			if (req.body.name) req.body.name = (req.body.name || '').trim();
-			if (!validate.validateName(req.body.name, false)
-			|| !validate.validateDate(req.body.timestamp, true)) {
-				logger4js.debug('Post a new VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
-				return res.status(400).send({
+		if (!(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to create VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+		if (req.body.name) req.body.name = (req.body.name || '').trim();
+		if (!validate.validateName(req.body.name, false)
+		|| !validate.validateDate(req.body.timestamp, true)) {
+			logger4js.debug('Post a new VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid name or timestamp in Organisation definition'
+			});
+		}
+		if (!req.body.reducedOrga && !req.body.organisation) {
+			logger4js.debug('Post a new VISBO Center Organisation orga definition missing %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Organisation definition missing'
+			});
+		}
+		var newTimeStamp = req.body.timestamp;
+		newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
+		newTimeStamp.setDate(1);
+		newTimeStamp.setHours(0,0,0,0);
+		var oldOrga = undefined;
+		if (req.visboOrganisation?.length > 0) {
+			// req.visboOrganisation.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
+			oldOrga = req.visboOrganisation[0];
+			var oldTimeStamp = new Date(oldOrga.timestamp);
+			if (newTimeStamp.getTime() <= oldTimeStamp.getTime()) {
+				return res.status(409).send({
 					state: 'failure',
-					message: 'No valid name or timestamp in Organisation definition'
+					message: 'Newer Organisation exists already'
 				});
 			}
-			if (!req.body.reducedOrga && !req.body.organisation) {
-				logger4js.debug('Post a new VISBO Center Organisation orga definition missing %O', req.body);
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Organisation definition missing'
+		}
+		var errorList = [];
+		var orga;
+		var isReducedOrga = req.body.reducedOrga != undefined;
+		if (req.body.reducedOrga) {
+			orga = helperOrga.initOrgaReduced(req.body.reducedOrga, newTimeStamp, oldOrga?.value, errorList);
+		} else if (req.body.organisation) {
+			orga = helperOrga.initOrga(req.body.organisation, newTimeStamp, oldOrga?.value, errorList);
+		}
+		if (!orga) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Incorrect Information in organisation',
+				organisation: orga,
+				error: errorList
+			});
+		}
+		logger4js.debug('Post Organisation Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
+		if (!helperOrga.verifyOrga(orga, oldOrga)) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Incorrect Information compared to old organisation',
+				organisation: orga
+			});
+		}
+		// now create the Setting that gets saved
+		var vcSetting = new VCSetting();
+		vcSetting.name = req.body.name;
+		vcSetting.vcid = req.params.vcid;
+		vcSetting.value = orga;
+		vcSetting.timestamp = newTimeStamp;
+		vcSetting.type = 'organisation';
+		vcSetting.save(function(err, oneVCSetting) {
+			if (err) {
+				errorHandler(err, res, `DB: POST VC Organisation ${req.params.vcid} save`, `Error creating VISBO Center Organisation ${req.oneVC.name}`);
+				return;
+			}
+			req.oneVCSetting = oneVCSetting;
+			if (isReducedOrga) {
+				var reducedOrga = helperOrga.reduceOrga(oneVCSetting.value);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Center Organisation',
+					count: req.auditInfo,
+					_id: oneVCSetting._id,
+					name: oneVCSetting.name,
+					timestamp: oneVCSetting.timestamp,
+					reducedOrga: [reducedOrga]
 				});
-			}
-			var newTimeStamp = req.body.timestamp;
-			newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : new Date();
-			newTimeStamp.setDate(1);
-			newTimeStamp.setHours(0,0,0,0);
-			var oldOrga = undefined;
-			if (req.visboOrganisation?.length > 0) {
-				// req.visboOrganisation.forEach( item => logger4js.warn('Orga Timestamp', item.timestamp));
-				oldOrga = req.visboOrganisation[0];
-				var oldTimeStamp = new Date(oldOrga.timestamp);
-				if (newTimeStamp.getTime() <= oldTimeStamp.getTime()) {
-					return res.status(409).send({
-						state: 'failure',
-						message: 'Newer Organisation exists already'
-					});
-				}
-			}
-			var errorList = [];
-			var orga;
-			if (req.body.reducedOrga) {
-				orga = helperOrga.initOrgaReduced(req.body.reducedOrga, newTimeStamp, oldOrga?.value, errorList);
-			} else if (req.body.organisation) {
-				orga = helperOrga.initOrga(req.body.organisation, newTimeStamp, oldOrga?.value, errorList);
-			}
-			if (!orga) {
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Incorrect Information in organisation',
-					organisation: orga,
-					error: errorList
-				});
-			}
-			logger4js.debug('Post Organisation Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
-			if (!helperOrga.verifyOrga(orga, oldOrga)) {
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Incorrect Information compared to old organisation',
-					organisation: orga
-				});
-			}
-			// now create the Setting that gets saved
-			var vcSetting = new VCSetting();
-			vcSetting.name = req.body.name;
-			vcSetting.vcid = req.params.vcid;
-			vcSetting.value = orga;
-			vcSetting.timestamp = newTimeStamp;
-			vcSetting.type = 'organisation';
-			vcSetting.save(function(err, oneVCSetting) {
-				if (err) {
-					errorHandler(err, res, `DB: POST VC Organisation ${req.params.vcid} save`, `Error creating VISBO Center Organisation ${req.oneVC.name}`);
-					return;
-				}
-				req.oneVCSetting = oneVCSetting;
+			} else {
 				return res.status(200).send({
 					state: 'success',
 					message: 'Inserted VISBO Center Organisation',
@@ -2165,11 +2182,157 @@ router.route('/:vcid/message')
 					organisation: [ orga ],
 					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 				});
-			});
+			}
 		});
+	});
 
+router.route('/:vcid/organisation/:settingid')
+	/**
+		* @api {put} /vc/:vcid/organisation/:orgaid Update an organisation
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center
+		* @apiName UpdateVISBOCenterOrganisation
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Creates a new VISBO Center Organisation
+		*
+		* @apiPermission Authenticated and VC.View & VC.Manage Permission for the VISBO Center.
+		* @apiError {number} 400 inconsistent information inside the new organisation
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 409 an organisation with the same time stamp already exists
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/vc/:vcid/organisation
+		*  {
+		*    'name': 'name',
+		*    'timestamp': '2018-12-01',
+		* 	 'reducedOrga': [
+	  *      'name':'name of orga unit',
+		*      'type': 'type of orga unit',
+		*      'uid': 'uid of orga unit',
+		*      'parent': 'parent name of orga unit',
+		*      'entryDate': '2021-01-01',
+		*      'exitDate': '2022-07-15',
+		*      'isExternRole': false,
+		*      'defaultCapa': 20,
+		*      'defaultDayCapa': 6.5,
+		*      'tagessatz': 800,
+		*      'employeeNr': 'U4711',
+		*      'aliases': ['Alias1', 'Alias2'],
+		*      'isAggregationRole': false,
+		*      'isSummaryRole': false,
+		*      'percent': 0.25
+	  *    ]
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Successfully created VISBO Center Organisation',
+		*   'timestamp': '2018-12-01',
+		*   'organisation': {
+		*   }
+		* }
+		*/
 
-	router.route('/:vcid/setting')
+	// Update VC Organisation
+	.put(function(req, res) {
+		var userId = req.decoded._id;
+		req.auditDescription = 'VISBO Center Organisation Update';
+		req.auditInfo = req.body.name;
+
+		logger4js.trace('Put VISBO Center Organisation Req Body: %O Name %s', req.body, req.body.name);
+		logger4js.info('Put VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
+
+		if (!(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to update VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+		if (req.body.name) req.body.name = (req.body.name || '').trim();
+		if (!validate.validateName(req.body.name, false)) {
+			logger4js.debug('Put VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid name in Organisation definition'
+			});
+		}
+		if (!req.body.reducedOrga && !req.body.organisation) {
+			logger4js.debug('Put VISBO Center Organisation orga definition missing %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Organisation definition missing'
+			});
+		}
+		if (req.visboOrganisation?.length > 1) {
+			var oldOrga = req.visboOrganisation[0];
+			if (validate.compareDate(req.oneVCSetting.timestamp, oldOrga.timestamp) < 0) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Newer Organisation exists already, update is not allowed'
+				});
+			}
+		}
+		var oldOrga = req.oneVCSetting;
+		var errorList = [];
+		var isReducedOrga = req.body.reducedOrga != undefined;
+		if (req.body.reducedOrga) {
+			orga = helperOrga.initOrgaReduced(req.body.reducedOrga, oldOrga.timestamp, oldOrga?.value, errorList);
+		} else if (req.body.organisation) {
+			orga = helperOrga.initOrga(req.body.organisation, oldOrga.timestamp, oldOrga?.value, errorList);
+		}
+		if (!orga) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Incorrect Information in organisation',
+				organisation: orga,
+				error: errorList
+			});
+		}
+		logger4js.debug('Put Organisation Check new Orga against', oldOrga ? oldOrga.timestamp : 'Nothing');
+		if (!helperOrga.verifyOrga(orga, oldOrga)) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Incorrect Information compared to old organisation',
+				organisation: orga
+			});
+		}
+		if (req.body.name) {
+			oldOrga.name = req.body.name
+		}
+		req.auditInfo = oldOrga.name.concat('/', oldOrga.timestamp.toISOString());
+		oldOrga.value = orga;
+
+		oldOrga.save(function(err, oneVCSetting) {
+			if (err) {
+				errorHandler(err, res, `DB: POST VC Organisation ${req.params.vcid} save`, `Error creating VISBO Center Organisation ${req.oneVC.name}`);
+				return;
+			}
+			req.oneVCSetting = oneVCSetting;
+			if (isReducedOrga) {
+				var reducedOrga = helperOrga.reduceOrga(oneVCSetting.value);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated VISBO Center Organisation',
+					_id: oneVCSetting._id,
+					name: oneVCSetting.name,
+					timestamp: oneVCSetting.timestamp,
+					reducedOrga: [reducedOrga]
+				});
+			} else {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Updated VISBO Center Organisation',
+					timestamp: oneVCSetting.timestamp,
+					_id: oneVCSetting._id,
+					organisation: [ orga ],
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
+			}
+		});
+	});
+
+router.route('/:vcid/setting')
 
 	/**
 		* @api {get} /vc/:vcid/setting Get all Settings
@@ -2219,116 +2382,116 @@ router.route('/:vcid/message')
 		*/
 
 	// get VC Settings
-		.get(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var latestOnly = false; 	// as default show all settings
-			var groupBy = 'name';
-			var isSysAdmin = req.query.sysadmin ? true : false;
-			var sortColumns;
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var latestOnly = false; 	// as default show all settings
+		var groupBy = 'name';
+		var isSysAdmin = req.query.sysadmin ? true : false;
+		var sortColumns;
 
-			req.auditDescription = 'VISBO Center Setting Read';
-			req.auditSysAdmin = isSysAdmin;
-			req.auditTTLMode = 1;
+		req.auditDescription = 'VISBO Center Setting Read';
+		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
 
-			logger4js.info('Get VISBO Center Setting for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+		logger4js.info('Get VISBO Center Setting for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
 
-			var query = {};
-			var refDate;
-			if (req.query.refDate != undefined) {
-				if (Date.parse(req.query.refDate)) {
-					refDate = new Date(req.query.refDate);
-				} else {
-					refDate = new Date();
+		var query = {};
+		var refDate;
+		if (req.query.refDate != undefined) {
+			if (Date.parse(req.query.refDate)) {
+				refDate = new Date(req.query.refDate);
+			} else {
+				refDate = new Date();
+			}
+			var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
+			query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
+			latestOnly = true;
+		}
+
+		query.vcid = req.oneVC._id;
+		if (req.query.name) query.name = req.query.name;
+		if (req.query.type) {
+			if (req.query.type.indexOf(',') == -1) {
+				query.type = req.query.type;
+			} else {
+				query.type = {$in: req.query.type.split(',')};
+			}
+		}
+		if (req.query.userId && validate.validateObjectId(req.query.userId, true)) query.userId = req.query.userId;
+		if (req.query.groupBy == 'type') groupBy = 'type';
+
+		if (groupBy == 'type') sortColumns = 'type userId ';
+		else sortColumns = 'type name userId ';
+		if (latestOnly) {
+			if (req.query.refNext) sortColumns = sortColumns.concat(' +timestamp');
+			else sortColumns = sortColumns.concat(' -timestamp');
+		}
+
+		logger4js.debug('Find VC Settings with query %O', query);
+		var queryVCSetting = VCSetting.find(query);
+		if (req.query.shortList == true) {
+			queryVCSetting.select('-value');
+		}
+		// queryVCSetting.select('_id vcid name');
+		queryVCSetting.sort(sortColumns);
+		queryVCSetting.lean();
+		queryVCSetting.exec(function (err, listVCSetting) {
+			if (err) {
+				errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+				return;
+			}
+			for (let i = 0; i < listVCSetting.length; i++){
+				// Remove Password Information
+				if (listVCSetting[i].type == 'SysConfig' && listVCSetting[i].name == 'SMTP'
+				&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
+					listVCSetting[i].value.auth.pass = '';
+					break;
 				}
-				var compare = req.query.refNext ? {$gt: refDate} : {$lt: refDate};
-				query = { $or: [ { timestamp: compare }, { timestamp: {$exists: false}  } ] };
-				latestOnly = true;
 			}
-
-			query.vcid = req.oneVC._id;
-			if (req.query.name) query.name = req.query.name;
-			if (req.query.type) {
-				if (req.query.type.indexOf(',') == -1) {
-					query.type = req.query.type;
-				} else {
-					query.type = {$in: req.query.type.split(',')};
-				}
-			}
-			if (req.query.userId && validate.validateObjectId(req.query.userId, true)) query.userId = req.query.userId;
-			if (req.query.groupBy == 'type') groupBy = 'type';
-
-			if (groupBy == 'type') sortColumns = 'type userId ';
-			else sortColumns = 'type name userId ';
-			if (latestOnly) {
-				if (req.query.refNext) sortColumns = sortColumns.concat(' +timestamp');
-				else sortColumns = sortColumns.concat(' -timestamp');
-			}
-
-			logger4js.debug('Find VC Settings with query %O', query);
-			var queryVCSetting = VCSetting.find(query);
-			if (req.query.shortList == true) {
-				queryVCSetting.select('-value');
-			}
-			// queryVCSetting.select('_id vcid name');
-			queryVCSetting.sort(sortColumns);
-			queryVCSetting.lean();
-			queryVCSetting.exec(function (err, listVCSetting) {
-				if (err) {
-					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
-					return;
-				}
-				for (let i = 0; i < listVCSetting.length; i++){
-					// Remove Password Information
-					if (listVCSetting[i].type == 'SysConfig' && listVCSetting[i].name == 'SMTP'
-					&& listVCSetting[i].value && listVCSetting[i].value.auth && listVCSetting[i].value.auth.pass) {
-						listVCSetting[i].value.auth.pass = '';
-						break;
+			var listVCSettingfiltered = [];
+			if (listVCSetting.length > 1 && latestOnly) {
+				listVCSettingfiltered.push(listVCSetting[0]);
+				for (let i = 1; i < listVCSetting.length; i++){
+					//compare current item with previous and ignore if it is the same type, name, userId
+					logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
+					if (listVCSetting[i].type != listVCSetting[i-1].type
+					|| (groupBy == 'name' && listVCSetting[i].name != listVCSetting[i-1].name)
+					|| (listVCSetting[i].userId || '').toString() != (listVCSetting[i-1].userId || '').toString()) {
+						listVCSettingfiltered.push(listVCSetting[i]);
+						logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
 					}
 				}
-				var listVCSettingfiltered = [];
-				if (listVCSetting.length > 1 && latestOnly) {
-					listVCSettingfiltered.push(listVCSetting[0]);
-					for (let i = 1; i < listVCSetting.length; i++){
-						//compare current item with previous and ignore if it is the same type, name, userId
-						logger4js.trace('compare: :%s: vs. :%s:', JSON.stringify(listVCSetting[i]), JSON.stringify(listVCSetting[i-1]) );
-						if (listVCSetting[i].type != listVCSetting[i-1].type
-						|| (groupBy == 'name' && listVCSetting[i].name != listVCSetting[i-1].name)
-						|| (listVCSetting[i].userId || '').toString() != (listVCSetting[i-1].userId || '').toString()) {
-							listVCSettingfiltered.push(listVCSetting[i]);
-							logger4js.trace('compare unequal: ', listVCSetting[i]._id != listVCSetting[i-1]._id);
-						}
-					}
-					logger4js.debug('Found %d Settings after Filtering', listVCSettingfiltered.length);
-				} else {
-					listVCSettingfiltered = listVCSetting;
+				logger4js.debug('Found %d Settings after Filtering', listVCSettingfiltered.length);
+			} else {
+				listVCSettingfiltered = listVCSetting;
+			}
+			if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit))) {
+				// if user has no Modify/Audit permission the personal settings of other users were removed
+				listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
+				// squeeze private settings, remove sensitive Information
+				listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
+			}
+			// filter _VCConfig Settings if not sysAdmin
+			if (!isSysAdmin) {
+				listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level == 2);
+			}
+			// join the capacity to the orga if it is available
+			listVCSettingfiltered.forEach(setting => {
+				if (setting.type == 'organisation') {
+					helperOrga.joinCapacity(setting, req.visboVCCapacity);
+					helperOrga.compatibilityOldOrga(setting);
 				}
-				if (!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit))) {
-					// if user has no Modify/Audit permission the personal settings of other users were removed
-					listVCSettingfiltered = listVCSettingfiltered.filter(item => !item.userId || item.userId.toString() == userId);
-					// squeeze private settings, remove sensitive Information
-					listVCSettingfiltered.forEach(function (item) { squeezeSetting(item, useremail); });
-				}
-				// filter _VCConfig Settings if not sysAdmin
-				if (!isSysAdmin) {
-					listVCSettingfiltered = listVCSettingfiltered.filter(item => item.type != '_VCConfig' || !item.value || item.value.level == 2);
-				}
-				// join the capacity to the orga if it is available
-				listVCSettingfiltered.forEach(setting => {
-					if (setting.type == 'organisation') {
-						helperOrga.joinCapacity(setting, req.visboVCCapacity);
-						helperOrga.compatibilityOldOrga(setting);
-					}
-				});
-				req.auditInfo = listVCSettingfiltered.length;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned VISBO Center Settings',
-					count: listVCSettingfiltered.length,
-					vcsetting: listVCSettingfiltered
-				});
 			});
-		})
+			req.auditInfo = listVCSettingfiltered.length;
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Center Settings',
+				count: listVCSettingfiltered.length,
+				vcsetting: listVCSettingfiltered
+			});
+		});
+	})
 
 	/**
 		* @api {post} /vc/:vcid/setting Create a Setting
@@ -2367,91 +2530,91 @@ router.route('/:vcid/message')
 		*/
 
 	// Create VISBO Center Setting
-		.post(function(req, res) {
-			// User is authenticated already
-			var userId = req.decoded._id;
-			var settingArea = 'public';
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var settingArea = 'public';
 
-			req.auditDescription = 'VISBO Center Setting Create';
-			req.auditInfo = req.body.name;
+		req.auditDescription = 'VISBO Center Setting Create';
+		req.auditInfo = req.body.name;
 
-			logger4js.trace('Post a new VISBO Center Setting Req Body: %O Name %s', req.body, req.body.name);
-			logger4js.info('Post a new VISBO Center Setting with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
+		logger4js.trace('Post a new VISBO Center Setting Req Body: %O Name %s', req.body, req.body.name);
+		logger4js.info('Post a new VISBO Center Setting with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
 
-			if (req.body.name) req.body.name = (req.body.name || '').trim();
-			if (req.body.type) req.body.type = (req.body.type || '').trim();
-			if (!validate.validateName(req.body.name, false) || !req.body.value || !validate.validateObjectId(req.body.userId, true)
-			|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, false)) {
-				logger4js.debug('Post a new VISBO Center Setting body or value not accepted %O', req.body);
-				return res.status(400).send({
+		if (req.body.name) req.body.name = (req.body.name || '').trim();
+		if (req.body.type) req.body.type = (req.body.type || '').trim();
+		if (!validate.validateName(req.body.name, false) || !req.body.value || !validate.validateObjectId(req.body.userId, true)
+		|| !validate.validateDate(req.body.timestamp, true) || !validate.validateName(req.body.type, false)) {
+			logger4js.debug('Post a new VISBO Center Setting body or value not accepted %O', req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No valid setting definition'
+			});
+		}
+		if (privateSettings.findIndex(type => type == req.body.type) >= 0) {
+			settingArea = 'private';
+		} else if (req.body.userId == userId) {
+			settingArea = 'personal';
+		}
+		var reqPermVC = constPermVC.View;
+		if (settingArea == 'private') {
+			reqPermVC = constPermVC.ManagePerm;
+		} else if (settingArea == 'public') {
+			reqPermVC = constPermVC.Modify;
+		}
+		if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+		|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to create VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+		logger4js.debug('Post Setting to VC %s Permission is ok', req.params.vcid);
+		var vcSetting = new VCSetting();
+		vcSetting.name = req.body.name;
+		vcSetting.vcid = req.params.vcid;
+		vcSetting.value = req.body.value;
+		vcSetting.type = 'Custom';
+		if (req.body.userId) vcSetting.userId = req.body.userId;
+		if (req.body.type) {
+			if (restrictedSettings.findIndex(item => item == req.body.type) >= 0) {
+				// not allowed to Create / Delete System Config Settings
+				return res.status(409).send({
 					state: 'failure',
-					message: 'No valid setting definition'
+					message: 'Not allowed to create this setting type'
 				});
 			}
-			if (privateSettings.findIndex(type => type == req.body.type) >= 0) {
-				settingArea = 'private';
-			} else if (req.body.userId == userId) {
-				settingArea = 'personal';
-			}
-			var reqPermVC = constPermVC.View;
-			if (settingArea == 'private') {
-				reqPermVC = constPermVC.ManagePerm;
-			} else if (settingArea == 'public') {
-				reqPermVC = constPermVC.Modify;
-			}
-			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
-			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Permission to create VISBO Center Setting',
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
-			logger4js.debug('Post Setting to VC %s Permission is ok', req.params.vcid);
-			var vcSetting = new VCSetting();
-			vcSetting.name = req.body.name;
-			vcSetting.vcid = req.params.vcid;
-			vcSetting.value = req.body.value;
-			vcSetting.type = 'Custom';
-			if (req.body.userId) vcSetting.userId = req.body.userId;
-			if (req.body.type) {
-				if (restrictedSettings.findIndex(item => item == req.body.type) >= 0) {
-					// not allowed to Create / Delete System Config Settings
-					return res.status(409).send({
-						state: 'failure',
-						message: 'Not allowed to create this setting type'
-					});
-				}
-				vcSetting.type = req.body.type;
-			}
-			// var newTimeStamp = req.body.timestamp || (req.body.value && req.body.value.validFrom);
-			var newTimeStamp = req.body.timestamp;
-			if (vcSetting.type == 'organisation') {
-				// no longer allowed to change organisation through setting POST/PUT
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Organisation change only through separate ReST Call'
-				});
-			}
-			newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
-			vcSetting.timestamp = newTimeStamp;
+			vcSetting.type = req.body.type;
+		}
+		// var newTimeStamp = req.body.timestamp || (req.body.value && req.body.value.validFrom);
+		var newTimeStamp = req.body.timestamp;
+		if (vcSetting.type == 'organisation') {
+			// no longer allowed to change organisation through setting POST/PUT
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Organisation change only through separate ReST Call'
+			});
+		}
+		newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
+		vcSetting.timestamp = newTimeStamp;
 
-			vcSetting.save(function(err, oneVCSetting) {
-				if (err) {
-					errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VISBO Center Setting ${req.oneVC.name}`);
-					return;
-				}
-				req.oneVCSetting = oneVCSetting;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Inserted VISBO Center Setting',
-					vcsetting: [ oneVCSetting ],
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
+		vcSetting.save(function(err, oneVCSetting) {
+			if (err) {
+				errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VISBO Center Setting ${req.oneVC.name}`);
+				return;
+			}
+			req.oneVCSetting = oneVCSetting;
+			return res.status(200).send({
+				state: 'success',
+				message: 'Inserted VISBO Center Setting',
+				vcsetting: [ oneVCSetting ],
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
 		});
+	});
 
-		router.route('/:vcid/setting/:settingid')
+router.route('/:vcid/setting/:settingid')
 
 	/**
 	  * @api {delete} /vc/:vcid/setting/:settingid Delete a Setting
@@ -2477,54 +2640,54 @@ router.route('/:vcid/message')
 	  */
 
 	// Delete VISBO Center Setting
-		.delete(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var settingArea = 'public';
+	.delete(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var settingArea = 'public';
 
-			req.auditDescription = 'VISBO Center Setting Delete';
-			req.auditInfo = req.oneVCSetting.name;
+		req.auditDescription = 'VISBO Center Setting Delete';
+		req.auditInfo = req.oneVCSetting.name;
 
-			logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
+		logger4js.info('DELETE VISBO Center Setting for userid %s email %s and vc %s setting %s ', userId, useremail, req.params.vcid, req.params.settingid);
 
-			if (privateSettings.findIndex(type => type == req.oneVCSetting.type) >= 0) {
-				settingArea = 'private';
-			} else if (req.oneVCSetting.userId && req.oneVCSetting.userId.toString() == userId) {
-				settingArea = 'personal';
-			}
-			var reqPermVC = constPermVC.View;
-			if (settingArea == 'private') {
-				reqPermVC = constPermVC.ManagePerm;
-			} else if (settingArea == 'public') {
-				reqPermVC = constPermVC.Modify;
-			}
-			if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
-			|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Permission to delete VISBO Center Setting',
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
-
-			if (restrictedSettings.findIndex(item => item == req.oneVCSetting.type) >= 0) {
-				// not allowed to Create / Delete System Config Settings
-				return res.status(409).send({
-					state: 'failure',
-					message: 'Not allowed to delete this setting type'
-				});
-			}
-			req.oneVCSetting.remove(function(err) {
-				if (err) {
-					errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
-					return;
-				}
-				return res.status(200).send({
-					state: 'success',
-					message: 'Deleted VISBO Center Setting'
-				});
+		if (privateSettings.findIndex(type => type == req.oneVCSetting.type) >= 0) {
+			settingArea = 'private';
+		} else if (req.oneVCSetting.userId && req.oneVCSetting.userId.toString() == userId) {
+			settingArea = 'personal';
+		}
+		var reqPermVC = constPermVC.View;
+		if (settingArea == 'private') {
+			reqPermVC = constPermVC.ManagePerm;
+		} else if (settingArea == 'public') {
+			reqPermVC = constPermVC.Modify;
+		}
+		if ((!req.query.sysadmin && !(req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC))
+		|| (req.query.sysadmin && !(req.listVCPerm.getPerm(0).system & constPermSystem.Modify))) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to delete VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
-		})
+		}
+
+		if (restrictedSettings.findIndex(item => item == req.oneVCSetting.type) >= 0) {
+			// not allowed to Create / Delete System Config Settings
+			return res.status(409).send({
+				state: 'failure',
+				message: 'Not allowed to delete this setting type'
+			});
+		}
+		req.oneVCSetting.remove(function(err) {
+			if (err) {
+				errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
+				return;
+			}
+			return res.status(200).send({
+				state: 'success',
+				message: 'Deleted VISBO Center Setting'
+			});
+		});
+	})
 
 	/**
 		* @api {put} /vc/:vcid/setting/:settingid Update a Setting
@@ -2563,7 +2726,7 @@ router.route('/:vcid/message')
 		* }
 		*/
 
-// change setting
+	// change setting
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -2755,8 +2918,9 @@ router.route('/:vcid/message')
 						message: 'Organisation change only through separate ReST Call'
 					});
 				}
-				// allow to change all beside userId and type
+				// allow to change name and value
 				if (req.body.name) req.oneVCSetting.name = req.body.name;
+				if (req.body.value) req.oneVCSetting.value = req.body.value;
 			}
 			req.oneVCSetting.save(function(err, resultVCSetting) {
 				if (err) {
@@ -2820,7 +2984,7 @@ router.route('/:vcid/message')
 		}
 	});
 
-	router.route('/:vcid/capacity')
+router.route('/:vcid/capacity')
 
 	/**
 		* @api {get} /vc/:vcid/capacity Get Capacity of Visbo Center
@@ -2866,102 +3030,102 @@ router.route('/:vcid/message')
 		*/
 
 	// get VC Capacity
-		.get(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
-			var roleID = req.query.roleID;
-			var parentID = req.query.parentID;
-			var hierarchy = req.query.hierarchy == true;
-			var perProject = req.query.perProject == true;
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var roleID = req.query.roleID;
+		var parentID = req.query.parentID;
+		var hierarchy = req.query.hierarchy == true;
+		var perProject = req.query.perProject == true;
 
-			var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
+		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
-			req.auditDescription = 'VISBO Center Capacity Read';
+		req.auditDescription = 'VISBO Center Capacity Read';
 
-			if ((perm.vc & (constPermVC.ViewAudit + constPermVC.Modify)) == 0) {
-				return res.status(403).send({
-					state: 'failure',
-					message: 'No Permission to calculate Capacity',
-					perm: perm
-				});
-			}
+		if ((perm.vc & (constPermVC.ViewAudit + constPermVC.Modify)) == 0) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to calculate Capacity',
+				perm: perm
+			});
+		}
 
-			logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
-			if (!req.visboOrganisation) {
-				return res.status(409).send({
-					state: 'failure',
-					message: 'No VISBO Center Organisation',
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
-			var onlyPT = true;
-			if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
-				onlyPT = false;
-			}
-			var listVPV = [];
-			req.listVPV && req.listVPV.forEach(vpv => {
-					var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
-					if (perm & constPermVP.ViewAudit == 0) {
-						onlyPT = true;
-					}
-					if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
-						listVPV.push(vpv);
-					}
-				});
-			var listVPVPFV = [];
-			req.listVPVPFV && req.listVPVPFV.forEach(vpv => {
-					var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
-					if (perm & constPermVP.ViewAudit == 0) {
-						onlyPT = true;
-					}
-					if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
-						listVPVPFV.push(vpv);
-					}
-				});
-
-			var capacity = undefined;
-			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
-			} else {
-				capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
-			}
-
-			var filteredCapacity = [];
-			var startDate = validate.validateDate(req.query.startDate, false, true);
-			if (!startDate) {
-				startDate = new Date(-8640000000000000);
-			}
-			var endDate = validate.validateDate(req.query.endDate, false, true);
-			if (!endDate) {
-				endDate = new Date(8640000000000000);
-			}
-
-			capacity.forEach(item => {
-					var current = new Date(item.month);
-					if (current.getTime() >= startDate.getTime() && current.getTime() <= endDate.getTime()) {
-						filteredCapacity.push(item);
-					}
+		logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
+		if (!req.visboOrganisation) {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'No VISBO Center Organisation',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+		var onlyPT = true;
+		if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
+			onlyPT = false;
+		}
+		var listVPV = [];
+		req.listVPV && req.listVPV.forEach(vpv => {
+				var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+				if (perm & constPermVP.ViewAudit == 0) {
+					onlyPT = true;
+				}
+				if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+					listVPV.push(vpv);
+				}
+			});
+		var listVPVPFV = [];
+		req.listVPVPFV && req.listVPVPFV.forEach(vpv => {
+				var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+				if (perm & constPermVP.ViewAudit == 0) {
+					onlyPT = true;
+				}
+				if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+					listVPVPFV.push(vpv);
+				}
 			});
 
-			req.auditInfo = '';
-			return res.status(200).send({
-				state: 'success',
-				message: 'Returned VISBO Center Capacity',
-				// count: capacity.length,
-				vc: [ {
-					_id: req.oneVC._id,
-					name: req.oneVC.name,
-					description: req.oneVC.description,
-					roleID: roleID,
-					vpCount: req.oneVC.vpCount,
-					createdAt: req.oneVC.createdAt,
-					updatedAt: req.oneVC.updatedAt,
-					capacity: filteredCapacity
-				} ]
-			});
+		var capacity = undefined;
+		if (perProject) {
+			capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
+		} else {
+			capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
+		}
+
+		var filteredCapacity = [];
+		var startDate = validate.validateDate(req.query.startDate, false, true);
+		if (!startDate) {
+			startDate = new Date(-8640000000000000);
+		}
+		var endDate = validate.validateDate(req.query.endDate, false, true);
+		if (!endDate) {
+			endDate = new Date(8640000000000000);
+		}
+
+		capacity.forEach(item => {
+				var current = new Date(item.month);
+				if (current.getTime() >= startDate.getTime() && current.getTime() <= endDate.getTime()) {
+					filteredCapacity.push(item);
+				}
 		});
 
-	router.route('/:vcid/capa')
+		req.auditInfo = '';
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned VISBO Center Capacity',
+			// count: capacity.length,
+			vc: [ {
+				_id: req.oneVC._id,
+				name: req.oneVC.name,
+				description: req.oneVC.description,
+				roleID: roleID,
+				vpCount: req.oneVC.vpCount,
+				createdAt: req.oneVC.createdAt,
+				updatedAt: req.oneVC.updatedAt,
+				capacity: filteredCapacity
+			} ]
+		});
+	});
+
+router.route('/:vcid/capa')
 
 	/**
 		* @api {get} /vc/:vcid/capa Get all capacities of persons
@@ -2999,38 +3163,38 @@ router.route('/:vcid/message')
 		*/
 
 	// get VC Capa
-		.get(function(req, res) {
-			var userId = req.decoded._id;
-			var useremail = req.decoded.email;
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
 
-			req.auditDescription = 'VISBO Center User Capacity Read';
-			req.auditTTLMode = 1;
+		req.auditDescription = 'VISBO Center User Capacity Read';
+		req.auditTTLMode = 1;
 
-			logger4js.info('Get VISBO Center User Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
-			var query = {};
-			query.vcid = req.oneVC._id;
-			var roleID = validate.validateNumber(req.query.roleID, false);
-			if (roleID >= 0) {
-				query.roleID = roleID;
+		logger4js.info('Get VISBO Center User Capacity for userid %s email %s and vc %s ', userId, useremail, req.params.vcid);
+		var query = {};
+		query.vcid = req.oneVC._id;
+		var roleID = validate.validateNumber(req.query.roleID, false);
+		if (roleID >= 0) {
+			query.roleID = roleID;
+		}
+
+		var queryVCCapacity = VCCapacity.find(query);
+		queryVCCapacity.sort('roleID startOfYear');
+		queryVCCapacity.lean();
+		queryVCCapacity.exec(function (err, listVCCapacity) {
+			if (err) {
+				errorHandler(err, res, `DB: GET VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
+				return;
 			}
-
-			var queryVCCapacity = VCCapacity.find(query);
-			queryVCCapacity.sort('roleID startOfYear');
-			queryVCCapacity.lean();
-			queryVCCapacity.exec(function (err, listVCCapacity) {
-				if (err) {
-					errorHandler(err, res, `DB: GET VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
-					return;
-				}
-				req.auditInfo = listVCCapacity.length;
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned VISBO Center User Capacities',
-					count: listVCCapacity.length,
-					capacity: listVCCapacity
-				});
+			req.auditInfo = listVCCapacity.length;
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned VISBO Center User Capacities',
+				count: listVCCapacity.length,
+				capacity: listVCCapacity
 			});
-		})
+		});
+	})
 
 	/**
 		* @api {post} /vc/:vcid/capa Create Capacity Entry for OrgaUnit of Visbo Center
@@ -3067,7 +3231,7 @@ router.route('/:vcid/message')
 		* }
 		*/
 
-// post VC Capacity
+	// post VC Capacity
 	.post(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -3075,7 +3239,7 @@ router.route('/:vcid/message')
 		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
 		req.auditDescription = 'VISBO Center Capacity Create';
-		logger4js.info('Post VISBO Center Capacity for userid %s email %s and vc %s RoleID %s', userId, useremail, req.params.vcid, roleID);
+		logger4js.info('Post VISBO Center Capacity for userid %s email %s and vc %s RoleID %s', userId, useremail, req.params.vcid, req.body.roleID);
 
 		if ((perm.vc & constPermVC.Modify) == 0) {
 			return res.status(403).send({
@@ -3154,83 +3318,83 @@ router.route('/:vcid/message')
 	});
 
 router.route('/:vcid/capa/:capaid')
-/**
-	* @api {put} /vc/:vcid/capa/:capaid Update a User capacity
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Properties
-	* @apiName UpdateVISBOCenterUserCapacity
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Updates the capaPerMonth for a specific roleID and calendar year
-	*
-	* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Update a VISBO Center User Capacity
-	* @apiError {number} 409 VISBO Center User Capacity does not exists
-	*
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/capa/:capaid
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'VISBO Center User Capacity updated'
-	* }
-	*/
-// Update VISBO Center User Capa
-.put(function(req, res) {
-	req.auditDescription = 'VISBO Center User Capacicty Update';
-	req.auditInfo = '';
+	/**
+		* @api {put} /vc/:vcid/capa/:capaid Update a User capacity
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName UpdateVISBOCenterUserCapacity
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Updates the capaPerMonth for a specific roleID and calendar year
+		*
+		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Update a VISBO Center User Capacity
+		* @apiError {number} 409 VISBO Center User Capacity does not exists
+		*
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/capa/:capaid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'VISBO Center User Capacity updated'
+		* }
+		*/
+	// Update VISBO Center User Capa
+	.put(function(req, res) {
+		req.auditDescription = 'VISBO Center User Capacicty Update';
+		req.auditInfo = '';
 
-	var reqPermVC = constPermVC.View + constPermVC.Modify;
-	if ((req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC) != reqPermVC) {
-		return res.status(403).send({
-			state: 'failure',
-			message: 'No Permission to update VISBO Center User Capacity',
-			perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-		});
-	}
-	if (!req.body.capaPerMonth || req.body.capaPerMonth.length != 12) {
-		return res.status(400).send({
-			state: 'failure',
-			message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`
-		});
-	}
-
-	var query = {};
-	query.vcid = req.oneVC._id;
-	query._id = req.params.capaid;
-	var queryVCCapa = VCCapacity.findOne(query);
-	queryVCCapa.exec(function (err, capa) {
-		if (err) {
-			errorHandler(err, res, `DB: Get VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
-			return;
-		}
-		if (capa) {
-			req.auditInfo = capa.roleID.toString().concat(' / ', capa.startOfYear.toISOString().substr(0, 10));
-			capa.capaPerMonth = [];
-			req.body.capaPerMonth.forEach(item => {
-				capa.capaPerMonth.push(validate.validateNumber(item, true));
-			});
-			capa.save(function(err, oneCapa) {
-				if (err) {
-					errorHandler(err, res, `DB: Update VC User Capacity ${req.params.capaid} Update`, `Error updating VISBO Center User Capacity ${req.params.capaid}`);
-					return;
-				}
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated VISBO Center User Capacity',
-					capacity: [oneCapa]
-				});
-			});
-		} else {
-			return res.status(409).send({
+		var reqPermVC = constPermVC.View + constPermVC.Modify;
+		if ((req.listVCPerm.getPerm(req.params.vcid).vc & reqPermVC) != reqPermVC) {
+			return res.status(403).send({
 				state: 'failure',
-				message: 'VISBO Center User Capacity does not exists',
+				message: 'No Permission to update VISBO Center User Capacity',
 				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
 		}
-	});
-})
+		if (!req.body.capaPerMonth || req.body.capaPerMonth.length != 12) {
+			return res.status(400).send({
+				state: 'failure',
+				message: `Capacity Definition needs to have a capacity per month (12) ${JSON.stringify(req.body)}`
+			});
+		}
+
+		var query = {};
+		query.vcid = req.oneVC._id;
+		query._id = req.params.capaid;
+		var queryVCCapa = VCCapacity.findOne(query);
+		queryVCCapa.exec(function (err, capa) {
+			if (err) {
+				errorHandler(err, res, `DB: Get VC User Capacity ${req.oneVC._id} Find`, `Error getting User Capacity for VISBO Center ${req.oneVC.name}`);
+				return;
+			}
+			if (capa) {
+				req.auditInfo = capa.roleID.toString().concat(' / ', capa.startOfYear.toISOString().substr(0, 10));
+				capa.capaPerMonth = [];
+				req.body.capaPerMonth.forEach(item => {
+					capa.capaPerMonth.push(validate.validateNumber(item, true));
+				});
+				capa.save(function(err, oneCapa) {
+					if (err) {
+						errorHandler(err, res, `DB: Update VC User Capacity ${req.params.capaid} Update`, `Error updating VISBO Center User Capacity ${req.params.capaid}`);
+						return;
+					}
+					return res.status(200).send({
+						state: 'success',
+						message: 'Updated VISBO Center User Capacity',
+						capacity: [oneCapa]
+					});
+				});
+			} else {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'VISBO Center User Capacity does not exists',
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
+			}
+		});
+	})
 
 	/**
 		* @api {delete} /vc/:vcid/capa/:capaid Delete a User capacity
@@ -3305,35 +3469,35 @@ router.route('/:vcid/capa/:capaid')
 
 router.route('/:vcid/predict')
 
-/**
-	* @api {get} /vc/:vcid/predict Get Predict Statistics
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Properties
-	* @apiName GetVISBOCenterPredict
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Gets all groups of the specified VISBO Center
-	*
-	* @apiPermission Authenticated and sysAdmin and VC.View Permission for the VISBO Center.
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/predict
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Returned VISBO Center Predict Statistics',
-	*   'count': 100,
-	*   'vp':[{
-	*     '_id':'vp5c754feaa',
-	*     'name':'Project Name',
-	*     'vcid': 'vc5c754feaa',
-	*     'vpvCount': 10
-	*   }]
-	* }
-	*/
+	/**
+		* @api {get} /vc/:vcid/predict Get Predict Statistics
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName GetVISBOCenterPredict
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all groups of the specified VISBO Center
+		*
+		* @apiPermission Authenticated and sysAdmin and VC.View Permission for the VISBO Center.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View VISBO Center, or VISBO Center does not exists
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/predict
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Predict Statistics',
+		*   'count': 100,
+		*   'vp':[{
+		*     '_id':'vp5c754feaa',
+		*     'name':'Project Name',
+		*     'vcid': 'vc5c754feaa',
+		*     'vpvCount': 10
+		*   }]
+		* }
+		*/
 
-// Get VC Predict Statistics
+	// Get VC Predict Statistics
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
@@ -3392,29 +3556,29 @@ router.route('/:vcid/predict')
 		});
 	})
 
-/**
-	* @api {delete} /vc/:vcid/predict Delete Predict Training
-	* @apiVersion 1.0.0
-	* @apiGroup VISBO Center Properties
-	* @apiName DeleteVISBOCenterPredict
-	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Deletes the training data of the VISBO Center
-	*
-	* @apiPermission Authenticated and sysAdmin and VC.View and VC.Delete for the VISBO Center.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
-	* @apiError {number} 403 No Permission to Delete VISBO Center Training Data
-	* @apiExample Example usage:
-	*   url: https://my.visbo.net/api/vc/:vcid/predict
-	* @apiSuccessExample {json} Success-Response:
-	* HTTP/1.1 200 OK
-	* {
-	*   'state':'success',
-	*   'message':'Deleted VISBO Center Predict Training'
-	* }
-	*/
+	/**
+		* @api {delete} /vc/:vcid/predict Delete Predict Training
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName DeleteVISBOCenterPredict
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the training data of the VISBO Center
+		*
+		* @apiPermission Authenticated and sysAdmin and VC.View and VC.Delete for the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Delete VISBO Center Training Data
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/predict
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Deleted VISBO Center Predict Training'
+		* }
+		*/
 
-// Delete VISBO Center Predict Training
+	// Delete VISBO Center Predict Training
 	.delete(function(req, res) {
 		var isSysAdmin = req.query.sysadmin ? true : false;
 		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);

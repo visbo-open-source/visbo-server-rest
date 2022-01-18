@@ -1154,13 +1154,7 @@ if (currentVersion < dateBlock) {
     print ("Visbo Capacity Collection Created")
   }
   // migrate capacity from latest orga per VC to vccapacities
-  var vcList = db.visbocenters.find(
-    {
-      system: {$exists: false},
-      name: {$in: ['Test-MS-VC02', 'Test-MS-VC01']},
-      deletedAt: {$exists: false}
-    }).toArray();
-  print ("VC List for capacity conversion", vcList.length)
+  var vcList = db.visbocenters.find({system: {$exists: false}}).toArray();
   var vcIDList = [];
   vcList.forEach(vc => {vcIDList.push(vc._id);});
 
@@ -1171,7 +1165,7 @@ if (currentVersion < dateBlock) {
     // print ("VC capacity conversion", vc.name, vc._id);
     var orga = vcOrgaList.find(item => item.vcid.toString() == vc._id.toString());
     if (!orga) {
-      print ("VC has no capacity to convert", vc.name);
+      // print ("VC has no capacity to convert", vc.name);
       return;
     }
     // print ("VC has orga", vc.name, orga.name, orga.type, orga.timestamp.toISOString());
@@ -1233,7 +1227,7 @@ if (currentVersion < dateBlock) {
       )
     print ("VC updated Orgas for VC", vc.name, result.matchedCount, result.modifiedCount);
   });
-  
+
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock

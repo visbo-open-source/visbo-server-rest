@@ -357,11 +357,6 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 
 	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
 	var queryVCSetting = VCSetting.find(query);
-	// do not get the big capa array, to reduce load, it is not necessary to get in case of keyMetrics calculation
-	if (req.method == 'POST' || req.method == 'PUT') {
-		queryVCSetting.select('-value.allRoles.kapazitaet');
-	}
-	queryVCSetting.sort('+timestamp');
 	queryVCSetting.lean();
 	queryVCSetting.exec(function (err, listVCSetting) {
 		if (err) {
@@ -370,6 +365,7 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 		}
 		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
 		if (listVCSetting.length > 0) {
+			listVCSetting.sort(function(a, b) { return validate.compareDate(b.timestamp, a.timestamp); });
 			req.visboOrganisation = listVCSetting;
 		}
 		if (withCapa) {

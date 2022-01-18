@@ -29,18 +29,6 @@ function getColumnOfDate(value) {
 	return valueMonth - refMonth;
 }
 
-function visboCmpDate(first, second) {
-	let result = 0;
-	if (first === undefined) { first = new Date(-8640000000000000); }
-	if (second === undefined) { second = new Date(-8640000000000000); }
-	if (first < second) {
-		result = -1;
-	} else if (first > second) {
-		result = 1;
-	}
-	return result;
-}
-
 function addDays(dd, numDays) {
 	var inputDate = new Date(dd);
 	inputDate.setDate(inputDate.getDate() + numDays);
@@ -405,7 +393,7 @@ function getSummeKosten(vpv, index, timeZones, maxTZ) {
 	}
 
 	var personnelCost = getAllPersonnelCost(vpv, timeZones, maxTZ);
-	var allOtherCost = getAllOtherCost('', vpv, timeZones);
+	var allOtherCost = getAllOtherCost(vpv, timeZones);
 
 	var len = Math.max(personnelCost.length, allOtherCost.length);
 	len = Math.min(len, index);
@@ -934,18 +922,18 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	logger4js.debug('Calculate KeyMetrics for %s with pfv %s and organization %s result %s ', vpv && vpv._id, pfv && pfv._id, organisation && organisation[0] && organisation[0]._id, JSON.stringify(keyMetrics));
 
 	if (organisation?.length > 0) {
-		var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate);
+		var indexTotal = getColumnOfDate(pfv.endDate) - getColumnOfDate(pfv.startDate) + 1;
 		// for calculation the actual cost of the baseline: all costs between the start of the project and the month before the timestamp of the vpv
 		var endDatePreviousMonthVPV = getDateEndOfPreviousMonth(vpv.timestamp);
-		var indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(pfv.startDate);
+		var indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(pfv.startDate) + 1;
 
 		var timeZones = splitInTimeZones(organisation, pfv.startDate, pfv.endDate);
 		var maxTimeZoneIndex = getTimeZoneIndex(timeZones, pfv.timestamp);
 		keyMetrics.costBaseLastTotal = getSummeKosten(pfv, indexTotal, timeZones, maxTimeZoneIndex);
 		keyMetrics.costBaseLastActual = getSummeKosten(pfv, indexActual, timeZones, maxTimeZoneIndex);
 
-		indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate);
-		indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate);
+		indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate) + 1;
+		indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate) + 1;
 		keyMetrics.costCurrentTotal= getSummeKosten(vpv, indexTotal, timeZones);
 		keyMetrics.costCurrentActual= getSummeKosten(vpv, indexActual, timeZones);
 	}
@@ -1002,7 +990,7 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate
 		return [];
 	}
 
-	if (visboCmpDate(new Date(startDate), new Date(endDate)) > 0 ){
+	if (validate.compareDate(startDate, endDate) > 0 ){
 		logger4js.warn('Calculate Capacities startDate %s before endDate %s ', startDate, endDate);
 		return [];
 	}
@@ -1392,7 +1380,7 @@ function splitInTimeZones(organisation, startDate, endDate) {
 		logger4js.warn('SplitInTimeZones not allowed parameters', organisation?.length, startDate, endDate);
 		return undefined;
 	}
-	organisation.sort(function(a, b) { return visboCmpDate(a.timestamp, b.timestamp); });
+	organisation.sort(function(a, b) { return validate.compareDate(a.timestamp, b.timestamp); });
 	// MS TODO reduce all orgas before startDate except one, reduce all orgas after endDate
 
 	var split = {};
@@ -1532,8 +1520,21 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	});
 	return costValues;
 }
+function checkAddRessource(role, roleID, teamID, isTeamMember, otherActivity) {
+	var result;
+	if (otherActivity) {
+		result = (role.RollenTyp == roleID && role.teamID != teamID)
+	} else {
+		if (isTeamMember) {
+			result = (role.RollenTyp == roleID && role.teamID == teamID);
+		} else {
+			result = (role.RollenTyp == roleID || role.teamID == teamID);
+		}
+	}
+	return result;
+}
 
-function addCostValues(roleID, teamID, otherActivity, vpv, timeZones, costValues) {
+function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZones, costValues) {
 	var maxTimeZoneIndex;
 	if (vpv.variantName == 'pfv') {
 		maxTimeZoneIndex = getTimeZoneIndex(timeZones, vpv.timestamp);
@@ -1545,27 +1546,23 @@ function addCostValues(roleID, teamID, otherActivity, vpv, timeZones, costValues
 	vpv.AllPhases?.forEach(phase => {
 		var phaseStart = vpvStartIndex + phase.relStart - 1;
 		phase.AllRoles?.forEach(role => {
-			if (role.RollenTyp == roleID
-			|| (!otherActivity && role.teamID == teamID)
-			|| (otherActivity && role.teamID != teamID)) {
-				if (role.Bedarf) {
-					var dimension = role.Bedarf.length;
-					var maxStart = Math.max(phaseStart, timeZones.startIndex);
-					var minEnd = Math.min(phaseStart + dimension, timeZones.endIndex + 1);
-					for (var l = maxStart; l < minEnd ; l++) {
-						// result in euro and in personnel day
-						var dailyRate = getDailyRateTZ(roleID, - 1, timeZones, l - timeZones.startIndex, maxTimeZoneIndex);
-						var bedarf = role.Bedarf[l - phaseStart];
-						if (l < actualDataIndex) {
-							costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
-							costValues[l - timeZones.startIndex].actCost_PT += bedarf;
-						} else if (otherActivity) {
-							costValues[l - timeZones.startIndex].otherActivityCost += bedarf * dailyRate / 1000;
-							costValues[l - timeZones.startIndex].otherActivityCost_PT += bedarf;
-						} else {
-							costValues[l - timeZones.startIndex].plannedCost += bedarf * dailyRate / 1000;
-							costValues[l - timeZones.startIndex].plannedCost_PT += bedarf;
-						}
+			if (role.Bedarf && checkAddRessource(role, roleID, teamID, isTeamMember, otherActivity)) {
+				var dimension = role.Bedarf.length;
+				var maxStart = Math.max(phaseStart, timeZones.startIndex);
+				var minEnd = Math.min(phaseStart + dimension, timeZones.endIndex + 1);
+				for (var l = maxStart; l < minEnd ; l++) {
+					// result in euro and in personnel day
+					var dailyRate = getDailyRateTZ(roleID, - 1, timeZones, l - timeZones.startIndex, maxTimeZoneIndex);
+					var bedarf = role.Bedarf[l - phaseStart];
+					if (l < actualDataIndex) {
+						costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
+						costValues[l - timeZones.startIndex].actCost_PT += bedarf;
+					} else if (otherActivity) {
+						costValues[l - timeZones.startIndex].otherActivityCost += bedarf * dailyRate / 1000;
+						costValues[l - timeZones.startIndex].otherActivityCost_PT += bedarf;
+					} else {
+						costValues[l - timeZones.startIndex].plannedCost += bedarf * dailyRate / 1000;
+						costValues[l - timeZones.startIndex].plannedCost_PT += bedarf;
 					}
 				}
 			}
@@ -1599,22 +1596,21 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, timeZones) {
 	if (!roleIDisTeam && !roleIDisTeamMember) {
 		concerningRoles.forEach(crole => {
 			var actRoleID = crole.actRole.uid;
-			addCostValues(actRoleID, actRoleID, false, vpv, timeZones, costValues);
+			addCostValues(actRoleID, actRoleID, false, false, vpv, timeZones, costValues);
 		});
 	} else if (roleIDisTeam) {
 		// add all needs with the choosen teamID
-		addCostValues(roleID, roleID, false, vpv, timeZones, costValues);
-
+		addCostValues(roleID, roleID, false, false, vpv, timeZones, costValues);
 		// add all needs of the persons in the Team teamID, but not as this teamMember
 		concerningRoles.forEach(crole => {
-			addCostValues(crole.actRole.uid, crole.teamID, true, vpv, timeZones, costValues);
+			addCostValues(crole.actRole.uid, crole.teamID, false, true, vpv, timeZones, costValues);
 		});
 	} else if (roleIDisTeamMember) {
 		concerningRoles.forEach(crole => {
 			// add all needs of the person roleID as TeamMember in the Team teamID
-			addCostValues(crole.actRole.uid, crole.teamID, false, vpv, timeZones, costValues);
+			addCostValues(crole.actRole.uid, crole.teamID, true, false, vpv, timeZones, costValues);
 			// add all needs of the person roleID as non TeamMember
-			addCostValues(crole.actRole.uid, crole.teamID, true, vpv, timeZones, costValues);
+			addCostValues(crole.actRole.uid, crole.teamID, true, true, vpv, timeZones, costValues);
 		});
 	}
 	return costValues;

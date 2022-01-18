@@ -333,7 +333,8 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				}
 				newRole.isExternRole = role.isExternRole;
 				newRole.defaultKapa = role.defaultKapa;
-				if (!(role.defaultDayCapa >= 0)) {
+				if (!role.defaultDayCapa) role.defaultDayCapa = 0;
+				if (role.defaultDayCapa < 0) {
 					errorstring = `Orga Role has no defaultDayCapa: uid: ${role.name}`;
 					listError && listError.push(errorstring);
 					logger4js.info('InitOrgaReduced: ', errorstring);
@@ -343,7 +344,8 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				newRole.defaultDayCapa = role.defaultDayCapa;
 				newRole.isExternRole = role.isExternRole;
 				// check Rule3: persons need to have a tagessatz > 0
-				if (!(newRole.tagessatz > 0)) {
+				if (!role.tagessatz) role.tagessatz = 0;
+				if (newRole.tagessatz < 0) {
 					errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid}`;
 					listError && listError.push(errorstring);
 					logger4js.info('InitOrgaReduced: ', errorstring);
