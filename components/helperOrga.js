@@ -39,6 +39,8 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			|| !validate.validateDate(role.exitDate, true)
 			|| !validate.validateDate(role.startOfCal, true)
 			|| validate.validateNumber(role.tagessatz || role.tagessatzIntern, true) == undefined
+			|| validate.validateNumber(role.defaultKapa, true) == undefined
+			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
 		) {
 			errorstring = `Orga Role has bad base structure: uid: ${role.uid}, name?: ${validate.validateName(role.name, false)}, role: ${JSON.stringify(role)} `;
 			listError && listError.push(errorstring);
@@ -67,7 +69,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		}
 		newRole.tagessatz = role.tagessatz || role.tagessatzIntern;
 		// check Rule3: orga units need to have a tagessatz > 0
-		if (!(newRole.tagessatz > 0)) {
+		if (!(newRole.tagessatz >= 0)) {
 			errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid} tagessatz: ${newRole.tagessatz}`;
 			listError && listError.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
@@ -103,9 +105,23 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 					newRole.entryDate = entryDate;
 				}
 			}
-			if (role.isExternRole) { newRole.isExternRole = role.isExternRole; }
+			if (role.isExternRole) { newRole.isExternRole = true; }
 			newRole.defaultKapa = validate.validateNumber(role.defaultKapa) || 0;
+			if (newRole.defaultKapa < 0) {
+				errorstring = `Orga Role has no valid defaultKapa: uid: ${role.name}`;
+				listError && listError.push(errorstring);
+				logger4js.info('InitOrgaList: ', errorstring);
+				isOrgaValid = false;
+				return;
+			}
 			newRole.defaultDayCapa = validate.validateNumber(role.defaultDayCapa) || 0;
+			if (newRole.defaultDayCapa < 0) {
+				errorstring = `Orga Role has no defaultDayCapa: uid: ${role.name}`;
+				listError && listError.push(errorstring);
+				logger4js.info('InitOrgaList: ', errorstring);
+				isOrgaValid = false;
+				return;
+			}
 
 			// check Rule1: internal people need to have capa
 			if (!newRole.isExternRole) {
@@ -206,7 +222,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (uniqueCostNames[newCost.name]) {
 			errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
 			listError && listError.push(errorstring);
-			logger4js.info('InitOrgaReduced: ', errorstring);
+			logger4js.info('InitOrgaList: ', errorstring);
 			isOrgaValid = false;
 			return;
 		}
@@ -256,16 +272,16 @@ function generateIndexedOrgaRoles(orga) {
 	return listOrga;
 }
 
-function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
+function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
 	var newOrga = new VCOrganisation();
 	var isOrgaValid = true;
 	var errorstring;
 	var oldOrgaIndexed = generateIndexedOrgaRoles(oldOrga);
-	if (!orgaReduced?.length > 0) {
-		errorstring = 'Reduced Orga List empty';
-		logger4js.info('InitOrgaReduced: ', errorstring);
+	if (!orgaList?.length > 0) {
+		errorstring = 'Orga List empty';
+		logger4js.info('InitOrgaFromList: ', errorstring);
 		listError && listError.push(errorstring);
 		return undefined;
 	}
@@ -277,7 +293,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 	var uniqueCostNames = [];
 	var maxRoleID = getMaxID(oldOrga, 1);
 	var maxCostID = getMaxID(oldOrga, 3);
-	orgaReduced.forEach(role => {
+	orgaList.forEach(role => {
 		if (validate.validateNumber(role.uid, true) == undefined
 			|| (validate.validateNumber(role.type, false) == undefined || role.type < 1 || role.type > 3)
 			|| !validate.validateName(role.name, false)
@@ -285,10 +301,12 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 			|| !validate.validateDate(role.entryDate, true)
 			|| !validate.validateDate(role.exitDate, true)
 			|| validate.validateNumber(role.tagessatz, true) == undefined
+			|| validate.validateNumber(role.defaultKapa, true) == undefined
+			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
 		) {
 			errorstring = `Orga Role has bad base structure: uid: ${role.uid}, name?: ${validate.validateName(role.name, false)}/${role.name}`;
 			listError && listError.push(errorstring);
-			logger4js.info('InitOrgaReduced: ', errorstring);
+			logger4js.info('InitOrgaList: ', errorstring);
 			isOrgaValid = false;
 			return;
 		}
@@ -300,7 +318,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 			newRole = new VCOrgaRole(role.uid, role.name);
 			newRole.type = role.type;
 			if (role.type == 2) {
-				logger4js.info('InitOrgaReduced: Team', role);
+				logger4js.info('InitOrgaList: Team', role);
 			}
 			newRole.parent = role.parent;
 			newRole.isSummaryRole = role.isSummaryRole;
@@ -308,6 +326,12 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				newRole.aliases = role.aliases;
 			}
 			newRole.tagessatz = role.tagessatz || 0;
+			if (newRole.tagessatz < 0) {
+				errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid} tagessatz: ${newRole.tagessatz}`;
+				listError && listError.push(errorstring);
+				logger4js.info('InitOrga: ', errorstring);
+				isOrgaValid = false;
+			}
 			if (role.exitDate) {
 				var exitDate = new Date(role.exitDate);
 				if (exitDate.getTime() < maxDate.getTime()) {
@@ -331,13 +355,11 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 						newRole.entryDate = entryDate;
 					}
 				}
-				newRole.isExternRole = role.isExternRole;
-				newRole.defaultKapa = role.defaultKapa;
 				if (!role.defaultDayCapa) role.defaultDayCapa = 0;
 				if (role.defaultDayCapa < 0) {
 					errorstring = `Orga Role has no defaultDayCapa: uid: ${role.name}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
 				}
@@ -348,15 +370,24 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				if (newRole.tagessatz < 0) {
 					errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
+				if (role.isExternRole) newRole.isExternRole = true;
+				if (role.defaultKapa < 0) {
+					errorstring = `Orga Role has no valid defaultKapa: uid: ${role.name}`;
+					listError && listError.push(errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
+					isOrgaValid = false;
+					return;
+				}
+				newRole.defaultKapa = role.defaultKapa;
 				// check Rule1: internal people need to have capa
 				if (!newRole.isExternRole) {
 					if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa > 0)) {
 						errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
 						listError && listError.push(errorstring);
-						logger4js.info('InitOrgaReduced: ', errorstring);
+						logger4js.info('InitOrgaList: ', errorstring);
 						isOrgaValid = false;
 					}
 				}
@@ -367,7 +398,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				if (!uniqueRoleNames[role.name]) {
 					errorstring = `Orga Role Name in Team not found: uid: ${role.uid}, name: ${role.name}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
 				}
@@ -377,7 +408,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				if (uniqueRoleNames[role.name]) {
 					errorstring = `Orga Role Name not unique: uid: ${role.uid}, name: ${role.name}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
 				}
@@ -389,7 +420,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				if ((oldRole.isSummaryRole == true) != (newRole.isSummaryRole == true)) {
 					errorstring = `Changed Orga Role isSummaryRole: uid: ${newRole.uid}, name: ${newRole.name}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
 				}
@@ -398,7 +429,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 					if (newRole.exitDate?.getTime() < timestamp.getTime()) {
 						errorstring = `Changed Orga Role exitDate to the past: uid: ${newRole.uid}, name: ${newRole.name}`;
 						listError && listError.push(errorstring);
-						logger4js.info('InitOrgaReduced: ', errorstring);
+						logger4js.info('InitOrgaList: ', errorstring);
 						isOrgaValid = false;
 						return;
 					}
@@ -422,7 +453,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 			if (uniqueCostNames[newCost.name]) {
 				errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
 				listError && listError.push(errorstring);
-				logger4js.info('InitOrgaReduced: ', errorstring);
+				logger4js.info('InitOrgaList: ', errorstring);
 				isOrgaValid = false;
 				return;
 			}
@@ -443,12 +474,12 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				} else {
 					errorstring = `Orga Role has no valid parent: uid: ${role.uid} parent: ${role.parent}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
 			}
 		});
-		orgaReduced.forEach(role => {
+		orgaList.forEach(role => {
 			// link the teamIDs
 			var parentRole = uniqueRoleNames[role.parent];
 			if (role.type == 2 && !role.isSummaryRole && parentRole) {
@@ -463,7 +494,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				} else {
 					errorstring = `Orga Team Role not found in orga: uid: ${role.uid} parent: ${role.name}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
 			}
@@ -478,7 +509,7 @@ function initOrgaReduced(orgaReduced, timestamp, oldOrga, listError) {
 				} else {
 					errorstring = `Orga Cost has no valid parent: uid: ${cost.uid} parent: ${cost.parent}`;
 					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaReduced: ', errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
 			}
@@ -682,6 +713,21 @@ function reduceOrga(orga) {
 	return organisation;
 }
 
+function convertSettingToOrga(setting, getOrgaList) {
+	var resultOrga = {};
+	resultOrga._id = setting._id;
+	resultOrga.name = setting.name;
+	resultOrga.timestamp = setting.timestamp;
+
+	if (getOrgaList) {
+		resultOrga.allUnits = reduceOrga(setting.value);
+	} else {
+		resultOrga.allRoles = setting.value.allRoles;
+		resultOrga.allCosts = setting.value.allCosts;
+	}
+	return resultOrga;
+}
+
 function calcFullPath(id, organisation) {
 	if (!organisation || !(id >= 0)) {
 		return;
@@ -770,8 +816,8 @@ function checkUIDs(newOrga, oldOrga) {
 }
 
 function joinCapacity(orga, capacity) {
-	if (!orga?.value?.allRoles || !capacity) {
-		logger4js.warn('JoinCapacity invalid organisation %d', orga?.value?.allRoles?.length);
+	if (!orga?.value?.allRoles) {
+		logger4js.warn('JoinCapacity invalid organisation %s/%s All Roles %d Capacity Length %d', orga?._id, orga?.timestamp?.toISOString(), orga?.value?.allRoles?.length, capacity?.length);
 		return;
 	}
 	if (!capacity) {
@@ -784,7 +830,7 @@ function joinCapacity(orga, capacity) {
 		if (!role.isSummaryRole) {
 			var newCapa = combinedCapacity.find(item => item.roleID == role.uid);
 			if (newCapa) {
-				role.kapazitaet = newCapa.capaPerMonth;
+				role.capaPerMonth = newCapa.capaPerMonth;
 				role.startOfCal = newCapa.startOfYear;
 			}
 		}
@@ -842,8 +888,9 @@ function combineCapacity(capacity) {
 
 module.exports = {
 	initOrga: initOrga,
-	initOrgaReduced: initOrgaReduced,
+	initOrgaFromList: initOrgaFromList,
 	reduceOrga: reduceOrga,
+	convertSettingToOrga: convertSettingToOrga,
 	joinCapacity: joinCapacity,
 	combineCapacity: combineCapacity,
 	compatibilityOldOrga: compatibilityOldOrga,

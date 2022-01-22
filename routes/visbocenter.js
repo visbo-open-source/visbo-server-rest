@@ -1893,10 +1893,10 @@ router.route('/:vcid/message')
 
 router.route('/:vcid/organisation')
 	/**
-		* @api {get} /vc/:vcid/organisation Get Organisation
+		* @api {get} /vc/:vcid/organisation Get Organisations
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName GetVISBOCenterOrganisation
+		* @apiName GetVISBOCenterOrganisations
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets the organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
 		*
@@ -1905,11 +1905,10 @@ router.route('/:vcid/organisation')
 		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
-		* @apiParam {Boolean} shortList Deliver only hierarchy but no capacity and tagessatz
-		* @apiParam {Boolean} reduced Deliver reduced orga list
+		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy
+		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
 		*
 		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
-		* Depending of custom roles the organisation could be filtered in addition to a specific branch inside the organisation.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
@@ -1919,13 +1918,14 @@ router.route('/:vcid/organisation')
 		* {
 		*   'state':'success',
 		*   'message':'Returned VISBO Center Organisation',
-		*   'vcsetting':[{
+		*   'organisation':[{
 		*     '_id':'vcsetting5c754feaa',
 		*     'vcid': 'vc5c754feaa',
 		*     'name': 'organisation',
-		*     'type': 'Type of Setting',
 		*     'timestamp': '2018-12-01',
-		*     'value': {'any name': 'any value'}
+		*     'allRoles': [roleDefinition],
+		*     'allCosts': [costDefinition],
+		*     'allUnits': [Definition],
 		*   }]
 		* }
 		*/
@@ -1935,8 +1935,8 @@ router.route('/:vcid/organisation')
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var latestOnly = false; 	// as default show all settings
-		var shortList = req.query.shortList == true;
-		var getReducedOrga = req.query.reducedOrga == true;
+		var withCapa = req.query.withCapa == true;
+		var getOrgaList = req.query.hierarchy != true;
 
 		req.auditDescription = 'VISBO Center Organisation Read';
 		req.auditTTLMode = 1;
@@ -1961,21 +1961,12 @@ router.route('/:vcid/organisation')
 		} else {
 			queryVCSetting.sort({vcid:1, timestamp: -1});
 		}
-		if (shortList) {
-			queryVCSetting.select('-value.allRoles.kapazitaet -value.allRoles.defaultKapa -value.allRoles.defaultDayCapa -value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-		} else if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
-			queryVCSetting.select('-value.allRoles.tagessatzIntern -value.allRoles.tagessatz ');
-		}
 		queryVCSetting.lean();
 		if (latestOnly) {
 			queryVCSetting.exec(function (err, VCSetting) {
 				if (err) {
 					errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
 					return;
-				}
-				logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
-				if (VCSetting && !getReducedOrga && !shortList) {
-					helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
 				}
 				req.auditInfo = VCSetting ? 1 : 0;
 				if (!VCSetting) {
@@ -1984,28 +1975,23 @@ router.route('/:vcid/organisation')
 						message: 'No VISBO Center Organisation found or no permission',
 						count: req.auditInfo
 					});
-				} else if (getReducedOrga) {
-					var reducedOrga = helperOrga.reduceOrga(VCSetting.value);
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Center Organisation',
-						count: req.auditInfo,
-						_id: VCSetting._id,
-						name: VCSetting.name,
-						timestamp: VCSetting.timestamp,
-						reducedOrga: [reducedOrga]
-					});
-				} else {
-					VCSetting.value._id = VCSetting._id;
-					VCSetting.value.name = VCSetting.name;
-					return res.status(200).send({
-						state: 'success',
-						message: 'Returned VISBO Center Organisation',
-						count: req.auditInfo,
-						timestamp: VCSetting.timestamp,
-						organisation: [VCSetting.value]
+				}
+				logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
+				if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+					VCSetting.value?.allRoles?.forEach(role => {
+						delete role.tagessatz;
 					});
 				}
+				if (!getOrgaList && withCapa) {
+					helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
+				}
+				var resultOrga = helperOrga.convertSettingToOrga(VCSetting, getOrgaList);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Center Organisation',
+					count: req.auditInfo,
+					organisation: [resultOrga]
+				});
 			});
 		} else {
 			queryVCSetting.exec(function (err, listVCSetting) {
@@ -2015,11 +2001,20 @@ router.route('/:vcid/organisation')
 				}
 				logger4js.debug('Found %d VC Organisation', listVCSetting.length);
 				req.auditInfo = listVCSetting.length;
+				var hasNoAudit = (req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0;
+
 				var listOrganisation = [];
 				listVCSetting.forEach(item => {
-					item.value.name = item.name;
-					item.value._id = item._id;
-					listOrganisation.push(item.value);
+					var resultOrga = helperOrga.convertSettingToOrga(item, getOrgaList);
+					if (hasNoAudit) {
+						resultOrga.allRoles.forEach(role => {
+							delete role.tagessatz;
+						});
+					}
+					if (!getOrgaList && withCapa) {
+						helperOrga.joinCapacity(item, req.visboVCCapacity);
+					}
+					listOrganisation.push(resultOrga);
 				});
 				return res.status(200).send({
 					state: 'success',
@@ -2037,7 +2032,10 @@ router.route('/:vcid/organisation')
 		* @apiGroup VISBO Center
 		* @apiName CreateVISBOCenterOrganisation
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Creates a new VISBO Center Organisation
+		* @apiDescription Creates a new VISBO Center Organisation. It supports old & new format.
+		* oldFormat means allRoles & allCosts as List with the defined properties
+		* newFormat means allUnits as List with reduced/extended properties
+		* the format that is returned is the same as what was delivered
 		*
 		* @apiPermission Authenticated and VC.View & VC.Manage Permission for the VISBO Center.
 		* @apiError {number} 400 inconsistent information inside the new organisation
@@ -2048,7 +2046,7 @@ router.route('/:vcid/organisation')
 		*  {
 		*    'name': 'name',
 		*    'timestamp': '2018-12-01',
-		* 	 'reducedOrga': [
+		* 	 'allUnits': [
 	  *      'name':'name of orga unit',
 		*      'type': 'type of orga unit',
 		*      'uid': 'uid of orga unit',
@@ -2072,8 +2070,8 @@ router.route('/:vcid/organisation')
 		*   'state':'success',
 		*   'message':'Successfully created VISBO Center Organisation',
 		*   'timestamp': '2018-12-01',
-		*   'organisation': {
-		*   }
+		*   'organisation': [{
+		*   }]
 		* }
 		*/
 
@@ -2096,13 +2094,13 @@ router.route('/:vcid/organisation')
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
 		if (!validate.validateName(req.body.name, false)
 		|| !validate.validateDate(req.body.timestamp, true)) {
-			logger4js.debug('Post a new VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
+			logger4js.debug('Post a new VISBO Center Organisation name or timestamp not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid name or timestamp in Organisation definition'
 			});
 		}
-		if (!req.body.reducedOrga && !req.body.organisation) {
+		if (!(req.body.allUnits || (req.body.allRoles && req.body.allCosts))) {
 			logger4js.debug('Post a new VISBO Center Organisation orga definition missing %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -2127,17 +2125,16 @@ router.route('/:vcid/organisation')
 		}
 		var errorList = [];
 		var orga;
-		var isReducedOrga = req.body.reducedOrga != undefined;
-		if (req.body.reducedOrga) {
-			orga = helperOrga.initOrgaReduced(req.body.reducedOrga, newTimeStamp, oldOrga?.value, errorList);
-		} else if (req.body.organisation) {
-			orga = helperOrga.initOrga(req.body.organisation, newTimeStamp, oldOrga?.value, errorList);
+		var isOrgaList = req.body.allUnits != undefined;
+		if (isOrgaList) {
+			orga = helperOrga.initOrgaFromList(req.body.allUnits, newTimeStamp, oldOrga?.value, errorList);
+		} else {
+			orga = helperOrga.initOrga(req.body, newTimeStamp, oldOrga?.value, errorList);
 		}
 		if (!orga) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Incorrect Information in organisation',
-				organisation: orga,
 				error: errorList
 			});
 		}
@@ -2162,38 +2159,91 @@ router.route('/:vcid/organisation')
 				return;
 			}
 			req.oneVCSetting = oneVCSetting;
-			if (isReducedOrga) {
-				var reducedOrga = helperOrga.reduceOrga(oneVCSetting.value);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Returned VISBO Center Organisation',
-					count: req.auditInfo,
-					_id: oneVCSetting._id,
-					name: oneVCSetting.name,
-					timestamp: oneVCSetting.timestamp,
-					reducedOrga: [reducedOrga]
-				});
-			} else {
-				return res.status(200).send({
-					state: 'success',
-					message: 'Inserted VISBO Center Organisation',
-					timestamp: newTimeStamp,
-					_id: oneVCSetting._id,
-					organisation: [ orga ],
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
+			var resultOrga = helperOrga.convertSettingToOrga(oneVCSetting, isOrgaList);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Inserted VISBO Center Organisation',
+				organisation: [ resultOrga ],
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
 		});
 	});
 
 router.route('/:vcid/organisation/:settingid')
+	/**
+		* @api {get} /vc/:vcid/organisation/:orgaid Get a specific Organisation
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName GetVISBOCenterOrganisation
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the specific organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
+		*
+		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy
+		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
+		*
+		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/organisation/:orgaid
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Organisation',
+		*   'organisation':[{
+		*     '_id':'vcsetting5c754feaa',
+		*     'name': 'organisation',
+		*     'timestamp': '2018-12-01',
+		*     'allRoles': [roleDefinition],
+		*     'allCosts': [costDefinition],
+		*     'allUnits': [Definition],
+		*   }]
+		* }
+		*/
+
+	// Get specific VC Organisation
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var withCapa = req.query.withCapa == true;
+		var getOrgaList = req.query.hierarchy != true;
+
+		req.auditDescription = 'VISBO Center Organisation Read';
+		req.auditTTLMode = 1;
+		req.auditInfo = req.oneVCSetting.name;
+
+		logger4js.info('Get VISBO Center Organisation %s for userid %s and vc %s ', req.params.settingid, userId, req.params.vcid);
+
+		var orga = req.oneVCSetting;
+		if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
+			orga.value?.allRoles?.forEach(role => {
+				delete role.tagessatz;
+			});
+		}
+		if (!getOrgaList && withCapa) {
+			helperOrga.joinCapacity(req.oneVCSetting, req.visboVCCapacity);
+		}
+		var resultOrga = helperOrga.convertSettingToOrga(req.oneVCSetting, getOrgaList);
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned VISBO Center Organisation',
+			count: 1,
+			organisation: [resultOrga]
+		});
+	})
+
 	/**
 		* @api {put} /vc/:vcid/organisation/:orgaid Update an organisation
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center
 		* @apiName UpdateVISBOCenterOrganisation
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Creates a new VISBO Center Organisation
+		* @apiDescription Updates a VISBO Center Organisation. It supports old & new format.
+		* oldFormat means allRoles & allCosts as List with the defined properties
+		* newFormat means allUnits as List with reduced/extended properties
+		* the format that is returned is the same as what was delivered
 		*
 		* @apiPermission Authenticated and VC.View & VC.Manage Permission for the VISBO Center.
 		* @apiError {number} 400 inconsistent information inside the new organisation
@@ -2204,8 +2254,8 @@ router.route('/:vcid/organisation/:settingid')
 		*  {
 		*    'name': 'name',
 		*    'timestamp': '2018-12-01',
-		* 	 'reducedOrga': [
-	  *      'name':'name of orga unit',
+		* 	 'allUnits': [
+	  *      'name': 'name of orga unit',
 		*      'type': 'type of orga unit',
 		*      'uid': 'uid of orga unit',
 		*      'parent': 'parent name of orga unit',
@@ -2228,8 +2278,8 @@ router.route('/:vcid/organisation/:settingid')
 		*   'state':'success',
 		*   'message':'Successfully created VISBO Center Organisation',
 		*   'timestamp': '2018-12-01',
-		*   'organisation': {
-		*   }
+		*   'organisation': [{
+		*   }]
 		* }
 		*/
 
@@ -2251,13 +2301,13 @@ router.route('/:vcid/organisation/:settingid')
 		}
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
 		if (!validate.validateName(req.body.name, false)) {
-			logger4js.debug('Put VISBO Center Organisation body or reducedOrga not accepted %O', req.body);
+			logger4js.debug('Put VISBO Center Organisation name not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid name in Organisation definition'
 			});
 		}
-		if (!req.body.reducedOrga && !req.body.organisation) {
+		if (!(req.body.allUnits || (req.body.allRoles && req.body.allCosts))) {
 			logger4js.debug('Put VISBO Center Organisation orga definition missing %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
@@ -2275,11 +2325,12 @@ router.route('/:vcid/organisation/:settingid')
 		}
 		var oldOrga = req.oneVCSetting;
 		var errorList = [];
-		var isReducedOrga = req.body.reducedOrga != undefined;
-		if (req.body.reducedOrga) {
-			orga = helperOrga.initOrgaReduced(req.body.reducedOrga, oldOrga.timestamp, oldOrga?.value, errorList);
-		} else if (req.body.organisation) {
-			orga = helperOrga.initOrga(req.body.organisation, oldOrga.timestamp, oldOrga?.value, errorList);
+		var orga;
+		var isOrgaList = req.body.allUnits != undefined;
+		if (isOrgaList) {
+			orga = helperOrga.initOrgaFromList(req.body.allUnits, oldOrga.timestamp, oldOrga?.value, errorList);
+		} else {
+			orga = helperOrga.initOrga(req.body, oldOrga.timestamp, oldOrga?.value, errorList);
 		}
 		if (!orga) {
 			return res.status(400).send({
@@ -2309,26 +2360,13 @@ router.route('/:vcid/organisation/:settingid')
 				return;
 			}
 			req.oneVCSetting = oneVCSetting;
-			if (isReducedOrga) {
-				var reducedOrga = helperOrga.reduceOrga(oneVCSetting.value);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated VISBO Center Organisation',
-					_id: oneVCSetting._id,
-					name: oneVCSetting.name,
-					timestamp: oneVCSetting.timestamp,
-					reducedOrga: [reducedOrga]
-				});
-			} else {
-				return res.status(200).send({
-					state: 'success',
-					message: 'Updated VISBO Center Organisation',
-					timestamp: oneVCSetting.timestamp,
-					_id: oneVCSetting._id,
-					organisation: [ orga ],
-					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
-				});
-			}
+			var resultOrga = helperOrga.convertSettingToOrga(oneVCSetting, isOrgaList);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Updated VISBO Center Organisation',
+				organisation: [ resultOrga ],
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
 		});
 	});
 

@@ -292,19 +292,23 @@ function checkVCOrgs(req, res, next) {
 			logger4js.debug('No POST Setting', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
-	} else if ((req.method == 'GET')
-	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
-		// User does a POST of a setting, check if it is an organisation
-		if (req.originalUrl.indexOf('type=organisation') >= 0) {
+	} else if (req.method == 'GET') {
+		var withCapa = false;
+		if (urlComponent.length == 4 && urlComponent[3] == 'setting'
+		&& req.originalUrl.indexOf('type=organisation') >= 0) {
+			withCapa = true;
+		}
+		if (urlComponent.length == 4 && urlComponent[3] == 'organisation'
+		&& req.originalUrl.indexOf('withCapa=') >= 0) {
+			withCapa = true;
+		}
+		if (withCapa) {
 			logger4js.debug('Get Organisation with Capacity');
 			getVCOrganisation(req.oneVC._id, true, req, res, next);
 		} else {
 			logger4js.debug('No GET Setting of organisation', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
-	} else {
-		logger4js.debug('Other Request', req.method, 'urlComponent', urlComponent);
-		return next();
 	}
 }
 
@@ -320,7 +324,7 @@ function getVCOrgs(req, res, next) {
 	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
 		skip = false;
 	}
-	if (urlComponent.findIndex(comp => comp.indexOf('capa') == 0) >= 0) {
+	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa') >= 0)) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
 		} else if (req.oneVP) {
@@ -331,7 +335,7 @@ function getVCOrgs(req, res, next) {
 	}
 	if (urlComponent.findIndex(comp => comp == 'organisation') >= 0) {
 		skip = false;
-		withCapa = true;
+		withCapa = (req.method == 'GET' && req.originalUrl.indexOf('withCapa=') >= 0);
 	}
 	if (skip) {
 		return next();
@@ -379,17 +383,17 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 					errorHandler(err, res, `DB: GET VC Capacity ${req.oneVC._id} Find`, `Error getting Capacity for VISBO Center ${req.oneVC.name}`);
 					return;
 				}
-				logger4js.debug('getVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
+				logger4js.debug('GetVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
 				if (listVCCapacity.length > 0) {
 					req.visboVCCapacity = listVCCapacity;
 				}
 				var endCalc = new Date();
-				logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+				logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
 				return next();
 			});
 		} else {
 			var endCalc = new Date();
-			logger4js.debug('Calculate getVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+			logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
 			return next();
 		}
 	});

@@ -41,11 +41,15 @@ var validatePath = function(path, allowEmpty) {
 
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty, dateObject) {
-	if (!allowEmpty && !dateString) {
-		logger4js.trace('validate Date: DateString is empty! :%s:', !dateString);
+	var dateValue;
+	if (allowEmpty && !dateString) {
+		dateValue = new Date();
+	} else if (!dateString) {
+		logger4js.info('validate Date: DateString is empty! :%s:', !dateString);
 		return undefined;
+	} else {
+		dateValue = new Date(dateString);
 	}
-	var dateValue = dateString ? new Date(dateString) : new Date();
 	if (isNaN(dateValue)) {
 		logger4js.info('validate Date: String contains no Date %s', dateString);
 		return undefined;
@@ -55,13 +59,12 @@ var validateDate = function(dateString, allowEmpty, dateObject) {
 
 // validate a number to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
-	if (!allowEmpty && isNaN(numberValue)) {
-		logger4js.info('validate Number: Number is NaN! :%s:', numberValue);
-		return undefined;
+	if (allowEmpty && !numberValue) {
+		return 0;
 	}
 	if (isNaN(numberValue)) {
-		logger4js.trace('validate Number: String contains no Number %s', numberValue);
-		return 0;
+		logger4js.info('validate Number: String contains no Number %s', numberValue);
+		return undefined;
 	}
 	return Number(numberValue);
 };

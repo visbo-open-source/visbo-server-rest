@@ -6,10 +6,10 @@ var log4js = require('log4js');
 var helperVpv = require('./../components/helperVpv');
 var helperOrga = require('./../components/helperOrga');
 // const { toNamespacedPath } = require('path');
-const { validateDate } = require('./validate');
-const { validateNumber } = require('./validate');
-// const { min } = require('moment');
-// const { any } = require('bluebird');
+const validate = require('./validate');
+const validateDate = validate.validateDate;
+const validateNumber = validate.validateNumber;
+
 const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
 
