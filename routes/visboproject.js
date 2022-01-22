@@ -126,8 +126,11 @@ function detectChangeCustomFieldDate(original, update) {
 			var updateItem = update.find(element => element.name == item.name);
 			if (!updateItem) {
 				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value.toString()});
-			} else if (item.value != updateItem.value) {
-				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: (updateItem.value || '').toString()});
+			} else {
+				let oldValue = new Date(item.value), newValue = new Date(updateItem.value);
+				if (oldValue.getTime() != newValue.getTime()) {
+					result.push({action: 'Project Property Change', name: item.name, oldValue: oldValue.toISOString(), newValue: (newValue.toISOString() || '')});
+				}
 			}
 	});
 	update.forEach(item => {
@@ -1177,8 +1180,6 @@ router.route('/:vpid')
 			req.oneVP.vpStatus = vpStatusNew;
 		}
 
-		var changeOfVP_PMCommitOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
-																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 		var changeOfVPPropertiesOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
 																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 
@@ -1187,15 +1188,6 @@ router.route('/:vpid')
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project Properties could not be changed for Status '.concat(vpStatusOrg, '/', vpStatusNew)
-			});
-		}
-		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
-		if (!changeOfVP_PMCommitOK && changeCommit) {
-			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
-			var detail = vpStatusOrg != vpStatusNew ? vpStatusOrg.concat('/', vpStatusNew) : vpStatusOrg;
-			return res.status(400).send({
-				state: 'failure',
-				message: 'Project could not be commited by PL for Status '.concat(detail)
 			});
 		}
 		// check duplicate Name
