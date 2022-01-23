@@ -139,6 +139,16 @@ function compareDate(first, second) {
 	return first.getTime() - second.getTime()
 }
 
+function isSameDay(dateA, dateB) {
+	if (!dateA && !dateB) { return true; }
+  if (!dateA || !dateB) { return false; }
+  const localA = new Date(dateA);
+  const localB = new Date(dateB);
+  localA.setHours(0, 0, 0, 0);
+  localB.setHours(0, 0, 0, 0);
+  return localA.toISOString() === localB.toISOString();
+}
+
 var evaluateLanguage = function(req) {
 	var lang;
 	if (req) {
@@ -158,5 +168,6 @@ module.exports = {
 	validateNumber: validateNumber,
 	evaluateLanguage: evaluateLanguage,
 	convertNumber: convertNumber,
-	compareDate: compareDate
+	compareDate: compareDate,
+	isSameDay: isSameDay
 };

@@ -152,7 +152,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 				isOrgaValid = false;
 				return;
 			}
-			if (oldRole.exitDate?.getTime() != newRole.exitDate?.getTime()) {
+			if (!validate.isSameDay(oldRole.exitDate, newRole.exitDate)) {
 				// exit date has changed verify that the new one, if it is set, is greater equal TimeStamp
 				if (newRole.exitDate && newRole.exitDate.getTime() < timestamp.getTime()) {
 					errorstring = `Changed Orga Role exitDate to the past: uid: ${newRole.uid}, name: ${newRole.name}`;
@@ -272,6 +272,12 @@ function generateIndexedOrgaRoles(orga) {
 	return listOrga;
 }
 
+function getParent(path) {
+	if (!path) return '';
+	var parts = path.split('/');
+	return parts[parts.length - 1];
+}
+
 function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
@@ -297,7 +303,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (validate.validateNumber(role.uid, true) == undefined
 			|| (validate.validateNumber(role.type, false) == undefined || role.type < 1 || role.type > 3)
 			|| !validate.validateName(role.name, false)
-			|| !validate.validateName(role.parent, true)
+			|| !validate.validateName(role.path, true)
 			|| !validate.validateDate(role.entryDate, true)
 			|| !validate.validateDate(role.exitDate, true)
 			|| validate.validateNumber(role.tagessatz, true) == undefined
@@ -320,7 +326,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if (role.type == 2) {
 				logger4js.info('InitOrgaList: Team', role);
 			}
-			newRole.parent = role.parent;
+			newRole.parent = getParent(role.path);
 			newRole.isSummaryRole = role.isSummaryRole;
 			if (role.aliases) {
 				newRole.aliases = role.aliases;
@@ -424,7 +430,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					isOrgaValid = false;
 					return;
 				}
-				if (oldRole.exitDate?.getTime() != newRole.exitDate?.getTime()) {
+				if (!validate.isSameDay(oldRole.exitDate, newRole.exitDate)) {
 					// exit date has changed verify that the new one is greater equal TimeStamp
 					if (newRole.exitDate?.getTime() < timestamp.getTime()) {
 						errorstring = `Changed Orga Role exitDate to the past: uid: ${newRole.uid}, name: ${newRole.name}`;
@@ -512,8 +518,11 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
+				delete cost.parent;
 			}
 		});
+		newOrga.allRoles.forEach(role => delete role.parent );
+
 		newOrga.maxRoleID = maxRoleID;
 		newOrga.maxCostID = maxCostID;
 
@@ -889,7 +898,6 @@ function combineCapacity(capacity) {
 module.exports = {
 	initOrga: initOrga,
 	initOrgaFromList: initOrgaFromList,
-	reduceOrga: reduceOrga,
 	convertSettingToOrga: convertSettingToOrga,
 	joinCapacity: joinCapacity,
 	combineCapacity: combineCapacity,

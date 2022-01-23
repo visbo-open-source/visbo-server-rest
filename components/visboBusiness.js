@@ -986,7 +986,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 
 function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate, organisation, capacity, hierarchy, onlyPT) {
 	if (!(vpvs?.length > 0) || !(organisation?.length > 0)) {
-		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
+		logger4js.warn('Calculate Capacities missing vpvs %d or organisation %d', vpvs?.length, organisation?.length);
 		return [];
 	}
 

@@ -309,6 +309,9 @@ function checkVCOrgs(req, res, next) {
 			logger4js.debug('No GET Setting of organisation', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
+	} else {
+		logger4js.debug('Other Request', req.method, 'urlComponent', urlComponent);
+		return next();
 	}
 }
 
@@ -324,7 +327,7 @@ function getVCOrgs(req, res, next) {
 	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
 		skip = false;
 	}
-	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa') >= 0)) {
+	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa')) >= 0) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
 		} else if (req.oneVP) {
