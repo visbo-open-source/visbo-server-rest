@@ -1900,12 +1900,18 @@ router.route('/:vcid/organisation')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets the organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
 		*
-		* With additional query paramteters the amount of results can be restricted. Available Restirctions are: refDate, refNext, longList returns the organisation including Capacities
+		* With additional query paramteters the amount of results can be restricted. Available Restirctions are: refDate, refNext
+		* The default result returns the organisation units in one list as allUnits, with the following parameters:
+		* (same as in hierarchy) uid, name, isSummaryRole, isAggregationRole, tagessatz, defaultKapa, defaultDayCapa, entryDate, exitDate, aliases
+		* The list delivers also new parameters like:
+		* type: 1 (normal orga unit), 2 (team orga unit including team members), 3 (cost units)
+		* pid: the parent uid of this organisation unit
+		* path: the full path of the organisation unit for the parent
 		*
 		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
-		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy
+		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy. Hierarchy means allRoles & AllCosts with subRoleID information.
 		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
 		*
 		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
@@ -2007,9 +2013,8 @@ router.route('/:vcid/organisation')
 				listVCSetting.forEach(item => {
 					var resultOrga = helperOrga.convertSettingToOrga(item, getOrgaList);
 					if (hasNoAudit) {
-						resultOrga.allRoles.forEach(role => {
-							delete role.tagessatz;
-						});
+						resultOrga.allRoles?.forEach(role => { delete role.tagessatz; });
+						resultOrga.allUnits?.forEach(role => { delete role.tagessatz; });
 					}
 					if (!getOrgaList && withCapa) {
 						helperOrga.joinCapacity(item, req.visboVCCapacity);

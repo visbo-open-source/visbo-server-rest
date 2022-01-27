@@ -112,7 +112,7 @@ function getDailyRateTZ(uid, teamID, timeZones, index, maxTZ) {
 }
 
 // identify the role of orga unit in a timezoned orga for a specific month
-function getRoleTZ(uid, timeZones, index, maxTZ) {
+function getRoleTZ(role, timeZones, index, maxTZ) {
 	index = Math.max(index, 0);
 	index = Math.min(index, timeZones.indexMonth.length - 1);
 	var orgaIndex = timeZones.indexMonth[index];
@@ -121,7 +121,11 @@ function getRoleTZ(uid, timeZones, index, maxTZ) {
 		orgaIndex = Math.min(orgaIndex, maxTZ);
 	}
 	var allRoles = timeZones.organisation[orgaIndex].indexedRoles;
-	return allRoles[uid];
+	var roleTZ = allRoles[role.uid];
+	if (role?.pid != roleTZ?.pid) {
+		return undefined;
+	}
+	return roleTZ;
 }
 
 // calculate personnel cost for the requested project per month
@@ -1486,7 +1490,7 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	var concerningRoles = getConcerningRoles(timeZones.mergedOrganisation, allTeams, roleID, parentID);
+	var concerningRoles = getConcerningRoles(timeZones, allTeams, roleID, parentID);
 	logger4js.debug('getting capacities for the related roleID/parentID given organisation %s/%s',  roleID, parentID);
 	var capaValues = getCapaValues(timeZones, concerningRoles);
 
@@ -1639,7 +1643,7 @@ function getCapaValues(timeZones, concerningRoles) {
 		concerningUIDs.push(actRoleID);
 
 		for (var mon = 0; mon < timeZones.duration; mon++) {
-			var role = getRoleTZ(actRoleID, timeZones, mon);
+			var role = getRoleTZ(item.actRole, timeZones, mon);
 			if (!role || role.isSummaryRole) {
 				continue;
 			}
@@ -1659,15 +1663,15 @@ function getCapaValues(timeZones, concerningRoles) {
 	return capaValues;
 }
 
-function getConcerningRoles(allRoles, allTeams, roleID, parentID) {
+function getConcerningRoles(timeZones, allTeams, roleID, parentID) {
 	var concerningRoles = [];
 	var crElem = {};
 
-	function findConcerningRoles(value, parentRole) {
+	function findConcerningRoles(roles, value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
 		crElem = {};
-		crElem.actRole = allRoles[hroleID];
+		crElem.actRole = roles[hroleID];
 		crElem.teamID = -1;
 		crElem.faktor = 1.0;
 
@@ -1685,26 +1689,29 @@ function getConcerningRoles(allRoles, allTeams, roleID, parentID) {
 		if (newParent?.subRoleIDs?.length > 0){
 			var shroles = newParent.subRoleIDs;
 			for (var sr = 0; shroles && sr < shroles.length; sr++) {
-				findConcerningRoles(shroles[sr], newParent);
+				findConcerningRoles(roles, shroles[sr], newParent);
 			}
 		}
 	}
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
-	if (roleID || roleID != ''){
-		var actRole = allRoles[roleID];
-		crElem = {};
-		crElem.actRole = allRoles[roleID];
-		crElem.teamID = -1;
-		if (allRoles[parentID]?.type == 2) 	crElem.teamID = parentID;
-		crElem.faktor = 1;
-		concerningRoles.push(crElem);
+	if (roleID || roleID != '') {
+		timeZones.organisation.forEach(orga => {
+			var allRoles = orga.indexedRoles;
+			var actRole = allRoles[roleID];
+			crElem = {};
+			crElem.actRole = allRoles[roleID];
+			crElem.teamID = -1;
+			if (allRoles[parentID]?.type == 2) 	crElem.teamID = parentID;
+			crElem.faktor = 1;
+			concerningRoles.push(crElem);
 
-		if (actRole) {
-			var subRoles = actRole.subRoleIDs;
-			for (var sr = 0; sr < subRoles?.length; sr++) {
-				findConcerningRoles(subRoles[sr], actRole);
+			if (actRole) {
+				var subRoles = actRole.subRoleIDs;
+				for (var sr = 0; sr < subRoles?.length; sr++) {
+					findConcerningRoles(allRoles, subRoles[sr], actRole);
+				}
 			}
-		}
+		});
 	}
 
 	return concerningRoles;
@@ -2012,9 +2019,6 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		newPFV.vpStatus = oldVPV.vpStatus;
 		newPFV.ampelStatus = oldVPV.ampelStatus;
 		newPFV.ampelErlaeuterung = oldVPV.ampelErlaeuterung;
-		newPFV.farbe = oldVPV.farbe;
-		newPFV.Schrift = oldVPV.Schrift;
-		newPFV.Schriftfarbe = oldVPV.Schriftfarbe;
 		newPFV.VorlagenName = oldVPV.VorlagenName;
 		newPFV.Dauer = oldVPV.Dauer;
 		newPFV.hierarchy = oldVPV.hierarchy;
@@ -2039,7 +2043,6 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 				var oneCost = {};
 				oneCost.KostenTyp = phase.AllCosts[ic].KostenTyp;
 				oneCost.name = phase.AllCosts[ic].name;
-				oneCost.farbe = phase.AllCosts[ic].farbe;
 				oneCost.Bedarf = phase.AllCosts[ic].Bedarf;
 				newAllCosts.push(oneCost);
 			}
@@ -2093,7 +2096,6 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 			onePhase.startOffsetinDays= phase.startOffsetinDays;
 			onePhase.dauerInDays= phase.dauerInDays;
 			onePhase.name= phase.name;
-			onePhase.farbe= phase.farbe;
 			onePhase.shortName= phase.shortName;
 			onePhase.originalName= phase.originalName;
 			onePhase.appearance= phase.appearance;

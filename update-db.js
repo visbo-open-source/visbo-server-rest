@@ -935,9 +935,7 @@ if (currentVersion < dateBlock) {
 
 dateBlock = "2021-02-08T00:00:00"
 if (currentVersion < dateBlock) {
-  // Delete uused Properties from vpv
-  // vpv.farbe, vpv.Schrift, vpv.Schriftfarbe, vpv.AllPhases[].farbe
-
+  // Delete unused Properties from vpv
   db.visboprojectversions.updateMany({farbe: {$exists: true}}, {$unset: {farbe: '', Schrift: '', Schriftfarbe: '', volumen: ''}});
 
   db.visboprojectversions.updateMany({'AllPhases.farbe': {$exists: true}},

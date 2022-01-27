@@ -177,6 +177,8 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 						listError && listError.push(errorstring);
 						logger4js.info('InitOrga: ', errorstring);
 						isOrgaValid = false;
+					} else if (role.type == 1){
+						newOrgaIndexed[subRole.key].pid = role.uid;
 					}
 				});
 			}
@@ -272,12 +274,6 @@ function generateIndexedOrgaRoles(orga) {
 	return listOrga;
 }
 
-function getParent(path) {
-	if (!path) return '';
-	var parts = path.split('/');
-	return parts[parts.length - 1];
-}
-
 function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
@@ -295,6 +291,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 
 	// check allRoles
 	newOrga.allRoles = [];
+	newOrga.allCosts = [];
 	var uniqueRoleNames = [];
 	var uniqueCostNames = [];
 	var maxRoleID = getMaxID(oldOrga, 1);
@@ -323,10 +320,11 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			}
 			newRole = new VCOrgaRole(role.uid, role.name);
 			newRole.type = role.type;
-			if (role.type == 2) {
-				logger4js.info('InitOrgaList: Team', role);
+			if (role.type == 1 || role.isSummaryRole) {
+				newRole.parent = getParent(role.path);
+			} else if (role.type == 2 && !role.isSummaryRole){
+				newRole.teamParent = getParent(role.path);
 			}
-			newRole.parent = getParent(role.path);
 			newRole.isSummaryRole = role.isSummaryRole;
 			if (role.aliases) {
 				newRole.aliases = role.aliases;
@@ -449,7 +447,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				role.uid = ++maxCostID;
 			}
 			newCost = new VCOrgaCost(role.uid, role.name);
-			newCost.parent = role.parent;
+			newCost.parent = getParent(role.path);
 			newCost.type = role.type;
 
 			if (role.isSummaryRole) {
@@ -474,6 +472,23 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if (role.parent) {
 				//check if parent exists?
 				parentRole = uniqueRoleNames[role.parent];
+				if (role.type == 2) {
+					logger4js.debug('InitOrgaList Team Mapping ', role.name);
+				}
+				if (parentRole) {
+					// map the item to the parent
+					parentRole.subRoleIDs.push( {key: role.uid, value: 1});
+					role.pid = parentRole.uid;
+				} else {
+					errorstring = `Orga Role has no valid parent: uid: ${role.uid} parent: ${role.parent}`;
+					listError && listError.push(errorstring);
+					logger4js.info('InitOrgaList: ', errorstring);
+					isOrgaValid = false;
+				}
+			}
+			if (role.teamParent && role.type == 2) {
+				//check if parent exists?
+				parentRole = uniqueRoleNames[role.teamParent];
 				if (parentRole) {
 					// map the item to the parent
 					parentRole.subRoleIDs.push( {key: role.uid, value: 1});
@@ -487,15 +502,15 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		});
 		orgaList.forEach(role => {
 			// link the teamIDs
-			var parentRole = uniqueRoleNames[role.parent];
-			if (role.type == 2 && !role.isSummaryRole && parentRole) {
+			if (role.type == 2 && !role.isSummaryRole) {
 				var user = newOrga.allRoles.find(item => item.uid == role.uid && item.type == 1);
-				var team = newOrga.allRoles.find(item => item.uid == parentRole.uid && item.type == 2);
+				var parentRole = uniqueRoleNames[getParent(role.path)];
+				var team = newOrga.allRoles.find(item => item.name == parentRole.name && item.type == 2);
 				if (user && team) {
 					if (user.teamIDs == undefined) {
 						user.teamIDs = [];
 					}
-					user.teamIDs.push({key: parentRole.uid, value: role.percent});
+					user.teamIDs.push({key: role.pid, value: role.percent});
 					team.subRoleIDs.push({key: user.uid, value: 1});
 				} else {
 					errorstring = `Orga Team Role not found in orga: uid: ${role.uid} parent: ${role.name}`;
@@ -511,7 +526,10 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				var parentCost = uniqueCostNames[cost.parent];
 				if (parentCost) {
 					// map the item to the parent
-					parentCost.subRoleIDs.push( {key: cost.uid, value: 1});
+					if (!parentCost.subRoleIDs) parentCost.subRoleIDs = []; // MS TODO
+					parentCost.subRoleIDs.push({key: cost.uid, value: 1});
+					parentCost.isSummaryRole = true;
+					cost.pid = parentCost.uid;
 				} else {
 					errorstring = `Orga Cost has no valid parent: uid: ${cost.uid} parent: ${cost.parent}`;
 					listError && listError.push(errorstring);
@@ -521,7 +539,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				delete cost.parent;
 			}
 		});
-		newOrga.allRoles.forEach(role => delete role.parent );
+		newOrga.allRoles.forEach(role => { delete role.parent; delete role.teamParent });
 
 		newOrga.maxRoleID = maxRoleID;
 		newOrga.maxCostID = maxCostID;
@@ -646,7 +664,6 @@ function reduceOrga(orga) {
 				organisation[maxid].type = 2;
 				organisation[maxid].pid = role.uid;
 				organisation[maxid].name = userRole.name;
-				organisation[maxid].parent = role.name;
 				if (userRole.employeeNr) { organisation[maxid].employeeNr = userRole.employeeNr; }
 				if (userRole.isExternRole) { organisation[maxid].isExternRole = userRole.isExternRole; }
 				if (userRole.defaultDayCapa >= 0) { organisation[maxid].defaultDayCapa = userRole.defaultDayCapa; }
@@ -669,7 +686,7 @@ function reduceOrga(orga) {
 		if (a.type != b.type) {
 			return a.type - b.type;
 		} else {
-			return a.path.localeCompare(b.path);
+			return a.path.concat(a.name).localeCompare(b.path.concat(b.name));
 		}
 	});
 
@@ -712,7 +729,7 @@ function reduceOrga(orga) {
 		if (a.type != b.type) {
 			return a.type - b.type;
 		} else {
-			return a.path.localeCompare(b.path);
+			return a.path.concat(a.name).localeCompare(b.path.concat(b.name));
 		}
 	});
 	// add the list to the orga list
@@ -737,25 +754,28 @@ function convertSettingToOrga(setting, getOrgaList) {
 	return resultOrga;
 }
 
+function getParent(path) {
+	// get the direct parent from path independent how many slashes were at the end
+	if (!path) return '';
+	var parts = path.split('/');
+	parts.reverse();
+	var result = parts.find(item => item != '');
+	return result;
+}
+
 function calcFullPath(id, organisation) {
-	if (!organisation || !(id >= 0)) {
+	if (!organisation || !organisation[id]) {
 		return;
 	}
 	let path = '';
-	let index = id;
-	let level = -1;
-	if (organisation[index]) {
-		const pid = organisation[index] && organisation[index].pid;
-		if (pid >= 0) {
-			organisation[index].parent = organisation[pid] && organisation[pid].name;
-		}
-	}
+	let level = 0;
+	let index = organisation[id]?.pid;
 	while (index >= 0 && organisation[index]) {
 		path = '/'.concat(organisation[index].name, path);
 		index = organisation[index].pid;
 		level += 1;
 	}
-	organisation[id].path = path;
+	organisation[id].path = path.concat('/');
 	organisation[id].level = level;
 }
 
