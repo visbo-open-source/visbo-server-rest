@@ -1878,7 +1878,6 @@ function buildOrgaList (orga) {
 				if (userRole.entryDate) { organisation[maxid].entryDate = userRole.entryDate; }
 				if (userRole.exitDate) { organisation[maxid].exitDate = userRole.exitDate; }
 				if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
-organisation[maxid].percent = Number(role.subRoleIDs[j].value) || 0;
 			}
 		}
 	}

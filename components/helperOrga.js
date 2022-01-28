@@ -510,7 +510,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					if (user.teamIDs == undefined) {
 						user.teamIDs = [];
 					}
-					user.teamIDs.push({key: role.pid, value: role.percent});
+					user.teamIDs.push({key: role.pid, value: 1});
 					team.subRoleIDs.push({key: user.uid, value: 1});
 				} else {
 					errorstring = `Orga Team Role not found in orga: uid: ${role.uid} parent: ${role.name}`;
@@ -675,7 +675,6 @@ function reduceOrga(orga) {
 				if (userRole.isAggregationRole) { organisation[maxid].isAggregationRole = userRole.isAggregationRole; }
 				if (userRole.isSummaryRole) { organisation[maxid].isSummaryRole = userRole.isSummaryRole; }
 				if (userRole.isActDataRelevant) { organisation[maxid].isActDataRelevant = userRole.isActDataRelevant; }
-				organisation[maxid].percent = Number(role.subRoleIDs[j].value) || 0;
 			}
 		}
 	});
