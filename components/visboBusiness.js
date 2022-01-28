@@ -1635,9 +1635,9 @@ function getCapaValues(timeZones, concerningRoles) {
 	// Calculate the Capacities of this Role
 	var concerningUIDs = [];
 	concerningRoles.forEach(item => {
-		var actRoleID = item.actRole.uid;
+		var actRoleID = item.actRole?.uid;
 		// UIDs should only be added once
-		if ( concerningUIDs.indexOf(actRoleID) >= 0 ) {
+		if ( actRoleID && concerningUIDs.indexOf(actRoleID) >= 0 ) {
 			return;
 		}
 		concerningUIDs.push(actRoleID);
@@ -1697,19 +1697,17 @@ function getConcerningRoles(timeZones, allTeams, roleID, parentID) {
 	if (roleID || roleID != '') {
 		timeZones.organisation.forEach(orga => {
 			var allRoles = orga.indexedRoles;
-			var actRole = allRoles[roleID];
-			crElem = {};
-			crElem.actRole = allRoles[roleID];
-			crElem.teamID = -1;
-			if (allRoles[parentID]?.type == 2) 	crElem.teamID = parentID;
-			crElem.faktor = 1;
-			concerningRoles.push(crElem);
-
-			if (actRole) {
-				var subRoles = actRole.subRoleIDs;
-				for (var sr = 0; sr < subRoles?.length; sr++) {
-					findConcerningRoles(allRoles, subRoles[sr], actRole);
-				}
+			var role = allRoles[roleID];
+			if (role) {
+				crElem = {};
+				crElem.actRole = role;
+				crElem.teamID = -1;
+				if (allRoles[parentID]?.type == 2) 	crElem.teamID = parentID;
+				crElem.faktor = 1;
+				concerningRoles.push(crElem);
+				role.subRoleIDs?.forEach(subrole => {
+					findConcerningRoles(allRoles, subrole, role);
+				});
 			}
 		});
 	}
