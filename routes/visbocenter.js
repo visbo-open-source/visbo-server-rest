@@ -1992,6 +1992,8 @@ router.route('/:vcid/organisation')
 					helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
 				}
 				var resultOrga = helperOrga.convertSettingToOrga(VCSetting, getOrgaList);
+				resultOrga.updatedAt = VCSetting.updatedAt;
+				resultOrga.createdAt = VCSetting.createdAt;
 				return res.status(200).send({
 					state: 'success',
 					message: 'Returned VISBO Center Organisation',
@@ -2019,6 +2021,8 @@ router.route('/:vcid/organisation')
 					if (!getOrgaList && withCapa) {
 						helperOrga.joinCapacity(item, req.visboVCCapacity);
 					}
+					resultOrga.updatedAt = item.updatedAt;
+					resultOrga.createdAt = item.createdAt;
 					listOrganisation.push(resultOrga);
 				});
 				return res.status(200).send({
@@ -2165,6 +2169,8 @@ router.route('/:vcid/organisation')
 			}
 			req.oneVCSetting = oneVCSetting;
 			var resultOrga = helperOrga.convertSettingToOrga(oneVCSetting, isOrgaList);
+			resultOrga.updatedAt = oneVCSetting.updatedAt;
+			resultOrga.createdAt = oneVCSetting.createdAt;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Inserted VISBO Center Organisation',
@@ -2231,6 +2237,8 @@ router.route('/:vcid/organisation/:settingid')
 			helperOrga.joinCapacity(req.oneVCSetting, req.visboVCCapacity);
 		}
 		var resultOrga = helperOrga.convertSettingToOrga(req.oneVCSetting, getOrgaList);
+		resultOrga.updatedAt = req.oneVCSetting.updatedAt;
+		resultOrga.createdAt = req.oneVCSetting.createdAt;
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned VISBO Center Organisation',
@@ -2357,6 +2365,7 @@ router.route('/:vcid/organisation/:settingid')
 			oldOrga.name = req.body.name
 		}
 		req.auditInfo = oldOrga.name.concat('/', oldOrga.timestamp.toISOString());
+		oldOrga.updatedAt = new Date(); // otherwise it does not write to DB
 		oldOrga.value = orga;
 
 		oldOrga.save(function(err, oneVCSetting) {
@@ -2366,6 +2375,8 @@ router.route('/:vcid/organisation/:settingid')
 			}
 			req.oneVCSetting = oneVCSetting;
 			var resultOrga = helperOrga.convertSettingToOrga(oneVCSetting, isOrgaList);
+			resultOrga.updatedAt = oneVCSetting.updatedAt;
+			resultOrga.createdAt = oneVCSetting.createdAt;
 			return res.status(200).send({
 				state: 'success',
 				message: 'Updated VISBO Center Organisation',

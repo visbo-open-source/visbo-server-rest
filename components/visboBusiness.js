@@ -1384,11 +1384,9 @@ function splitInTimeZones(organisation, startDate, endDate) {
 		logger4js.warn('SplitInTimeZones not allowed parameters', organisation?.length, startDate, endDate);
 		return undefined;
 	}
-	organisation.sort(function(a, b) { return validate.compareDate(a.timestamp, b.timestamp); });
-	// MS TODO reduce all orgas before startDate except one, reduce all orgas after endDate
 
 	var split = {};
-	split.organisation = organisation;
+	split.organisation = [];
 	split.startDate = getDateStartOfMonth(startDate);
 	split.endDate = getDateEndOfMonth(endDate);
 	split.indexMonth = [];
@@ -1397,30 +1395,32 @@ function splitInTimeZones(organisation, startDate, endDate) {
 	split.endIndex = getColumnOfDate(split.endDate);
 	split.duration = split.endIndex - split.startIndex + 1;
 
-	var orgaIndex = 0;
-	var maxIndex = split.endIndex;
-	for (; orgaIndex < organisation.length - 1; orgaIndex++) {
-		var nextIndex = getColumnOfDate(organisation[orgaIndex + 1].timestamp);
-		if (nextIndex >= split.startIndex) {
-			break;
+	organisation.sort(function(a, b) { return validate.compareDate(a.timestamp, b.timestamp); });
+
+	// reduce all orgas before startDate except one, reduce all orgas after endDate
+	// search the first organisation we need
+	var index = organisation.findIndex(orga => getColumnOfDate(orga.timestamp) >= split.startIndex);
+	index = index <= 0 ? 0 : index - 1;
+
+	// add all organisations from first to the last we need to split.organisation list
+	for (; index < organisation.length; index++) {
+		if (getColumnOfDate(organisation[index].timestamp) <= split.endIndex) {
+			split.organisation.push(organisation[index]);
 		}
 	}
-	if (organisation.length > orgaIndex + 1) {
-		maxIndex = getColumnOfDate(organisation[orgaIndex + 1].timestamp);
-	}
-	if (orgaIndex >= organisation.length) {
-		logger4js.warn('SplitInTimeZones no valid organisation found', organisation?.length, startDate, endDate);
-		return undefined;
-	}
 
+	// set indexMonth from start to end so that it references the correct organisation
+	// initialise so that the first for loop sets the correct value
+	var orgaIndex = -1;
+	var maxIndexMonth = -1;
 	for (var i = split.startIndex; i <= split.endIndex; i++) {
-		if (i >= maxIndex) {
-			maxIndex = split.endIndex;
+		if (i >= maxIndexMonth) {
+			maxIndexMonth = split.endIndex;
 			// switch to next orga if avilable
-			if (orgaIndex < organisation.length - 1) {
+			if (orgaIndex < split.organisation.length - 1) {
 				orgaIndex++;
-				if (orgaIndex < organisation.length - 1) {
-					maxIndex = getColumnOfDate(organisation[orgaIndex + 1].timestamp);
+				if (orgaIndex < split.organisation.length - 1) {
+					maxIndexMonth = getColumnOfDate(organisation[orgaIndex + 1].timestamp);
 				}
 			}
 		}

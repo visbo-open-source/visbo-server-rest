@@ -131,7 +131,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 					logger4js.info('InitOrga: ', errorstring);
 				}
 			}
-			newRole.isActDataRelevant = role.isActDataRelevant;
+			// newRole.isActDataRelevant = role.isActDataRelevant;
 		}
 
 		if (uniqueRoleNames[role.name]) {
@@ -274,6 +274,11 @@ function generateIndexedOrgaRoles(orga) {
 	return listOrga;
 }
 
+function getFullPath(role) {
+	if (!role || !role.path) return '';
+	return role.path.concat('/', role.name || '');
+}
+
 function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
@@ -325,7 +330,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			} else if (role.type == 2 && !role.isSummaryRole){
 				newRole.teamParent = getParent(role.path);
 			}
-			newRole.isSummaryRole = role.isSummaryRole;
+			if (role.isSummaryRole) newRole.isSummaryRole = true;
 			if (role.aliases) {
 				newRole.aliases = role.aliases;
 			}
@@ -386,8 +391,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					return;
 				}
 				newRole.defaultKapa = role.defaultKapa;
-				// check Rule1: internal people need to have capa
-				if (!newRole.isExternRole) {
+				// check Rule1: internal people need to have capa (to avoid confusion team members get their capa from the real orga unit)
+				if (!newRole.isExternRole && newRole.type == 1) {
 					if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa > 0)) {
 						errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
 						listError && listError.push(errorstring);
@@ -395,7 +400,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 						isOrgaValid = false;
 					}
 				}
-				newRole.isActDataRelevant = role.isActDataRelevant;
+				// newRole.isActDataRelevant = role.isActDataRelevant;
 			}
 			if (role.type == 2 && !role.isSummaryRole) {
 				// role is a team member
@@ -504,13 +509,12 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			// link the teamIDs
 			if (role.type == 2 && !role.isSummaryRole) {
 				var user = newOrga.allRoles.find(item => item.uid == role.uid && item.type == 1);
-				var parentRole = uniqueRoleNames[getParent(role.path)];
-				var team = newOrga.allRoles.find(item => item.name == parentRole.name && item.type == 2);
+				var team = uniqueRoleNames[getParent(role.path)];
 				if (user && team) {
 					if (user.teamIDs == undefined) {
 						user.teamIDs = [];
 					}
-					user.teamIDs.push({key: role.pid, value: 1});
+					user.teamIDs.push({key: team.uid, value: 1});
 					team.subRoleIDs.push({key: user.uid, value: 1});
 				} else {
 					errorstring = `Orga Team Role not found in orga: uid: ${role.uid} parent: ${role.name}`;
@@ -674,7 +678,7 @@ function reduceOrga(orga) {
 				if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
 				if (userRole.isAggregationRole) { organisation[maxid].isAggregationRole = userRole.isAggregationRole; }
 				if (userRole.isSummaryRole) { organisation[maxid].isSummaryRole = userRole.isSummaryRole; }
-				if (userRole.isActDataRelevant) { organisation[maxid].isActDataRelevant = userRole.isActDataRelevant; }
+				// if (userRole.isActDataRelevant) { organisation[maxid].isActDataRelevant = userRole.isActDataRelevant; }
 			}
 		}
 	});
@@ -685,7 +689,7 @@ function reduceOrga(orga) {
 		if (a.type != b.type) {
 			return a.type - b.type;
 		} else {
-			return a.path.concat(a.name).localeCompare(b.path.concat(b.name));
+			return getFullPath(a).localeCompare(getFullPath(b));
 		}
 	});
 
@@ -728,7 +732,7 @@ function reduceOrga(orga) {
 		if (a.type != b.type) {
 			return a.type - b.type;
 		} else {
-			return a.path.concat(a.name).localeCompare(b.path.concat(b.name));
+			return getFullPath(a).localeCompare(getFullPath(b));
 		}
 	});
 	// add the list to the orga list
