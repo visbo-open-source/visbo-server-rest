@@ -1148,7 +1148,7 @@ if (currentVersion < dateBlock) {
   if (!collection || collection.length == 0) {
     // print ("Need to Create Visbo Capacity Collection ", collectionName)
     db.createCollection( collectionName );
-    db.vccapacities.createIndex( { vcid: 1, roleID: 1, startOfYear: -1 }, { name: "vcid" } );
+    db.vccapacities.createIndex( { vcid: 1, roleID: 1, startOfYear: -1 }, { name: "unique", unique: true } );
     print ("Visbo Capacity Collection Created")
   }
   // migrate capacity from latest orga per VC to vccapacities
@@ -1230,7 +1230,6 @@ if (currentVersion < dateBlock) {
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
 }
-
 
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
