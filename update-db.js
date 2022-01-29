@@ -1231,6 +1231,24 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2022-01-31T00:00:00"
+if (currentVersion < dateBlock) {
+  // Remove capa values without VC and remove (only in 2022) capa values for 2024 and later the far future (240 month array)
+  var vcList = db.visbocenters.find({system: {$exists: false}}).toArray();
+  var vcIDList = [];
+  vcList.forEach(vc => {vcIDList.push(vc._id);});
+
+  var resultOrphan = db.vccapacities.deleteMany({vcid: {$nin: vcIDList}});
+  if (resultOrphan.deletedCount) print ("Removed orphan capacity entries for destroyed VCs", resultOrphan.deletedCount);
+
+  var resultFuture = db.vccapacities.deleteMany({startOfYear: {$gt: new Date('2023-12-01')}});
+  if (resultFuture.deletedCount) print ("Removed far future capacity entries", resultFuture.deletedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

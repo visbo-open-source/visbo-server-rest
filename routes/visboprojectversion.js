@@ -1259,10 +1259,19 @@ router.route('/:vpvid/copy')
 				logger4js.warn('VPV Post Copy: Variant does not exist %s %s', vpid, variantName);
 				return res.status(409).send({
 					state: 'failure',
-					message: 'Project variant does not exist',
+					message: 'Project variant does not exist: ' + variantName,
 					vp: [req.oneVP]
 				});
 			}
+		}
+		// check if the version is locked
+		if (lockVP.lockStatus(req.oneVP, useremail, variantName).locked) {
+			logger4js.warn('VPV Post Copy VP locked %s %s', vpid, variantName);
+			return res.status(423).send({
+				state: 'failure',
+				message: 'Project locked',
+				vp: [req.oneVP]
+			});
 		}
 
 		// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'

@@ -305,13 +305,13 @@ app.use(logger(function (tokens, req, res) {
   if (['GET', 'POST', 'PUT', 'DELETE'].indexOf(tokens.method(req, res)) >= 0 ) {
     visboAudit.visboAudit(tokens, req, res);
     var webLog = [
-      tokens.method(req, res),
+      tokens.method(req, res).padEnd(6, ' '),
       // 'base url', req.baseUrl,
       //'Url', req.originalUrl,
-      tokens.url(req, res),
       tokens.status(req, res),
-      tokens.res(req, res, 'content-length')||0+' Bytes',
-      Math.round(tokens['response-time'](req, res))+'ms',
+      (Math.round(tokens['response-time'](req, res)) + 'ms').padStart(8, ' '),
+      ((tokens.res(req, res, 'content-length')||0) + 'B').padStart(8, ' '),
+      tokens.url(req, res),
       req.headers['x-real-ip'] || req.ip,
       req.get('User-Agent'),
       ''

@@ -1091,6 +1091,14 @@ router.route('/:vpid')
 				});
 			}
 		}
+		if (vpStatusNew != vpStatusOrg && (vpStatusNew == 'ordered' || vpStatusOrg == 'ordered')
+		&& !(req.listVCPerm.getPerm(req.oneVP.vcid).vc & constPermVC.Modify)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to change VP status: ordered',
+				vp: [req.oneVP]
+			});
+		}
 		if (req.body.customFieldString) {
 			customFieldString =  convertCustomFieldString(req.body.customFieldString);
 			if (!customFieldString ) {

@@ -717,69 +717,77 @@ router.route('/:vcid')
 				logger4js.trace('VC Destroy: ProjectIDs %O', vpidList);
 				// Delete all VPVs relating to these ProjectIDs
 				var queryvpv = {vpid: {$in: vpidList}};
-				VisboProjectVersion.deleteMany(queryvpv, function (err) {
+				VisboProjectVersion.deleteMany(queryvpv, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VPVs %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VPVs Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VPVs Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				// Delete all VP Portfolios relating to these ProjectIDs
 				var queryvpf = {vpid: {$in: vpidList}};
-				VisboPortfolio.deleteMany(queryvpf, function (err) {
+				VisboPortfolio.deleteMany(queryvpf, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VP Portfolios %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VP Portfolios Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VP Portfolios Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				// Delete Audit Trail of VPs & VPVs
 				var queryaudit = {'vp.vpid': {$in: vpidList}};
-				VisboAudit.deleteMany(queryaudit, function (err) {
+				VisboAudit.deleteMany(queryaudit, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting Audit %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VP Audit Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VP Audit Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				// Delete all VPs regarding these ProjectIDs
 				var queryvp = {_id: {$in: vpidList}};
-				VisboProject.deleteMany(queryvp, function (err) {
+				VisboProject.deleteMany(queryvp, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VPs %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VPs Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VPs Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				var queryvcid = {vcid: req.oneVC._id};
 				// Delete all VCSettings
-				VCSetting.deleteMany(queryvcid, function (err) {
+				VCSetting.deleteMany(queryvcid, function (err, result) {
 					if (err){
-						logger4js.error('DB: Destroy VC %s, Problem deleting VC Role %s', req.oneVC._id, err.message);
+						logger4js.error('DB: Destroy VC %s, Problem deleting VC Setting %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VC Roles Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VC Setting Deleted %d', req.oneVC._id, result?.deletedCount);
+				});
+
+				// Delete all VCCapacities
+				VCCapacity.deleteMany(queryvcid, function (err, result) {
+					if (err){
+						logger4js.error('DB: Destroy VC %s, Problem deleting VC Capacities %s', req.oneVC._id, err.message);
+					}
+					logger4js.info('VC Destroy: %s VC Capacities Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 
 				// Delete all Groups
-				VisboGroup.deleteMany(queryvcid, function (err) {
+				VisboGroup.deleteMany(queryvcid, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VC Groups %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VC Groups Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VC Groups Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 
 				// Delete Audit Trail of VC
 				queryaudit = {'vc.vcid': req.oneVC._id};
 				queryaudit.action = {$ne: 'DELETE'};
-				VisboAudit.deleteMany(queryaudit, function (err) {
+				VisboAudit.deleteMany(queryaudit, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VC Audit %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VC Audit Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VC Audit Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				// Delete the VC  itself
 				var queryvc = {_id: req.oneVC._id};
-				VisboCenter.deleteOne(queryvc, function (err) {
+				VisboCenter.deleteOne(queryvc, function (err, result) {
 					if (err){
 						logger4js.error('DB: Destroy VC %s, Problem deleting VC %s', req.oneVC._id, err.message);
 					}
-					logger4js.trace('VC Destroy: %s VC Deleted', req.oneVC._id);
+					logger4js.info('VC Destroy: %s VC Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 				return res.status(200).send({
 					state: 'success',
@@ -1976,10 +1984,11 @@ router.route('/:vcid/organisation')
 				}
 				req.auditInfo = VCSetting ? 1 : 0;
 				if (!VCSetting) {
-					return res.status(403).send({
-						state: 'failure',
-						message: 'No VISBO Center Organisation found or no permission',
-						count: req.auditInfo
+					return res.status(200).send({
+						state: 'success',
+						message: 'No VISBO Center Organisation found',
+						count: req.auditInfo,
+						organisation: []
 					});
 				}
 				logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
@@ -2171,6 +2180,7 @@ router.route('/:vcid/organisation')
 			var resultOrga = helperOrga.convertSettingToOrga(oneVCSetting, isOrgaList);
 			resultOrga.updatedAt = oneVCSetting.updatedAt;
 			resultOrga.createdAt = oneVCSetting.createdAt;
+			req.auditInfo = oneVCSetting.name.concat('/', oneVCSetting.timestamp.toISOString());
 			return res.status(200).send({
 				state: 'success',
 				message: 'Inserted VISBO Center Organisation',
