@@ -1906,13 +1906,14 @@ router.route('/:vcid/organisation')
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterOrganisations
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
+		* @apiDescription Gets the organisation of the specified VISBO Center, filtered by the users role what he can see from the organisation
 		*
 		* With additional query paramteters the amount of results can be restricted. Available Restirctions are: refDate, refNext
 		* The default result returns the organisation units in one list as allUnits, with the following parameters:
 		* (same as in hierarchy) uid, name, isSummaryRole, isAggregationRole, tagessatz, defaultKapa, defaultDayCapa, entryDate, exitDate, aliases
 		* The list delivers also new parameters like:
 		* type: 1 (normal orga unit), 2 (team orga unit including team members), 3 (cost units)
+		*
 		* pid: the parent uid of this organisation unit
 		* path: the full path of the organisation unit for the parent
 		*
@@ -1922,7 +1923,7 @@ router.route('/:vcid/organisation')
 		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy. Hierarchy means allRoles & AllCosts with subRoleID information.
 		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
 		*
-		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
+		* @apiPermission Authenticated and VC.View for the VISBO Center. It requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
@@ -1939,7 +1940,7 @@ router.route('/:vcid/organisation')
 		*     'timestamp': '2018-12-01',
 		*     'allRoles': [roleDefinition],
 		*     'allCosts': [costDefinition],
-		*     'allUnits': [Definition],
+		*     'allUnits': [allUnitsDefinition],
 		*   }]
 		* }
 		*/
@@ -2064,11 +2065,11 @@ router.route('/:vcid/organisation')
 		*  {
 		*    'name': 'name',
 		*    'timestamp': '2018-12-01',
-		* 	 'allUnits': [
+		*    'allUnits': [
 	  *      'name':'name of orga unit',
 		*      'type': 'type of orga unit',
 		*      'uid': 'uid of orga unit',
-		*      'parent': 'parent name of orga unit',
+		*      'path': 'parent name or path of orga unit',
 		*      'entryDate': '2021-01-01',
 		*      'exitDate': '2022-07-15',
 		*      'isExternRole': false,
@@ -2078,8 +2079,7 @@ router.route('/:vcid/organisation')
 		*      'employeeNr': 'U4711',
 		*      'aliases': ['Alias1', 'Alias2'],
 		*      'isAggregationRole': false,
-		*      'isSummaryRole': false,
-		*      'percent': 0.25
+		*      'isSummaryRole': false
 	  *    ]
 		*  }
 		* @apiSuccessExample {json} Success-Response:
@@ -2197,7 +2197,7 @@ router.route('/:vcid/organisation/:settingid')
 		* @apiGroup VISBO Center Properties
 		* @apiName GetVISBOCenterOrganisation
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the specific organisation of the specified VISBO Center, filtered by the users role what he can see from the organisaion
+		* @apiDescription Gets the specific organisation of the specified VISBO Center, filtered by the users role what he can see from the organisation
 		*
 		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
 		* Date Format is in the form: 2018-10-30T10:00:00Z
@@ -2277,11 +2277,11 @@ router.route('/:vcid/organisation/:settingid')
 		*  {
 		*    'name': 'name',
 		*    'timestamp': '2018-12-01',
-		* 	 'allUnits': [
+		*    'allUnits': [
 	  *      'name': 'name of orga unit',
 		*      'type': 'type of orga unit',
 		*      'uid': 'uid of orga unit',
-		*      'parent': 'parent name of orga unit',
+		*      'path': 'name or path of parent orga unit',
 		*      'entryDate': '2021-01-01',
 		*      'exitDate': '2022-07-15',
 		*      'isExternRole': false,
@@ -2291,8 +2291,7 @@ router.route('/:vcid/organisation/:settingid')
 		*      'employeeNr': 'U4711',
 		*      'aliases': ['Alias1', 'Alias2'],
 		*      'isAggregationRole': false,
-		*      'isSummaryRole': false,
-		*      'percent': 0.25
+		*      'isSummaryRole': false
 	  *    ]
 		*  }
 		* @apiSuccessExample {json} Success-Response:
@@ -2346,6 +2345,14 @@ router.route('/:vcid/organisation/:settingid')
 				});
 			}
 		}
+		var beginOfMonth = validate.getBeginningOfMonth();
+		if (validate.compareDate(req.oneVCSetting.timestamp, beginOfMonth) < 0) {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'Not allowed to update an old organisation'
+			});
+		}
+
 		var oldOrga = req.oneVCSetting;
 		var errorList = [];
 		var orga;
@@ -2741,6 +2748,15 @@ router.route('/:vcid/setting/:settingid')
 				message: 'Not allowed to delete this setting type'
 			});
 		}
+		if (req.oneVCSetting.type == 'organisation'
+		&& req.visboOrganisation?.length > 1
+		&& validate.compareDate(req.oneVCSetting.timestamp, req.visboOrganisation[0].timestamp) < 0) {
+			logger4js.info('Check if it is the newest orga', req.oneVCSetting._id, req.oneVCSetting.name, req.oneVCSetting.timestamp.toISOString());
+			return res.status(409).send({
+				state: 'failure',
+				message: 'Not allowed to delete an old Organisation, while a newer still exists'
+			});
+		}
 		req.oneVCSetting.remove(function(err) {
 			if (err) {
 				errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
@@ -3064,7 +3080,7 @@ router.route('/:vcid/capacity')
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion-uid, default is complete organisation
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation-uid, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
 		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
@@ -3261,7 +3277,7 @@ router.route('/:vcid/capa')
 	})
 
 	/**
-		* @api {post} /vc/:vcid/capa Create Capacity Entry for OrgaUnit of Visbo Center
+		* @api {post} /vc/:vcid/capa Create Capacity for OrgaUnit
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
 		* @apiName CreateVISBOCenterCapacity
@@ -3276,11 +3292,11 @@ router.route('/:vcid/capa')
 		* @apiError {number} 409 No Organisation configured in the VISBO Center
 		* @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vc/:vcid/capa
-		* {
- 	  *  'roleID': 11,
- 	  *  'startOfYear': '2021-01-01',
-		*  'capaPerMonth': [10, 12, 8]
- 	  * }
+		*  {
+ 	  *   'roleID': 11,
+ 	  *   'startOfYear': '2021-01-01',
+		*   'capaPerMonth': [10, 12, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ 	  *  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

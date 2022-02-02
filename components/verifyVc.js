@@ -174,7 +174,12 @@ function checkSettingId(req, res, next, settingID) {
 			});
 		}
 		req.oneVCSetting = oneVCSetting;
-		return next();
+		if (oneVCSetting.type == 'organisation') {
+			// get also the other organisations to verify that only newest can be deleted
+			getVCOrganisation(vcid, false, req, res, next);
+		} else {
+			return next();
+		}
 	});
 }
 
@@ -371,10 +376,8 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 			return;
 		}
 		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
-		if (listVCSetting.length > 0) {
-			listVCSetting.sort(function(a, b) { return validate.compareDate(b.timestamp, a.timestamp); });
-			req.visboOrganisation = listVCSetting;
-		}
+		listVCSetting.sort(function(a, b) { return validate.compareDate(b.timestamp, a.timestamp); });
+		req.visboOrganisation = listVCSetting;
 		if (withCapa) {
 			var query = {};
 			query.vcid = vcid;
@@ -387,9 +390,7 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 					return;
 				}
 				logger4js.debug('GetVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
-				if (listVCCapacity.length > 0) {
-					req.visboVCCapacity = listVCCapacity;
-				}
+				req.visboVCCapacity = listVCCapacity;
 				var endCalc = new Date();
 				logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
 				return next();

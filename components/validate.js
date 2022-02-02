@@ -149,6 +149,14 @@ function isSameDay(dateA, dateB) {
   return localA.toISOString() === localB.toISOString();
 }
 
+function getBeginningOfMonth(dateA) {
+	if (dateA === undefined) { dateA = new Date(); }
+	var result = new Date(dateA);
+  result.setHours(0, 0, 0, 0);
+  result.setDate(1);
+  return result;
+}
+
 var evaluateLanguage = function(req) {
 	var lang;
 	if (req) {
@@ -169,5 +177,6 @@ module.exports = {
 	evaluateLanguage: evaluateLanguage,
 	convertNumber: convertNumber,
 	compareDate: compareDate,
-	isSameDay: isSameDay
+	isSameDay: isSameDay,
+	getBeginningOfMonth: getBeginningOfMonth
 };

@@ -58,10 +58,7 @@ router.route('/')
 		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays;
 		var ageDate = new Date();
 		ageDate.setDate(ageDate.getDate() - ageDays);
-		ageDate.setHours(0);
-		ageDate.setMinutes(0);
-		ageDate.setSeconds(0);
-		ageDate.setMilliseconds(0);
+		ageDate.setHours(0, 0, 0, 0);
 
 		var dir = path.join(__dirname, '../logging');
 		if (process.env.LOGPATH != undefined) {

@@ -865,13 +865,9 @@ function diffDays(date1, date2) {
 	var differenceInDays = undefined;
 	var oneDay = 24*60*60*1000; // hours*minutes*seconds*milliseconds
 	var firstDate = new Date(date1);
-	firstDate.setHours(12);
-	firstDate.setMinutes(0);
-	firstDate.setMilliseconds(0);
+	firstDate.setHours(12, 0, 0, 0);
 	var secondDate = new Date(date2);
-	secondDate.setHours(12);
-	secondDate.setMinutes(0);
-	secondDate.setMilliseconds(0);
+	secondDate.setHours(12, 0, 0, 0);
 	// var firstDate = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
 	// var secondDate = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
 	if (!isNaN(firstDate) && !isNaN(secondDate)) {

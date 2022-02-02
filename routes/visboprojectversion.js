@@ -1407,7 +1407,7 @@ router.route('/:vpvid/capacity')
 		*
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all direct childs of roleID
 		*
 		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.

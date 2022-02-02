@@ -1249,6 +1249,36 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2022-01-31T10:00:00"
+if (currentVersion < dateBlock) {
+  // set ttl for Create&Delete Lock
+  var ttlDate = new Date();
+  ttlDate.setMonth(ttlDate.getMonth() - 3);
+  var result = db.visboaudits.updateMany({ actionDescription: {$in: ['Project Lock Create', 'Project Lock Delete']} },
+    {$set: {ttl: ttlDate}}, {upsert: false, multi: "true"}
+  )
+  print("Updated TTL for Lock Items: ", result.modifiedCount);
+
+  // remove farbe & tagessatzIntern from organisation
+  var result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$unset: {'value.allRoles.$[elem].tagessatzIntern': true}},
+      {arrayFilters: [ { "elem.tagessatz": { $exists: true } } ] }
+    )
+  print ("Updated VC Orgas removed tagessatzIntern", result.modifiedCount);
+
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$unset: {'value.allRoles.$[elem].farbe': true}},
+      {arrayFilters: [ { "elem.farbe": { $exists: true } } ] }
+    )
+  print ("Updated VC Orgas removed farbe", result.modifiedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

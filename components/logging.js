@@ -31,10 +31,7 @@ function cleanupLogFiles(task, finishedTask) {
 	var deleteLogDate = new Date();
 	var deletedCount = 0;
 	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays);
-	deleteLogDate.setHours(0);
-	deleteLogDate.setMinutes(0);
-	deleteLogDate.setSeconds(0);
-	deleteLogDate.setMilliseconds(0);
+	deleteLogDate.setHours(0, 0, 0, 0);
 
 	var dir = path.join(__dirname, '../logging');
 	if (process.env.LOGPATH != undefined) {

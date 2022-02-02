@@ -2310,6 +2310,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
+		req.auditTTLMode = 1;
 		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
 		req.oneVP.lock = listLockNew;
 
@@ -2403,6 +2404,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
+		req.auditTTLMode = 1;
 
 		logger4js.debug('Delete Lock for VP :%s: after perm check has %d Locks', req.oneVP.name, req.oneVP.lock.length);
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
@@ -3385,8 +3387,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
-		* @apiParam {String} parentID Deliver the capacity planning for the specified organisaion with the specified parentID, default is complete organisation
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
+		* @apiParam {String} parentID Deliver the capacity planning for the specified organisation with the specified parentID, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
 		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
