@@ -275,8 +275,8 @@ function generateIndexedOrgaRoles(orga) {
 }
 
 function getFullPath(role) {
-	if (!role || !role.path) return '';
-	return role.path.concat('/', role.name || '');
+	if (!role?.path) return '';
+	return role.path.concat(role.name || '');
 }
 
 function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
@@ -596,35 +596,35 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 
 // reduce orga to a flat list with parent reference
 function reduceOrga(orga) {
-	var organisation = [];
+	var allUnits = [];
 	var minDate = new Date('0001-01-01');
 	var maxDate = new Date('2200-11-30');
 	if (!orga || !orga.allRoles) {
-		return organisation;
+		return allUnits;
 	}
 	orga.allRoles.forEach(role => {
-		if (!organisation[role.uid]) {
+		if (!allUnits[role.uid]) {
 			var newRole = {};
 			newRole.uid = role.uid;
 			newRole.calcid = role.uid;
 			newRole.pid = undefined;
-			organisation[role.uid] = newRole;
+			allUnits[role.uid] = newRole;
 		}
-		organisation[role.uid].name = role.name;
-		if (role.isSummaryRole) { organisation[role.uid].isSummaryRole = role.isSummaryRole; }
-		if (role.isAggregationRole) { organisation[role.uid].isAggregationRole = role.isAggregationRole; }
-		if (role.isExternRole) { organisation[role.uid].isExternRole = role.isExternRole; }
-		if (role.defaultKapa) { organisation[role.uid].defaultKapa = role.defaultKapa; }
-		if (role.defaultDayCapa) { organisation[role.uid].defaultDayCapa = role.defaultDayCapa; }
-		if (role.tagessatz >= 0) { organisation[role.uid].tagessatz = role.tagessatz; }
+		allUnits[role.uid].name = role.name;
+		if (role.isSummaryRole) { allUnits[role.uid].isSummaryRole = role.isSummaryRole; }
+		if (role.isAggregationRole) { allUnits[role.uid].isAggregationRole = role.isAggregationRole; }
+		if (role.isExternRole) { allUnits[role.uid].isExternRole = role.isExternRole; }
+		if (role.defaultKapa) { allUnits[role.uid].defaultKapa = role.defaultKapa; }
+		if (role.defaultDayCapa) { allUnits[role.uid].defaultDayCapa = role.defaultDayCapa; }
+		if (role.tagessatz >= 0) { allUnits[role.uid].tagessatz = role.tagessatz; }
 		if (role.entryDate?.getTime() > minDate.getTime()) {
-			organisation[role.uid].entryDate = role.entryDate;
+			allUnits[role.uid].entryDate = role.entryDate;
 		}
 		if (role.exitDate?.getTime() < maxDate.getTime()) {
-			organisation[role.uid].exitDate = role.exitDate;
+			allUnits[role.uid].exitDate = role.exitDate;
 		}
-		if (role.aliases) { organisation[role.uid].aliases = role.aliases; }
-		organisation[role.uid].type = role.type;
+		if (role.aliases) { allUnits[role.uid].aliases = role.aliases; }
+		allUnits[role.uid].type = role.type;
 		role.subRoleIDs?.forEach(item => {
 			const index = Number(item.key);
 			if (index < 0) {
@@ -632,17 +632,17 @@ function reduceOrga(orga) {
 				// something wrong with the numbering
 				return;
 			}
-			if (!organisation[index]) {
+			if (!allUnits[index]) {
 				// added by subrole
 				var newRole = {};
 				newRole.uid = index;
 				newRole.calcid = index;
-				organisation[index] = newRole;
+				allUnits[index] = newRole;
 			} else {
 				logger4js.info(`SubRole already exists ${role.uid} SubRole ${index}`);
 			}
-			if (!organisation[index].pid) {
-				organisation[index].pid = role.uid;
+			if (!allUnits[index].pid) {
+				allUnits[index].pid = role.uid;
 			}
 		});
 	});
@@ -655,43 +655,35 @@ function reduceOrga(orga) {
 		if (role.type == 2 && role.subRoleIDs) {
 			for (let j = 0; j < role.subRoleIDs.length; j++) {
 				const index = role.subRoleIDs[j].key;
-				if (!organisation[index] || organisation[index].type == 2) {
+				if (!allUnits[index] || allUnits[index].type == 2) {
 					// nothing to do
 					continue;
 				}
-				const userRole = organisation[index];
+				const userRole = allUnits[index];
 				// now it is a user, add a new entry to the team
 				maxid += 1;
-				organisation[maxid] = {};
-				organisation[maxid].uid = index;
-				organisation[maxid].calcid = maxid;
-				organisation[maxid].type = 2;
-				organisation[maxid].pid = role.uid;
-				organisation[maxid].name = userRole.name;
-				if (userRole.employeeNr) { organisation[maxid].employeeNr = userRole.employeeNr; }
-				if (userRole.isExternRole) { organisation[maxid].isExternRole = userRole.isExternRole; }
-				if (userRole.defaultDayCapa >= 0) { organisation[maxid].defaultDayCapa = userRole.defaultDayCapa; }
-				if (userRole.defaultKapa >= 0) { organisation[maxid].defaultKapa = userRole.defaultKapa; }
-				if (userRole.tagessatz >= 0) { organisation[maxid].tagessatz = userRole.tagessatz; }
-				if (userRole.entryDate) { organisation[maxid].entryDate = userRole.entryDate; }
-				if (userRole.exitDate) { organisation[maxid].exitDate = userRole.exitDate; }
-				if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
-				if (userRole.isAggregationRole) { organisation[maxid].isAggregationRole = userRole.isAggregationRole; }
-				if (userRole.isSummaryRole) { organisation[maxid].isSummaryRole = userRole.isSummaryRole; }
-				// if (userRole.isActDataRelevant) { organisation[maxid].isActDataRelevant = userRole.isActDataRelevant; }
+				allUnits[maxid] = {};
+				allUnits[maxid].uid = index;
+				allUnits[maxid].calcid = maxid;
+				allUnits[maxid].type = 2;
+				allUnits[maxid].pid = role.uid;
+				allUnits[maxid].name = userRole.name;
+				if (userRole.employeeNr) { allUnits[maxid].employeeNr = userRole.employeeNr; }
+				if (userRole.isExternRole) { allUnits[maxid].isExternRole = userRole.isExternRole; }
+				if (userRole.defaultDayCapa >= 0) { allUnits[maxid].defaultDayCapa = userRole.defaultDayCapa; }
+				if (userRole.defaultKapa >= 0) { allUnits[maxid].defaultKapa = userRole.defaultKapa; }
+				if (userRole.tagessatz >= 0) { allUnits[maxid].tagessatz = userRole.tagessatz; }
+				if (userRole.entryDate) { allUnits[maxid].entryDate = userRole.entryDate; }
+				if (userRole.exitDate) { allUnits[maxid].exitDate = userRole.exitDate; }
+				if (userRole.aliases) { allUnits[maxid].aliases = userRole.aliases; }
+				if (userRole.isAggregationRole) { allUnits[maxid].isAggregationRole = userRole.isAggregationRole; }
+				if (userRole.isSummaryRole) { allUnits[maxid].isSummaryRole = userRole.isSummaryRole; }
+				// if (userRole.isActDataRelevant) { allUnits[maxid].isActDataRelevant = userRole.isActDataRelevant; }
 			}
 		}
 	});
 
-	organisation.forEach(item => calcFullPath(item.calcid, organisation));
-	organisation = organisation.filter(item => item.calcid !== undefined);
-	organisation.sort(function(a, b) {
-		if (a.type != b.type) {
-			return a.type - b.type;
-		} else {
-			return getFullPath(a).localeCompare(getFullPath(b));
-		}
-	});
+	allUnits.forEach(item => calcFullPath(item.calcid, allUnits));
 
 	// build cost Information hierarchy
 	var listCost = [];
@@ -727,19 +719,19 @@ function reduceOrga(orga) {
 	});
 
 	listCost.forEach(item => calcFullPath(item.calcid, listCost));
-	listCost = listCost.filter(item => item.calcid !== undefined);
-	listCost.sort(function(a, b) {
+	// add the list to the allUnits list
+	listCost.forEach(item => allUnits.push(item));
+
+	allUnits = allUnits.filter(item => item.calcid !== undefined);
+	allUnits.forEach(item => delete item.calcid);
+	allUnits.sort(function(a, b) {
 		if (a.type != b.type) {
 			return a.type - b.type;
 		} else {
 			return getFullPath(a).localeCompare(getFullPath(b));
 		}
 	});
-	// add the list to the orga list
-	listCost.forEach(item => organisation.push(item));
-
-	organisation.forEach(item => delete item.calcid);
-	return organisation;
+	return allUnits;
 }
 
 function convertSettingToOrga(setting, getOrgaList) {
