@@ -1395,8 +1395,14 @@ function splitInTimeZones(organisation, startDate, endDate) {
 
 	// reduce all orgas before startDate except one, reduce all orgas after endDate
 	// search the first organisation we need
-	var index = organisation.findIndex(orga => getColumnOfDate(orga.timestamp) >= split.startIndex);
-	index = index <= 0 ? 0 : index - 1;
+	var index;
+	if (getColumnOfDate(organisation[0].timestamp) >= split.startIndex) {
+		// ealriset organisation starts after the startIndex, take this for the past also
+		index = 0;
+	} else {
+		index = organisation.findIndex(orga => getColumnOfDate(orga.timestamp) >= split.startIndex);
+		index = index <= 0 ? organisation.length - 1 : index - 1;
+	}
 
 	// add all organisations from first to the last we need to split.organisation list
 	for (; index < organisation.length; index++) {
@@ -1886,7 +1892,6 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.StrategicFit = undefined;
 	vpv.actualDataUntil = undefined;
 	vpv.Erloes = undefined;
-	vpv.leadPerson = undefined;
 	vpv.earliestStart = undefined;
 	vpv.earliestStartDate = undefined;
 	vpv.latestStart = undefined;
@@ -2002,7 +2007,6 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		newPFV.customBoolFields = oldVPV.customBoolFields;
 		// ? newPFV.actualDataUntil = oneVPV.actualDataUntil;
 		newPFV.Erloes = oldVPV.Erloes;
-		newPFV.leadPerson = oldVPV.leadPerson;
 		newPFV.startDate = oldVPV.startDate;
 		newPFV.endDate = oldVPV.endDate;
 		newPFV.earliestStart = oldVPV.earliestStart;

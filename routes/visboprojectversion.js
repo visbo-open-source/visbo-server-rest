@@ -533,13 +533,13 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName VorlagenName description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
-					queryVPV.select('_id vpid name timestamp variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName description updatedAt createdAt deletedAt');
 				} else {
-					queryVPV.select('_id vpid name timestamp startDate endDate status ampelStatus variantName businessUnit VorlagenName leadPerson description updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName startDate endDate status ampelStatus VorlagenName description updatedAt createdAt deletedAt');
 				}
 			}
 			queryVPV.lean();

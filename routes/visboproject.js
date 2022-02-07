@@ -615,6 +615,7 @@ router.route('/')
 	*   'name':'My first Project',
 	*   '_id':'vp5aaf882',
 	*   'vcid': 'vc5aaf992',
+	*   'managerId': 'vu5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0',
 	*   'kundennummer': 'customer project identifier'
@@ -754,6 +755,7 @@ router.route('/')
 				newVP.name = vpname;
 				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
+				newVP.managerId = userId;
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
 				if (customFieldString) {
 					newVP.customFieldString = customFieldString;
@@ -974,6 +976,7 @@ router.route('/:vpid')
 	* the system checks if the user has Modify permission to the Project.
 	* If an updatedAt Info is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 	* If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
+	* The project manager can be changed by specifying the managerId as a userId that is member of the vp admin group.
 	* If the Project Name has changed, the Name will be populated to the Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiHeader {String} access-key User authentication token.
@@ -1029,6 +1032,7 @@ router.route('/:vpid')
     *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
     *		]
 	*   'vcid': 'vc5aaf992',
+	*   'managerId': 'vu5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0'
 	*  }]
@@ -1054,6 +1058,7 @@ router.route('/:vpid')
 		var kundennummer = (req.body.kundennummer || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpStatusNew, vpStatusOrg;
+		var vpManagerNew;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -1131,6 +1136,20 @@ router.route('/:vpid')
 				});
 			}
 		}
+		if (req.body.managerId && req.body.managerId != req.oneVP.managerId?.toString()) {
+			logger4js.debug('PUT Project manager changes ', req.body.managerId);
+			// Check if the new manager is in the "VISBO Project Admin" Group
+			var group = req.listVPGroup?.find(group => group.groupType == 'VP' && group.internal && group.name == "VISBO Project Admin");
+			var manager = group?.users?.find(user => user.userId.toString() == req.body.managerId);
+			if (!group || !manager) {
+				logger4js.info('PUT Project new project manager not part of admin group', req.body.managerId);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Manager not part of VISBO Project Admin group'
+				});
+			}
+			vpManagerNew = manager.email;
+		}
 
 		var vpUndelete = false;
 		// undelete the VP in case of change
@@ -1170,8 +1189,13 @@ router.route('/:vpid')
 			propertyChange = true;
 		}
 		req.auditProperty = [];
+		if (vpManagerNew) {
+			req.oneVP.managerId = req.body.managerId;
+			let entry = {action: 'Project Update', name: 'Manager', newValue: vpManagerNew};
+			req.auditProperty = req.auditProperty.concat(entry);
+		}
 		if (customFieldString) {
-			req.auditProperty = detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString);
+			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString));
 			req.oneVP.customFieldString =  customFieldString.filter(item => item.value != undefined);
 		}
 		if (customFieldDouble) {
@@ -1455,7 +1479,7 @@ router.route('/:vpid/audit')
 					message: 'No Valid Regular Expression'
 				});
 			}
-			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+			if (validate.validateObjectId(req.query.text, false)) {
 				logger4js.debug('Get Audit Search for ObjectID %s', text);
 				textCondition.push({'vpv.vpvid': text});
 				textCondition.push({'user.userId': text});
@@ -1500,6 +1524,92 @@ router.route('/:vpid/audit')
 			});
 		});
 	});
+
+	router.route('/:vpid/user')
+
+	/**
+		* @api {get} /vp/:vpid/user Get Users
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Properties
+		* @apiName GetVISBOProjectUser
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all users of the specified Project
+		*
+		* @apiPermission Authenticated and VP.View Permission for the Project.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Project, or Project does not exists
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vp/:vpid/user
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned Project Users',
+		*   'count': 1,
+		*   'user':[{
+		*    '_id':'us5c754feac',
+		*    'updatedAt':'2018-03-20T10:31:27.216Z',
+		*    'createdAt':'2018-02-28T09:38:04.774Z',
+		*    'email':'first.last@visbo.de',
+		*    'profile': {
+		*      'firstname': 'First',
+		*      'lastname': 'Last',
+		*      'company': 'Company inc',
+		*      'phone': '0151-11223344',
+		*      'address' : {
+		*        'street': 'Street',
+		*        'city': 'City',
+		*        'zip': '88888',
+		*        'state': 'State',
+		*        'country': 'Country',
+		*      }
+		*    }]
+		* }
+		*/
+
+	// Get VP Users
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var isSysAdmin = req.query.sysadmin ? true : false;
+
+			req.auditDescription = 'Project User Read';
+			req.auditSysAdmin = isSysAdmin;
+			req.auditTTLMode = 1;
+
+			logger4js.info('Get Project Users for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
+
+			// collect all the users from VP Permission Info
+			var userSet = new Set();
+			req.listVPGroup.forEach(group => {
+				group.users.forEach(user => {
+					userSet.add(user.userId);
+				})
+			});
+			var userList = [];
+			userSet.forEach(item => userList.push(item));
+
+			var query = {};
+			query._id = {$in: userList};
+			logger4js.trace('Get Project Users Query %O', query);
+			var queryUser = User.find(query);
+			queryUser.select('email profile status.lastLoginAt status.registeredAt');
+			queryUser.lean();
+			queryUser.exec(function (err, listVPUser) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VP Users find ${query}`, 'Error getting Project Users');
+					return;
+				}
+				logger4js.info('Found %d Users for VP', listVPUser.length);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Project Users',
+					count: listVPUser.length,
+					user: listVPUser
+				});
+			});
+		})
 
 	router.route('/:vpid/group')
 
@@ -2211,6 +2321,16 @@ router.route('/:vpid/audit')
 					groups: [req.oneGroup]
 				});
 			});
+			if (delUser.userId.toString() == req.oneVP.managerId.toString()) {
+				logger4js.info('Delete Project Manager from Project', delUser.email);
+				delete req.oneVP.managerId;
+				req.oneVP.save(function(err, vp) {
+					if (err) {
+						errorHandler(err, res, 'DB: DELETE VP Manager from VP', 'Error delete VP Manager from Project');
+						return;
+					}
+				});
+			}
 		});
 
 router.route('/:vpid/lock')
@@ -3376,7 +3496,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	/**
 		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity of VISBO Portfolio
 		* @apiVersion 1.0.0
-		* @apiGroup VISBO Project Properties
+		* @apiGroup VISBO Project Portfolio
 		* @apiName GetVISBOPortfolioCapacity
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio List.

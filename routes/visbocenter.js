@@ -70,6 +70,7 @@ router.use('/:vcid/organisation', verifyVc.getVCOrgs);
 router.use('/:vcid/capa', verifyVc.getVCOrgs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
+router.use('/', verifyVg.getVCGroups);
 
 function findUserById(currentUser) {
 	// logger4js.info('FIND User by ID %s with %s result %s', this, currentUser.userId, currentUser.userId.toString() == this.toString());
@@ -950,6 +951,93 @@ router.route('/:vcid/audit')
 			});
 		});
 	});
+
+router.route('/:vcid/user')
+
+/**
+	* @api {get} /vp/:vcid/user Get Users
+	* @apiVersion 1.0.0
+	* @apiGroup VISBO Center Properties
+	* @apiName GetVISBOCenterUser
+	* @apiHeader {String} access-key User authentication token.
+	* @apiDescription Gets all users of the specified Project
+	*
+	* @apiPermission Authenticated and VC.View Permission for the Project.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Project, or Project does not exists
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vc/:vcid/user
+	* @apiSuccessExample {json} Success-Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Returned Project Users',
+	*   'count': 1,
+	*   'user':[{
+	*    '_id':'us5c754feac',
+	*    'updatedAt':'2018-03-20T10:31:27.216Z',
+	*    'createdAt':'2018-02-28T09:38:04.774Z',
+	*    'email':'first.last@visbo.de',
+	*    'profile': {
+	*      'firstname': 'First',
+	*      'lastname': 'Last',
+	*      'company': 'Company inc',
+	*      'phone': '0151-11223344',
+	*      'address' : {
+	*        'street': 'Street',
+	*        'city': 'City',
+	*        'zip': '88888',
+	*        'state': 'State',
+	*        'country': 'Country',
+	*      }
+	*    }]
+	* }
+	*/
+
+// Get VC Users
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var isSysAdmin = req.query.sysadmin ? true : false;
+
+		req.auditDescription = 'VISBO Center User Read';
+		req.auditSysAdmin = isSysAdmin;
+		req.auditTTLMode = 1;
+
+		logger4js.info('Get VC Users for userid %s email %s and vc %s Perm %O', userId, useremail, req.params.vcid, req.listVCPerm.getPerm(req.params.vpid));
+
+		// collect all the users from VC Permission Info
+		var userSet = new Set();
+		req.listVCGroup?.forEach(group => {
+			group.users.forEach(user => {
+				userSet.add(user.userId);
+			})
+		});
+		var userList = [];
+		userSet.forEach(item => userList.push(item));
+
+		var query = {};
+		query._id = {$in: userList};
+		logger4js.trace('Get Project Users Query %O', query);
+		var queryUser = User.find(query);
+		queryUser.select('email profile status.lastLoginAt status.registeredAt');
+		queryUser.lean();
+		queryUser.exec(function (err, listVCUser) {
+			if (err) {
+				errorHandler(err, res, `DB: GET VC Users find ${query}`, 'Error getting VISBO Center Users');
+				return;
+			}
+			logger4js.info('Found %d Users for VC', listVCUser.length);
+			return res.status(200).send({
+				state: 'success',
+				message: 'Returned Project Users',
+				count: listVCUser.length,
+				user: listVCUser
+			});
+		});
+	})
+
 
 router.route('/:vcid/group')
 

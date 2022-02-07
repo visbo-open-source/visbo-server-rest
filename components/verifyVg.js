@@ -63,12 +63,53 @@ function checkUserId(req, res, next, userid) {
 	return next();
 }
 
-// get VP Groups used only for manage restrictions, we need all VP Groups not only the groups where the user is member of
+// get VC Groups used for viewing the project manager, we need all VC Groups with the user members
+function getVCGroups(req, res, next) {
+	var baseUrl = req.url.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	logger4js.debug('Check if we need groups %s ', req.url);
+	var skip = true
+	if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'user') {
+		skip = false
+	}
+	if (skip) {
+		return next();
+	}
+	var vcid = urlComponent[1];
+	logger4js.debug('Get Groups for url %s vcid %s', req.url, vcid);
+
+	var query = {};
+	query.vcid = vcid;
+	query.groupType = {$in: ['VC', 'VP']};
+	logger4js.trace('Get VC Group Query %O', query);
+	var queryVCGroup = VisboGroup.find(query);
+	queryVCGroup.select('-vpids');
+	queryVCGroup.lean();
+	queryVCGroup.exec(function (err, listVCGroup) {
+		if (err) {
+			errorHandler(err, res, `DB: GET VC Groups find ${query}`, 'Error getting VC Groups');
+			return;
+		}
+		logger4js.info('Found %d Groups for VC', listVCGroup.length);
+		req.listVCGroup = listVCGroup;
+		return next();
+	});
+}
+
+// get VP Groups used for manage restrictions and for updating the project manager, we need all VP Groups not only the groups where the user is member of
 function getVPGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 	logger4js.debug('Check if we need groups %s ', req.url);
-	if (req.method != 'POST' || urlComponent.length < 3 || urlComponent[2] != 'restrict') {
+	var skip = true
+	if (req.method == 'POST' && urlComponent.length >= 3 && urlComponent[2] == 'restrict') {
+		skip = false;
+	} else if (req.method == 'PUT' && urlComponent.length == 2) {
+		skip = false
+	} else if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'user') {
+		skip = false
+	}
+	if (skip) {
 		return next();
 	}
 	var vpid = urlComponent[1];
@@ -78,10 +119,10 @@ function getVPGroups(req, res, next) {
 	query.vpids = vpid;
 	query.groupType = {$in: ['VC', 'VP']};
 	logger4js.trace('Get Project Group Query %O', query);
-	var queryVCGroup = VisboGroup.find(query);
-	queryVCGroup.select('-vpids');
-	queryVCGroup.lean();
-	queryVCGroup.exec(function (err, listVPGroup) {
+	var queryVPGroup = VisboGroup.find(query);
+	queryVPGroup.select('-vpids');
+	queryVPGroup.lean();
+	queryVPGroup.exec(function (err, listVPGroup) {
 		if (err) {
 			errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting Project Groups');
 			return;
@@ -95,5 +136,6 @@ function getVPGroups(req, res, next) {
 module.exports = {
 	getGroupId: getGroupId,
 	checkUserId: checkUserId,
-	getVPGroups: getVPGroups
+	getVPGroups: getVPGroups,
+	getVCGroups: getVCGroups
 };

@@ -1274,6 +1274,12 @@ if (currentVersion < dateBlock) {
     )
   print ("Updated VC Orgas removed farbe", result.modifiedCount);
 
+  result = db.visboprojectversions.updateMany(
+      {leadPerson: {$exists: true}},
+      {$unset: {leadPerson: true}}
+    )
+  print ("Updated VPVs removed leadPerson", result.modifiedCount);
+
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
   currentVersion = dateBlock
