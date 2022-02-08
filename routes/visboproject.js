@@ -3031,10 +3031,12 @@ router.route('/:vpid/portfolio')
 		var useremail = req.decoded.email;
 
 		req.auditDescription = 'Portfolio List Create';
+		req.auditInfo = req.oneVP.name;
+		if (req.body.variantName) {
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.variantName);
+		}
 
 		logger4js.info('POST Portfolio for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
-
-		logger4js.debug('Variant %s Portfolio %O', variantName || 'None', req.body);
 
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
 		var variantIndex = 0;
@@ -3280,6 +3282,10 @@ router.route('/:vpid/portfolio/:vpfid')
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName.trim();
 
 		req.auditDescription = 'Portfolio List Update';
+		req.auditInfo = req.oneVP.name;
+		if (req.body.variantName) {
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.variantName);
+		}
 
 		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s', userId, useremail, req.params.vpfid);
 		// undelete the VPF in case of PUT

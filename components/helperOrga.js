@@ -125,7 +125,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 
 			// check Rule1: internal people need to have capa
 			if (!newRole.isExternRole) {
-				if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa > 0)) {
+				if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa >= 0)) {
 					errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
 					listError && listError.push(errorstring);
 					logger4js.info('InitOrga: ', errorstring);
@@ -170,18 +170,16 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		// check that all subRoleIDs exists
 		var newOrgaIndexed = generateIndexedOrgaRoles(newOrga);
 		newOrga.allRoles.forEach(role => {
-			if (role.subRoleIDs) {
-				role.subRoleIDs.forEach(subRole => {
-					if (!newOrgaIndexed[subRole.key]) {
-						errorstring = `Unknown subRoleID: uid: ${role.uid}, name: ${role.name}, subRole: ${subRole.key}`;
-						listError && listError.push(errorstring);
-						logger4js.info('InitOrga: ', errorstring);
-						isOrgaValid = false;
-					} else if (role.type == 1){
-						newOrgaIndexed[subRole.key].pid = role.uid;
-					}
-				});
-			}
+			role.subRoleIDs?.forEach(subRole => {
+				if (!newOrgaIndexed[subRole.key]) {
+					errorstring = `Unknown subRoleID: uid: ${role.uid}, name: ${role.name}, subRole: ${subRole.key}`;
+					listError && listError.push(errorstring);
+					logger4js.info('InitOrga: ', errorstring);
+					isOrgaValid = false;
+				} else if (role.type == 1){
+					newOrgaIndexed[subRole.key].pid = role.uid;
+				}
+			});
 			if (role.teamIDs) {
 				role.teamIDs.forEach(teamID => {
 					if (!newOrgaIndexed[teamID.key]) {
@@ -218,9 +216,9 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		maxCostID = Math.max(maxCostID, cost.uid);
 		newCost.name = cost.name;
 		newCost.subCostIDs = [];
-		if (cost.subCostIDs && cost.subCostIDs.length > 0) {
-			cost.subCostIDs.forEach(item => newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)}));
-		}
+		cost.subCostIDs?.forEach(item => {
+			newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)})
+		});
 		if (uniqueCostNames[newCost.name]) {
 			errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
 			listError && listError.push(errorstring);
@@ -373,7 +371,6 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					return;
 				}
 				newRole.defaultDayCapa = role.defaultDayCapa;
-				newRole.isExternRole = role.isExternRole;
 				// check Rule3: persons need to have a tagessatz > 0
 				if (!role.tagessatz) role.tagessatz = 0;
 				if (newRole.tagessatz < 0) {
@@ -390,10 +387,10 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					isOrgaValid = false;
 					return;
 				}
-				newRole.defaultKapa = role.defaultKapa;
+				if (role.defaultKapa) newRole.defaultKapa = role.defaultKapa;
 				// check Rule1: internal people need to have capa (to avoid confusion team members get their capa from the real orga unit)
 				if (!newRole.isExternRole && newRole.type == 1) {
-					if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa > 0)) {
+					if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa >= 0)) {
 						errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
 						listError && listError.push(errorstring);
 						logger4js.info('InitOrgaList: ', errorstring);
@@ -540,10 +537,13 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
-				delete cost.parent;
 			}
+			delete cost.parent;
 		});
-		newOrga.allRoles.forEach(role => { delete role.parent; delete role.teamParent });
+		newOrga.allRoles.forEach(role => {
+			delete role.parent;
+			delete role.teamParent;
+		});
 
 		newOrga.maxRoleID = maxRoleID;
 		newOrga.maxCostID = maxCostID;
@@ -607,7 +607,6 @@ function reduceOrga(orga) {
 			var newRole = {};
 			newRole.uid = role.uid;
 			newRole.calcid = role.uid;
-			newRole.pid = undefined;
 			allUnits[role.uid] = newRole;
 		}
 		allUnits[role.uid].name = role.name;
@@ -692,7 +691,6 @@ function reduceOrga(orga) {
 			listCost[cost.uid] = {};
 			listCost[cost.uid].uid = cost.uid;
 			listCost[cost.uid].calcid = cost.uid;
-			listCost[cost.uid].pid = undefined;
 		}
 		listCost[cost.uid].name = cost.name;
 		listCost[cost.uid].type = 3;
@@ -723,7 +721,12 @@ function reduceOrga(orga) {
 	listCost.forEach(item => allUnits.push(item));
 
 	allUnits = allUnits.filter(item => item.calcid !== undefined);
-	allUnits.forEach(item => delete item.calcid);
+	allUnits.forEach(item => {
+		delete item.calcid;
+		if (!item.pid) {
+			delete item.pid;
+		}
+	});
 	allUnits.sort(function(a, b) {
 		if (a.type != b.type) {
 			return a.type - b.type;
@@ -734,13 +737,13 @@ function reduceOrga(orga) {
 	return allUnits;
 }
 
-function convertSettingToOrga(setting, getOrgaList) {
+function convertSettingToOrga(setting, getListFormat) {
 	var resultOrga = {};
 	resultOrga._id = setting._id;
 	resultOrga.name = setting.name;
 	resultOrga.timestamp = setting.timestamp;
 
-	if (getOrgaList) {
+	if (getListFormat) {
 		resultOrga.allUnits = reduceOrga(setting.value);
 	} else {
 		resultOrga.allRoles = setting.value.allRoles;

@@ -2039,7 +2039,7 @@ router.route('/:vcid/organisation')
 		var useremail = req.decoded.email;
 		var latestOnly = false; 	// as default show all settings
 		var withCapa = req.query.withCapa == true;
-		var getOrgaList = req.query.hierarchy != true;
+		var getListFormat = req.query.hierarchy != true;
 
 		req.auditDescription = 'VISBO Center Organisation Read';
 		req.auditTTLMode = 1;
@@ -2086,10 +2086,10 @@ router.route('/:vcid/organisation')
 						delete role.tagessatz;
 					});
 				}
-				if (!getOrgaList && withCapa) {
+				if (!getListFormat && withCapa) {
 					helperOrga.joinCapacity(VCSetting, req.visboVCCapacity);
 				}
-				var resultOrga = helperOrga.convertSettingToOrga(VCSetting, getOrgaList);
+				var resultOrga = helperOrga.convertSettingToOrga(VCSetting, getListFormat);
 				resultOrga.updatedAt = VCSetting.updatedAt;
 				resultOrga.createdAt = VCSetting.createdAt;
 				return res.status(200).send({
@@ -2111,12 +2111,12 @@ router.route('/:vcid/organisation')
 
 				var listOrganisation = [];
 				listVCSetting.forEach(item => {
-					var resultOrga = helperOrga.convertSettingToOrga(item, getOrgaList);
+					var resultOrga = helperOrga.convertSettingToOrga(item, getListFormat);
 					if (hasNoAudit) {
 						resultOrga.allRoles?.forEach(role => { delete role.tagessatz; });
 						resultOrga.allUnits?.forEach(role => { delete role.tagessatz; });
 					}
-					if (!getOrgaList && withCapa) {
+					if (!getListFormat && withCapa) {
 						helperOrga.joinCapacity(item, req.visboVCCapacity);
 					}
 					resultOrga.updatedAt = item.updatedAt;
@@ -2317,7 +2317,7 @@ router.route('/:vcid/organisation/:settingid')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var withCapa = req.query.withCapa == true;
-		var getOrgaList = req.query.hierarchy != true;
+		var getListFormat = req.query.hierarchy != true;
 
 		req.auditDescription = 'VISBO Center Organisation Read';
 		req.auditTTLMode = 1;
@@ -2331,10 +2331,10 @@ router.route('/:vcid/organisation/:settingid')
 				delete role.tagessatz;
 			});
 		}
-		if (!getOrgaList && withCapa) {
+		if (!getListFormat && withCapa) {
 			helperOrga.joinCapacity(req.oneVCSetting, req.visboVCCapacity);
 		}
-		var resultOrga = helperOrga.convertSettingToOrga(req.oneVCSetting, getOrgaList);
+		var resultOrga = helperOrga.convertSettingToOrga(req.oneVCSetting, getListFormat);
 		resultOrga.updatedAt = req.oneVCSetting.updatedAt;
 		resultOrga.createdAt = req.oneVCSetting.createdAt;
 		return res.status(200).send({
