@@ -1025,13 +1025,14 @@ router.route('/:vpvid')
 	* @apiDescription Deletes a specific Project Version.
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
-	* @apiError {number} 400 Bad Parameter in URL
+	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project
+	* or user has VP.Modify or VP.CreateVariant permission and it is a version that belongs to a variant that was created by the user
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete Project Version or Project Version does not exists
+	* @apiError {number} 409 Baseline version could not be deleted, as a newer VPV exists
+	* @apiError {number} 412 Project status does not allow to delete a version
 	* @apiError {number} 423 Project locked by another user
 	*
-	* @apiError ServerIssue No DB Connection HTTP 500
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vpv/vpv5c754feaa
 	* @apiSuccessExample {json} Success-Response:
@@ -1068,7 +1069,8 @@ router.route('/:vpvid')
 		logger4js.debug('VPV Delete Permission %O', req.listVPPerm);
 		if (perm.vp & constPermVP.Delete) {
 			hasPerm = true;
-		} else if (variantName != '' && req.oneVP.variant[variantIndex].email == useremail) {
+		} else if (variantName != '' && variantName != 'pfv'
+		&& perm.vp & (constPermVP.Modify + constPermVP.CreateVariant) && req.oneVP.variant[variantIndex].email == useremail) {
 			hasPerm = true;
 		}
 		if (!hasPerm) {
