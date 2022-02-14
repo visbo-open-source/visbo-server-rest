@@ -771,9 +771,7 @@ router.route('/')
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
 				}
-				if (newVP.vpType == 0) { // Project
-					newVP.vpStatus = constVPStatus[0];
-				}
+				newVP.vpStatus = constVPStatus[0];
 				if (req.oneVPTemplate) {
 					newVP.variant = [];
 					if (req.oneVPTemplate.variant) {
@@ -1071,7 +1069,7 @@ router.route('/:vpid')
 		}
 
 		vpStatusNew = req.body.vpStatus;
-		vpStatusOrg = req.oneVP.vpStatus;
+		vpStatusOrg = req.oneVP.vpStatus || constVPStatus[0];
 		if (vpStatusNew) {
 			if (constVPStatus.find(element => element == vpStatusNew)) {
 				if (vpStatusNew != constVPStatus[0] && req.oneVP.vpvCount == 0) {
