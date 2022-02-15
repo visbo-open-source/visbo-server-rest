@@ -3397,10 +3397,12 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiGroup VISBO Project Portfolio
 	* @apiName DeleteVISBOPortfolio
 	* @apiDescription Deletes a specific Portfolio List
-	* the user needs to have Delete Project Permission to the Project
+	* the user needs to have either Delete Project Permission to the Project or
+	* he can delete portfolio lists that belong to his variant that he could modify.
+	* This means he needs either Modify or CreateVariant Permission and is the owner of the project variant, where he wants to delete the portfolio list.
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
+	* @apiPermission Authenticated and VP.View and VP.Delete or VP.Modify or VP.CreateVariant Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project or no Delete Permission to delete the Version
 	* @apiError {number} 423 Portfolio locked by another user
@@ -3422,8 +3424,27 @@ router.route('/:vpid/portfolio/:vpfid')
 
 		req.auditDescription = 'Portfolio List Delete';
 
-		logger4js.debug('DELETE Portfolio in Project %s', req.oneVP.name);
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
+		var variantIndex;
+		var variantName = req.oneVPF?.variantName;
+		if (variantName != '') {
+			// check that the Variant exists
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
+			if (variantIndex < 0) {
+				logger4js.warn('VPV Delete Variant does not exist %s %s', req.params.vpvid, variantName);
+				// Allow Deleting of a version where Variant does not exists for Admins
+				variantName = '';
+			}
+		}
+		var hasPerm = false;
+		var perm = req.listVPPerm.getPerm(req.params.vpid);
+		logger4js.debug('DELETE Portfolio in Project %s %O', req.oneVP.name, perm);
+		if (perm.vp & constPermVP.Delete) {
+			hasPerm = true;
+		} else if (variantName != '' && variantName != 'pfv'
+		&& perm.vp & (constPermVP.Modify + constPermVP.CreateVariant) && req.oneVP.variant[variantIndex].email == useremail) {
+			hasPerm = true;
+		}
+		if (!hasPerm) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete Portfolio List'
