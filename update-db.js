@@ -1285,6 +1285,33 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2022-02-15T00:00:00"
+if (currentVersion < dateBlock) {
+  // Update type of role/cost in Organisation
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allRoles.$[elem].type': 2}},
+      {arrayFilters: [ { "elem.isTeam": true } ] }
+    )
+  print ("Updated VC Orgas set team type 2", result.modifiedCount);
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allRoles.$[elem].type': 1}},
+      {arrayFilters: [ { "elem.isTeam": {$exists: false} } ] }
+    )
+  print ("Updated VC Orgas set orga unit type 1", result.modifiedCount);
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allCosts.$[elem].type': 3}},
+      {arrayFilters: [ { "elem.uid": {$exists: true} } ] }
+    )
+  print ("Updated VC Orgas set cost type 3", result.modifiedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

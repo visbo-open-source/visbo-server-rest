@@ -32,7 +32,11 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 	var maxRoleID = getMaxID(oldOrga, 1);
 	var maxCostID = getMaxID(oldOrga, 3);
 	newOrga.allRoles = [];
-	orga.allRoles.forEach(role => {
+	orga.allRoles.forEach((role, index) => {
+		if (!(role.name || '').trim()) {
+			// skip empty entry
+			return;
+		}
 		if (validate.validateNumber(role.uid, false) == undefined
 			|| !validate.validateName(role.name, false)
 			|| !validate.validateDate(role.entryDate, true)
@@ -42,7 +46,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			|| validate.validateNumber(role.defaultKapa, true) == undefined
 			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
 		) {
-			errorstring = `Orga Role has bad base structure: uid: ${role.uid}, name?: ${validate.validateName(role.name, false)}, role: ${JSON.stringify(role)} `;
+			errorstring = `Orga Role has bad base structure: row: ${index+2}, uid: ${role.uid}, name: ${role.name}, role: ${JSON.stringify(role)} `;
 			listError && listError.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
@@ -299,7 +303,11 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var uniqueCostNames = [];
 	var maxRoleID = getMaxID(oldOrga, 1);
 	var maxCostID = getMaxID(oldOrga, 3);
-	orgaList.forEach(role => {
+	orgaList.forEach((role, index) => {
+		if (!(role.name || '').trim()) {
+			// skip empty entry
+			return;
+		}
 		if (validate.validateNumber(role.uid, true) == undefined
 			|| (validate.validateNumber(role.type, false) == undefined || role.type < 1 || role.type > 3)
 			|| !validate.validateName(role.name, false)
@@ -310,7 +318,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			|| validate.validateNumber(role.defaultKapa, true) == undefined
 			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
 		) {
-			errorstring = `Orga Role has bad base structure: uid: ${role.uid}, name?: ${validate.validateName(role.name, false)}/${role.name}`;
+			errorstring = `Orga Role has bad base structure: row: ${index+2}, uid: ${role.uid}, name: ${role.name}`;
 			listError && listError.push(errorstring);
 			logger4js.info('InitOrgaList: ', errorstring);
 			isOrgaValid = false;
@@ -324,9 +332,9 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			newRole = new VCOrgaRole(role.uid, role.name);
 			newRole.type = role.type;
 			if (role.type == 1 || role.isSummaryRole) {
-				newRole.parent = getParent(role.path);
+				newRole.parent = getParent(role.path, role.name);
 			} else if (role.type == 2 && !role.isSummaryRole){
-				newRole.teamParent = getParent(role.path);
+				newRole.teamParent = getParent(role.path, role.name);
 			}
 			if (role.isSummaryRole) newRole.isSummaryRole = true;
 			if (role.aliases) {
@@ -449,7 +457,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				role.uid = ++maxCostID;
 			}
 			newCost = new VCOrgaCost(role.uid, role.name);
-			newCost.parent = getParent(role.path);
+			newCost.parent = getParent(role.path, role.name);
 			newCost.type = role.type;
 
 			if (role.isSummaryRole) {
@@ -479,6 +487,10 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				}
 				if (parentRole) {
 					// map the item to the parent
+					if (!parentRole.subRoleIDs) {
+						parentRole.subRoleIDs = [];
+						parentRole.isSummaryRole = 1;
+					}
 					parentRole.subRoleIDs.push( {key: role.uid, value: 1});
 					role.pid = parentRole.uid;
 				} else {
@@ -506,7 +518,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			// link the teamIDs
 			if (role.type == 2 && !role.isSummaryRole) {
 				var user = newOrga.allRoles.find(item => item.uid == role.uid && item.type == 1);
-				var team = uniqueRoleNames[getParent(role.path)];
+				var team = uniqueRoleNames[getParent(role.path, role.name)];
 				if (user && team) {
 					if (user.teamIDs == undefined) {
 						user.teamIDs = [];
@@ -562,6 +574,7 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 	deleteExitDate.setDate(1);
 	deleteExitDate.setHours(0, 0, 0, 0);
 	deleteExitDate.setMonth(deleteExitDate.getMonth() - 3);
+	if (!newOrga || !oldOrga) return true;
 
 	if (!oldOrga?.allRoles || !uniqueRoleNames || !newOrga?.allRoles) {
 		var errorstring = `Orga Role Check for Deleted has no valid oldOrga: ${oldOrga?.allRoles?.length} list: ${uniqueRoleNames?.length}`;
@@ -752,12 +765,12 @@ function convertSettingToOrga(setting, getListFormat) {
 	return resultOrga;
 }
 
-function getParent(path) {
+function getParent(path, childName) {
 	// get the direct parent from path independent how many slashes were at the end
 	if (!path) return '';
 	var parts = path.split('/');
 	parts.reverse();
-	var result = parts.find(item => item != '');
+	var result = parts.find(item => item != '' && item != childName);
 	return result;
 }
 
@@ -765,16 +778,22 @@ function calcFullPath(id, organisation) {
 	if (!organisation || !organisation[id]) {
 		return;
 	}
+	const maxLevel = 30;
 	let path = '';
 	let level = 0;
 	let index = organisation[id]?.pid;
-	while (index >= 0 && organisation[index]) {
+	while (level < maxLevel && index >= 0 && organisation[index]) {
 		path = '/'.concat(organisation[index].name, path);
 		index = organisation[index].pid;
 		level += 1;
 	}
-	organisation[id].path = path.concat('/');
-	organisation[id].level = level;
+	if (level == maxLevel) {
+		organisation[id].path = '';
+		organisation[id].level = -1;
+	} else {
+		organisation[id].path = path.concat('/');
+		organisation[id].level = level;
+	}
 }
 
 // check orga
