@@ -22,7 +22,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 	) {
 		errorstring = `Orga bad content in key properties: ${!!orga}, has roles: ${(orga.allRoles || false) && orga.allRoles.length > 0}, has costs: ${!!orga.allCosts}`;
 		logger4js.info('InitOrga: ', errorstring);
-		listError && listError.push(errorstring);
+		listError?.push(errorstring);
 		return undefined;
 	}
 	// check allRoles
@@ -42,12 +42,12 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			|| !validate.validateDate(role.entryDate, true)
 			|| !validate.validateDate(role.exitDate, true)
 			|| !validate.validateDate(role.startOfCal, true)
-			|| validate.validateNumber(role.tagessatz || role.tagessatzIntern, true) == undefined
-			|| validate.validateNumber(role.defaultKapa, true) == undefined
-			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
+			|| validate.validateNumber(role.dailyRate, true) == undefined
+			|| validate.validateNumber(role.defCapaMonth, true) == undefined
+			|| validate.validateNumber(role.defCapaDay, true) == undefined
 		) {
-			errorstring = `Orga Role has bad base structure: row: ${index+2}, uid: ${role.uid}, name: ${role.name}, role: ${JSON.stringify(role)} `;
-			listError && listError.push(errorstring);
+			errorstring = `${index+2}: Orga Role has bad base structure, uid: ${role.uid || ''}, name: ${role.name}, role: ${JSON.stringify(role)} `;
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -55,7 +55,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		var newRole;
 		if (!(role.uid >= 0 && role.name)) {
 			errorstring = `Orga Role has bad content: uid: ${role.uid} name: ${role.name}`;
-			listError && listError.push(errorstring);
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -71,11 +71,11 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (role.aliases) {
 			newRole.aliases = role.aliases;
 		}
-		newRole.tagessatz = role.tagessatz || role.tagessatzIntern;
-		// check Rule3: orga units need to have a tagessatz > 0
-		if (!(newRole.tagessatz >= 0)) {
-			errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid} tagessatz: ${newRole.tagessatz}`;
-			listError && listError.push(errorstring);
+		newRole.dailyRate = role.dailyRate;
+		// check Rule3: orga units need to have a valid dailyRate
+		if (!(newRole.dailyRate >= 0)) {
+			errorstring = `Orga Role has to have dailyRate: uid: ${newRole.uid} dailyRate: ${newRole.dailyRate}`;
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 		}
@@ -95,7 +95,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			if (role.isAggregationRole) {
 				newRole.isAggregationRole = role.isAggregationRole == true;
 			}
-			// check Rule2: Group should not have a defaultKapa or defaultDayCapa
+			// check Rule2: Group should not have a defCapaMonth or defCapaDay
 			// this is automatically true, as the values are not set for a group
 		} else {
 			if (role.type == 2 || role.teamIDs?.length > 0) {
@@ -110,18 +110,18 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 				}
 			}
 			if (role.isExternRole) { newRole.isExternRole = true; }
-			newRole.defaultKapa = validate.validateNumber(role.defaultKapa) || 0;
-			if (newRole.defaultKapa < 0) {
-				errorstring = `Orga Role has no valid defaultKapa: uid: ${role.name}`;
-				listError && listError.push(errorstring);
+			newRole.defCapaMonth = validate.validateNumber(role.defCapaMonth) || 0;
+			if (newRole.defCapaMonth < 0) {
+				errorstring = `Orga Role has no valid defCapaMonth: uid: ${role.name}`;
+				listError?.push(errorstring);
 				logger4js.info('InitOrgaList: ', errorstring);
 				isOrgaValid = false;
 				return;
 			}
-			newRole.defaultDayCapa = validate.validateNumber(role.defaultDayCapa) || 0;
-			if (newRole.defaultDayCapa < 0) {
-				errorstring = `Orga Role has no defaultDayCapa: uid: ${role.name}`;
-				listError && listError.push(errorstring);
+			newRole.defCapaDay = validate.validateNumber(role.defCapaDay) || 0;
+			if (newRole.defCapaDay < 0) {
+				errorstring = `Orga Role has no defCapaDay: uid: ${role.name}`;
+				listError?.push(errorstring);
 				logger4js.info('InitOrgaList: ', errorstring);
 				isOrgaValid = false;
 				return;
@@ -129,9 +129,9 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 
 			// check Rule1: internal people need to have capa
 			if (!newRole.isExternRole) {
-				if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa >= 0)) {
-					errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
-					listError && listError.push(errorstring);
+				if (!(newRole.defCapaDay >= 0 && newRole.defCapaMonth >= 0)) {
+					errorstring = `Orga Role Person intern has to have defCapaMonth and defCapaDay: uid: ${newRole.uid}`;
+					listError?.push(errorstring);
 					logger4js.info('InitOrga: ', errorstring);
 				}
 			}
@@ -140,7 +140,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 
 		if (uniqueRoleNames[role.name]) {
 			errorstring = `Orga Role Name not unique: uid: ${role.uid}, name: ${role.name}`;
-			listError && listError.push(errorstring);
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -151,7 +151,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (oldRole) {
 			if ((oldRole.isSummaryRole == true) != (newRole.isSummaryRole == true)) {
 				errorstring = `Changed Orga Role isSummaryRole: uid: ${newRole.uid}, name: ${newRole.name}`;
-				listError && listError.push(errorstring);
+				listError?.push(errorstring);
 				logger4js.info('InitOrga: ', errorstring);
 				isOrgaValid = false;
 				return;
@@ -160,7 +160,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 				// exit date has changed verify that the new one, if it is set, is greater equal TimeStamp
 				if (newRole.exitDate && newRole.exitDate.getTime() < timestamp.getTime()) {
 					errorstring = `Changed Orga Role exitDate to the past: uid: ${newRole.uid}, name: ${newRole.name}`;
-					listError && listError.push(errorstring);
+					listError?.push(errorstring);
 					logger4js.info('InitOrga: ', errorstring);
 					isOrgaValid = false;
 					return;
@@ -177,7 +177,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			role.subRoleIDs?.forEach(subRole => {
 				if (!newOrgaIndexed[subRole.key]) {
 					errorstring = `Unknown subRoleID: uid: ${role.uid}, name: ${role.name}, subRole: ${subRole.key}`;
-					listError && listError.push(errorstring);
+					listError?.push(errorstring);
 					logger4js.info('InitOrga: ', errorstring);
 					isOrgaValid = false;
 				} else if (role.type == 1){
@@ -188,7 +188,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 				role.teamIDs.forEach(teamID => {
 					if (!newOrgaIndexed[teamID.key]) {
 						errorstring = `Unknown teamID: uid: ${role.uid}, name: ${role.name}, teamID: ${teamID.key}`;
-						listError && listError.push(errorstring);
+						listError?.push(errorstring);
 						logger4js.info('InitOrga: ', errorstring);
 						isOrgaValid = false;
 					}
@@ -204,14 +204,14 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			|| !validate.validateName(cost.name, false)
 		) {
 			errorstring = `Orga Cost has bad content: uid: ${cost.uid}`;
-			listError && listError.push(errorstring);
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 			return;
 		}
 		if (!(cost.uid >= 0 && cost.name)) {
 			errorstring = `Orga Cost has not accepted uid/name: uid: ${cost.uid}`;
-			listError && listError.push(errorstring);
+			listError?.push(errorstring);
 			logger4js.info('InitOrga: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -225,7 +225,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		});
 		if (uniqueCostNames[newCost.name]) {
 			errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
-			listError && listError.push(errorstring);
+			listError?.push(errorstring);
 			logger4js.info('InitOrgaList: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -291,7 +291,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	if (!orgaList?.length > 0) {
 		errorstring = 'Orga List empty';
 		logger4js.info('InitOrgaFromList: ', errorstring);
-		listError && listError.push(errorstring);
+		listError?.push(errorstring);
 		return undefined;
 	}
 	newOrga.validFrom = timestamp;
@@ -308,18 +308,37 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			// skip empty entry
 			return;
 		}
-		if (validate.validateNumber(role.uid, true) == undefined
-			|| (validate.validateNumber(role.type, false) == undefined || role.type < 1 || role.type > 3)
-			|| !validate.validateName(role.name, false)
-			|| !validate.validateName(role.path, true)
-			|| !validate.validateDate(role.entryDate, true)
-			|| !validate.validateDate(role.exitDate, true)
-			|| validate.validateNumber(role.tagessatz, true) == undefined
-			|| validate.validateNumber(role.defaultKapa, true) == undefined
-			|| validate.validateNumber(role.defaultDayCapa, true) == undefined
-		) {
-			errorstring = `Orga Role has bad base structure: row: ${index+2}, uid: ${role.uid}, name: ${role.name}`;
-			listError && listError.push(errorstring);
+		if (role.type == undefined) {
+			role.type = 1;
+		} else {
+			role.type = validate.validateNumber(role.type, false);
+		}
+		role.dailyRate = validate.validateNumber(role.dailyRate, true);
+		let errorDetails = [];
+		if (validate.validateNumber(role.uid, true) == undefined) {errorDetails.push(`uid not accepted: ${role.uid || ''}`);}
+		if (role.type < 1 || role.type > 3) {errorDetails.push(`type not accepted: ${role.type}`);}
+		if (!validate.validateName(role.path, true)) {errorDetails.push(`path not accepted: ${role.path || ''}`);}
+		var testDate = validate.validateDate(role.entryDate, false);
+		if (role.entryDate && !testDate) {
+			errorDetails.push(`entryDate not accepted: ${role.entryDate || ''}`);
+		} else {
+			role.entryDate = testDate;
+		}
+		testDate = validate.validateDate(role.exitDate, false);
+		if (role.exitDate && !testDate) {
+			errorDetails.push(`exitDate not accepted: ${role.exitDate || ''}`);
+		} else {
+			role.exitDate = testDate;
+		}
+		if (role.dailyRate == undefined || role.dailyRate < 0) {errorDetails.push(`dailyRate not accepted: ${role.dailyRate || ''}`);}
+		var testNumber = validate.validateNumber(role.defCapaMonth, false);
+		if (role.defCapaMonth && (isNaN(testNumber) || testNumber < 0 )) {errorDetails.push(`defCapaMonth not accepted: ${role.defCapaMonth || ''}`);}
+		testNumber = validate.validateNumber(role.defCapaDay, false);
+		if (role.defCapaDay && (isNaN(testNumber) || testNumber < 0 )) {errorDetails.push(`defCapaDay not accepted: ${role.defCapaDay || ''}`);}
+
+		if (errorDetails.length > 0) {
+			errorstring = `${index+2}: Orga Role Definition not valid, name: ${role.name} details: ${errorDetails.join(', ')}`;
+			listError?.push(errorstring);
 			logger4js.info('InitOrgaList: ', errorstring);
 			isOrgaValid = false;
 			return;
@@ -340,17 +359,10 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if (role.aliases) {
 				newRole.aliases = role.aliases;
 			}
-			newRole.tagessatz = role.tagessatz || 0;
-			if (newRole.tagessatz < 0) {
-				errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid} tagessatz: ${newRole.tagessatz}`;
-				listError && listError.push(errorstring);
-				logger4js.info('InitOrga: ', errorstring);
-				isOrgaValid = false;
-			}
+			newRole.dailyRate = role.dailyRate || 0;
 			if (role.exitDate) {
-				var exitDate = new Date(role.exitDate);
-				if (exitDate.getTime() < maxDate.getTime()) {
-					newRole.exitDate = exitDate;
+				if (role.exitDate.getTime() < maxDate.getTime()) {
+					newRole.exitDate = role.exitDate;
 				}
 			}
 			// set certain property depending if the orga unit is a person or a group/team
@@ -360,47 +372,23 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				if (role.isAggregationRole) {
 					newRole.isAggregationRole = role.isAggregationRole == true;
 				}
-				// check Rule2: Group should not have a defaultKapa or defaultDayCapa
+				// check Rule2: Group should not have a defCapaMonth or defCapaDay
 				// this is automatically true, as the values are not set for a group
 			} else {
 				if (role.employeeNr) { newRole.employeeNr = role.employeeNr; }
 				if (role.entryDate) {
-					var entryDate = new Date(role.entryDate);
-					if (entryDate.getTime() > minDate.getTime()) {
-						newRole.entryDate = entryDate;
+					if (role.entryDate.getTime() > minDate.getTime()) {
+						newRole.entryDate = role.entryDate;
 					}
 				}
-				if (!role.defaultDayCapa) role.defaultDayCapa = 0;
-				if (role.defaultDayCapa < 0) {
-					errorstring = `Orga Role has no defaultDayCapa: uid: ${role.name}`;
-					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaList: ', errorstring);
-					isOrgaValid = false;
-					return;
-				}
-				newRole.defaultDayCapa = role.defaultDayCapa;
-				// check Rule3: persons need to have a tagessatz > 0
-				if (!role.tagessatz) role.tagessatz = 0;
-				if (newRole.tagessatz < 0) {
-					errorstring = `Orga Role has to have tagessatz: uid: ${newRole.uid}`;
-					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaList: ', errorstring);
-					isOrgaValid = false;
-				}
+				newRole.defCapaDay = role.defCapaDay || 0;
 				if (role.isExternRole) newRole.isExternRole = true;
-				if (role.defaultKapa < 0) {
-					errorstring = `Orga Role has no valid defaultKapa: uid: ${role.name}`;
-					listError && listError.push(errorstring);
-					logger4js.info('InitOrgaList: ', errorstring);
-					isOrgaValid = false;
-					return;
-				}
-				if (role.defaultKapa) newRole.defaultKapa = role.defaultKapa;
+				if (role.defCapaMonth) newRole.defCapaMonth = role.defCapaMonth;
 				// check Rule1: internal people need to have capa (to avoid confusion team members get their capa from the real orga unit)
 				if (!newRole.isExternRole && newRole.type == 1) {
-					if (!(newRole.defaultDayCapa >= 0 && newRole.defaultKapa >= 0)) {
-						errorstring = `Orga Role Person intern has to have defaultKapa and defaultDayCapa: uid: ${newRole.uid}`;
-						listError && listError.push(errorstring);
+					if (!(newRole.defCapaDay >= 0 && newRole.defCapaMonth >= 0)) {
+						errorstring = `${index+2} Orga Role Person intern has to have defaultCapa, name: ${newRole.name}`;
+						listError?.push(errorstring);
 						logger4js.info('InitOrgaList: ', errorstring);
 						isOrgaValid = false;
 					}
@@ -410,8 +398,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if (role.type == 2 && !role.isSummaryRole) {
 				// role is a team member
 				if (!uniqueRoleNames[role.name]) {
-					errorstring = `Orga Role Name in Team not found: uid: ${role.uid}, name: ${role.name}`;
-					listError && listError.push(errorstring);
+					errorstring = `${index+2}: Orga Role Name in Team not found, uid: ${role.uid}, name: ${role.name}`;
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
@@ -420,8 +408,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				return;
 			} else {
 				if (uniqueRoleNames[role.name]) {
-					errorstring = `Orga Role Name not unique: uid: ${role.uid}, name: ${role.name}`;
-					listError && listError.push(errorstring);
+					errorstring = `${index+2}: Orga Role Name not unique, uid ${role.uid}, name: ${role.name}`;
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
@@ -432,8 +420,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			var oldRole = oldOrgaIndexed[newRole.uid];
 			if (oldRole) {
 				if ((oldRole.isSummaryRole == true) != (newRole.isSummaryRole == true)) {
-					errorstring = `Changed Orga Role isSummaryRole: uid: ${newRole.uid}, name: ${newRole.name}`;
-					listError && listError.push(errorstring);
+					errorstring = `${index+2}: Changed Orga Role isSummaryRole, uid: ${newRole.uid}, name: ${newRole.name}`;
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 					return;
@@ -441,8 +429,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				if (!validate.isSameDay(oldRole.exitDate, newRole.exitDate)) {
 					// exit date has changed verify that the new one is greater equal TimeStamp
 					if (newRole.exitDate?.getTime() < timestamp.getTime()) {
-						errorstring = `Changed Orga Role exitDate to the past: uid: ${newRole.uid}, name: ${newRole.name}`;
-						listError && listError.push(errorstring);
+						errorstring = `${index+2}: Changed Orga Role exitDate to the past, uid: ${newRole.uid}, name: ${newRole.name}`;
+						listError?.push(errorstring);
 						logger4js.info('InitOrgaList: ', errorstring);
 						isOrgaValid = false;
 						return;
@@ -465,8 +453,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				newCost.subRoleIDs = [];
 			}
 			if (uniqueCostNames[newCost.name]) {
-				errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
-				listError && listError.push(errorstring);
+				errorstring = `${index+2}: Orga Cost Name not unique, uid: ${newCost.uid}, name: ${newCost.name}`;
+				listError?.push(errorstring);
 				logger4js.info('InitOrgaList: ', errorstring);
 				isOrgaValid = false;
 				return;
@@ -494,8 +482,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					parentRole.subRoleIDs.push( {key: role.uid, value: 1});
 					role.pid = parentRole.uid;
 				} else {
-					errorstring = `Orga Role has no valid parent: uid: ${role.uid} parent: ${role.parent}`;
-					listError && listError.push(errorstring);
+					errorstring = `Orga Role has no valid parent, uid: ${role.uid} parent: ${role.parent}`;
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
@@ -508,7 +496,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					parentRole.subRoleIDs.push( {key: role.uid, value: 1});
 				} else {
 					errorstring = `Orga Role has no valid parent: uid: ${role.uid} parent: ${role.parent}`;
-					listError && listError.push(errorstring);
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
@@ -527,7 +515,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					team.subRoleIDs.push({key: user.uid, value: 1});
 				} else {
 					errorstring = `Orga Team Role not found in orga: uid: ${role.uid} parent: ${role.name}`;
-					listError && listError.push(errorstring);
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
@@ -545,7 +533,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					cost.pid = parentCost.uid;
 				} else {
 					errorstring = `Orga Cost has no valid parent: uid: ${cost.uid} parent: ${cost.parent}`;
-					listError && listError.push(errorstring);
+					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
 					isOrgaValid = false;
 				}
@@ -578,7 +566,7 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 
 	if (!oldOrga?.allRoles || !uniqueRoleNames || !newOrga?.allRoles) {
 		var errorstring = `Orga Role Check for Deleted has no valid oldOrga: ${oldOrga?.allRoles?.length} list: ${uniqueRoleNames?.length}`;
-		listError && listError.push(errorstring);
+		listError?.push(errorstring);
 		logger4js.info('CheckOrgaUnitDelete: ', errorstring);
 		return false;
 	}
@@ -598,7 +586,7 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 				logger4js.debug('CheckOrgaUnitDelete Accepted: ', role.uid, role.name);
 			} else {
 				var errorstring = `Orga Role Deleted not allowed: ${role.uid} / ${role.name} with exitDate ${role.exitDate?.toISOString()}`;
-				listError && listError.push(errorstring);
+				listError?.push(errorstring);
 				logger4js.info('CheckOrgaUnitDelete: ', errorstring);
 				isOrgaValid = false;
 			}
@@ -626,9 +614,9 @@ function reduceOrga(orga) {
 		if (role.isSummaryRole) { allUnits[role.uid].isSummaryRole = role.isSummaryRole; }
 		if (role.isAggregationRole) { allUnits[role.uid].isAggregationRole = role.isAggregationRole; }
 		if (role.isExternRole) { allUnits[role.uid].isExternRole = role.isExternRole; }
-		if (role.defaultKapa) { allUnits[role.uid].defaultKapa = role.defaultKapa; }
-		if (role.defaultDayCapa) { allUnits[role.uid].defaultDayCapa = role.defaultDayCapa; }
-		if (role.tagessatz >= 0) { allUnits[role.uid].tagessatz = role.tagessatz; }
+		if (role.defCapaMonth) { allUnits[role.uid].defCapaMonth = role.defCapaMonth; }
+		if (role.defCapaDay) { allUnits[role.uid].defCapaDay = role.defCapaDay; }
+		if (role.dailyRate >= 0) { allUnits[role.uid].dailyRate = role.dailyRate; }
 		if (role.entryDate?.getTime() > minDate.getTime()) {
 			allUnits[role.uid].entryDate = role.entryDate;
 		}
@@ -682,9 +670,9 @@ function reduceOrga(orga) {
 				allUnits[maxid].name = userRole.name;
 				if (userRole.employeeNr) { allUnits[maxid].employeeNr = userRole.employeeNr; }
 				if (userRole.isExternRole) { allUnits[maxid].isExternRole = userRole.isExternRole; }
-				if (userRole.defaultDayCapa >= 0) { allUnits[maxid].defaultDayCapa = userRole.defaultDayCapa; }
-				if (userRole.defaultKapa >= 0) { allUnits[maxid].defaultKapa = userRole.defaultKapa; }
-				if (userRole.tagessatz >= 0) { allUnits[maxid].tagessatz = userRole.tagessatz; }
+				if (userRole.defCapaDay >= 0) { allUnits[maxid].defCapaDay = userRole.defCapaDay; }
+				if (userRole.defCapaMonth >= 0) { allUnits[maxid].defCapaMonth = userRole.defCapaMonth; }
+				if (userRole.dailyRate >= 0) { allUnits[maxid].dailyRate = userRole.dailyRate; }
 				if (userRole.entryDate) { allUnits[maxid].entryDate = userRole.entryDate; }
 				if (userRole.exitDate) { allUnits[maxid].exitDate = userRole.exitDate; }
 				if (userRole.aliases) { allUnits[maxid].aliases = userRole.aliases; }
@@ -755,6 +743,7 @@ function convertSettingToOrga(setting, getListFormat) {
 	resultOrga._id = setting._id;
 	resultOrga.name = setting.name;
 	resultOrga.timestamp = setting.timestamp;
+	resultOrga.vcid = setting.vcid;
 
 	if (getListFormat) {
 		resultOrga.allUnits = reduceOrga(setting.value);
@@ -893,6 +882,13 @@ function compatibilityOldOrga(setting) {
 		if (!role.teamIDs) { role.teamIDs = []; }
 		if (role.type == 2 && role.isSummaryRole) {
 			role.isTeam = true;
+		}
+		if (role.dailyRate >= 0) role.tagessatz = role.dailyRate;
+		if (role.defCapaMonth >= 0) role.defaultKapa = role.defCapaMonth;
+		if (role.defCapaDay >= 0) role.defaultDayCapa = role.defCapaDay;
+		if (role.capaPerMonth) {
+			role.kapazitaet = role.capaPerMonth;
+			delete role.capaPerMonth;
 		}
 	});
 }

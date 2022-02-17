@@ -74,7 +74,7 @@ function getDailyCapaTZ(uid, capacity, timeZones, index, maxTZ) {
 		orgaIndex = Math.min(orgaIndex, maxTZ);
 	}
 	var allRoles = timeZones.organisation[orgaIndex].indexedRoles;
-	dailyCapa = allRoles[uid]?.defaultKapa;
+	dailyCapa = allRoles[uid]?.defCapaMonth;
 	// check if there is a sepcific capa defined
 	var capa = capacity[uid];
 	if (capa) {
@@ -99,14 +99,14 @@ function getDailyRateTZ(uid, teamID, timeZones, index, maxTZ) {
 	}
 	var allRoles = timeZones.organisation[orgaIndex].indexedRoles;
 	// dailyRate of orga-unit
-	dailyRate = allRoles[uid]?.tagessatz;
+	dailyRate = allRoles[uid]?.dailyRate;
 	// dailyRate of teamID
 	if (teamID >= 0) {
-		dailyRate = allRoles[teamID] ? allRoles[teamID].tagessatz : dailyRate;
+		dailyRate = allRoles[teamID] ? allRoles[teamID].dailyRate : dailyRate;
 	}
 	// set dailyRate of person also if it is member of a team
 	if (isOrgaRolePerson(allRoles[uid])) {
-		dailyRate = allRoles[uid].tagessatz;
+		dailyRate = allRoles[uid].dailyRate;
 	}
 	return dailyRate || 0;
 }
@@ -1649,7 +1649,7 @@ function getCapaValues(timeZones, concerningRoles) {
 			if (!role || role.isSummaryRole) {
 				continue;
 			}
-			var dailyRate = role.tagessatz;
+			var dailyRate = role.dailyRate;
 			var roleIsExtern = role.isExternRole;
 			var capaMonth = timeZones.mergedCapacity[actRoleID]?.capacityPerMonth;
 			var capaPT = capaMonth[mon + 1] || 0;
@@ -1799,10 +1799,10 @@ function buildOrgaList (orga) {
 		}
 		organisation[id].name = role.name;
 		organisation[id].isExternRole = role.isExternRole;
-		organisation[id].defaultKapa = role.defaultKapa;
-		organisation[id].tagessatz = role.tagessatzIntern;
+		organisation[id].defCapaMonth = role.defCapaMonth;
+		organisation[id].dailyRate = role.dailyRate;
 		organisation[id].employeeNr = role.employeeNr;
-		organisation[id].defaultDayCapa = role.defaultDayCapa;
+		organisation[id].defCapaDay = role.defCapaDay;
 		if (role.entryDate > '0001-01-01T00:00:00Z') {
 			organisation[id].entryDate = role.entryDate;
 		}
@@ -1872,9 +1872,9 @@ function buildOrgaList (orga) {
 				organisation[maxid].parent = role.name;
 				if (userRole.employeeNr) { organisation[maxid].employeeNr = userRole.employeeNr; }
 				if (userRole.isExternRole) { organisation[maxid].isExternRole = userRole.isExternRole; }
-				if (userRole.defaultDayCapa >= 0) { organisation[maxid].defaultDayCapa = userRole.defaultDayCapa; }
-				if (userRole.defaultKapa >= 0) { organisation[maxid].defaultKapa = userRole.defaultKapa; }
-				if (userRole.tagessatz >= 0) { organisation[maxid].tagessatz = userRole.tagessatz; }
+				if (userRole.defCapaDay >= 0) { organisation[maxid].defCapaDay = userRole.defCapaDay; }
+				if (userRole.defCapaMonth >= 0) { organisation[maxid].defCapaMonth = userRole.defCapaMonth; }
+				if (userRole.dailyRate >= 0) { organisation[maxid].dailyRate = userRole.dailyRate; }
 				if (userRole.entryDate) { organisation[maxid].entryDate = userRole.entryDate; }
 				if (userRole.exitDate) { organisation[maxid].exitDate = userRole.exitDate; }
 				if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
@@ -2509,8 +2509,8 @@ function aggregateRoles(phase, orgalist){
 			// therefore it will be considered the relation between dailyRate of each person versus the dailyRate of the summaryRole
 			// and the PT will be calculated in the same relation.
 			oneRole.Bedarf = [];
-			var newDailyRate = orgalist && orgalist[oneRole.RollenTyp] && orgalist[oneRole.RollenTyp].tagessatz;
-			var actDailyRate = roleSett ? roleSett.tagessatz : newDailyRate;
+			var newDailyRate = orgalist && orgalist[oneRole.RollenTyp] && orgalist[oneRole.RollenTyp].dailyRate;
+			var actDailyRate = roleSett ? roleSett.dailyRate : newDailyRate;
 			var ptFaktor = newDailyRate > 0 ? actDailyRate/newDailyRate : 1;
 			for (var ib = 0; role && ib < role.Bedarf.length; ib++) {
 				oneRole.Bedarf.push(role.Bedarf[ib] * ptFaktor);

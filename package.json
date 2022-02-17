@@ -10,7 +10,7 @@
     "maillint": "ejslint emailTemplates "
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=14"
   },
   "dependencies": {
     "assert": "^2.0.0",

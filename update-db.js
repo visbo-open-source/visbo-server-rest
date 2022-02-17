@@ -1312,6 +1312,29 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2022-02-16T00:00:00"
+if (currentVersion < dateBlock) {
+  // Change Orga Terms to english
+  // Duplicate fields in organisation (tagessatz - dailyRate, defaultKapa - defCapaMonth, defaultDayCapa - defCapaDay)
+  var OrgListAll = db.vcsettings.find({type: 'organisation'}).toArray();
+  print("Orga List Length ", OrgListAll.length)
+  var updatedCount = 0;
+  OrgListAll.forEach(orga => {
+    orga.value.allRoles.forEach(role => {
+      role.dailyRate = role.tagessatz;
+      role.defCapaMonth = role.defaultKapa;
+      role.defCapaDay = role.defCapaDay;
+    });
+    db.vcsettings.replaceOne({_id: orga._id}, orga);
+    updatedCount += result.matchedCount;
+  });
+  print("Orgas Updated", updatedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once

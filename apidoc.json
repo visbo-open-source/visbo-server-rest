@@ -4,12 +4,19 @@
   "description": "REST API documentation for VISBO ReST Server",
   "title": "API Documentation - VISBO ReST Server",
   "footer": {
-  	"title": "2020 © VISBO GmbH"
+  	"title": "2022 © VISBO GmbH"
   },
   "order": [
   	"Authentication",
   	"UserProfile",
-  	"Posts",
-  	"AdminProfile"
+    "VISBO Center",
+    "VISBO Center Properties",
+    "VISBO Center Permission",
+    "VISBO Project",
+    "VISBO Project Portfolio",
+    "VISBO Project Properties",
+    "VISBO Project Permission",
+    "VISBO Project Version",
+  	"VISBO System"
   ]
 }

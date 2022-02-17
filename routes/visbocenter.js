@@ -86,8 +86,7 @@ function squeezeSetting(item, email) {
 			if (item.value && item.value.allRoles) {
 				var allRoles = item.value.allRoles;
 				for (var i=0; i<allRoles.length; i++) {
-					allRoles[i].tagessatzIntern = undefined;
-					allRoles[i].tagessatz = undefined;
+					allRoles[i].dailyRate = undefined;
 				}
 			}
 		} else if (item.type == 'customroles') {
@@ -1998,7 +1997,7 @@ router.route('/:vcid/organisation')
 		*
 		* With additional query paramteters the amount of results can be restricted. Available Restirctions are: refDate, refNext
 		* The default result returns the organisation units in one list as allUnits, with the following parameters:
-		* (same as in hierarchy) uid, name, isSummaryRole, isAggregationRole, tagessatz, defaultKapa, defaultDayCapa, entryDate, exitDate, aliases
+		* (same as in hierarchy) uid, name, isSummaryRole, isAggregationRole, dailyRate, defCapaMonth, defCapaDay, entryDate, exitDate, aliases
 		* The list delivers also new parameters like:
 		* type: 1 (normal orga unit), 2 (team orga unit including team members), 3 (cost units)
 		*
@@ -2007,11 +2006,11 @@ router.route('/:vcid/organisation')
 		*
 		* @apiParam {Date} refDate only the latest organisation with a timestamp before the reference date is delivered
 		* Date Format is in the form: 2018-10-30T10:00:00Z
-		* @apiParam {String} refNext If refNext is not empty the system delivers not the setting before refDate instead it delivers the setting after refDate
+		* @apiParam {String} refNext If refNext is not empty the system delivers not the organisation before refDate instead it delivers the organisation after refDate
 		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy. Hierarchy means allRoles & AllCosts with subRoleID information.
 		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
 		*
-		* @apiPermission Authenticated and VC.View for the VISBO Center. It requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
+		* @apiPermission Authenticated and VC.View for the VISBO Center. It requires also VC.ViewAudit or VC.Modify to get information about extended properties like dailyRate.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
@@ -2022,7 +2021,7 @@ router.route('/:vcid/organisation')
 		*   'state':'success',
 		*   'message':'Returned VISBO Center Organisation',
 		*   'organisation':[{
-		*     '_id':'vcsetting5c754feaa',
+		*     '_id':'vcorga5c754feaa',
 		*     'vcid': 'vc5c754feaa',
 		*     'name': 'organisation',
 		*     'timestamp': '2018-12-01',
@@ -2083,6 +2082,7 @@ router.route('/:vcid/organisation')
 				logger4js.debug('Found VC Organisation', VCSetting && VCSetting.timestamp);
 				if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
 					VCSetting.value?.allRoles?.forEach(role => {
+						delete role.dailyRate;
 						delete role.tagessatz;
 					});
 				}
@@ -2113,8 +2113,8 @@ router.route('/:vcid/organisation')
 				listVCSetting.forEach(item => {
 					var resultOrga = helperOrga.convertSettingToOrga(item, getListFormat);
 					if (hasNoAudit) {
-						resultOrga.allRoles?.forEach(role => { delete role.tagessatz; });
-						resultOrga.allUnits?.forEach(role => { delete role.tagessatz; });
+						resultOrga.allRoles?.forEach(role => { delete role.dailyRate; });
+						resultOrga.allUnits?.forEach(role => { delete role.dailyRate; });
 					}
 					if (!getListFormat && withCapa) {
 						helperOrga.joinCapacity(item, req.visboVCCapacity);
@@ -2162,8 +2162,8 @@ router.route('/:vcid/organisation')
 		*      'exitDate': '2022-07-15',
 		*      'isExternRole': false,
 		*      'defaultCapa': 20,
-		*      'defaultDayCapa': 6.5,
-		*      'tagessatz': 800,
+		*      'defCapaDay': 6.5,
+		*      'dailyRate': 800,
 		*      'employeeNr': 'U4711',
 		*      'aliases': ['Alias1', 'Alias2'],
 		*      'isAggregationRole': false,
@@ -2292,7 +2292,7 @@ router.route('/:vcid/organisation/:settingid')
 		* @apiParam {Boolean} hierarchy Deliver orga with hierarchy
 		* @apiParam {Boolean} withCapa Deliver capaPerMonth for each role that has a specific capacity. Only valid in combination with hierarchy
 		*
-		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like tagessatz.
+		* @apiPermission Authenticated and VC.View for the VISBO Center. For longList it requires also VC.ViewAudit or VC.Modify to get information about extended properties like dailyRate.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View the VISBO Center
 		* @apiExample Example usage:
@@ -2303,7 +2303,7 @@ router.route('/:vcid/organisation/:settingid')
 		*   'state':'success',
 		*   'message':'Returned VISBO Center Organisation',
 		*   'organisation':[{
-		*     '_id':'vcsetting5c754feaa',
+		*     '_id':'orga5c754feaa',
 		*     'name': 'organisation',
 		*     'timestamp': '2018-12-01',
 		*     'allRoles': [roleDefinition],
@@ -2328,7 +2328,7 @@ router.route('/:vcid/organisation/:settingid')
 		var orga = req.oneVCSetting;
 		if ((req.listVCPerm.getPerm(req.params.vcid).vc & (constPermVC.ViewAudit)) == 0) {
 			orga.value?.allRoles?.forEach(role => {
-				delete role.tagessatz;
+				delete role.dailyRate;
 			});
 		}
 		if (!getListFormat && withCapa) {
@@ -2374,8 +2374,8 @@ router.route('/:vcid/organisation/:settingid')
 		*      'exitDate': '2022-07-15',
 		*      'isExternRole': false,
 		*      'defaultCapa': 20,
-		*      'defaultDayCapa': 6.5,
-		*      'tagessatz': 800,
+		*      'defCapaDay': 6.5,
+		*      'dailyRate': 800,
 		*      'employeeNr': 'U4711',
 		*      'aliases': ['Alias1', 'Alias2'],
 		*      'isAggregationRole': false,
@@ -3158,7 +3158,7 @@ router.route('/:vcid/capacity')
 		* @api {get} /vc/:vcid/capacity Get Capacity of Visbo Center
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName GetVISBOCenterCapacity
+		* @apiName VISBOCenterCapacityGet
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets the capacity numbers for the specified VISBO Center.
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
@@ -3190,9 +3190,9 @@ router.route('/:vcid/capacity')
 		*     '_id':'vc5c754feaa',
 		*     'name':'VISBO Center Name',
 		*     'capacity': [{
-						'month': 2020-05-01T00:00:00.000Z,
-						....
-					}]
+		*       'month': 2020-05-01T00:00:00.000Z,
+		*       ....
+		*     }]
 		*   }]
 		* }
 		*/
@@ -3299,11 +3299,11 @@ router.route('/:vcid/capa')
 		* @api {get} /vc/:vcid/capa Get all capacities of persons
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName GetVISBOCenterCapa
+		* @apiName VISBOCenterCapaGet
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all capa records of the specified VISBO Center there the user has permission to.
 		*
-		* With additional query paramteters the amount of settings can be restricted. Available Restirctions are: roleID.
+		* With additional query paramteters the amount of capa entries can be restricted. Available Restirctions are: roleID and startOfYear.
 		*
 		* @apiParam {Number} roleID only capa values for a specific user
 		* @apiParam {Date} startOfYear only capa values for this date or later
@@ -3317,15 +3317,14 @@ router.route('/:vcid/capa')
 		* HTTP/1.1 200 OK
 		* {
 		*   'state':'success',
-		*   'message':'Returned VISBO Center Settings',
-		*   'vcsetting':[{
-		*     '_id':'vcsetting5c754feaa',
+		*   'message':'Returned VISBO Center User Capacities',
+		*   'count': 8,
+		*   'capacity':[{
+		*     '_id':'capa5c754feaa',
 		*     'vcid': 'vc5c754feaa',
-		*     'name':'Setting Name',
-		*     'userId': 'us5c754feab',
-		*     'type': 'Type of Setting',
-		*     'timestamp': '2018-12-01',
-		*     'value': {'any name': 'any value'}
+		*     'roleID': 'us5c754feab',
+		*     'startOfYear': '2022-01-01T00:00:00.000Z',
+		*     'capaPerMonth': [11, 12, ... ]
 		*   }]
 		* }
 		*/
@@ -3368,7 +3367,7 @@ router.route('/:vcid/capa')
 		* @api {post} /vc/:vcid/capa Create Capacity for OrgaUnit
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName CreateVISBOCenterCapacity
+		* @apiName VISBOCenterCapaCreate
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Creates a new capacity entry for an organization unit for a calendar year.
 		* A roleID and the startOfYear must be specified.
@@ -3490,7 +3489,7 @@ router.route('/:vcid/capa/:capaid')
 		* @api {put} /vc/:vcid/capa/:capaid Update a User capacity
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName UpdateVISBOCenterUserCapacity
+		* @apiName VISBOCenterCapaUpdate
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Updates the capaPerMonth for a specific roleID and calendar year
 		*
@@ -3568,7 +3567,7 @@ router.route('/:vcid/capa/:capaid')
 		* @api {delete} /vc/:vcid/capa/:capaid Delete a User capacity
 		* @apiVersion 1.0.0
 		* @apiGroup VISBO Center Properties
-		* @apiName DeleteVISBOCenterUserCapacity
+		* @apiName VISBOCenterCapaDelete
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes a specific user capacity for a specific roleID and calendar year
 		*
