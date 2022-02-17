@@ -1325,7 +1325,7 @@ if (currentVersion < dateBlock) {
       role.defCapaMonth = role.defaultKapa;
       role.defCapaDay = role.defCapaDay;
     });
-    db.vcsettings.replaceOne({_id: orga._id}, orga);
+    result = db.vcsettings.replaceOne({_id: orga._id}, orga);
     updatedCount += result.matchedCount;
   });
   print("Orgas Updated", updatedCount);
