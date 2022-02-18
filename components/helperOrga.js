@@ -318,13 +318,13 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (validate.validateNumber(role.uid, true) == undefined) {errorDetails.push(`uid not accepted: ${role.uid || ''}`);}
 		if (role.type < 1 || role.type > 3) {errorDetails.push(`type not accepted: ${role.type}`);}
 		if (!validate.validateName(role.path, true)) {errorDetails.push(`path not accepted: ${role.path || ''}`);}
-		var testDate = validate.validateDate(role.entryDate, false);
+		var testDate = validate.validateDate(role.entryDate, false, true);
 		if (role.entryDate && !testDate) {
 			errorDetails.push(`entryDate not accepted: ${role.entryDate || ''}`);
 		} else {
 			role.entryDate = testDate;
 		}
-		testDate = validate.validateDate(role.exitDate, false);
+		testDate = validate.validateDate(role.exitDate, false, true);
 		if (role.exitDate && !testDate) {
 			errorDetails.push(`exitDate not accepted: ${role.exitDate || ''}`);
 		} else {

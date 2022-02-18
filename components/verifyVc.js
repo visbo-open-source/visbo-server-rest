@@ -33,10 +33,10 @@ function getAllGroups(req, res, next) {
 
 	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
+	} else if (urlComponent.length >= 2) {
+		vcid = urlComponent[1];
 	} else if (req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
-	} else if (req.method == 'GET' && urlComponent.length >= 2) {
-		vcid = urlComponent[1];
 	}
 	if (!validate.validateObjectId(vcid, true)) {
 		logger4js.warn('VC Get all Groups Bad Parameter vcid %s', vcid);
