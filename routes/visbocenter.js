@@ -3201,10 +3201,6 @@ router.route('/:vcid/capacity')
 	.get(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var roleID = req.query.roleID;
-		var parentID = req.query.parentID;
-		var hierarchy = req.query.hierarchy == true;
-		var perProject = req.query.perProject == true;
 
 		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
 
@@ -3218,13 +3214,33 @@ router.route('/:vcid/capacity')
 			});
 		}
 
-		logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
+		logger4js.info('Get VISBO Center Capacity for userid %s email %s and vc %s RoleID %s Hierarchy %s', userId, useremail, req.params.vcid, req.query.roleID, req.query.hierarchy);
 		if (!req.visboOrganisation) {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'No VISBO Center Organisation',
 				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
+		}
+
+		// validate the parameters
+		var roleID = validate.validateNumber(req.query.roleID, false);
+		if (roleID == undefined ) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No roleID given to Calculate Capacities',
+				perm: perm
+			});
+		}
+		var perProject = req.query.perProject == true;
+		var hierarchy = req.query.hierarchy == true;
+		var parentID = validate.validateNumber(req.query.parentID);
+		var startDate, endDate;
+		if (req.query.startDate) {
+			startDate = validate.validateDate(req.query.startDate, false, true)
+		}
+		if (req.query.endDate) {
+			endDate = validate.validateDate(req.query.endDate, false, true)
 		}
 		var onlyPT = true;
 		if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
@@ -3253,9 +3269,9 @@ router.route('/:vcid/capacity')
 
 		var capacity = undefined;
 		if (perProject) {
-			capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
+			capacity = visboBusiness.calcCapacitiesPerProject(listVPV, listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
 		} else {
-			capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
+			capacity = visboBusiness.calcCapacities(listVPV, listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
 		}
 
 		var filteredCapacity = [];

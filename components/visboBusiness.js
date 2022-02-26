@@ -120,8 +120,13 @@ function getRoleTZ(role, timeZones, index, maxTZ) {
 	if (maxTZ >= 0) {
 		orgaIndex = Math.min(orgaIndex, maxTZ);
 	}
-	var allRoles = timeZones.organisation[orgaIndex].indexedRoles;
-	var roleTZ = allRoles[role.uid];
+	// check if the role is a concerningRole for this TSO
+	var orga = timeZones.organisation[orgaIndex];
+	if (!orga.concerningRoles?.find(item => item.role.uid == role.uid)) {
+		// role is not concerning for this TSO
+		return undefined;
+	}
+	roleTZ = orga.indexedRoles[role.uid];
 	if (role?.pid != roleTZ?.pid) {
 		return undefined;
 	}
@@ -984,7 +989,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
-function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate, organisation, capacity, hierarchy, onlyPT) {
+function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organisation, capacity, hierarchy, onlyPT) {
 	if (!(vpvs?.length > 0) || !(organisation?.length > 0)) {
 		logger4js.warn('Calculate Capacities missing vpvs %d or organisation %d', vpvs?.length, organisation?.length);
 		return [];
@@ -995,22 +1000,19 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate
 		return [];
 	}
 
-	logger4js.debug('Calculate Capacities %s/%s', roleIdentifier, parentID);
+	logger4js.debug('Calculate Capacities %s/%s', roleID, parentID);
 	var startTimer = new Date();
 
-	parentID = validateNumber(Number(parentID), false);
-	if (parentID == 0){
+	if (parentID == 0) {
 		parentID = undefined;
 	}
 
-	startDate = validateDate(startDate, false, true);
 	if (!startDate) {
 		startDate = getDateStartOfMonth();
 		startDate.setMonth(startDate.getMonth() - 4);
 	}
 	var startIndex = getColumnOfDate(startDate);
 
-	endDate = validateDate(endDate, false, true);
 	if (!endDate) {
 		endDate = getDateStartOfMonth();
 		endDate.setMonth(endDate.getMonth() + 9);
@@ -1020,13 +1022,9 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
 	mergeCapacity(capacity, timeZones, startDate);
 
-	var roleID;
-	if ( roleIdentifier ) {
-		roleID = parseInt(roleIdentifier);
-		if (isNaN(roleID)) {
-			var role = timeZones.mergedOrganisation.find(role => role.name == roleIdentifier);
-			roleID = role?.uid;
-		}
+	if (!roleID) {
+		var role = timeZones.mergedOrganisation.find(role => true);
+		roleID = role?.uid;
 	}
 
 	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
@@ -1120,20 +1118,18 @@ function calcCapacities(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate
 	return capa;
 }
 
-function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, parentID, startDate, endDate, organisation, capacity, onlyPT) {
+function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDate, organisation, capacity, onlyPT) {
 	if (!vpvs || vpvs.length == 0 || !(organisation?.length > 0)) {
 		logger4js.warn('Calculate Capacities missing vpvs or organisation ');
 		return [];
 	}
 
-	startDate = validateDate(startDate, false, true);
 	if (!startDate) {
 		startDate = getDateStartOfMonth();
 		startDate.setMonth(startDate.getMonth() - 4);
 	}
 	var startIndex = getColumnOfDate(startDate);
 
-	endDate = validateDate(endDate, false, true);
 	if (!endDate) {
 		endDate = getDateStartOfMonth();
 		endDate.setMonth(endDate.getMonth() + 9);
@@ -1145,13 +1141,9 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleIdentifier, parentID, startDat
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
 	mergeCapacity(capacity, timeZones, startDate);
 
-	var roleID;
-	if ( roleIdentifier ) {
-		roleID = parseInt(roleIdentifier);
-		if (isNaN(roleID)) {
-			var role = timeZones.mergedOrganisation.find(role => role.name == roleIdentifier);
-			roleID = role?.uid;
-		}
+	if (!roleID) {
+		var role = timeZones.mergedOrganisation.find(role => true);
+		roleID = role?.uid;
 	}
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
@@ -1492,9 +1484,9 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	}
 
 	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	var concerningRoles = getConcerningRoles(timeZones, allTeams, roleID, parentID);
+	calcConcerningRoles(timeZones, allTeams, roleID, parentID);
 	logger4js.debug('getting capacities for the related roleID/parentID given organisation %s/%s',  roleID, parentID);
-	var capaValues = getCapaValues(timeZones, concerningRoles);
+	var capaValues = getCapaValues(timeZones);
 
 	var costValues = [];
 	for (var i = 0 ; i < timeZones.duration; i++){
@@ -1514,7 +1506,7 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 
 	vpvs.forEach(vpv => {
 		logger4js.trace('Calculate Personal Cost of RoleID %s of Project Version %s', roleID, vpv._id);
-		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, concerningRoles, timeZones);
+		var oneVPVcostValues = getRessourcenBedarfe(roleID, vpv, timeZones);
 		oneVPVcostValues?.forEach((cost, index) => {
 			costValues[index].actCost_PT += cost.actCost_PT || 0;
 			costValues[index].plannedCost_PT += cost.plannedCost_PT || 0;
@@ -1526,15 +1518,15 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	});
 	return costValues;
 }
-function checkAddRessource(role, roleID, teamID, isTeamMember, otherActivity) {
+function checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity) {
 	var result;
 	if (otherActivity) {
-		result = (role.RollenTyp == roleID && role.teamID != teamID)
+		result = (rolePhase.RollenTyp == roleID && rolePhase.teamID != teamID)
 	} else {
 		if (isTeamMember) {
-			result = (role.RollenTyp == roleID && role.teamID == teamID);
+			result = (rolePhase.RollenTyp == roleID && rolePhase.teamID == teamID);
 		} else {
-			result = (role.RollenTyp == roleID || role.teamID == teamID);
+			result = (rolePhase.RollenTyp == roleID || rolePhase.teamID == teamID);
 		}
 	}
 	return result;
@@ -1548,18 +1540,21 @@ function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZon
 	var vpvStartIndex = getColumnOfDate(vpv.startDate);
 	var actualDataIndex = getColumnOfDate(vpv.actualDataUntil) + 1;
 
-	logger4js.trace('Calculate Phases with ActRole %s Phases %s', roleID, vpv.AllPhases?.length);
+	logger4js.trace('Calculate Phases with roleID %s Phases %s', roleID, vpv.AllPhases?.length);
 	vpv.AllPhases?.forEach(phase => {
 		var phaseStart = vpvStartIndex + phase.relStart - 1;
-		phase.AllRoles?.forEach(role => {
-			if (role.Bedarf && checkAddRessource(role, roleID, teamID, isTeamMember, otherActivity)) {
-				var dimension = role.Bedarf.length;
+		phase.AllRoles?.forEach(rolePhase => {
+			if (rolePhase.Bedarf && checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity)) {
+				var dimension = rolePhase.Bedarf.length;
 				var maxStart = Math.max(phaseStart, timeZones.startIndex);
 				var minEnd = Math.min(phaseStart + dimension, timeZones.endIndex + 1);
 				for (var l = maxStart; l < minEnd ; l++) {
+					if (!isConcerningRole(roleID, l, timeZones)) {
+						continue;
+					}
 					// result in euro and in personnel day
 					var dailyRate = getDailyRateTZ(roleID, - 1, timeZones, l - timeZones.startIndex, maxTimeZoneIndex);
-					var bedarf = role.Bedarf[l - phaseStart];
+					var bedarf = rolePhase.Bedarf[l - phaseStart];
 					if (l < actualDataIndex) {
 						costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
 						costValues[l - timeZones.startIndex].actCost_PT += bedarf;
@@ -1576,7 +1571,16 @@ function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZon
 	});
 }
 
-function getRessourcenBedarfe(roleID, vpv, concerningRoles, timeZones) {
+function isConcerningRole(roleID, month, timeZones) {
+	var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
+	var cRole = timeZones.organisation[orgaIndex]?.concerningRoles.find(item => item.role?.uid == roleID);
+	if (roleID == 11) {
+		logger4js.trace('check if role is concerning for month', roleID, month, cRole != undefined);
+	}
+	return cRole != undefined;
+}
+
+function getRessourcenBedarfe(roleID, vpv, timeZones) {
 	var costValues = [];
 	logger4js.trace('Calculate all RessourceBedarfe and Capacities of VPV %s for RoleID %d ', vpv._id, roleID);
 
@@ -1594,35 +1598,34 @@ function getRessourcenBedarfe(roleID, vpv, concerningRoles, timeZones) {
 	if (!vpv.AllPhases) {
 		return costValues;
 	}
-	var roleIDisTeam = concerningRoles[0].actRole.type == 2;
-	var roleIDisTeamMember = concerningRoles[0].teamID != -1 && !timeZones.mergedOrganisation[roleID].isSummaryRole;
+	var roleIDisTeam = timeZones.role.type == 2;
+	var roleIDisTeamMember = timeZones.teamID != -1 && !timeZones.mergedOrganisation[roleID].isSummaryRole;
 
 	logger4js.trace('Combine Capacity Values for Project Version %s',  vpv._id);
 	// Treatment, if the roleID is a orgaUnit, no parentID is given
 	if (!roleIDisTeam && !roleIDisTeamMember) {
-		concerningRoles.forEach(crole => {
-			var actRoleID = crole.actRole.uid;
-			addCostValues(actRoleID, actRoleID, false, false, vpv, timeZones, costValues);
+		timeZones.allConcerningRoles.forEach(crole => {
+			addCostValues(crole.role.uid, crole.role.uid, false, false, vpv, timeZones, costValues);
 		});
 	} else if (roleIDisTeam) {
 		// add all needs with the choosen teamID
 		addCostValues(roleID, roleID, false, false, vpv, timeZones, costValues);
 		// add all needs of the persons in the Team teamID, but not as this teamMember
-		concerningRoles.forEach(crole => {
-			addCostValues(crole.actRole.uid, crole.teamID, false, true, vpv, timeZones, costValues);
+		timeZones.allConcerningRoles.forEach(crole => {
+			addCostValues(crole.role.uid, crole.teamID, false, true, vpv, timeZones, costValues);
 		});
 	} else if (roleIDisTeamMember) {
-		concerningRoles.forEach(crole => {
+		timeZones.allConcerningRoles.forEach(crole => {
 			// add all needs of the person roleID as TeamMember in the Team teamID
-			addCostValues(crole.actRole.uid, crole.teamID, true, false, vpv, timeZones, costValues);
+			addCostValues(crole.role.uid, crole.teamID, true, false, vpv, timeZones, costValues);
 			// add all needs of the person roleID as non TeamMember
-			addCostValues(crole.actRole.uid, crole.teamID, true, true, vpv, timeZones, costValues);
+			addCostValues(crole.role.uid, crole.teamID, true, true, vpv, timeZones, costValues);
 		});
 	}
 	return costValues;
 }
 
-function getCapaValues(timeZones, concerningRoles) {
+function getCapaValues(timeZones) {
 	var capaValues = [];
 
 	for (var i=0 ; i < timeZones.duration; i++){
@@ -1635,23 +1638,19 @@ function getCapaValues(timeZones, concerningRoles) {
 	}
 
 	// Calculate the Capacities of this Role
-	var concerningUIDs = [];
-	concerningRoles.forEach(item => {
-		var actRoleID = item.actRole?.uid;
-		// UIDs should only be added once
-		if ( actRoleID && concerningUIDs.indexOf(actRoleID) >= 0 ) {
+	timeZones.allConcerningRoles?.forEach(cr => {
+		if (!cr?.role) {
+			// skip empty roles
 			return;
 		}
-		concerningUIDs.push(actRoleID);
-
 		for (var mon = 0; mon < timeZones.duration; mon++) {
-			var role = getRoleTZ(item.actRole, timeZones, mon);
+			var role = getRoleTZ(cr.role, timeZones, mon);
 			if (!role || role.isSummaryRole) {
 				continue;
 			}
 			var dailyRate = role.dailyRate;
 			var roleIsExtern = role.isExternRole;
-			var capaMonth = timeZones.mergedCapacity[actRoleID]?.capacityPerMonth;
+			var capaMonth = timeZones.mergedCapacity[role.uid]?.capacityPerMonth;
 			var capaPT = capaMonth[mon + 1] || 0;
 			if (roleIsExtern) {
 				capaValues[mon].externCapa_PT += capaPT;
@@ -1665,56 +1664,66 @@ function getCapaValues(timeZones, concerningRoles) {
 	return capaValues;
 }
 
-function getConcerningRoles(timeZones, allTeams, roleID, parentID) {
-	var concerningRoles = [];
-	var crElem = {};
+/* Calculate the related/concerning Roles that belong to this role, means the role itself and all Children
+ * With TSO this can be different for every organisation, so the concerningRoles were calculated per Orga
+ * and stored in the timeZone Structure for easy access
+ * in addition the root role that is used for the calculation is also stored to allow distinction between teams and normal orga units
+ */
+function calcConcerningRoles(timeZones, allTeams, roleID, parentID) {
+	var allConcerningRoles = [];
 
-	function findConcerningRoles(roles, value, parentRole) {
+	function findConcerningRoles(orga, roles, value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
 		crElem = {};
-		crElem.actRole = roles[hroleID];
+		crElem.role = roles[hroleID];
 		crElem.teamID = -1;
 		crElem.faktor = 1.0;
 
 		if (parentRole.type == 2) {
-			for (var t = 0 ; t < crElem.actRole.teamIDs?.length; t++) {
-				var team = crElem.actRole.teamIDs[t];
+			for (var t = 0 ; t < crElem.role.teamIDs?.length; t++) {
+				var team = crElem.role.teamIDs[t];
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
 				crElem.faktor = team.value;
 			}
 		}
-		concerningRoles.push(crElem);
+		orga.concerningRoles.push(crElem);
+		allConcerningRoles[hroleID] = crElem;
 
-		var newParent = crElem.actRole;
+		var newParent = crElem.role;
 		if (newParent?.subRoleIDs?.length > 0){
 			var shroles = newParent.subRoleIDs;
 			for (var sr = 0; shroles && sr < shroles.length; sr++) {
-				findConcerningRoles(roles, shroles[sr], newParent);
+				findConcerningRoles(orga, roles, shroles[sr], newParent);
 			}
 		}
 	}
-	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
-	if (roleID || roleID != '') {
-		timeZones.organisation.forEach(orga => {
-			var allRoles = orga.indexedRoles;
-			var role = allRoles[roleID];
-			if (role) {
-				crElem = {};
-				crElem.actRole = role;
-				crElem.teamID = -1;
-				if (allRoles[parentID]?.type == 2) 	crElem.teamID = parentID;
-				crElem.faktor = 1;
-				concerningRoles.push(crElem);
-				role.subRoleIDs?.forEach(subrole => {
-					findConcerningRoles(allRoles, subrole, role);
-				});
-			}
-		});
-	}
 
-	return concerningRoles;
+	// find the role in the latest organisation
+	var orga = timeZones.organisation[timeZones.organisation.length - 1]
+	timeZones.role = orga.indexedRoles[roleID]
+
+	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
+	timeZones.allConcerningRoles = [];
+	timeZones.organisation.forEach(orga => {
+		orga.concerningRoles = []
+		var allRoles = orga.indexedRoles;
+		var role = allRoles[roleID];
+		if (role && (!(parentID > 0) || role.pid == parentID)) {
+			var crElem = {};
+			crElem.role = role;
+			crElem.teamID = -1;
+			if (allRoles[parentID]?.type == 2) crElem.teamID = parentID;
+			crElem.faktor = 1;
+			orga.concerningRoles.push(crElem);
+			allConcerningRoles[role.uid] = crElem;
+			role.subRoleIDs?.forEach(subrole => {
+				findConcerningRoles(orga, allRoles, subrole, role);
+			});
+		}
+	});
+	timeZones.allConcerningRoles = allConcerningRoles;
 }
 
 function mergeCapacity(capacity, timeZones, startDate) {

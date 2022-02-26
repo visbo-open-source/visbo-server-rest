@@ -1444,8 +1444,6 @@ router.route('/:vpvid/capacity')
 			var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
 			perm.vc = perm.vc | permVC.vc;
 		}
-		var roleID = req.query.roleID;
-		var parentID = req.query.parentID;
 
 		req.auditDescription = 'Project Version Capacity Read';
 		req.auditSysAdmin = sysAdmin;
@@ -1466,19 +1464,10 @@ router.route('/:vpvid/capacity')
 				perm: perm
 			});
 		}
-		if (!validate.validateDate(req.query.startDate, true)
-		|| !validate.validateDate(req.query.endDate, true)) {
-			logger4js.warn('Get VPF mal formed query parameter %O ', req.query);
-			return res.status(400).send({
-				state: 'failure',
-				message: 'Bad Content in Query Parameters'
-			});
-		}
 
-		var onlyPT = true;
-		if (perm.vp & constPermVP.ViewAudit ) {
-			onlyPT = false;
-		}
+		// validate the parameters
+		var hierarchy = req.query.hierarchy == true;
+		var roleID = validate.validateNumber(req.query.roleID, false);
 		if (roleID == undefined ) {
 			return res.status(400).send({
 				state: 'failure',
@@ -1486,9 +1475,22 @@ router.route('/:vpvid/capacity')
 				perm: perm
 			});
 		}
+		var parentID = validate.validateNumber(req.query.parentID);
+		var startDate, endDate;
+		if (req.query.startDate) {
+			startDate = validate.validateDate(req.query.startDate, false, true)
+		}
+		if (req.query.endDate) {
+			endDate = validate.validateDate(req.query.endDate, false, true)
+		}
+
+		var onlyPT = true;
+		if (perm.vp & constPermVP.ViewAudit ) {
+			onlyPT = false;
+		}
 		logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, roleID);
 
-		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisation, req.visboVCCapacity, req.query.hierarchy == true, onlyPT);
+		var capacity = visboBusiness.calcCapacities([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
 		return res.status(200).send({
 			state: 'success',
 			message: 'Returned Project Version',
