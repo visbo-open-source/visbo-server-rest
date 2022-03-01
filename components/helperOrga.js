@@ -918,7 +918,7 @@ function combineCapacity(capacity) {
 			startOfNextYear.setMonth(startOfNextYear.getMonth() + fullCapa.capaPerMonth.length);
 			// fill the gap
 			while (startOfNextYear.getTime() < capa.startOfYear.getTime()) {
-				fullCapa.capaPerMonth.push(undefined);
+				fullCapa.capaPerMonth.push(-1);
 				startOfNextYear.setMonth(startOfNextYear.getMonth() + 1);
 			}
 			// add the capa for the year

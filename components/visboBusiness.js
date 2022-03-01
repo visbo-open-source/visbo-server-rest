@@ -81,7 +81,9 @@ function getDailyCapaTZ(uid, capacity, timeZones, index, maxTZ) {
 		var capaStartIndex = getColumnOfDate(capa.startOfYear);
 		var actIndex = index + timeZones.startIndex - capaStartIndex;
 		if (actIndex >= 0 && actIndex < capa.capaPerMonth.length) {
-			dailyCapa = capa.capaPerMonth[actIndex];
+			if (capa.capaPerMonth[actIndex] >= 0) {
+				dailyCapa = capa.capaPerMonth[actIndex];
+			}
 		}
 	}
 	return dailyCapa;
@@ -1003,10 +1005,6 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 	logger4js.debug('Calculate Capacities %s/%s', roleID, parentID);
 	var startTimer = new Date();
 
-	if (parentID == 0) {
-		parentID = undefined;
-	}
-
 	if (!startDate) {
 		startDate = getDateStartOfMonth();
 		startDate.setMonth(startDate.getMonth() - 4);
@@ -1020,12 +1018,24 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 	var endIndex = getColumnOfDate(endDate);
 
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
-	mergeCapacity(capacity, timeZones, startDate);
-
+	var role, parentRole;
 	if (!roleID) {
-		var role = timeZones.mergedOrganisation.find(role => true);
+		role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
 		roleID = role?.uid;
+	} else {
+		role = timeZones.mergedOrganisation[roleID];
 	}
+	if (parentID > 0) {
+		parentRole = timeZones.mergedOrganisation[parentID];
+	} else if (role?.pid) {
+		parentRole = timeZones.mergedOrganisation[role.pid];
+	}
+	if (!role || !parentRole) {
+		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
+	}
+	mergeCapacity(capacity, timeZones, startDate);
+	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
+	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1139,12 +1149,24 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
-	mergeCapacity(capacity, timeZones, startDate);
-
+	var role, parentRole;
 	if (!roleID) {
-		var role = timeZones.mergedOrganisation.find(role => true);
+		role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
 		roleID = role?.uid;
+	} else {
+		role = timeZones.mergedOrganisation[roleID];
 	}
+	if (parentID > 0) {
+		parentRole = timeZones.mergedOrganisation[parentID];
+	} else if (role?.pid) {
+		parentRole = timeZones.mergedOrganisation[role.pid];
+	}
+	if (!role || !parentRole) {
+		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
+	}
+	mergeCapacity(capacity, timeZones, startDate);
+	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
+	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1483,8 +1505,6 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 		return undefined;
 	}
 
-	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	calcConcerningRoles(timeZones, allTeams, roleID, parentID);
 	logger4js.debug('getting capacities for the related roleID/parentID given organisation %s/%s',  roleID, parentID);
 	var capaValues = getCapaValues(timeZones);
 
@@ -1518,6 +1538,7 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	});
 	return costValues;
 }
+
 function checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity) {
 	var result;
 	if (otherActivity) {
@@ -1669,8 +1690,9 @@ function getCapaValues(timeZones) {
  * and stored in the timeZone Structure for easy access
  * in addition the root role that is used for the calculation is also stored to allow distinction between teams and normal orga units
  */
-function calcConcerningRoles(timeZones, allTeams, roleID, parentID) {
+function calcConcerningRoles(timeZones, roleID, parentID) {
 	var allConcerningRoles = [];
+	var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
 
 	function findConcerningRoles(orga, roles, value, parentRole) {
 		//value is the Id of one subrole
@@ -1710,7 +1732,7 @@ function calcConcerningRoles(timeZones, allTeams, roleID, parentID) {
 		orga.concerningRoles = []
 		var allRoles = orga.indexedRoles;
 		var role = allRoles[roleID];
-		if (role && (!(parentID > 0) || role.pid == parentID)) {
+		if (role) {
 			var crElem = {};
 			crElem.role = role;
 			crElem.teamID = -1;
