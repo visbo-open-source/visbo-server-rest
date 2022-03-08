@@ -1137,7 +1137,7 @@ router.route('/:vpid')
 		if (req.body.managerId && req.body.managerId != req.oneVP.managerId?.toString()) {
 			logger4js.debug('PUT Project manager changes ', req.body.managerId);
 			// Check if the new manager is in the "VISBO Project Admin" Group
-			var group = req.listVPGroup?.find(group => group.groupType == 'VP' && group.internal && group.name == "VISBO Project Admin");
+			var group = req.listVPGroup?.find(group => group.groupType == 'VP' && group.internal && group.name == 'VISBO Project Admin');
 			var manager = group?.users?.find(user => user.userId.toString() == req.body.managerId);
 			if (!group || !manager) {
 				logger4js.info('PUT Project new project manager not part of admin group', req.body.managerId);
@@ -1583,7 +1583,7 @@ router.route('/:vpid/audit')
 			req.listVPGroup.forEach(group => {
 				group.users.forEach(user => {
 					userSet.add(user.userId);
-				})
+				});
 			});
 			var userList = [];
 			userSet.forEach(item => userList.push(item));
@@ -1607,7 +1607,7 @@ router.route('/:vpid/audit')
 					user: listVPUser
 				});
 			});
-		})
+		});
 
 	router.route('/:vpid/group')
 
@@ -2322,7 +2322,7 @@ router.route('/:vpid/audit')
 			if (delUser.userId.toString() == req.oneVP.managerId.toString()) {
 				logger4js.info('Delete Project Manager from Project', delUser.email);
 				delete req.oneVP.managerId;
-				req.oneVP.save(function(err, vp) {
+				req.oneVP.save(function(err) {
 					if (err) {
 						errorHandler(err, res, 'DB: DELETE VP Manager from VP', 'Error delete VP Manager from Project');
 						return;
@@ -3581,8 +3581,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			if (roleID == undefined ) {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'No roleID given to Calculate Capacities',
-					perm: perm
+					message: 'No roleID given to Calculate Capacities'
 				});
 			}
 			var perProject = req.query.perProject == true;
@@ -3590,10 +3589,10 @@ router.route('/:vpid/portfolio/:vpfid')
 			var parentID = validate.validateNumber(req.query.parentID);
 			var startDate, endDate;
 			if (req.query.startDate) {
-				startDate = validate.validateDate(req.query.startDate, false, true)
+				startDate = validate.validateDate(req.query.startDate, false, true);
 			}
 			if (req.query.endDate) {
-				endDate = validate.validateDate(req.query.endDate, false, true)
+				endDate = validate.validateDate(req.query.endDate, false, true);
 			}
 
 			var onlyPT = false;

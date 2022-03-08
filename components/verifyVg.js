@@ -68,9 +68,9 @@ function getVCGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 	logger4js.debug('Check if we need groups %s ', req.url);
-	var skip = true
+	var skip = true;
 	if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'user') {
-		skip = false
+		skip = false;
 	}
 	if (skip) {
 		return next();
@@ -101,13 +101,13 @@ function getVPGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
 	logger4js.debug('Check if we need groups %s ', req.url);
-	var skip = true
+	var skip = true;
 	if (req.method == 'POST' && urlComponent.length >= 3 && urlComponent[2] == 'restrict') {
 		skip = false;
 	} else if (req.method == 'PUT' && urlComponent.length == 2) {
-		skip = false
+		skip = false;
 	} else if (req.method == 'GET' && urlComponent.length == 3 && urlComponent[2] == 'user') {
-		skip = false
+		skip = false;
 	}
 	if (skip) {
 		return next();

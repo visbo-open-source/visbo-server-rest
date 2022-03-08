@@ -1478,10 +1478,10 @@ router.route('/:vpvid/capacity')
 		var parentID = validate.validateNumber(req.query.parentID);
 		var startDate, endDate;
 		if (req.query.startDate) {
-			startDate = validate.validateDate(req.query.startDate, false, true)
+			startDate = validate.validateDate(req.query.startDate, false, true);
 		}
 		if (req.query.endDate) {
-			endDate = validate.validateDate(req.query.endDate, false, true)
+			endDate = validate.validateDate(req.query.endDate, false, true);
 		}
 
 		var onlyPT = true;

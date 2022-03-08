@@ -134,9 +134,9 @@ function convertNumber(str) {
 function compareDate(first, second) {
 	if (first === undefined) { first = new Date(-8640000000000000); }
 	if (second === undefined) { second = new Date(-8640000000000000); }
-	if (typeof first == "number" || typeof first == "string") first = new Date(first);
-	if (typeof second == "number" || typeof second == "string") second = new Date(second);
-	return first.getTime() - second.getTime()
+	if (typeof first == 'number' || typeof first == 'string') first = new Date(first);
+	if (typeof second == 'number' || typeof second == 'string') second = new Date(second);
+	return first.getTime() - second.getTime();
 }
 
 function isSameDay(dateA, dateB) {

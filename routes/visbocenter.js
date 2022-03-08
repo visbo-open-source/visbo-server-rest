@@ -418,7 +418,7 @@ router.route('/')
 	});
 
 router.route('/:vcid')
-	 /**
+	/**
 	 	* @api {get} /vc/:vcid Get a VISBO Center
 	 	* @apiVersion 1.0.0
 	 	* @apiGroup VISBO Center
@@ -1011,7 +1011,7 @@ router.route('/:vcid/user')
 		req.listVCGroup?.forEach(group => {
 			group.users.forEach(user => {
 				userSet.add(user.userId);
-			})
+			});
 		});
 		var userList = [];
 		userSet.forEach(item => userList.push(item));
@@ -1035,7 +1035,7 @@ router.route('/:vcid/user')
 				user: listVCUser
 			});
 		});
-	})
+	});
 
 
 router.route('/:vcid/group')
@@ -2396,6 +2396,7 @@ router.route('/:vcid/organisation/:settingid')
 	// Update VC Organisation
 	.put(function(req, res) {
 		var userId = req.decoded._id;
+		var oldOrga;
 		req.auditDescription = 'VISBO Center Organisation Update';
 		req.auditInfo = req.body.name;
 
@@ -2425,7 +2426,7 @@ router.route('/:vcid/organisation/:settingid')
 			});
 		}
 		if (req.visboOrganisation?.length > 1) {
-			var oldOrga = req.visboOrganisation[0];
+			oldOrga = req.visboOrganisation[0];
 			if (validate.compareDate(req.oneVCSetting.timestamp, oldOrga.timestamp) < 0) {
 				return res.status(409).send({
 					state: 'failure',
@@ -2441,7 +2442,7 @@ router.route('/:vcid/organisation/:settingid')
 			});
 		}
 
-		var oldOrga = req.oneVCSetting;
+		oldOrga = req.oneVCSetting;
 		var errorList = [];
 		var orga;
 		var isOrgaList = req.body.allUnits != undefined;
@@ -2467,7 +2468,7 @@ router.route('/:vcid/organisation/:settingid')
 			});
 		}
 		if (req.body.name) {
-			oldOrga.name = req.body.name
+			oldOrga.name = req.body.name;
 		}
 		req.auditInfo = oldOrga.name.concat('/', oldOrga.timestamp.toISOString());
 		oldOrga.updatedAt = new Date(); // otherwise it does not write to DB
@@ -3237,10 +3238,10 @@ router.route('/:vcid/capacity')
 		var parentID = validate.validateNumber(req.query.parentID);
 		var startDate, endDate;
 		if (req.query.startDate) {
-			startDate = validate.validateDate(req.query.startDate, false, true)
+			startDate = validate.validateDate(req.query.startDate, false, true);
 		}
 		if (req.query.endDate) {
-			endDate = validate.validateDate(req.query.endDate, false, true)
+			endDate = validate.validateDate(req.query.endDate, false, true);
 		}
 		var onlyPT = true;
 		if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
@@ -3275,11 +3276,11 @@ router.route('/:vcid/capacity')
 		}
 
 		var filteredCapacity = [];
-		var startDate = validate.validateDate(req.query.startDate, false, true);
+		startDate = validate.validateDate(req.query.startDate, false, true);
 		if (!startDate) {
 			startDate = new Date(-8640000000000000);
 		}
-		var endDate = validate.validateDate(req.query.endDate, false, true);
+		endDate = validate.validateDate(req.query.endDate, false, true);
 		if (!endDate) {
 			endDate = new Date(8640000000000000);
 		}

@@ -7,13 +7,11 @@ var helperVpv = require('./../components/helperVpv');
 var helperOrga = require('./../components/helperOrga');
 // const { toNamespacedPath } = require('path');
 const validate = require('./validate');
-const validateDate = validate.validateDate;
-const validateNumber = validate.validateNumber;
 
 const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
 
-const minStartDate = new Date('2015-01-01')
+const minStartDate = new Date('2015-01-01');
 var refMonth = undefined;
 
 function getColumnOfDate(value) {
@@ -128,7 +126,7 @@ function getRoleTZ(role, timeZones, index, maxTZ) {
 		// role is not concerning for this TSO
 		return undefined;
 	}
-	roleTZ = orga.indexedRoles[role.uid];
+	var roleTZ = orga.indexedRoles[role.uid];
 	if (role?.pid != roleTZ?.pid) {
 		return undefined;
 	}
@@ -1533,7 +1531,7 @@ function getTimeZoneIndex(timeZones, timestamp) {
 }
 
 function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
-	var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
+	// var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
 	if (!roleID || !timeZones.mergedOrganisation[roleID]) {
 		// given roleID isn't defined in this organisation
 		return undefined;
@@ -1581,7 +1579,7 @@ function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 function checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity) {
 	var result;
 	if (otherActivity) {
-		result = (rolePhase.RollenTyp == roleID && rolePhase.teamID != teamID)
+		result = (rolePhase.RollenTyp == roleID && rolePhase.teamID != teamID);
 	} else {
 		if (isTeamMember) {
 			result = (rolePhase.RollenTyp == roleID && rolePhase.teamID == teamID);
@@ -1731,12 +1729,12 @@ function getCapaValues(timeZones) {
  */
 function calcConcerningRoles(timeZones, roleID, parentID) {
 	var allConcerningRoles = [];
-	var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
+	// var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
 
 	function findConcerningRoles(orga, roles, value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
-		crElem = {};
+		var crElem = {};
 		crElem.role = roles[hroleID];
 		crElem.teamID = -1;
 		crElem.faktor = 1.0;
@@ -1762,13 +1760,13 @@ function calcConcerningRoles(timeZones, roleID, parentID) {
 	}
 
 	// find the role in the latest organisation
-	var orga = timeZones.organisation[timeZones.organisation.length - 1]
-	timeZones.role = orga.indexedRoles[roleID]
+	var orga = timeZones.organisation[timeZones.organisation.length - 1];
+	timeZones.role = orga.indexedRoles[roleID];
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	timeZones.allConcerningRoles = [];
 	timeZones.organisation.forEach(orga => {
-		orga.concerningRoles = []
+		orga.concerningRoles = [];
 		var allRoles = orga.indexedRoles;
 		var role = allRoles[roleID];
 		if (role) {
@@ -1851,107 +1849,6 @@ function mergeCapacity(capacity, timeZones, startDate) {
 	var endCalc = new Date();
 	logger4js.debug('Merge Capacity duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return;
-}
-
-function buildOrgaList (orga) {
-	var organisation = [];
-	var organisationItem = {};
-	var aggreID = undefined;
-	for (let i = 0; orga.value.allRoles && i < orga.value.allRoles.length; i++) {
-		const role = orga.value.allRoles[i];
-		const id = role.uid;
-		if (!organisation[id]) {
-			organisationItem = {};
-			organisation[id] = organisationItem;
-			organisation[id].uid = id;
-			organisation[id].calcid = id;
-			organisation[id].pid = undefined;
-		}
-		organisation[id].name = role.name;
-		organisation[id].isExternRole = role.isExternRole;
-		organisation[id].defCapaMonth = role.defCapaMonth;
-		organisation[id].dailyRate = role.dailyRate;
-		organisation[id].employeeNr = role.employeeNr;
-		organisation[id].defCapaDay = role.defCapaDay;
-		if (role.entryDate > '0001-01-01T00:00:00Z') {
-			organisation[id].entryDate = role.entryDate;
-		}
-		if (role.exitDate < '2200-11-30T23:00:00Z') {
-			organisation[id].exitDate = role.exitDate;
-		}
-		organisation[id].aliases = role.aliases;
-		organisation[id].isAggregationRole = role.isAggregationRole;
-		if (role.isAggregationRole){
-			aggreID = id;
-			organisation[id].aggreID = aggreID;
-		}
-		organisation[id].isSummaryRole = role.isSummaryRole;
-		organisation[id].isActDataRelevant = role.isActDataRelevant;
-
-		// this.log(`Add Orga Unit ${id} ${role.name} Children ${role.subRoleIDs.length}`);
-		// role is a summary role
-		organisation[id].sumRole = role.isSummaryRole;
-		for (let j = 0; j < role.subRoleIDs?.length; j++) {
-			const index = Number(role.subRoleIDs[j].key);
-			if (index < 0) {
-				logger4js.error(`Inconsistent Org Structure Role ${id} SubRole ${role.subRoleIDs[j].key}`);
-				// something wrong with the numbering
-				break;
-			}
-			if (!organisation[index]) {
-				// added by subrole
-				organisationItem = {};
-				organisation[index] = organisationItem;
-				organisation[index].uid = index;
-				organisation[index].calcid = index;
-			} else {
-				logger4js.trace(`SubRole already exists ${id} SubRole ${index}`);
-			}
-			if (!organisation[index].pid) {
-				organisation[index].pid = id;
-			}
-			if (!organisation[index].aggreID) {
-				organisation[index].aggreID = organisation[role.uid] && organisation[role.uid].aggreID;
-			}
-		}
-	}
-
-	// build team members Information by duplicating users with their percentage
-	let maxid = 0;
-	orga.value.allRoles.forEach(element => { if (element.uid > maxid) maxid = element.uid; } );
-	logger4js.trace(`MaxID ${maxid}`);
-	for (let i = 0; i < orga.value.allRoles.length; i++) {
-		const role = orga.value.allRoles[i];
-		if (role.type == 2 && role.subRoleIDs?.length > 0) {
-			for (let j = 0; j < role.subRoleIDs.length; j++) {
-				const index = role.subRoleIDs[j].key;
-				if (organisation[index]?.type == 2) {
-					// nothing to do for teams
-					continue;
-				}
-				const userRole = organisation[index];
-				// now it is a user, add a new entry
-				maxid += 1;
-				organisationItem = {};
-				organisation[maxid] = organisationItem;
-				organisation[maxid].uid = index;
-				organisation[maxid].calcid = maxid;
-				organisation[maxid].type = 2;
-				organisation[maxid].pid = role.uid;
-				organisation[maxid].name = userRole.name;
-				organisation[maxid].parent = role.name;
-				if (userRole.employeeNr) { organisation[maxid].employeeNr = userRole.employeeNr; }
-				if (userRole.isExternRole) { organisation[maxid].isExternRole = userRole.isExternRole; }
-				if (userRole.defCapaDay >= 0) { organisation[maxid].defCapaDay = userRole.defCapaDay; }
-				if (userRole.defCapaMonth >= 0) { organisation[maxid].defCapaMonth = userRole.defCapaMonth; }
-				if (userRole.dailyRate >= 0) { organisation[maxid].dailyRate = userRole.dailyRate; }
-				if (userRole.entryDate) { organisation[maxid].entryDate = userRole.entryDate; }
-				if (userRole.exitDate) { organisation[maxid].exitDate = userRole.exitDate; }
-				if (userRole.aliases) { organisation[maxid].aliases = userRole.aliases; }
-			}
-		}
-	}
-	return organisation;
 }
 
 function cleanupRestrictedVersion(vpv) {
@@ -2047,7 +1944,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 	// 	return undefined;
 	// }
 
-	var newestOrga, orgalist;
+	var newestOrga, orgaList;
 	if (orga?.length > 0) {	// convert the newest organisation
 		var listError = [];
 		newestOrga = helperOrga.initOrga(orga[0].value, orga[0].timestamp, undefined, listError);
@@ -2104,9 +2001,9 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		newPFV.AllPhases = [];
 		oldVPV.AllPhases?.forEach(phase => {
 			var onePhase = {};
-			if (orgalist) {
+			if (orgaList) {
 				logger4js.trace('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID);
-				onePhase.AllRoles  = aggregateRoles(phase, orgalist);
+				onePhase.AllRoles  = aggregateRoles(phase, orgaList);
 			} else {
 				onePhase.AllRoles = phase.AllRoles;
 			}
@@ -2147,7 +2044,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 			onePhase.deliverables = [];
 			phase.deliverables?.forEach(item => {
 				onePhase.deliverables.push(item);
-			})
+			});
 
 			onePhase.percentDone= phase.percentDone;
 			onePhase.invoice= phase.invoice;

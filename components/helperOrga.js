@@ -224,7 +224,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		newCost.name = cost.name;
 		newCost.subCostIDs = [];
 		cost.subCostIDs?.forEach(item => {
-			newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)})
+			newCost.subCostIDs.push({key: validate.convertNumber(item.key), value: validate.convertNumber(item.value)});
 		});
 		if (uniqueCostNames[newCost.name]) {
 			errorstring = `Orga Cost Name not unique: uid: ${newCost.uid}, name: ${newCost.name}`;
@@ -248,7 +248,6 @@ function calcAggregationID(role, indexedOrga) {
 			return undefined;
 		}
 		var actRole = role;
-		var aggregationRole;
 		while (actRole.pid && !actRole.isAggregationRole) {
 			actRole = indexedOrga[actRole.pid];
 		}
