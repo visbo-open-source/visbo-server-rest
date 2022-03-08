@@ -94,6 +94,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 			}
 			if (role.isAggregationRole) {
 				newRole.isAggregationRole = role.isAggregationRole == true;
+				newRole.aggregationID = role.uid;
 			}
 			// check Rule2: Group should not have a defCapaMonth or defCapaDay
 			// this is automatically true, as the values are not set for a group
@@ -184,15 +185,17 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 					newOrgaIndexed[subRole.key].pid = role.uid;
 				}
 			});
-			if (role.teamIDs) {
-				role.teamIDs.forEach(teamID => {
-					if (!newOrgaIndexed[teamID.key]) {
-						errorstring = `Unknown teamID: uid: ${role.uid}, name: ${role.name}, teamID: ${teamID.key}`;
-						listError?.push(errorstring);
-						logger4js.info('InitOrga: ', errorstring);
-						isOrgaValid = false;
-					}
-				});
+			role.teamIDs?.forEach(teamID => {
+				if (!newOrgaIndexed[teamID.key]) {
+					errorstring = `Unknown teamID: uid: ${role.uid}, name: ${role.name}, teamID: ${teamID.key}`;
+					listError?.push(errorstring);
+					logger4js.info('InitOrga: ', errorstring);
+					isOrgaValid = false;
+				}
+			});
+			if (role.isSummaryRole) {
+				// set the aggregationID for the reduction
+				role.aggregationID = calcAggregationID(role, newOrgaIndexed);
 			}
 		});
 	}
@@ -237,6 +240,24 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 	newOrga.maxCostID = maxCostID;
 
 	return isOrgaValid ? newOrga : undefined;
+}
+
+// calculate the aggregationID for this orga unit for a summary role, either the folder itself or the first parent that has isAggregation set
+function calcAggregationID(role, indexedOrga) {
+		if (!role?.isSummaryRole) {
+			return undefined;
+		}
+		var actRole = role;
+		var aggregationRole;
+		while (actRole.pid && !actRole.isAggregationRole) {
+			actRole = indexedOrga[actRole.pid];
+		}
+		if (actRole.isAggregationRole) {
+			// we have found one
+			return actRole.uid;
+		} else {
+			return role.uid;
+		}
 }
 
 // gets the maxID for Role or Cost either as a stored property or by calculation of the max value
@@ -346,7 +367,18 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (role.type == 1 || role.type == 2) {
 			var newRole;
 			if (role.uid == undefined) {
-				role.uid = ++maxRoleID;
+				if (role.type == 1) {
+					role.uid = ++maxRoleID;
+				} else {
+					var originalRole = newOrga.allRoles.find(item => item.name == role.name);
+					role.uid = originalRole?.uid;
+					if (!role.uid)  {
+						errorstring = `${index+2} Orga Role Team Member not found in orga, name: ${role.name}`;
+						listError?.push(errorstring);
+						logger4js.info('InitOrgaList: ', errorstring);
+						isOrgaValid = false;
+					}
+				}
 			}
 			newRole = new VCOrgaRole(role.uid, role.name);
 			newRole.type = role.type;
@@ -382,8 +414,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 					}
 				}
 				newRole.defCapaDay = role.defCapaDay || 0;
+				newRole.defCapaMonth = role.defCapaMonth || 0;
 				if (role.isExternRole) newRole.isExternRole = true;
-				if (role.defCapaMonth) newRole.defCapaMonth = role.defCapaMonth;
 				// check Rule1: internal people need to have capa (to avoid confusion team members get their capa from the real orga unit)
 				if (!newRole.isExternRole && newRole.type == 1) {
 					if (!(newRole.defCapaDay >= 0 && newRole.defCapaMonth >= 0)) {
@@ -931,6 +963,7 @@ function combineCapacity(capacity) {
 module.exports = {
 	initOrga: initOrga,
 	initOrgaFromList: initOrgaFromList,
+	generateIndexedOrgaRoles: generateIndexedOrgaRoles,
 	convertSettingToOrga: convertSettingToOrga,
 	joinCapacity: joinCapacity,
 	combineCapacity: combineCapacity,

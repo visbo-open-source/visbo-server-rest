@@ -206,13 +206,44 @@ function getAllOtherCost(vpv, timeZones) {
 	return othercostValues;
 }
 
+// calculate all Invoices for the requested project per month
+function getAllInvoices(vpv) {
+	var invoiceValues = [];
+
+	if (!(vpv?.AllPhases?.length > 0)) {
+		logger4js.warn('Calculate Invoice: inconsistent project %d', vpv?.AllPhases?.length);
+		return invoiceValues;
+	}
+
+	logger4js.debug('Calculate all Invoices of Project Version %s start %s end %s', vpv._id, vpv.startDate, vpv.endDate);
+	var startCalc = new Date();
+
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var duration = endIndex - startIndex + 1;
+
+	for (var i = 0; i < duration; i++){
+		invoiceValues[i] = 0;
+	}
+
+	vpv.AllPhases.forEach(phase => {
+		var phaseEnd = phase.relEnde - 1;
+		if (phase.invoice) {
+			invoiceValues[phaseEnd] += phase.invoice.Key || 0;
+		}
+	});
+	var endCalc = new Date();
+	logger4js.debug('Calculate all Invoices duration %s ', endCalc.getTime() - startCalc.getTime());
+	return invoiceValues;
+}
+
 function calcCosts(vpv, pfv, organisation) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
 	var startCalc = new Date();
 	var startDate, endDate;
 	var len;
-	var personnelCost, allOtherCost;
+	var personnelCost, allOtherCost, allInvoices;
 
 	if ( !(vpv || pfv) || !(organisation?.length > 0) ) {
 		logger4js.warn('CalcCost no valid vpv/pfv or organisation');
@@ -236,9 +267,13 @@ function calcCosts(vpv, pfv, organisation) {
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
 		personnelCost = getAllPersonnelCost(vpv, timeZones);
 		allOtherCost = getAllOtherCost(vpv, timeZones);
-		len = Math.max(personnelCost.length, allOtherCost.length);
+		allInvoices = getAllInvoices(vpv);
+		len = Math.max(personnelCost.length, allOtherCost.length, allInvoices.length);
 		for (var j = 0; j < len; j++) {
-			allCostValues[currentDate.toISOString()] = { 'currentCost': personnelCost[j] + allOtherCost[j] };
+			allCostValues[currentDate.toISOString()] = {
+				'currentCost': (personnelCost[j] || 0) + (allOtherCost[j] || 0),
+				'currentInvoice': allInvoices[j] || 0
+			};
 			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
@@ -248,14 +283,16 @@ function calcCosts(vpv, pfv, organisation) {
 		var maxTimeZoneIndex = getTimeZoneIndex(timeZones, pfv.timestamp);
 		personnelCost = getAllPersonnelCost(pfv, timeZones, maxTimeZoneIndex);
 		allOtherCost = getAllOtherCost(pfv, timeZones);
-		len = Math.max(personnelCost.length, allOtherCost.length);
+		allInvoices = getAllInvoices(pfv);
+		len = Math.max(personnelCost.length, allOtherCost.length, allInvoices.length);
 		for (var i = 0 ; i < len; i++) {
 			const currentDateISO = currentDate.toISOString();
 			if (!allCostValues[currentDateISO]) {
 				allCostValues[currentDateISO] = {};
 			}
-			allCostValues[currentDateISO].baseLineCost = personnelCost[i] + allOtherCost[i];
-				currentDate.setMonth(currentDate.getMonth() + 1);
+			allCostValues[currentDateISO].baseLineCost = (personnelCost[i] || 0) + (allOtherCost[i] || 0);
+			allCostValues[currentDateISO].baseLineInvoice = (allInvoices[i] || 0);
+			currentDate.setMonth(currentDate.getMonth() + 1);
 		}
 	}
 
@@ -263,7 +300,9 @@ function calcCosts(vpv, pfv, organisation) {
 		allCostValuesIndexed.push({
 			'currentDate': element,
 			'baseLineCost': allCostValues[element].baseLineCost || 0,
-			'currentCost': allCostValues[element].currentCost || 0
+			'currentCost': allCostValues[element].currentCost || 0,
+			'baseLineInvoice': allCostValues[element].baseLineInvoice || 0,
+			'currentInvoice': allCostValues[element].currentInvoice || 0,
 		});
 	}
 	var endCalc = new Date();
@@ -2008,10 +2047,16 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 	// 	return undefined;
 	// }
 
-	var newestOrga;
+	var newestOrga, orgalist;
 	if (orga?.length > 0) {	// convert the newest organisation
-		newestOrga = orga[0];
-		var orgalist = buildOrgaList(newestOrga);
+		var listError = [];
+		newestOrga = helperOrga.initOrga(orga[0].value, orga[0].timestamp, undefined, listError);
+		if (newestOrga) {
+			orgaList = helperOrga.generateIndexedOrgaRoles(newestOrga);
+		} else {
+			logger4js.warn('Convert Orga failed', listError);
+		}
+		// var orgalist = buildOrgaList(newestOrga);
 		logger4js.debug('generate new PFV %s out of VPV %s ', oldPFV?.name, oldVPV?.name + oldVPV?.variantName);
 	}
 
@@ -2056,30 +2101,28 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		newPFV.businessUnit = oldVPV.businessUnit;
 
 		// newPFV.AllPhases have to be created new ones	and the ressources will be aggregated to sumRoles
-		var newpfvAllPhases = [];
-		oldVPV.AllPhases.forEach(phase => {
+		newPFV.AllPhases = [];
+		oldVPV.AllPhases?.forEach(phase => {
 			var onePhase = {};
-			if (newestOrga && orgalist) {
-				logger4js.trace('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID, newestOrga.name);
+			if (orgalist) {
+				logger4js.trace('aggregate allRoles of the one phase %s in the given VPV and the given orga %s to generate a newPFV ', phase.nameID);
 				onePhase.AllRoles  = aggregateRoles(phase, orgalist);
 			} else {
 				onePhase.AllRoles = phase.AllRoles;
 			}
 
-			var newAllCosts = [];
-			for ( var ic = 0; phase && phase.AllCosts && ic < phase.AllCosts.length; ic++){
+			onePhase.AllCosts = [];
+			phase.AllCosts?.forEach(cost => {
 				var oneCost = {};
-				oneCost.KostenTyp = phase.AllCosts[ic].KostenTyp;
-				oneCost.name = phase.AllCosts[ic].name;
-				oneCost.Bedarf = phase.AllCosts[ic].Bedarf;
-				newAllCosts.push(oneCost);
-			}
-			onePhase.AllCosts = newAllCosts;
+				oneCost.KostenTyp = cost.KostenTyp;
+				oneCost.name = cost.name;
+				oneCost.Bedarf = cost.Bedarf;
+				onePhase.AllCosts.push(oneCost);
+			});
 
-			var newAllResults = [];
-			for ( var ires = 0; phase && phase.AllResults && ires < phase.AllResults.length; ires++){
+			onePhase.AllResults = [];
+			phase.AllResults?.forEach(milestone => {
 				var oneResult = {};
-				var milestone = phase.AllResults[ires];
 				oneResult.bewertungen = milestone.bewertungen ;
 				oneResult.name = milestone.name ;
 				oneResult.verantwortlich = milestone.verantwortlich ;
@@ -2091,23 +2134,20 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 				oneResult.percentDone = milestone.percentDone ;
 				oneResult.invoice = milestone.invoice ;
 				oneResult.penalty = milestone.penalty ;
-				var newmsdeliverables = [];
-				for (var id = 0;  milestone && milestone.deliverables && id < milestone.deliverables.length; id++){
-					newmsdeliverables.push(milestone.deliverables[id]);
-				}
-				oneResult.deliverables = newmsdeliverables;
-				newAllResults.push(oneResult);
-			}
-			onePhase.AllResults = newAllResults;
+				oneResult.deliverables = [];
+				milestone.deliverables?.forEach(item => {
+					oneResult.deliverables.push(item);
+				});
+				onePhase.AllResults.push(oneResult);
+			});
 
 			// AllBewertungen keep as they are
 			onePhase.AllBewertungen = phase.AllBewertungen;
 
-			var newdeliverables = [];
-			for ( id = 0;  phase && phase.deliverables && id < phase.deliverables.length; id++){
-				newdeliverables.push(phase.deliverables[id]);
-			}
-			onePhase.deliverables = newdeliverables;
+			onePhase.deliverables = [];
+			phase.deliverables?.forEach(item => {
+				onePhase.deliverables.push(item);
+			})
 
 			onePhase.percentDone= phase.percentDone;
 			onePhase.invoice= phase.invoice;
@@ -2127,10 +2167,8 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 			onePhase.shortName= phase.shortName;
 			onePhase.originalName= phase.originalName;
 			onePhase.appearance= phase.appearance;
-			newpfvAllPhases.push(onePhase);
+			newPFV.AllPhases.push(onePhase);
 		});
-
-		newPFV.AllPhases = newpfvAllPhases;
 	}
 
 	var reducedPFV = oldPFV || newPFV;
