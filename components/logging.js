@@ -104,8 +104,8 @@ function initLog4js(fsLogPath) {
 		logConfig = {
 			appenders: {
 				out: { type: 'stdout' },
-				everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-				emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+				everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, numBackups: 30 },
+				emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, numBackups: 30 },
 				'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
 				'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
 			},
