@@ -768,11 +768,11 @@ router.route('/')
 					newVPV.Erloes = req.visboPFV.Erloes;
 				}
 				var customField;
-				if (req.oneVP && req.oneVP.customFieldString) {
+				if (req.oneVP.customFieldString) {
 					customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
 					if (customField) { newVPV.businessUnit = customField.value; }
 				}
-				if (req.oneVP && req.oneVP.customFieldDouble) {
+				if (req.oneVP.customFieldDouble) {
 					customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
 					if (customField) { newVPV.Risiko = customField.value; }
 					customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
@@ -783,7 +783,7 @@ router.route('/')
 				// 	if (customField) { newVPV.pmCommit = customField.value; }
 				// }
 				newVPV.status = undefined;
-				if (req.oneVP && req.oneVP.vpStatus) {
+				if (req.oneVP.vpStatus) {
 					newVPV.vpStatus = req.oneVP.vpStatus;
 				}
 
