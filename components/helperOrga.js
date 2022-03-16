@@ -919,6 +919,7 @@ function compatibilityOldOrga(setting) {
 		if (role.defCapaDay >= 0) role.defaultDayCapa = role.defCapaDay;
 		if (role.capaPerMonth) {
 			role.kapazitaet = role.capaPerMonth;
+			role.kapazitaet.unshift(0); // old arrays had always an empty/null entry  that was not used
 			delete role.capaPerMonth;
 		}
 	});
