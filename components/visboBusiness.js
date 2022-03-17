@@ -260,6 +260,9 @@ function calcCosts(vpv, pfv, organisation) {
 	}
 
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
+	if (!timeZones) {
+		return allCostValues;
+	}
 	if (vpv) {
 		var currentDate = getDateStartOfMonth(vpv.startDate);
 		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
@@ -972,14 +975,16 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 		var indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(pfv.startDate) + 1;
 
 		var timeZones = splitInTimeZones(organisation, pfv.startDate, pfv.endDate);
-		var maxTimeZoneIndex = getTimeZoneIndex(timeZones, pfv.timestamp);
-		keyMetrics.costBaseLastTotal = getSummeKosten(pfv, indexTotal, timeZones, maxTimeZoneIndex);
-		keyMetrics.costBaseLastActual = getSummeKosten(pfv, indexActual, timeZones, maxTimeZoneIndex);
+		if (timeZones) {
+			var maxTimeZoneIndex = getTimeZoneIndex(timeZones, pfv.timestamp);
+			keyMetrics.costBaseLastTotal = getSummeKosten(pfv, indexTotal, timeZones, maxTimeZoneIndex);
+			keyMetrics.costBaseLastActual = getSummeKosten(pfv, indexActual, timeZones, maxTimeZoneIndex);
 
-		indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate) + 1;
-		indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate) + 1;
-		keyMetrics.costCurrentTotal= getSummeKosten(vpv, indexTotal, timeZones);
-		keyMetrics.costCurrentActual= getSummeKosten(vpv, indexActual, timeZones);
+			indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate) + 1;
+			indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate) + 1;
+			keyMetrics.costCurrentTotal= getSummeKosten(vpv, indexTotal, timeZones);
+			keyMetrics.costCurrentActual= getSummeKosten(vpv, indexActual, timeZones);
+		}
 	}
 
 	// prepare hierarchy of pfv for direct access
@@ -995,15 +1000,13 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	// update the deadlines with properties of vpv (only those, which are in the pfv too)
 	allDeadlines = getDeadlines(vpv, hrchy_vpv, allDeadlines);
 
-	if (allDeadlines && allDeadlines.length > 0){
+	if (allDeadlines?.length > 0){
 		var timeKeyMetric = getTimeCompletionMetric(allDeadlines, vpv.timestamp);
 		keyMetrics.timeCompletionCurrentActual = timeKeyMetric.timeCompletionCurrentActual;
 		keyMetrics.timeCompletionBaseLastActual = timeKeyMetric.timeCompletionBaseLastActual;
 		keyMetrics.timeCompletionCurrentTotal = timeKeyMetric.timeCompletionCurrentTotal;
 		keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
-	}
 
-	if (allDeadlines && allDeadlines.length > 0){
 		var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
 		keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
 		keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
@@ -1014,7 +1017,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	// update the deliverables with properties of vpv (only those, which are in the pfv too)
 	allDeliverables = getAllDeliverables(vpv, hrchy_vpv, allDeliverables);
 
-	if (allDeliverables && allDeliverables.length > 0){
+	if (allDeliverables?.length > 0){
 		var deliverableKeyMetric = getDeliverableCompletionMetric(allDeliverables, vpv.timestamp);
 		keyMetrics.deliverableCompletionBaseLastActual = deliverableKeyMetric.deliverableCompletionBaseLastActual;
 		keyMetrics.deliverableCompletionBaseLastTotal = deliverableKeyMetric.deliverableCompletionBaseLastTotal;
@@ -1055,6 +1058,9 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 	var endIndex = getColumnOfDate(endDate);
 
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
+	if (!timeZones) {
+		return [];
+	}
 	var role, parentRole;
 	if (!roleID) {
 		role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
@@ -1186,6 +1192,9 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
 	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
 	var timeZones = splitInTimeZones(organisation, startDate, endDate);
+	if (!timeZones) {
+		return [];
+	}
 	var role, parentRole;
 	if (!roleID) {
 		role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
