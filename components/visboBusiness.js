@@ -1769,8 +1769,10 @@ function calcConcerningRoles(timeZones, roleID, parentID) {
 	}
 
 	// find the role in the latest organisation
+	logger4js.warning('Concerning Roles orga count', timeZones?.organisation?.length);
 	var orga = timeZones.organisation[timeZones.organisation.length - 1];
-	timeZones.role = orga.indexedRoles[roleID];
+	timeZones.role = orga?.indexedRoles[roleID];
+	logger4js.warning('Concerning Roles role', orga != undefined, orga?.indexedRoles != undefined, orga?.indexedRoles[roleID] != undefined);
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	timeZones.allConcerningRoles = [];
