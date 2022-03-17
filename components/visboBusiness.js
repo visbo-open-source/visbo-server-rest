@@ -1073,7 +1073,7 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 	} else if (role?.pid) {
 		parentRole = timeZones.mergedOrganisation[role.pid];
 	}
-	if (!role || !parentRole) {
+	if (!role || (role?.pid && !parentRole)) {
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
@@ -1207,7 +1207,7 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 	} else if (role?.pid) {
 		parentRole = timeZones.mergedOrganisation[role.pid];
 	}
-	if (!role || !parentRole) {
+	if (!role || (role?.pid && !parentRole)) {
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
@@ -1458,7 +1458,8 @@ function splitInTimeZones(organisation, startDate, endDate) {
 	var index;
 	if (getColumnOfDate(organisation[0].timestamp) >= split.startIndex) {
 		// ealriset organisation starts after the startIndex, take this for the past also
-		index = 0;
+		split.organisation.push(organisation[0]);
+		index = 1;
 	} else {
 		index = organisation.findIndex(orga => getColumnOfDate(orga.timestamp) >= split.startIndex);
 		index = index <= 0 ? organisation.length - 1 : index - 1;
@@ -1769,10 +1770,8 @@ function calcConcerningRoles(timeZones, roleID, parentID) {
 	}
 
 	// find the role in the latest organisation
-	logger4js.warn('Concerning Roles orga count', timeZones?.organisation?.length);
 	var orga = timeZones.organisation[timeZones.organisation.length - 1];
 	timeZones.role = orga?.indexedRoles[roleID];
-	logger4js.warn('Concerning Roles role', orga != undefined, orga?.indexedRoles != undefined, orga?.indexedRoles[roleID] != undefined);
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	timeZones.allConcerningRoles = [];
