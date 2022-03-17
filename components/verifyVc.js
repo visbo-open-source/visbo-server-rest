@@ -379,6 +379,7 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
 		listVCSetting.sort(function(a, b) { return validate.compareDate(b.timestamp, a.timestamp); });
 		req.visboOrganisation = listVCSetting;
+		logger4js.warn('getVCOrganisation for VCID %s orga %d', vcid, req.visboOrganisation?.length);
 		if (withCapa) {
 			var query = {};
 			query.vcid = vcid;
@@ -394,12 +395,12 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 				req.visboVCCapacity = listVCCapacity;
 				var endCalc = new Date();
 				logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+				logger4js.warn('getVCOrganisation Capa for VCID %s capa %d', vcid, req.visboVCCapacity?.length);
 				return next();
 			});
 		} else {
 			var endCalc = new Date();
 			logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
-			logger4js.warn('getVCOrganisation for VCID %s orga %d', vcid, req.visboOrganisation?.length);
 			return next();
 		}
 	});
