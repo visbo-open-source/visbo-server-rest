@@ -2434,13 +2434,13 @@ router.route('/:vcid/organisation/:settingid')
 				});
 			}
 		}
-		var beginOfMonth = validate.getBeginningOfMonth();
-		if (validate.compareDate(req.oneVCSetting.timestamp, beginOfMonth) < 0) {
-			return res.status(409).send({
-				state: 'failure',
-				message: 'Not allowed to update an old organisation'
-			});
-		}
+		// var beginOfMonth = validate.getBeginningOfMonth();
+		// if (validate.compareDate(req.oneVCSetting.timestamp, beginOfMonth) < 0) {
+		// 	return res.status(409).send({
+		// 		state: 'failure',
+		// 		message: 'Not allowed to update an old organisation'
+		// 	});
+		// }
 
 		oldOrga = req.oneVCSetting;
 		var errorList = [];
