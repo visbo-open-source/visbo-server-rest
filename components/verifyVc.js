@@ -350,6 +350,7 @@ function getVCOrgs(req, res, next) {
 	}
 
 	let vcid = req.oneVC?._id || req.oneVCID;
+	logger4js.warn('VPV getVCOrgs organization for VCID %s with capa %s', vcid, withCapa);
 	if (!vcid) {
 		logger4js.warn('No VISBO Center identified');
 		return res.status(400).send({
@@ -398,6 +399,7 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 		} else {
 			var endCalc = new Date();
 			logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+			logger4js.warn('getVCOrganisation for VCID %s orga %d', vcid, req.visboOrganisation?.length);
 			return next();
 		}
 	});
