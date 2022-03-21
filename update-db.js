@@ -1335,6 +1335,78 @@ if (currentVersion < dateBlock) {
   currentVersion = dateBlock
 }
 
+dateBlock = "2022-03-21T00:00:00";
+if (currentVersion < dateBlock) {
+  // Change Orga isActDataRelevant-property of a role to the list isActualDataRelevant, 
+  // which contains the role-Uids of these roles an save it in the vcsettings type customization
+  //  - ? - fields in organisation isActDataRelevant will be removed     
+
+  var OrgListAll = db.vcsettings.find({type: 'organisation'}).sort({vcid:1, timestamp:1}).toArray();
+  print("Orga List Length ", OrgListAll.length);
+  
+  // find the newest orga of every vc
+  var todoList=[];
+  if (OrgListAll.length == 1) {
+      todoList.push(OrgListAll[0]);
+  }
+  for (let i = 0; i < OrgListAll.length - 1; i++){
+    //compare current item with previous and ignore if it is the same vcid       
+    if (OrgListAll[i].vcid.toString() != OrgListAll[i+1].vcid.toString()) {
+      todoList.push(OrgListAll[i]);
+      //print("VisboCenters todo: " + OrgListAll[i].vcid.toString());
+    }
+  };
+  // In the case that it exists only one vcid with several orgas
+  if ((OrgListAll.length > 0) && (todoList < 1)) {
+    todoList.push(OrgListAll[OrgListAll.length-1]);
+  }
+  print("VisboCenters todo: " + todoList.length);
+  
+  var isActualDataRelevant = "";
+  var noActData = "";
+  var updatedCount = 0;
+  // run through all newest orgas and look for the isActDataRelevant - role-uids
+  todoList.forEach(orga => {  
+    isActualDataRelevant = "";
+
+    orga.value.allRoles.forEach(role => {
+      if (role.isActDataRelevant) {
+            isActualDataRelevant =  isActualDataRelevant + role.uid + ";"
+      };        
+    });
+
+    // store into customizationSetting of this visbocenter
+    var customizationSettings = db.vcsettings.find({vcid: orga.vcid , type: 'customization'}).toArray();    
+    if (customizationSettings.length > 0) {  
+      var customization = customizationSettings[0];
+      if (customization) {                
+          if (isActualDataRelevant != "") {
+              customization.value.allianzIstDatenReferate = isActualDataRelevant;
+              customization.value.isActualDataRelevant = isActualDataRelevant;		
+          }	
+          else {
+              // some older visbocenters have this information in the customization - allianzIstDatenReferate
+              customization.value.isActualDataRelevant = customization.value.allianzIstDatenReferate;
+          };
+          print("Orga:   " + "VisboCenter: " + orga.vcid + ":"  + " : " + orga.timestamp.toString() + " " + "isActualDataRelevant - uids ", customization.value.isActualDataRelevant );
+
+          // store the new custiomization setting
+          result = db.vcsettings.replaceOne({_id: customization._id}, customization);            
+          updatedCount += result.matchedCount;
+          print("customization: '" +  customization._id + "' is updated");            
+      }
+    }
+    else {
+      noActData= noActData + orga.vcid  + " : ";
+    }   
+  }); 
+  //print("customization: updatedCount: " +  updatedCount.toString()); 
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
 // dateBlock = "2000-01-01T00:00:00"
 // if (currentVersion < dateBlock) {
 //   // Prototype Block for additional upgrade topics run only once
