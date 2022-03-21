@@ -289,7 +289,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"vpid\": \"{{vpID}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": \"{{endDate}}\",\n  \"hierarchy\": {\n    \"allNodes\": [\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce5\",\n        \"hryNodeKey\": \"0\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"0§01 Preparation§\",\n            \"0§02 Blueprints§\",\n            \"0§03 Realization§\",\n            \"0§04 Final Preparation / GoLive§\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce6\",\n          \"elemName\": \".\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce7\",\n        \"hryNodeKey\": \"0§01 Preparation§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce8\",\n          \"elemName\": \"01 Preparation\",\n          \"origName\": null,\n          \"indexOfElem\": 2,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce9\",\n        \"hryNodeKey\": \"0§02 Blueprints§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0002\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cea\",\n          \"elemName\": \"02 Blueprints\",\n          \"origName\": null,\n          \"indexOfElem\": 3,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ceb\",\n        \"hryNodeKey\": \"0§03 Realization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0003\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cec\",\n          \"elemName\": \"03 Realization\",\n          \"origName\": null,\n          \"indexOfElem\": 4,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ced\",\n        \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0004\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cee\",\n          \"elemName\": \"04 Final Preparation / GoLive\",\n          \"origName\": null,\n          \"indexOfElem\": 5,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cef\",\n        \"hryNodeKey\": \"1§Finalization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf0\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§01 Preparation§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf1\",\n        \"hryNodeKey\": \"1§Finalization§0002\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf2\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§02 Blueprints§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf3\",\n        \"hryNodeKey\": \"1§Finalization§0003\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf4\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§03 Realization§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf5\",\n        \"hryNodeKey\": \"1§Finalization§0004\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf6\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\n        }\n      }\n    ]\n  },  \n  \"customDblFields\": [],\n  \"customStringFields\": [],\n  \"AllPhases\": [\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cc4\",\n      \"AllRoles\": [],\n      \"AllCosts\": [],\n      \"AllResults\": [],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 20,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 592,\n      \"name\": \"0§.§\",\n      \"shortName\": \"\",\n      \"originalName\": \".\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cc5\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            3,\n            3,\n            3,\n            2.875\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc6\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            1.9375,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc7\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Kosten-/Nutzen Analyse\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc8\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cc9\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cca\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§\",\n          \"verantwortlich\": \"\",\n          \"offset\": 106,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 4,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 112,\n      \"name\": \"0§01 Preparation§\",\n      \"shortName\": \"\",\n      \"originalName\": \"01 Preparation\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201ccb\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            3,\n            6,\n            6,\n            6,\n            2.75\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccc\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            5,\n            9,\n            9,\n            9,\n            3.625\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccd\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            2,\n            1,\n            0.9375\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cce\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Click-Prototyp\",\n            \"Machbarkeits-Analyse\",\n            \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccf\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cd0\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cd1\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0002\",\n          \"verantwortlich\": \"\",\n          \"offset\": 120,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 2,\n      \"relEnde\": 6,\n      \"startOffsetinDays\": 42,\n      \"dauerInDays\": 123,\n      \"name\": \"0§02 Blueprints§\",\n      \"shortName\": \"\",\n      \"originalName\": \"02 Blueprints\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cd2\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            4,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            4,\n            4.5,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd3\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            17,\n            19,\n            19,\n            19,\n            19,\n            19,\n            19,\n            19,\n            18,\n            19,\n            3\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd4\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            8,\n            10,\n            10,\n            9,\n            10,\n            9,\n            10,\n            10,\n            9,\n            10,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd5\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            4,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            1\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd6\",\n          \"RollenTyp\": 23,\n          \"teamID\": 1010\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd7\",\n          \"RollenTyp\": 5,\n          \"teamID\": 1010\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd8\",\n          \"RollenTyp\": 4,\n          \"teamID\": 1010\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\n            \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd9\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cda\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cdb\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0003\",\n          \"verantwortlich\": \"\",\n          \"offset\": 292,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 5,\n      \"relEnde\": 15,\n      \"startOffsetinDays\": 123,\n      \"dauerInDays\": 304,\n      \"name\": \"0§03 Realization§\",\n      \"shortName\": \"\",\n      \"originalName\": \"03 Realization\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cdc\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            2,\n            2,\n            2,\n            1.875\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cdd\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            8,\n            9,\n            9,\n            9,\n            9,\n            3.5\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cde\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            9,\n            10,\n            9,\n            10,\n            9,\n            3\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cdf\",\n          \"RollenTyp\": 6,\n          \"teamID\": 1001\n        },\n        {\n          \"Bedarf\": [\n            3,\n            4,\n            4,\n            4,\n            4,\n            1\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce0\",\n          \"RollenTyp\": 11,\n          \"teamID\": 1001\n        },\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            2,\n            2,\n            2,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce1\",\n          \"RollenTyp\": 32,\n          \"teamID\": 1001\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Rollout Plan \",\n            \"Schulungspartner unter Vertrag\",\n            \"Schulungstermine festgelegt\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce2\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201ce3\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201ce4\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0004\",\n          \"verantwortlich\": \"\",\n          \"offset\": 157,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 15,\n      \"relEnde\": 20,\n      \"startOffsetinDays\": 426,\n      \"dauerInDays\": 163,\n      \"name\": \"0§04 Final Preparation / GoLive§\",\n      \"shortName\": \"\",\n      \"originalName\": \"04 Final Preparation / GoLive\",\n      \"appearance\": \"Phasen Default\"\n    }\n  ],\n  \"variantDescription\": \"\",\n  \"Risiko\": 2,\n  \"StrategicFit\": 5,\n  \"Erloes\": 380,\n  \"status\": \"beauftragt\",\n  \"ampelStatus\": 0,\n  \"ampelErlaeuterung\": \"\",\n  \"farbe\": 682978,\n  \"Schrift\": 10,\n  \"Schriftfarbe\": 16777215,\n  \"VorlagenName\": \"IM BP\",\n  \"Dauer\": 20,\n  \"complexity\": 0,\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\n  \"businessUnit\": \"BU1\"\n}"
+											"raw": "{\n  \"vpid\": \"{{vpID}}\",\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": \"{{endDate}}\",\n  \"hierarchy\": {\n    \"allNodes\": [\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce5\",\n        \"hryNodeKey\": \"0\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"0§01 Preparation§\",\n            \"0§02 Blueprints§\",\n            \"0§03 Realization§\",\n            \"0§04 Final Preparation / GoLive§\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce6\",\n          \"elemName\": \".\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce7\",\n        \"hryNodeKey\": \"0§01 Preparation§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce8\",\n          \"elemName\": \"01 Preparation\",\n          \"origName\": null,\n          \"indexOfElem\": 2,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ce9\",\n        \"hryNodeKey\": \"0§02 Blueprints§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0002\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cea\",\n          \"elemName\": \"02 Blueprints\",\n          \"origName\": null,\n          \"indexOfElem\": 3,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ceb\",\n        \"hryNodeKey\": \"0§03 Realization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0003\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cec\",\n          \"elemName\": \"03 Realization\",\n          \"origName\": null,\n          \"indexOfElem\": 4,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201ced\",\n        \"hryNodeKey\": \"0§04 Final Preparation / GoLive§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [\n            \"1§Finalization§0004\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cee\",\n          \"elemName\": \"04 Final Preparation / GoLive\",\n          \"origName\": null,\n          \"indexOfElem\": 5,\n          \"parentNodeKey\": \"0§.§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cef\",\n        \"hryNodeKey\": \"1§Finalization§\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf0\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§01 Preparation§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf1\",\n        \"hryNodeKey\": \"1§Finalization§0002\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf2\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§02 Blueprints§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf3\",\n        \"hryNodeKey\": \"1§Finalization§0003\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf4\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§03 Realization§\"\n        }\n      },\n      {\n        \"_id\": \"6041fcb23f3ff819a1201cf5\",\n        \"hryNodeKey\": \"1§Finalization§0004\",\n        \"hryNode\": {\n          \"childNodeKeys\": [],\n          \"_id\": \"6041fcb23f3ff819a1201cf6\",\n          \"elemName\": \"Finalization\",\n          \"origName\": null,\n          \"indexOfElem\": 1,\n          \"parentNodeKey\": \"0§04 Final Preparation / GoLive§\"\n        }\n      }\n    ]\n  },  \n  \"customDblFields\": [],\n  \"customStringFields\": [],\n  \"AllPhases\": [\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cc4\",\n      \"AllRoles\": [],\n      \"AllCosts\": [],\n      \"AllResults\": [],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 20,\n      \"invoice\": {\"Key\": 100},\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 592,\n      \"name\": \"0§.§\",\n      \"shortName\": \"\",\n      \"originalName\": \".\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cc5\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            3,\n            3,\n            3,\n            2.875\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc6\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            1.9375,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc7\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Kosten-/Nutzen Analyse\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cc8\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cc9\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cca\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§\",\n          \"verantwortlich\": \"\",\n          \"offset\": 106,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 1,\n      \"relEnde\": 4,\n      \"startOffsetinDays\": 0,\n      \"dauerInDays\": 112,\n      \"name\": \"0§01 Preparation§\",\n      \"shortName\": \"\",\n      \"originalName\": \"01 Preparation\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201ccb\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            3,\n            6,\n            6,\n            6,\n            2.75\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccc\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            5,\n            9,\n            9,\n            9,\n            3.625\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccd\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            2,\n            1,\n            0.9375\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cce\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Click-Prototyp\",\n            \"Machbarkeits-Analyse\",\n            \"alle Testfälle beschrieben, unterteilt in Muss- und Kann\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ccf\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cd0\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cd1\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0002\",\n          \"verantwortlich\": \"\",\n          \"offset\": 120,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"invoice\": {\"Key\": 150},\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 2,\n      \"relEnde\": 6,\n      \"startOffsetinDays\": 42,\n      \"dauerInDays\": 123,\n      \"name\": \"0§02 Blueprints§\",\n      \"shortName\": \"\",\n      \"originalName\": \"02 Blueprints\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cd2\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            4,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            4,\n            4.5,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd3\",\n          \"RollenTyp\": 2,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            17,\n            19,\n            19,\n            19,\n            19,\n            19,\n            19,\n            19,\n            18,\n            19,\n            3\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd4\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            8,\n            10,\n            10,\n            9,\n            10,\n            9,\n            10,\n            10,\n            9,\n            10,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd5\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            4,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            5,\n            1\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd6\",\n          \"RollenTyp\": 23,\n          \"teamID\": 1010\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd7\",\n          \"RollenTyp\": 5,\n          \"teamID\": 1010\n        },\n        {\n          \"Bedarf\": [\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            1,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd8\",\n          \"RollenTyp\": 4,\n          \"teamID\": 1010\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"90% der Muss-Testfälle erfüllt und fehlerfrei\",\n            \"Zeitplan für max. restl. 10% der Muss-Testfälle freigegeben\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cd9\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201cda\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201cdb\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0003\",\n          \"verantwortlich\": \"\",\n          \"offset\": 292,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 5,\n      \"relEnde\": 15,\n      \"startOffsetinDays\": 123,\n      \"dauerInDays\": 304,\n      \"name\": \"0§03 Realization§\",\n      \"invoice\": {\"Key\": 200},\n      \"shortName\": \"\",\n      \"originalName\": \"03 Realization\",\n      \"appearance\": \"Phasen Default\"\n    },\n    {\n      \"deliverables\": [],\n      \"_id\": \"6041fcb23f3ff819a1201cdc\",\n      \"AllRoles\": [\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            2,\n            2,\n            2,\n            1.875\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cdd\",\n          \"RollenTyp\": 6,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            8,\n            9,\n            9,\n            9,\n            9,\n            3.5\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cde\",\n          \"RollenTyp\": 16,\n          \"teamID\": -1\n        },\n        {\n          \"Bedarf\": [\n            9,\n            10,\n            9,\n            10,\n            9,\n            3\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201cdf\",\n          \"RollenTyp\": 6,\n          \"teamID\": 1001\n        },\n        {\n          \"Bedarf\": [\n            3,\n            4,\n            4,\n            4,\n            4,\n            1\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce0\",\n          \"RollenTyp\": 11,\n          \"teamID\": 1001\n        },\n        {\n          \"Bedarf\": [\n            2,\n            2,\n            2,\n            2,\n            2,\n            0\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce1\",\n          \"RollenTyp\": 32,\n          \"teamID\": 1001\n        }\n      ],\n      \"AllCosts\": [],\n      \"AllResults\": [\n        {\n          \"deliverables\": [\n            \"Rollout Plan \",\n            \"Schulungspartner unter Vertrag\",\n            \"Schulungstermine festgelegt\"\n          ],\n          \"_id\": \"6041fcb23f3ff819a1201ce2\",\n          \"bewertungen\": [\n            {\n              \"_id\": \"6041fcb23f3ff819a1201ce3\",\n              \"key\": \"#Mrz 21\",\n              \"bewertung\": {\n                \"_id\": \"6041fcb23f3ff819a1201ce4\",\n                \"color\": 0,\n                \"description\": \"\",\n                \"deliverables\": \"\",\n                \"bewerterName\": \"\",\n                \"datum\": \"2021-03-05T10:19:39.0210489+01:00\"\n              }\n            }\n          ],\n          \"name\": \"1§Finalization§0004\",\n          \"verantwortlich\": \"\",\n          \"offset\": 157,\n          \"alternativeColor\": 13959039,\n          \"shortName\": \"\",\n          \"originalName\": \"Finalization\",\n          \"appearance\": \"Meilenstein Default\",\n          \"percentDone\": 0\n        }\n      ],\n      \"AllBewertungen\": [],\n      \"percentDone\": 0,\n      \"responsible\": \"\",\n      \"ampelStatus\": 0,\n      \"ampelErlaeuterung\": \"\",\n      \"minDauer\": 0,\n      \"maxDauer\": 0,\n      \"relStart\": 15,\n      \"relEnde\": 20,\n      \"startOffsetinDays\": 426,\n      \"dauerInDays\": 163,\n      \"name\": \"0§04 Final Preparation / GoLive§\",\n      \"invoice\": {\"Key\": 250},\n      \"shortName\": \"\",\n      \"originalName\": \"04 Final Preparation / GoLive\",\n      \"appearance\": \"Phasen Default\"\n    }\n  ],\n  \"variantDescription\": \"\",\n  \"Risiko\": 2,\n  \"StrategicFit\": 5,\n  \"Erloes\": 380,\n  \"status\": \"beauftragt\",\n  \"ampelStatus\": 0,\n  \"ampelErlaeuterung\": \"\",\n  \"farbe\": 682978,\n  \"Schrift\": 10,\n  \"Schriftfarbe\": 16777215,\n  \"VorlagenName\": \"IM BP\",\n  \"Dauer\": 20,\n  \"complexity\": 0,\n  \"description\": \"Neu-Entwicklung zu Sys 9, Thema 2\",\n  \"businessUnit\": \"BU1\"\n}"
 										},
 										"url": {
 											"raw": "{{url}}/vpv",
@@ -839,6 +839,142 @@
 									"response": []
 								},
 								{
+									"name": "00-99-05 Get VC for Delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"",
+													"pm.test(\"Check that VC Testname does not exist\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
+													"    var baseName = pm.environment.get(\"VCBaseName\");",
+													"    var searchList = [];",
+													"    searchList.push(baseName.concat('01'));",
+													"    searchList.push(baseName.concat('02'));",
+													"    searchList.push(baseName.concat('03'));",
+													"    var list = jsonData.vc;",
+													"    var listItems = [];",
+													"    var today = new Date();",
+													"    today.setHours(0, 0, 0, 0);",
+													"    list.forEach(vc => {",
+													"        if (searchList.includes(vc.name)) {",
+													"            // console.log(\"VC found check date\", vc.name, (new Date(vc.createdAt)).getTime(), today.getTime())",
+													"            // delete the VC only if they are older than today",
+													"            if ((new Date(vc.createdAt)).getTime() < today.getTime()) {",
+													"                listItems.push(vc._id);",
+													"            }",
+													"        }",
+													"    })",
+													"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+													"    console.log(\"Found VCs to delete\", listItems.length);",
+													"    if (listItems.length == 0) {",
+													"        postman.setNextRequest(\"00-99-99 Final\");",
+													"    }",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc"
+											]
+										},
+										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+									},
+									"response": []
+								},
+								{
+									"name": "00-99-06 Delete VC Multiple",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+													"pm.expect(listItems.length).to.be.at.least(1, \"No more VCs to Delete\");",
+													"var DeleteID = listItems[0];",
+													"listItems.shift();",
+													"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+													"pm.globals.set(\"DeleteID\", DeleteID);",
+													"if (listItems.length > 0) {",
+													"    postman.setNextRequest(\"00-99-06 Delete VC Multiple\");     ",
+													"}",
+													"console.log(\"Remaining VCs to Delete\", listItems.length)"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{url}}/vc/{{DeleteID}}?sysadmin=1",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{DeleteID}}"
+											],
+											"query": [
+												{
+													"key": "sysadmin",
+													"value": "1"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "00-99-99 Final",
 									"event": [
 										{
@@ -952,7 +1088,7 @@
 													"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
 													"    var searchName = pm.environment.get(\"VCBaseName\") + '01';",
 													"    var list = jsonData.vc;",
-													"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+													"    var index = list.findIndex(item => item.name == searchName);",
 													"    if (index >= 0) {",
 													"        console.log(\"Skip Creation, VC exists:\", list[index].name)",
 													"        pm.globals.set(\"vcID\", list[index]._id);",
@@ -1409,7 +1545,7 @@
 													"    pm.expect(jsonData.vc && jsonData.vc.length >= 0).to.be.eql(true, \"No VC List found\");",
 													"    var searchName = pm.environment.get(\"VCBaseName\") + '02';",
 													"    var list = jsonData.vc;",
-													"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+													"    var index = list.findIndex(item => item.name == searchName);",
 													"    if (index >= 0) {",
 													"        console.log(\"Skip Creation, VC exists:\", list[index].name)",
 													"        pm.globals.set(\"vcID\", list[index]._id);",
@@ -7079,6 +7215,13 @@
 													"    listItems.push(item.uid);",
 													"}",
 													"",
+													"item = orga.allRoles.find(role => role.name.indexOf('Erich') >= 0)",
+													"if (item) {",
+													"    console.log(\"Found Orga Unit Gap\", item.uid, item.name);",
+													"    item.name = item.name.concat(' (Gap)')",
+													"    listItems.push(item.uid);",
+													"}",
+													"",
 													"item = orga.allRoles.find(role => role.name.indexOf('Erika') >= 0)",
 													"if (item) {",
 													"    console.log(\"Found Orga Unit Move\", item.uid, item.name);",
@@ -8366,7 +8509,7 @@
 									"response": []
 								},
 								{
-									"name": "02-10-44 Get VC Orga Specific Hierarchy&Capa Copy",
+									"name": "02-10-44 Get VC Orga Specific Hierarchy&Capa",
 									"event": [
 										{
 											"listen": "test",
@@ -8532,8 +8675,8 @@
 											"listen": "prerequest",
 											"script": {
 												"exec": [
-													"var timestamp = new Date(pm.globals.get(\"timestamp\"))",
-													"timestamp.setMonth(timestamp.getMonth() + 1)",
+													"var timestamp = new Date()",
+													"timestamp.setMonth(timestamp.getMonth() - 6)",
 													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
 													"",
 													"var allUnits = JSON.parse(pm.globals.get(\"allUnits\"));",
@@ -10806,6 +10949,86 @@
 									"response": []
 								},
 								{
+									"name": "03-01-21a Update Orga-6Mon",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check short capacity arrays\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var organisation = jsonData.organisation;",
+													"    pm.expect(organisation?.length).to.be.eql(1, \"Wrong expected number of organisation\");",
+													"    var allRoles = organisation[0].allRoles;",
+													"    allRoles?.forEach(role => {",
+													"        pm.expect(role.kapazitaet).to.be.eql(undefined, \"Capacity found for \", role.name)",
+													"    })",
+													"    pm.globals.set('TempID', organisation[0]._id);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var orgaValid = new Date();",
+													"orgaValid.setDate(1);",
+													"orgaValid.setHours(0,0,0,0);",
+													"orgaValid.setMonth(orgaValid.getMonth() - 6);",
+													"pm.variables.set(\"varOrgaValid\", orgaValid);",
+													"console.log(\"Organisation Timestamp\", orgaValid.toISOString())",
+													"",
+													"var orga = JSON.parse(pm.globals.get(\"vcTemplateOrga\"));",
+													"orga.timestamp = orgaValid;",
+													"orga.name = 'Organisation-6M';",
+													"",
+													"pm.variables.set(\"varOrga\", JSON.stringify(orga));",
+													"pm.variables.set(\"varOrgaValid\", orgaValid);",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{{varOrga}}"
+										},
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"organisation",
+												"{{TempID}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "03-01-22 Get VC Orga specific",
 									"event": [
 										{
@@ -12281,7 +12504,7 @@
 									"response": []
 								},
 								{
-									"name": "03-02-11b Get VC All Orgas Hirarchy",
+									"name": "03-02-11b Get VC All Orgas Hierarchy",
 									"event": [
 										{
 											"listen": "test",
@@ -12315,12 +12538,6 @@
 													"        // console.log(\"All Rolles Indexed:\", orgaListIndexed.length);",
 													"        // verify if the subIDs are defined",
 													"        orgaListIndexed.forEach(item => checkSubRoles(item, orgaListIndexed));",
-													"        orgaList = orgaListIndexed.filter(item => item != undefined);",
-													"        orgaList.sort((a, b) => a.uid - b.uid);",
-													"        console.log(\"All Rolles:\", orgaList.length);",
-													"        var orgaListReduced = [];",
-													"        orgaList.forEach(item => orgaListReduced.push({uid: item.uid, name: item.name, subRoleIDs: item.subRoleIDs}));",
-													"        // console.log(JSON.stringify(orgaListReduced));",
 													"    })",
 													"});",
 													""
@@ -12351,7 +12568,7 @@
 											}
 										],
 										"url": {
-											"raw": "{{url}}/vc/{{vcID}}/organisation?hierarchy=1",
+											"raw": "{{url}}/vc/{{vcID}}/organisation?hierarchy=1&withCapa=1",
 											"host": [
 												"{{url}}"
 											],
@@ -12363,6 +12580,91 @@
 											"query": [
 												{
 													"key": "hierarchy",
+													"value": "1"
+												},
+												{
+													"key": "withCapa",
+													"value": "1"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "03-02-11c Get VC All Orgas Compatibility",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Verify Orga old values\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var organisation = jsonData.vcsetting;",
+													"    pm.expect(organisation?.length).to.be.eql(3, \"Wrong expected number of Organisations\");",
+													"    organisation.forEach(orga => {",
+													"        var list = orga.value.allRoles;",
+													"        pm.expect(list.length >= 0).to.be.eql(true, \"No Roles List found\");",
+													"        list.forEach(item => {",
+													"            pm.expect(item.tagessatz).to.be.gte(0, \"Tagessatz missing \" + item.name); ",
+													"            if (!item.isSummaryRole) {",
+													"                pm.expect(item.defaultKapa).to.be.gte(0, \"defaultKapa missing for role \" + item.name); ",
+													"                pm.expect(item.defCapaDay).to.be.gte(0, \"defCapaDay missing \" + item.name); ",
+													"            }",
+													"            if (item.startOfCal) {",
+													"                pm.expect(item.kapazitaet?.length).to.be.gte(0, \"capacity info missing \" + item.name); ",
+													"            }       ",
+													"        });",
+													"    })",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/setting?type=organisation&withCapa=1",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"setting"
+											],
+											"query": [
+												{
+													"key": "type",
+													"value": "organisation"
+												},
+												{
+													"key": "withCapa",
 													"value": "1"
 												}
 											]
@@ -33832,7 +34134,7 @@
 											"raw": "{\n    \"variantName\": \"pfv\"\n}"
 										},
 										"url": {
-											"raw": "{{url}}/vpv/{{vpvID}}/copy?level=3",
+											"raw": "{{url}}/vpv/{{vpvID}}/copy?level=4",
 											"host": [
 												"{{url}}"
 											],
@@ -33844,8 +34146,283 @@
 											"query": [
 												{
 													"key": "level",
-													"value": "3"
+													"value": "4"
 												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "05-06-13 Create a VPV",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check the VPV Result\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    pm.globals.set(\"vpvID\", list[0]._id);",
+													"    var vpv = list[0];",
+													"    pm.expect(vpv.hierarchy).not.to.be.eql(undefined, \"VPV does not contain hierarchy\");",
+													"    pm.expect(vpv.AllPhases).not.to.be.eql(undefined, \"VPV does not contain AllPhases\");",
+													"    pm.expect(vpv.keyMetrics).to.be.not.eql(undefined, \"VPV does not contain keyMetrics \" + vpv._id.toString());",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var vpv = JSON.parse(pm.globals.get(\"vpvTemplateLarge\"));",
+													"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpvTemplateLarge in globals missing\");",
+													"",
+													"var timestamp = new Date();",
+													"timestamp.setMonth(timestamp.getMonth() - 3);",
+													"timestamp.setDate(2);",
+													"timestamp.setHours(9, 0, 0, 0);",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													"",
+													"",
+													"vpv.variantName = '';",
+													"vpv.vpid = pm.globals.get(\"vpID\");",
+													"vpv.timestamp = timestamp;",
+													"delete vpv.actualDataUntil;",
+													"",
+													"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"variantName\": \"\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv/{{vpvID}}/copy",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv",
+												"{{vpvID}}",
+												"copy"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "05-06-14 Get VPV Latest",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, 'No VPV found');",
+													"    var vpv = jsonData.vpv[0];",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    pm.globals.set(\"timestamp\", vpv.timestamp);",
+													"    delete vpv._id;",
+													"    delete vpv.vpid;",
+													"    delete vpv.timestamp;",
+													"    pm.globals.set(\"vpv\", JSON.stringify(vpv));",
+													"});",
+													"",
+													"    "
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vpv?vpid={{vpID}}&refDate=&variantID=&longList=1",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv"
+											],
+											"query": [
+												{
+													"key": "vpid",
+													"value": "{{vpID}}"
+												},
+												{
+													"key": "refDate",
+													"value": ""
+												},
+												{
+													"key": "variantID",
+													"value": ""
+												},
+												{
+													"key": "longList",
+													"value": "1"
+												}
+											]
+										},
+										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+									},
+									"response": []
+								},
+								{
+									"name": "05-06-16 Create a VPV with Deadline Status",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var vpv = JSON.parse(pm.globals.get(\"vpv\"));",
+													"pm.expect(vpv && vpv.AllPhases != undefined).to.be.eql(true, \"vpv in globals missing\");",
+													"var startDate = new Date(vpv.startDate);",
+													"var actDate = new Date();",
+													"var actual = Math.round((actDate.getTime() - startDate.getTime()) / 1000 / 60 / 60 / 24)",
+													"var pastCount = 0;",
+													"var futureCount = 0;",
+													"vpv.AllPhases.forEach(phase => {",
+													"    if (phase.name == '0§.§') {",
+													"        return; // ignore the Project itself",
+													"    }",
+													"    var past = (phase.startOffsetinDays + phase.dauerInDays) <= actual;",
+													"    if (past) {",
+													"        switch (pastCount % 4) {",
+													"            case 0:",
+													"                // console.log(\"set to done ahead in time\");",
+													"                phase.percentDone = 1;",
+													"                if (phase.dauerInDays > 1) phase.dauerInDays--;",
+													"                break;",
+													"            case 1:",
+													"                // console.log(\"set to done in time\");",
+													"                phase.percentDone = 1;",
+													"                break;",
+													"            case 2:",
+													"                // console.log(\"set to done late in time\");",
+													"                phase.percentDone = 1;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"            case 3:",
+													"                // console.log(\"set to done late in time\");",
+													"                phase.percentDone = 0.8;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"        }",
+													"        pastCount++;",
+													"    } else {",
+													"         switch (futureCount % 4) {",
+													"            case 0:",
+													"                // set to done",
+													"                phase.percentDone = 1;",
+													"                break;",
+													"            case 1:",
+													"                // set to not done earlier",
+													"                phase.percentDone = 0.5;",
+													"                if (phase.dauerInDays > 1) phase.dauerInDays--;",
+													"                break;",
+													"            case 2:",
+													"                // set to not done in time",
+													"                phase.percentDone = 0.7;",
+													"                break;",
+													"            case 3:",
+													"                // set to not done late in time",
+													"                phase.percentDone = 0.3;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"        }",
+													"        futureCount++",
+													"    }",
+													"    phase.AllResults?.forEach(result => result.percentDone = phase.percentDone);",
+													"});",
+													"console.log(\"Deadline Status future/past\", futureCount, pastCount);",
+													"console.log(\"phase\", vpv.AllPhases[1].percentDone)",
+													"vpv.vpid = pm.globals.get(\"vpID\");",
+													"delete vpv.timestamp;",
+													"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check the VPV Result\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    var vpv = list[0];",
+													"    pm.expect(vpv.variantName).to.be.eql(\"\", \"Incorrect Variant Created\");",
+													"",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{{vpvTemp}}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv"
 											]
 										}
 									},
@@ -34540,7 +35117,7 @@
 													"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
 													"",
 													"var timestamp = new Date();",
-													"timestamp.setMonth(timestamp.getMonth(timestamp)-4);",
+													"timestamp.setMonth(timestamp.getMonth(timestamp)-5);",
 													"timestamp.setDate(1);",
 													"timestamp.setHours(9, 0, 0, 0);",
 													"console.log(\"Timestamp:\", timestamp.toISOString());",
@@ -35039,6 +35616,162 @@
 									"response": []
 								},
 								{
+									"name": "06-01-16 Create a PFV with Copy",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
+													"timestamp.setHours(timestamp.getHours() + 1);",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check the VPV Result\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    var vpv = list[0];",
+													"    pm.expect(vpv.variantName).to.be.eql(\"pfv\", \"Incorrect Variant Created\");",
+													"",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    delete vpv._id;",
+													"    delete vpv.vpid;",
+													"    delete vpv.timestamp;",
+													"    pm.globals.set(\"vpv\", JSON.stringify(vpv));",
+													"",
+													"    pm.expect(vpv.hierarchy).not.to.be.eql(undefined, \"VPV does not contain hierarchy\");",
+													"    pm.expect(vpv.AllPhases).not.to.be.eql(undefined, \"VPV does not contain AllPhases\");",
+													"    pm.expect(vpv.AllPhases.length).to.be.gte(5, \"VPV does contain less than 5 AllPhases\");",
+													"",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"timestamp\": \"{{timestamp}}\",\n    \"variantName\": \"pfv\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv/{{vpvID}}/copy",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv",
+												"{{vpvID}}",
+												"copy"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-01-17 Create a VPV with Copy",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
+													"timestamp.setHours(timestamp.getHours() + 6);",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check the VPV Result\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    var vpv = list[0];",
+													"    pm.expect(vpv.variantName).to.be.eql(\"\", \"Incorrect Variant Created\");",
+													"",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    delete vpv._id;",
+													"    delete vpv.timestamp;",
+													"    pm.globals.set(\"vpv\", JSON.stringify(vpv));",
+													"        var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    pm.expect(vpv.hierarchy).not.to.be.eql(undefined, \"VPV does not contain hierarchy\");",
+													"    pm.expect(vpv.AllPhases).not.to.be.eql(undefined, \"VPV does not contain AllPhases\");",
+													"    pm.expect(vpv.AllPhases.length).to.be.gte(5, \"VPV does contain less than 5 AllPhases\");",
+													"    pm.expect(vpv.keyMetrics).not.to.be.eql(undefined, \"VPV does not contain keyMetrics\");",
+													"",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n\t\"timestamp\": \"{{timestamp}}\",\n    \"variantName\": \"\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv/{{vpvID}}/copy",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv",
+												"{{vpvID}}",
+												"copy"
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "06-01-20 Get VPV Latest",
 									"event": [
 										{
@@ -35051,6 +35784,11 @@
 													"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, 'No VPV found');",
 													"    var vpv = jsonData.vpv[0];",
 													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    pm.globals.set(\"timestamp\", vpv.timestamp);",
+													"    delete vpv._id;",
+													"    delete vpv.vpid;",
+													"    delete vpv.timestamp;",
+													"    pm.globals.set(\"vpv\", JSON.stringify(vpv));",
 													"});",
 													"",
 													"    "
@@ -35068,7 +35806,7 @@
 											}
 										],
 										"url": {
-											"raw": "{{url}}/vpv?vpid={{vpID}}&refDate=&variantID=&keyMetrics=1",
+											"raw": "{{url}}/vpv?vpid={{vpID}}&refDate=&variantID=&longList=1",
 											"host": [
 												"{{url}}"
 											],
@@ -35089,7 +35827,7 @@
 													"value": ""
 												},
 												{
-													"key": "keyMetrics",
+													"key": "longList",
 													"value": "1"
 												}
 											]
@@ -35099,62 +35837,134 @@
 									"response": []
 								},
 								{
-									"name": "06-01-20 Get VPV Latest Copy",
+									"name": "06-01-22 Create a VPV with Deadline Status Copy",
 									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var vpv = JSON.parse(pm.globals.get(\"vpv\"));",
+													"pm.expect(vpv && vpv.AllPhases != undefined).to.be.eql(true, \"vpv in globals missing\");",
+													"",
+													"var timestamp = new Date(pm.globals.get(\"timestamp\"));",
+													"timestamp.setDate(timestamp.getDate() + 28);",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													"",
+													"var startDate = new Date(vpv.startDate);",
+													"var actDate = new Date();",
+													"var actual = Math.round((actDate.getTime() - startDate.getTime()) / 1000 / 60 / 60 / 24)",
+													"var pastCount = 0;",
+													"var futureCount = 0;",
+													"vpv.AllPhases.forEach(phase => {",
+													"    if (phase.name == '0§.§') {",
+													"        return; // ignore the Project itself",
+													"    }",
+													"    var past = (phase.startOffsetinDays + phase.dauerInDays) <= actual;",
+													"    if (past) {",
+													"        switch (pastCount % 3) {",
+													"            case 0:",
+													"                // console.log(\"set to done in time\");",
+													"                phase.percentDone = 1;",
+													"                break;",
+													"            case 1:",
+													"                // console.log(\"set to done late in time\");",
+													"                phase.percentDone = 1;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"            case 2:",
+													"                // console.log(\"set to done late in time\");",
+													"                phase.percentDone = 0.8;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"            case 3: //ignore at the moment",
+													"                // console.log(\"set to done ahead in time\");",
+													"                phase.percentDone = 1;",
+													"                if (phase.dauerInDays > 1) phase.dauerInDays--;",
+													"                break;",
+													"        }",
+													"        pastCount++;",
+													"    } else {",
+													"         switch (futureCount % 3) {",
+													"            case 0:",
+													"                // set to done",
+													"                phase.percentDone = 1;",
+													"                break;",
+													"            case 1:",
+													"                // set to not done in time",
+													"                phase.percentDone = 0.7;",
+													"                break;",
+													"            case 2:",
+													"                // set to not done late in time",
+													"                phase.percentDone = 0.3;",
+													"                phase.dauerInDays++;",
+													"                break;",
+													"            case 3: // ignore at the moment",
+													"                // set to not done earlier",
+													"                phase.percentDone = 0.5;",
+													"                if (phase.dauerInDays > 1) phase.dauerInDays--;",
+													"                break;",
+													"        }",
+													"        futureCount++",
+													"    }",
+													"    phase.AllResults?.forEach(result => result.percentDone = phase.percentDone);",
+													"});",
+													"console.log(\"Deadline Status future/past\", futureCount, pastCount);",
+													"vpv.vpid = pm.globals.get(\"vpID\");",
+													"vpv.timestamp = timestamp;",
+													"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
 										{
 											"listen": "test",
 											"script": {
 												"exec": [
 													"pm.test(\"Status code Check\", function () {",
 													"    pm.response.to.have.status(200);",
-													"    var jsonData = pm.response.json();",
-													"    pm.expect(jsonData.vpv && jsonData.vpv.length == 1).to.be.eql(true, 'No VPV found');",
-													"    var vpv = jsonData.vpv[0];",
-													"    pm.globals.set(\"vpvID\", vpv._id);",
 													"});",
 													"",
-													"    "
+													"pm.test(\"Check the VPV Result\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"",
+													"    var vpv = list[0];",
+													"    pm.expect(vpv.variantName).to.be.eql(\"\", \"Incorrect Variant Created\");",
+													"",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"});"
 												],
 												"type": "text/javascript"
 											}
 										}
 									],
 									"request": {
-										"method": "GET",
+										"method": "POST",
 										"header": [
 											{
 												"key": "access-key",
 												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
 											}
 										],
+										"body": {
+											"mode": "raw",
+											"raw": "{{vpvTemp}}"
+										},
 										"url": {
-											"raw": "{{url}}/vpv?vpid={{vpID}}&refDate=&variantID=&keyMetrics=1",
+											"raw": "{{url}}/vpv",
 											"host": [
 												"{{url}}"
 											],
 											"path": [
 												"vpv"
-											],
-											"query": [
-												{
-													"key": "vpid",
-													"value": "{{vpID}}"
-												},
-												{
-													"key": "refDate",
-													"value": ""
-												},
-												{
-													"key": "variantID",
-													"value": ""
-												},
-												{
-													"key": "keyMetrics",
-													"value": "1"
-												}
 											]
-										},
-										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+										}
 									},
 									"response": []
 								},
@@ -50300,7 +51110,7 @@
 									"response": []
 								},
 								{
-									"name": "06-30a-04 Get VC Orga by Name",
+									"name": "06-30a-04 Get VC Orga",
 									"event": [
 										{
 											"listen": "test",
@@ -50314,7 +51124,7 @@
 													"",
 													"    var found = false;",
 													"    organisation.forEach(orga => {",
-													"        if (orga.name == 'Organisation-Future') {",
+													"        if (orga.name.indexOf('Organisation-Future') == 0) {",
 													"            found = true;",
 													"            console.log(\"Organ found: \", orga.name);",
 													"            pm.globals.set(\"DeleteID\", orga._id);",
@@ -50375,6 +51185,7 @@
 												"exec": [
 													"pm.test(\"Status code Check\", function () {",
 													"    pm.response.to.have.status(200);",
+													"    postman.setNextRequest(\"06-30a-04 Get VC Orga\");",
 													"});",
 													"",
 													""
@@ -50936,7 +51747,7 @@
 													"var individualRoles = [11, 14]",
 													"vpv.AllPhases.forEach(phase => {",
 													"    phase.AllRoles.forEach(role => {",
-													"        if (groupRoles.includes(role.RollenTyp)) {",
+													"        if (role.teamID == -1 && groupRoles.includes(role.RollenTyp)) {",
 													"            // map this ressource request",
 													"            role.RollenTyp = individualRoles[occurence % individualRoles.length];",
 													"            occurence += 1;",
@@ -51509,7 +52320,7 @@
 													"var individualRoles = [09]",
 													"vpv.AllPhases.forEach(phase => {",
 													"    phase.AllRoles.forEach(role => {",
-													"        if (groupRoles.includes(role.RollenTyp)) {",
+													"        if (role.teamID == -1 && groupRoles.includes(role.RollenTyp)) {",
 													"            // map this ressource request",
 													"            role.RollenTyp = individualRoles[occurence % individualRoles.length];",
 													"            occurence += 1;",
@@ -52069,7 +52880,7 @@
 													"var individualRoles = [10]",
 													"vpv.AllPhases.forEach(phase => {",
 													"    phase.AllRoles.forEach(role => {",
-													"        if (groupRoles.includes(role.RollenTyp)) {",
+													"        if (role.teamID == -1 && groupRoles.includes(role.RollenTyp)) {",
 													"            // map this ressource request",
 													"            role.RollenTyp = individualRoles[occurence % individualRoles.length];",
 													"            occurence += 1;",
@@ -52645,7 +53456,7 @@
 													"var individualRoles = [12]",
 													"vpv.AllPhases.forEach(phase => {",
 													"    phase.AllRoles.forEach(role => {",
-													"        if (groupRoles.includes(role.RollenTyp)) {",
+													"        if (role.teamID == -1 && groupRoles.includes(role.RollenTyp)) {",
 													"            // map this ressource request",
 													"            role.RollenTyp = individualRoles[occurence % individualRoles.length];",
 													"            occurence += 1;",
@@ -52695,6 +53506,567 @@
 								},
 								{
 									"name": "06-33-99 Final",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vp",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vp"
+											]
+										},
+										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "06-34 VPV for VC03/VP05 Gap",
+							"item": [
+								{
+									"name": "06-34-03 Get VP of VC",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Check that VP exists or not\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vp;",
+													"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
+													"    var searchName = pm.environment.get(\"VPBaseName\") + '05 Gap';",
+													"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+													"    if (index >= 0) {",
+													"        console.log(\"Found:\", list[index].name)",
+													"        pm.globals.set(\"vpID\", list[index]._id);",
+													"        postman.setNextRequest(\"06-34-10 Get VPV\");",
+													"    } else {",
+													"        console.log(\"Item not found\", searchName)",
+													"    }",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vp?vcid={{vcID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vp"
+											],
+											"query": [
+												{
+													"key": "vcid",
+													"value": "{{vcID}}"
+												}
+											]
+										},
+										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-04 Create VP Real",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Check Created VPID\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var vpName = pm.variables.get(\"varVPName\");",
+													"    pm.expect(jsonData.vp[0].name).to.eql(vpName);",
+													"    pm.globals.set(\"vpID\", jsonData.vp[0]._id);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var varVPName = pm.environment.get(\"VPBaseName\") + '05 Gap';",
+													"pm.variables.set(\"varVPName\", varVPName);",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{  \n   \"name\":\"{{varVPName}}\",\n   \"vcid\":\"{{vcID}}\",\n   \"customFieldString\": [\n       {\"name\": \"_businessUnit\", \"value\": \"BU1\"}, \n       {\"name\": \"kundennummer\", \"value\": \"KdNr.4711\"}\n    ],\n   \"customFieldDouble\": [\n       {\"name\": \"_risk\", \"value\": \"3\"}, \n       {\"name\": \"_strategicFit\", \"value\": \"4\"}, \n       {\"name\": \"score\", \"value\": 1.5}\n    ]\n\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vp",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vp"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-05 Create a Variant PFV",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"",
+													"pm.test(\"Check Created Variant\", function () {",
+													"    var jsonData = pm.response.json();",
+													"    var variant = jsonData.variant[0];",
+													"    var user = pm.environment.get(\"UserAdmin\");",
+													"    pm.expect(variant.variantName).to.eql(\"pfv\");",
+													"    pm.expect(variant.email).to.eql(user);",
+													"    pm.expect(variant.vpvCount).to.eql(0);",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{  \n   \"variantName\":\"pfv\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vp/{{vpID}}/variant",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vp",
+												"{{vpID}}",
+												"variant"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-10 Get VPV",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    var listItems = [];",
+													"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
+													"    list.sort(function (a, b) { return (new Date(b.timestamp)).getTime() - (new Date(a.timestamp)).getTime() });",
+													"    list.forEach(item => listItems.push(item._id))",
+													"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+													"    console.log(\"List Length:\", listItems.length);",
+													"    if (listItems.length === 0) {",
+													"        postman.setNextRequest(\"06-34-15 Create a VPV PFV\");",
+													"    }",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vpv?vpid={{vpID}}&keyMetrics=1",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv"
+											],
+											"query": [
+												{
+													"key": "vpid",
+													"value": "{{vpID}}"
+												},
+												{
+													"key": "keyMetrics",
+													"value": "1"
+												}
+											]
+										},
+										"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-14 Delete VPV Real (multiple)",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+													"pm.expect(listItems.length).to.be.above(0, \"No more Items to delete\");",
+													"var DeleteID = listItems[0];",
+													"listItems.shift();",
+													"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+													"pm.globals.set(\"DeleteID\", DeleteID);",
+													"console.log(\"Remaining Items\", listItems.length);",
+													"if (listItems.length > 0) {",
+													"    postman.setNextRequest(\"06-34-11 Delete VPV Real (multiple)\");",
+													"}",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{url}}/vpv/{{DeleteID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv",
+												"{{DeleteID}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-15 Create a VPV PFV",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"    var vpv = list[0];",
+													"    pm.globals.set('vpv', JSON.stringify(vpv));",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    pm.globals.set('endDate', vpv.endDate);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var vpv = JSON.parse(pm.environment.get(\"vpvTemplate\"));",
+													"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
+													"",
+													"var timestamp = new Date();",
+													"timestamp.setMonth(timestamp.getMonth(timestamp)-4);",
+													"timestamp.setDate(1);",
+													"timestamp.setHours(8, 0, 0, 0);",
+													"console.log(\"Timestamp:\", timestamp.toISOString());",
+													"var startDate = new Date(timestamp);",
+													"startDate.setDate(2);",
+													"startDate.setHours(0, 0, 0, 0);",
+													"startDate.setMonth(startDate.getMonth() - 3);",
+													"var endDate = new Date(startDate);",
+													"if (vpv.AllPhases && vpv.AllPhases[0]) {",
+													"    var projdauerindays = vpv.AllPhases[0].dauerInDays;",
+													"    endDate.setDate(startDate.getDate() + projdauerindays-1); ",
+													"}",
+													"//var endDate = new Date(pm.globals.get(\"endDate\"));",
+													"//endDate.setMonth(endDate.getMonth() - 1);",
+													"var actualDataUntil = new Date(timestamp);",
+													"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
+													"actualDataUntil.setDate(0);",
+													"actualDataUntil.setHours(23, 59, 59, 0);",
+													"",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													"pm.globals.set(\"startDate\", startDate.toISOString());",
+													"pm.globals.set(\"endDate\", endDate.toISOString());",
+													"pm.globals.set(\"actualDataUntil\", actualDataUntil.toISOString());",
+													"vpv.variantName = 'pfv';",
+													"vpv.vpid = pm.globals.get(\"vpID\");",
+													"vpv.timestamp = timestamp;",
+													"vpv.actualDataUntil = actualDataUntil;",
+													"vpv.startDate = startDate;",
+													"vpv.endDate = endDate;",
+													"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{{vpvTemp}}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-16 Create a VPV with mapping",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var list = jsonData.vpv;",
+													"    pm.expect(list && list.length == 1).to.be.eql(true, \"No List found\");",
+													"    var vpv = list[0];",
+													"    pm.globals.set('vpv', JSON.stringify(vpv));",
+													"    pm.globals.set(\"vpvID\", vpv._id);",
+													"    pm.globals.set('endDate', vpv.endDate);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var vpv = JSON.parse(pm.environment.get(\"vpvTemplate\"));",
+													"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
+													"",
+													"var timestamp = new Date();",
+													"timestamp.setMonth(timestamp.getMonth(timestamp)-4);",
+													"timestamp.setDate(1);",
+													"timestamp.setHours(9, 0, 0, 0);",
+													"console.log(\"Timestamp:\", timestamp.toISOString());",
+													"var startDate = new Date(timestamp);",
+													"startDate.setDate(2);",
+													"startDate.setHours(0, 0, 0, 0);",
+													"startDate.setMonth(startDate.getMonth() - 3);",
+													"var endDate = new Date(startDate);",
+													"if (vpv.AllPhases && vpv.AllPhases[0]) {",
+													"    var projdauerindays = vpv.AllPhases[0].dauerInDays;",
+													"    endDate.setDate(startDate.getDate() + projdauerindays-1); ",
+													"}",
+													"//var endDate = new Date(pm.globals.get(\"endDate\"));",
+													"//endDate.setMonth(endDate.getMonth() - 1);",
+													"var actualDataUntil = new Date(timestamp);",
+													"actualDataUntil.setMonth(actualDataUntil.getMonth() - 1);",
+													"actualDataUntil.setDate(0);",
+													"actualDataUntil.setHours(23, 59, 59, 0);",
+													"",
+													"pm.globals.set(\"timestamp\", timestamp.toISOString());",
+													"pm.globals.set(\"startDate\", startDate.toISOString());",
+													"pm.globals.set(\"endDate\", endDate.toISOString());",
+													"pm.globals.set(\"actualDataUntil\", actualDataUntil.toISOString());",
+													"",
+													"// map every usage of ressource 'Entwickler' to 'Erika'",
+													"// map every usage of ressource 'Analysten' to 'Armin', 'Achim' 'Adelheid'",
+													"",
+													"var occurence = 0;",
+													"var groupRoles = [6, 9, 10, 12, 32]",
+													"var individualRoles = [7]",
+													"vpv.AllPhases.forEach(phase => {",
+													"    phase.AllRoles.forEach(role => {",
+													"        if (role.teamID == -1 && groupRoles.includes(role.RollenTyp)) {",
+													"            // map this ressource request",
+													"            role.RollenTyp = individualRoles[occurence % individualRoles.length];",
+													"            occurence += 1;",
+													"        }",
+													"    })",
+													"})",
+													"vpv.variantName = '';",
+													"vpv.vpid = pm.globals.get(\"vpID\");",
+													"vpv.timestamp = timestamp;",
+													"vpv.actualDataUntil = actualDataUntil;",
+													"vpv.startDate = startDate;",
+													"vpv.endDate = endDate;",
+													"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{{vpvTemp}}"
+										},
+										"url": {
+											"raw": "{{url}}/vpv",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vpv"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-34-99 Final",
 									"event": [
 										{
 											"listen": "test",
@@ -53106,6 +54478,61 @@
 									"response": []
 								},
 								{
+									"name": "06-38-11 Create a Variant (Gap)",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{  \n   \"variantName\":\"Gap\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}/vp/{{vpID}}/variant",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vp",
+												"{{vpID}}",
+												"variant"
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "06-38-15 Get VP of VC",
 									"event": [
 										{
@@ -53454,9 +54881,13 @@
 													"    var organisation = jsonData.organisation",
 													"    pm.expect(organisation?.length).to.be.eql(1, \"Wrong expected number of Organisations\");",
 													"    organisation = organisation[0];",
+													"    if (organisation.name.indexOf(\"Organisation-Future\") != 0) {",
+													"        postman.setNextRequest(\"06-39-02 Create Orga Future\");",
+													"    }",
 													"    pm.globals.set(\"timestamp\", organisation.timestamp);",
 													"    pm.globals.set(\"allUnits\", JSON.stringify(organisation.allUnits));",
 													"    pm.globals.set(\"TempID\", organisation._id);",
+													"    pm.globals.set(\"DeleteID\", organisation._id);",
 													"});",
 													""
 												],
@@ -53500,6 +54931,64 @@
 													"key": "refDate",
 													"value": "2050-01-01"
 												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-01a Delete Orga Future",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    postman.setNextRequest(\"06-39-01 Get VC Orga latest\");",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/setting/{{DeleteID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"setting",
+												"{{DeleteID}}"
 											]
 										}
 									},
@@ -53554,13 +55043,18 @@
 											"listen": "prerequest",
 											"script": {
 												"exec": [
+													"var timestamp = pm.globals.get(\"timestamp\");\r",
+													"timestamp = new Date(timestamp);\r",
 													"var orgaValid = new Date();\r",
 													"// orgaValid.setMonth(orgaValid.getMonth() + 1);\r",
 													"orgaValid.setDate(1);\r",
 													"orgaValid.setHours(0,0,0,0);\r",
+													"if (orgaValid.getTime() <= timestamp.getTime()) {\r",
+													"    orgaValid.setMonth(orgaValid.getMonth() + 1);\r",
+													"}\r",
 													"pm.variables.set(\"varOrgaValid\", orgaValid.toISOString());\r",
 													"\r",
-													"var begOfMonth = new Date();\r",
+													"var begOfMonth = new Date(orgaValid);\r",
 													"begOfMonth.setHours(0, 0, 0, 0);\r",
 													"begOfMonth.setDate(1);\r",
 													"\r",
@@ -53613,7 +55107,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation Move&Delete\",\r\n    \"timestamp\": \"{{varOrgaValid}}\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"name\": \"Organisation-Future Move&Delete\",\r\n    \"timestamp\": \"{{varOrgaValid}}\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation",
@@ -53796,7 +55290,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -53808,6 +55302,363 @@
 												"{{vcID}}",
 												"organisation",
 												"{{TempID}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-13 Get User Capa",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var capacity = jsonData.capacity;",
+													"    pm.expect(capacity).not.to.be.eql(undefined, \"No capacity found\");",
+													"    if (capacity.length == 2) {",
+													"        // capa gap allready done skip",
+													"        postman.setNextRequest(\"06-39-15 Get VC Capacity\");",
+													"    } else {",
+													"        pm.expect(capacity.length).to.be.eql(3, \"Wrong expected number of capacity\");",
+													"        capacity.sort((a, b) => (new Date(a.startOfYear)).getTime() - (new Date(b.startOfYear)).getTime());",
+													"        pm.globals.set(\"DeleteID\", capacity[1]._id);",
+													"        pm.globals.set(\"startDate\", capacity[1].startOfYear);",
+													"        var capaPerMonth = capacity[1].capaPerMonth;",
+													"        var changeIndex = capaPerMonth.findIndex(item => item != capaPerMonth[0]);",
+													"        pm.expect(changeIndex).to.be.gte(0, \"Capa Value are fixed for all months\");",
+													"    }",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var allUnits = pm.globals.get(\"allUnits\");",
+													"pm.expect(allUnits?.length).to.be.gt(0, \"AllUnits List not found\");",
+													"allUnits = JSON.parse(allUnits);",
+													"",
+													"var user=allUnits.find(item=>item.name.indexOf('(Gap)') >= 0);",
+													"console.log(\"found user\", user);",
+													"pm.globals.set('roleID', user?.uid);"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/capa?roleID={{roleID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"capa"
+											],
+											"query": [
+												{
+													"key": "roleID",
+													"value": "{{roleID}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-14 Get VC Capacity",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var capacity = jsonData.vc[0]?.capacity;",
+													"    pm.expect(capacity).not.to.be.eql(undefined, \"No capacity found\");",
+													"    pm.expect(capacity.length).to.be.eql(12, \"Wrong expected number of capacity\");",
+													"    var changeIndex = capacity.findIndex(item => item.internCapa_PT != capacity[0].internCapa_PT);",
+													"    pm.expect(changeIndex).to.be.gte(0, \"Capa Value are fixed for all months\"); ",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"actDate = new Date();",
+													"actDate.setDate(1);",
+													"actDate.setMonth(0);",
+													"actDate.setHours(0, 0, 0, 0);",
+													"pm.variables.set('varStartDate', actDate.toISOString());",
+													"actDate.setMonth(actDate.getMonth() + 11);",
+													"pm.variables.set('varEndDate', actDate.toISOString());",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&startDate={{varStartDate}}&endDate={{varEndDate}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"capacity"
+											],
+											"query": [
+												{
+													"key": "roleID",
+													"value": "{{roleID}}"
+												},
+												{
+													"key": "startDate",
+													"value": "{{varStartDate}}"
+												},
+												{
+													"key": "endDate",
+													"value": "{{varEndDate}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-14 Delete Capa User Gap",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/capa/{{DeleteID}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"capa",
+												"{{DeleteID}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-15 Get VC Capacity",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var capacity = jsonData.vc[0]?.capacity;",
+													"    pm.expect(capacity).not.to.be.eql(undefined, \"No capacity found\");",
+													"    pm.expect(capacity.length).to.be.eql(12, \"Wrong expected number of capacity\");",
+													"    var changeIndex = capacity.findIndex(item => item.internCapa_PT != capacity[0].internCapa_PT);",
+													"    pm.expect(changeIndex).to.be.eq(-1, \"Capa Value are not fixed for all months\"); ",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"actDate = new Date();",
+													"actDate.setDate(1);",
+													"actDate.setMonth(0);",
+													"actDate.setHours(0, 0, 0, 0);",
+													"pm.variables.set('varStartDate', actDate.toISOString());",
+													"actDate.setMonth(actDate.getMonth() + 11);",
+													"pm.variables.set('varEndDate', actDate.toISOString());",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/capacity?roleID={{roleID}}&startDate={{varStartDate}}&endDate={{varEndDate}}",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"capacity"
+											],
+											"query": [
+												{
+													"key": "roleID",
+													"value": "{{roleID}}"
+												},
+												{
+													"key": "startDate",
+													"value": "{{varStartDate}}"
+												},
+												{
+													"key": "endDate",
+													"value": "{{varEndDate}}"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-16 Get VC OrgaList with Capa",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"    var jsonData = pm.response.json();",
+													"    var organisation = jsonData.organisation;",
+													"    pm.expect(organisation?.length).to.be.eql(1, \"Wrong expected number of organisation\");",
+													"    pm.globals.set(\"allUnits\", JSON.stringify(organisation[0].allUnits));",
+													"    pm.globals.set(\"TempID\", organisation[0]._id)",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/organisation?refDate=2050-01-01&hierarchy=1&withCapa=1",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"organisation"
+											],
+											"query": [
+												{
+													"key": "refDate",
+													"value": "2050-01-01"
+												},
+												{
+													"key": "hierarchy",
+													"value": "1"
+												},
+												{
+													"key": "withCapa",
+													"value": "1"
+												}
 											]
 										}
 									},
@@ -54078,7 +55929,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation Actual\",\r\n    \"timestamp\": \"{{varOrgaValid}}\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"name\": \"Organisation-Future Actual\",\r\n    \"timestamp\": \"{{varOrgaValid}}\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation",
@@ -54313,7 +56164,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -54551,7 +56402,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -54638,7 +56489,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -54789,7 +56640,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -54937,7 +56788,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n    \"name\": \"Organisation\",\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
+											"raw": "{\r\n    \"allUnits\": {{varAllUnits}}\r\n}\r\n"
 										},
 										"url": {
 											"raw": "{{url}}/vc/{{vcID}}/organisation/{{TempID}}",
@@ -55005,6 +56856,73 @@
 												"{{vcID}}",
 												"setting",
 												"{{TempID}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "06-39-40 Insert Capa again",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code Check\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var orgaValid = new Date();\r",
+													"// orgaValid.setMonth(orgaValid.getMonth());\r",
+													"orgaValid.setDate(1);\r",
+													"orgaValid.setHours(0,0,0,0);\r",
+													"pm.variables.set(\"varOrgaValid\", orgaValid.toISOString());\r",
+													"\r",
+													"var allUnits = JSON.parse(pm.globals.get(\"allUnits\"));\r",
+													"pm.expect(allUnits?.length).to.be.gt(50, \"Unit Definition missing\")\r",
+													"\r",
+													"// modify orga: Do the change for marked users\r",
+													" \r",
+													"pm.variables.set(\"varAllUnits\", JSON.stringify(allUnits));\r",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "access-key",
+												"value": "{{token}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n            \"capaPerMonth\": [\r\n                5,\r\n                5,\r\n                5,\r\n                5,\r\n                5,\r\n                5,\r\n                5,\r\n                1,\r\n                5,\r\n                5,\r\n                5,\r\n                5\r\n            ],\r\n            \"roleID\": 7,\r\n            \"startOfYear\": \"{{startDate}}\"\r\n}\r\n"
+										},
+										"url": {
+											"raw": "{{url}}/vc/{{vcID}}/capa",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"vc",
+												"{{vcID}}",
+												"capa"
 											]
 										}
 									},

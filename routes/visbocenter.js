@@ -2400,8 +2400,8 @@ router.route('/:vcid/organisation/:settingid')
 		req.auditDescription = 'VISBO Center Organisation Update';
 		req.auditInfo = req.body.name;
 
-		logger4js.trace('Put VISBO Center Organisation Req Body: %O Name %s', req.body, req.body.name);
-		logger4js.info('Put VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name, userId, req.query.sysadmin);
+		logger4js.trace('Put VISBO Center Organisation Req Body: %O Name %s', req.body, req.body.name || '');
+		logger4js.info('Put VISBO Center Organisation with name %s executed by user %s sysadmin %s', req.body.name || '', userId, req.query.sysadmin);
 
 		if (!(req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ManagePerm)) {
 			return res.status(403).send({
@@ -2411,7 +2411,7 @@ router.route('/:vcid/organisation/:settingid')
 			});
 		}
 		if (req.body.name) req.body.name = (req.body.name || '').trim();
-		if (!validate.validateName(req.body.name, false)) {
+		if (!validate.validateName(req.body.name, true)) {
 			logger4js.debug('Put VISBO Center Organisation name not accepted %O', req.body);
 			return res.status(400).send({
 				state: 'failure',
