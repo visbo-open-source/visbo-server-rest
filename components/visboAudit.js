@@ -60,10 +60,7 @@ function squeezeAudit(task, finishedTask) {
 	if (latestSqueeze < endSqueeze) endSqueeze = latestSqueeze;
 	// set it to beginning of Month
 	endSqueeze.setDate(1);
-	endSqueeze.setHours(0);
-	endSqueeze.setMinutes(0);
-	endSqueeze.setSeconds(0);
-	endSqueeze.setMilliseconds(0);
+	endSqueeze.setHours(0, 0, 0, 0);
 	resultFinished.lastMonth = endSqueeze;
 	if (startSqueeze >= endSqueeze) {
 		logger4js.debug('squeezeAudit Nothing to Execute %s: Start %s End %s', task._id, startSqueeze.toISOString(), endSqueeze.toISOString());

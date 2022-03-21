@@ -41,11 +41,15 @@ var validatePath = function(path, allowEmpty) {
 
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty, dateObject) {
-	if (!allowEmpty && !dateString) {
-		logger4js.trace('validate Date: DateString is empty! :%s:', !dateString);
+	var dateValue;
+	if (allowEmpty && !dateString) {
+		dateValue = new Date();
+	} else if (!dateString) {
+		logger4js.info('validate Date: DateString is empty! :%s:', !dateString);
 		return undefined;
+	} else {
+		dateValue = new Date(dateString);
 	}
-	var dateValue = dateString ? new Date(dateString) : new Date();
 	if (isNaN(dateValue)) {
 		logger4js.info('validate Date: String contains no Date %s', dateString);
 		return undefined;
@@ -55,15 +59,14 @@ var validateDate = function(dateString, allowEmpty, dateObject) {
 
 // validate a number to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
-	if (!allowEmpty && isNaN(numberValue)) {
-		logger4js.info('validate Number: Number is NaN! :%s:', numberValue);
-		return undefined;
-	}
-	if (isNaN(numberValue)) {
-		logger4js.trace('validate Number: String contains no Number %s', numberValue);
+	if (allowEmpty && !numberValue) {
 		return 0;
 	}
-	return numberValue;
+	if (isNaN(numberValue)) {
+		logger4js.info('validate Number: String contains no Number %s', numberValue);
+		return undefined;
+	}
+	return Number(numberValue);
 };
 
 // check if string has invalid content
@@ -128,6 +131,32 @@ function convertNumber(str) {
 	return result;
 }
 
+function compareDate(first, second) {
+	if (first === undefined) { first = new Date(-8640000000000000); }
+	if (second === undefined) { second = new Date(-8640000000000000); }
+	if (typeof first == 'number' || typeof first == 'string') first = new Date(first);
+	if (typeof second == 'number' || typeof second == 'string') second = new Date(second);
+	return first.getTime() - second.getTime();
+}
+
+function isSameDay(dateA, dateB) {
+	if (!dateA && !dateB) { return true; }
+  if (!dateA || !dateB) { return false; }
+  const localA = new Date(dateA);
+  const localB = new Date(dateB);
+  localA.setHours(0, 0, 0, 0);
+  localB.setHours(0, 0, 0, 0);
+  return localA.toISOString() === localB.toISOString();
+}
+
+function getBeginningOfMonth(dateA) {
+	if (dateA === undefined) { dateA = new Date(); }
+	var result = new Date(dateA);
+  result.setHours(0, 0, 0, 0);
+  result.setDate(1);
+  return result;
+}
+
 var evaluateLanguage = function(req) {
 	var lang;
 	if (req) {
@@ -146,5 +175,8 @@ module.exports = {
 	validateDate: validateDate,
 	validateNumber: validateNumber,
 	evaluateLanguage: evaluateLanguage,
-	convertNumber: convertNumber
+	convertNumber: convertNumber,
+	compareDate: compareDate,
+	isSameDay: isSameDay,
+	getBeginningOfMonth: getBeginningOfMonth
 };

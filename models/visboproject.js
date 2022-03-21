@@ -35,6 +35,7 @@ var visboProjectSchema = new mongoose.Schema({
 	vcid: {type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true},
 	vpType: {type: Number, required: false},					// vpType: Project, Portfolio, ProjectTemplate
 	vpStatus: { type: String, required: false, maxlength: 50 },
+	managerId: {type: Schema.Types.ObjectId, ref: 'User', required: false},
 	description: { type: String, required: false, maxlength: 4096 },
 	kundennummer: { type: String, required: false, maxlength: 256 }, // customer project identifier
 	customFieldDouble: [{
@@ -82,5 +83,5 @@ mongoose.model('Restrict', restrictSchema);
 
 module.exports = {
 	constSystemCustomName: constSystemCustomName,
-	constVPStatus: constVPStatus 
+	constVPStatus: constVPStatus
 };

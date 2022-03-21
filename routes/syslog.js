@@ -8,8 +8,8 @@ var path = require('path');
 var auth = require('../components/auth');
 var verifyVc = require('../components/verifyVc');
 
-var Const = require('../models/constants');
-var constPermSystem = Const.constPermSystem;
+var ConstPerm = require('../models/constPerm');
+var constPermSystem = ConstPerm.constPermSystem;
 
 var logModule = 'OTHER';
 var log4js = require('log4js');
@@ -58,10 +58,7 @@ router.route('/')
 		if (req.query.ageDays && !isNaN(req.query.ageDays)) ageDays = req.query.ageDays;
 		var ageDate = new Date();
 		ageDate.setDate(ageDate.getDate() - ageDays);
-		ageDate.setHours(0);
-		ageDate.setMinutes(0);
-		ageDate.setSeconds(0);
-		ageDate.setMilliseconds(0);
+		ageDate.setHours(0, 0, 0, 0);
 
 		var dir = path.join(__dirname, '../logging');
 		if (process.env.LOGPATH != undefined) {

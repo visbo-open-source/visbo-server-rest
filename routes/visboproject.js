@@ -8,6 +8,7 @@ var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
 var lockVP = require('./../components/lock');
+var verifyVc = require('./../components/verifyVc');
 var verifyVp = require('./../components/verifyVp');
 var verifyVg = require('./../components/verifyVg');
 var verifyVpv = require('./../components/verifyVpv');
@@ -28,9 +29,9 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
 
-var Const = require('../models/constants');
-var constPermVC = Const.constPermVC;
-var constPermVP = Const.constPermVP;
+var ConstPerm = require('../models/constPerm');
+var constPermVC = ConstPerm.constPermVC;
+var constPermVP = ConstPerm.constPermVP;
 var constSystemCustomName = require('../models/visboproject').constSystemCustomName;
 var constVPStatus = require('../models/visboproject').constVPStatus;
 
@@ -125,8 +126,11 @@ function detectChangeCustomFieldDate(original, update) {
 			var updateItem = update.find(element => element.name == item.name);
 			if (!updateItem) {
 				result.push({action: 'Project Property Remove', name: item.name, oldValue: item.value.toString()});
-			} else if (item.value != updateItem.value) {
-				result.push({action: 'Project Property Change', name: item.name, oldValue: item.value.toString(), newValue: (updateItem.value || '').toString()});
+			} else {
+				let oldValue = new Date(item.value), newValue = new Date(updateItem.value);
+				if (oldValue.getTime() != newValue.getTime()) {
+					result.push({action: 'Project Property Change', name: item.name, oldValue: oldValue.toISOString(), newValue: (newValue.toISOString() || '')});
+				}
 			}
 	});
 	update.forEach(item => {
@@ -151,7 +155,7 @@ function convertCustomFieldDouble(customFieldDouble) {
 	if (customFieldDouble) {
 		customFieldDouble.forEach(item => {
 			if (!validateName(item.name, false)
-			|| !validateNumber(item.value, true)) {
+			|| validateNumber(item.value, true) == undefined) {
 				return result;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
@@ -427,7 +431,7 @@ router.param('groupid', verifyVg.getGroupId);
 router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
 router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
-router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVCOrgs);
+router.use('/:vpid/portfolio/:vpfid/capacity', verifyVc.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFPFVs);
@@ -611,6 +615,7 @@ router.route('/')
 	*   'name':'My first Project',
 	*   '_id':'vp5aaf882',
 	*   'vcid': 'vc5aaf992',
+	*   'managerId': 'vu5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0',
 	*   'kundennummer': 'customer project identifier'
@@ -750,6 +755,7 @@ router.route('/')
 				newVP.name = vpname;
 				newVP.vcid = req.oneVC._id;
 				newVP.description = vpdescription;
+				newVP.managerId = userId;
 				if (req.body.kundennummer) newVP.kundennummer = req.body.kundennummer;
 				if (customFieldString) {
 					newVP.customFieldString = customFieldString;
@@ -765,9 +771,7 @@ router.route('/')
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
 				}
-				if (newVP.vpType == 0) { // Project
-					newVP.vpStatus = constVPStatus[0];
-				}
+				newVP.vpStatus = constVPStatus[0];
 				if (req.oneVPTemplate) {
 					newVP.variant = [];
 					if (req.oneVPTemplate.variant) {
@@ -783,7 +787,7 @@ router.route('/')
 				newVG.name = 'VISBO Project Admin';
 				newVG.groupType = 'VP';
 				newVG.internal = true;
-				newVG.permission = {vp: Const.constPermVPFull };
+				newVG.permission = {vp: ConstPerm.constPermVPFull };
 				newVG.vcid = req.oneVC._id;
 				newVG.global = false;
 				newVG.vpids.push(newVP._id);
@@ -818,10 +822,8 @@ router.route('/')
 
 							// calculate scale factor if possible
 							var scaleFactor = 1;
-							var bac = 0;
-							if (req.body.bac) {
-								bac = validate.validateNumber(req.body.bac);
-							}
+							var bac = validate.validateNumber(req.body.bac, true);
+
 							// Transform Start & End Date & Budget
 							var startDate = new Date();
 							if (req.body.startDate && validate.validateDate(req.body.startDate)) {
@@ -841,9 +843,9 @@ router.route('/')
 							}
 							// reset the VPV and reset individual user roles to group roles
 							templateVPV = visboBusiness.resetStatusVPV(templateVPV);
-							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisations);
+							templateVPV = visboBusiness.convertVPV(templateVPV, undefined, req.visboOrganisation);
 							if (bac) {
-								var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisations);
+								var costDetails = visboBusiness.calcCosts(templateVPV, undefined, req.visboOrganisation);
 								var costSum = 0;
 								if (costDetails && costDetails.length > 0) {
 									costDetails.forEach(item => { costSum += item.currentCost; });
@@ -861,7 +863,7 @@ router.route('/')
 							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
-							if (req.body.rac && validate.validateNumber(req.body.rac)) {
+							if (req.body.rac && validate.validateNumber(req.body.rac) != undefined ) {
 								newVPV.Erloes = req.body.rac;
 							}
 							newVPV.status = undefined;
@@ -972,6 +974,7 @@ router.route('/:vpid')
 	* the system checks if the user has Modify permission to the Project.
 	* If an updatedAt Info is delivered in the body, the system checks that the updatedAt flag from the body equals the updatedAt in the system.
 	* If not equal, the system delivers an error because the VP was updated between the read and write of the user and therefore it might lead to inconsitency.
+	* The project manager can be changed by specifying the managerId as a userId that is member of the vp admin group.
 	* If the Project Name has changed, the Name will be populated to the Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiHeader {String} access-key User authentication token.
@@ -1027,6 +1030,7 @@ router.route('/:vpid')
     *  		'name': '_PMCommit', 'value': '2018-03-16T12:39:54.042Z', 'type': 'System',
     *		]
 	*   'vcid': 'vc5aaf992',
+	*   'managerId': 'vu5aaf992',
 	*   'vpvCount': '0',
 	*   'vpType': '0'
 	*  }]
@@ -1051,7 +1055,8 @@ router.route('/:vpid')
 		var vpdescription = (req.body.description || '').trim();
 		var kundennummer = (req.body.kundennummer || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
-		var vpStatus;
+		var vpStatusNew, vpStatusOrg;
+		var vpManagerNew;
 
 		if (!validateName(name, true)
 		|| !validateName(vpdescription, true)
@@ -1063,16 +1068,17 @@ router.route('/:vpid')
 			});
 		}
 
-		if (req.body.vpStatus) {
-			if (constVPStatus.find(element => element == req.body.vpStatus)) {
-				vpStatus = req.body.vpStatus;
-				if (vpStatus != constVPStatus[0] && req.oneVP.vpvCount == 0) {
+		vpStatusNew = req.body.vpStatus;
+		vpStatusOrg = req.oneVP.vpStatus || constVPStatus[0];
+		if (vpStatusNew) {
+			if (constVPStatus.find(element => element == vpStatusNew)) {
+				if (vpStatusNew != constVPStatus[0] && req.oneVP.vpvCount == 0) {
 					return res.status(400).send({
 						state: 'failure',
 						message: 'Project does not have any version, status could not be changed'
 					});
 				}
-				if (vpStatus == 'ordered') {
+				if (vpStatusNew == 'ordered') {
 					var variantIndex = req.oneVP.variant.findIndex(element => element.variantName == 'pfv');
 					if (variantIndex < 0 || req.oneVP.variant[variantIndex].vpvCount <= 0) {
 						return res.status(400).send({
@@ -1084,9 +1090,17 @@ router.route('/:vpid')
 			} else {
 				return res.status(400).send({
 					state: 'failure',
-					message: 'Project Body contains invalid value vpStatus'
+					message: 'New vpStatus value not allowed: '.concat(vpStatusNew || '', ':')
 				});
 			}
+		}
+		if (vpStatusNew != vpStatusOrg && (vpStatusNew == 'ordered' || vpStatusOrg == 'ordered')
+		&& !(req.listVCPerm.getPerm(req.oneVP.vcid).vc & constPermVC.Modify)) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to change VP status: ordered',
+				vp: [req.oneVP]
+			});
 		}
 		if (req.body.customFieldString) {
 			customFieldString =  convertCustomFieldString(req.body.customFieldString);
@@ -1119,6 +1133,20 @@ router.route('/:vpid')
 					message: 'Project Body contains invalid values in customFieldDate'
 				});
 			}
+		}
+		if (req.body.managerId && req.body.managerId != req.oneVP.managerId?.toString()) {
+			logger4js.debug('PUT Project manager changes ', req.body.managerId);
+			// Check if the new manager is in the "VISBO Project Admin" Group
+			var group = req.listVPGroup?.find(group => group.groupType == 'VP' && group.internal && group.name == 'VISBO Project Admin');
+			var manager = group?.users?.find(user => user.userId.toString() == req.body.managerId);
+			if (!group || !manager) {
+				logger4js.info('PUT Project new project manager not part of admin group', req.body.managerId);
+				return res.status(400).send({
+					state: 'failure',
+					message: 'Project Manager not part of VISBO Project Admin group'
+				});
+			}
+			vpManagerNew = manager.email;
 		}
 
 		var vpUndelete = false;
@@ -1154,14 +1182,18 @@ router.route('/:vpid')
 			req.oneVP.description = req.body.description.trim();
 		}
 		let propertyChange = false;
-		let statusChange = false;
 		if (req.body.kundennummer != undefined && req.body.kundennummer != req.oneVP.kundennummer) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
 			propertyChange = true;
 		}
 		req.auditProperty = [];
+		if (vpManagerNew) {
+			req.oneVP.managerId = req.body.managerId;
+			let entry = {action: 'Project Update', name: 'Manager', newValue: vpManagerNew};
+			req.auditProperty = req.auditProperty.concat(entry);
+		}
 		if (customFieldString) {
-			req.auditProperty = detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString);
+			req.auditProperty = req.auditProperty.concat(detectChangeCustomFieldString(req.oneVP.customFieldString, customFieldString));
 			req.oneVP.customFieldString =  customFieldString.filter(item => item.value != undefined);
 		}
 		if (customFieldDouble) {
@@ -1173,28 +1205,19 @@ router.route('/:vpid')
 			req.oneVP.customFieldDate =  customFieldDate.filter(item => (item.value != undefined) && (item.type=='System' && constSystemCustomName.find(element => element == item.name)));
 		}
 		propertyChange = propertyChange || (req.auditProperty.length ? true : false);
-		if (vpStatus && vpStatus != req.oneVP.vpStatus) {
-			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatus));
-			req.oneVP.vpStatus = vpStatus;
-			statusChange = true;
+		if (vpStatusNew && vpStatusNew != vpStatusOrg) {
+			req.auditProperty = req.auditProperty.concat(detectChangeVPStatus(req.oneVP.vpStatus, vpStatusNew));
+			req.oneVP.vpStatus = vpStatusNew;
 		}
 
-		var changeOfVP_PMCommitOK = (req.oneVP.vpStatus == 'proposed') || (req.oneVP.vpStatus == 'ordered');
-		var changeOfVPPropertiesOK = (req.oneVP.vpStatus == 'initialized' || req.oneVP.vpStatus == 'proposed' || req.oneVP.vpStatus == 'ordered');
+		var changeOfVPPropertiesOK = (vpStatusOrg == 'initialized' || vpStatusOrg == 'proposed' || vpStatusOrg == 'ordered'
+																	|| vpStatusNew == 'initialized' || vpStatusNew == 'proposed' || vpStatusNew == 'ordered');
 
 		if (!changeOfVPPropertiesOK && propertyChange) {
-			logger4js.info('PUT Project %s could not update properties because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
+			logger4js.info('PUT Project %s could not update properties because of vpStatus %s/%s', req.oneVP._id, vpStatusOrg, vpStatusNew);
 			return res.status(400).send({
 				state: 'failure',
-				message: 'Project Properties could not be changed for Status ' + vpStatus
-			});
-		}
-		let changeCommit = req.auditProperty.findIndex(item => item.name == '_PMCommit') >= 0;
-		if (!changeOfVP_PMCommitOK && changeCommit) {
-			logger4js.info('PUT Project %s could not PMcommit because of vpStatus %s', req.oneVP._id, req.oneVP.vpStatus);
-			return res.status(400).send({
-				state: 'failure',
-				message: 'Project could not be commited by PL for Status ' + vpStatus
+				message: 'Project Properties could not be changed for Status '.concat(vpStatusOrg, '/', vpStatusNew)
 			});
 		}
 		// check duplicate Name
@@ -1454,7 +1477,7 @@ router.route('/:vpid/audit')
 					message: 'No Valid Regular Expression'
 				});
 			}
-			if (mongoose.Types.ObjectId.isValid(req.query.text)) {
+			if (validate.validateObjectId(req.query.text, false)) {
 				logger4js.debug('Get Audit Search for ObjectID %s', text);
 				textCondition.push({'vpv.vpvid': text});
 				textCondition.push({'user.userId': text});
@@ -1499,6 +1522,92 @@ router.route('/:vpid/audit')
 			});
 		});
 	});
+
+	router.route('/:vpid/user')
+
+	/**
+		* @api {get} /vp/:vpid/user Get Users
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Project Properties
+		* @apiName GetVISBOProjectUser
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets all users of the specified Project
+		*
+		* @apiPermission Authenticated and VP.View Permission for the Project.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to View Project, or Project does not exists
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vp/:vpid/user
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned Project Users',
+		*   'count': 1,
+		*   'user':[{
+		*    '_id':'us5c754feac',
+		*    'updatedAt':'2018-03-20T10:31:27.216Z',
+		*    'createdAt':'2018-02-28T09:38:04.774Z',
+		*    'email':'first.last@visbo.de',
+		*    'profile': {
+		*      'firstname': 'First',
+		*      'lastname': 'Last',
+		*      'company': 'Company inc',
+		*      'phone': '0151-11223344',
+		*      'address' : {
+		*        'street': 'Street',
+		*        'city': 'City',
+		*        'zip': '88888',
+		*        'state': 'State',
+		*        'country': 'Country',
+		*      }
+		*    }]
+		* }
+		*/
+
+	// Get VP Users
+		.get(function(req, res) {
+			var userId = req.decoded._id;
+			var useremail = req.decoded.email;
+			var isSysAdmin = req.query.sysadmin ? true : false;
+
+			req.auditDescription = 'Project User Read';
+			req.auditSysAdmin = isSysAdmin;
+			req.auditTTLMode = 1;
+
+			logger4js.info('Get Project Users for userid %s email %s and vp %s VP %s Perm %O', userId, useremail, req.params.vpid, req.oneVP.name, req.listVPPerm.getPerm(req.params.vpid));
+
+			// collect all the users from VP Permission Info
+			var userSet = new Set();
+			req.listVPGroup.forEach(group => {
+				group.users.forEach(user => {
+					userSet.add(user.userId);
+				});
+			});
+			var userList = [];
+			userSet.forEach(item => userList.push(item));
+
+			var query = {};
+			query._id = {$in: userList};
+			logger4js.trace('Get Project Users Query %O', query);
+			var queryUser = User.find(query);
+			queryUser.select('email profile status.lastLoginAt status.registeredAt');
+			queryUser.lean();
+			queryUser.exec(function (err, listVPUser) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VP Users find ${query}`, 'Error getting Project Users');
+					return;
+				}
+				logger4js.info('Found %d Users for VP', listVPUser.length);
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned Project Users',
+					count: listVPUser.length,
+					user: listVPUser
+				});
+			});
+		});
 
 	router.route('/:vpid/group')
 
@@ -1652,11 +1761,11 @@ router.route('/:vpid/audit')
 			var vgGlobal = false;
 
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || 0) & ConstPerm.constPermVPAll;
 			}
 			if (newPerm.vp & constPermVP.View) {
 				// remove View Restricted if View is set
-				newPerm.vp = newPerm.vp & Const.constPermVPFull;
+				newPerm.vp = newPerm.vp & ConstPerm.constPermVPFull;
 			}
 
 			req.auditDescription = 'Project Group Create';
@@ -1842,7 +1951,7 @@ router.route('/:vpid/audit')
 				vgGlobal = req.body.global == true;
 			logger4js.debug('Get Global Flag %s process %s', req.body.global, vgGlobal);
 			if ( req.body.permission ) {
-				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & Const.constPermVPAll;
+				newPerm.vp = (parseInt(req.body.permission.vp) || undefined) & ConstPerm.constPermVPAll;
 			}
 
 			logger4js.info('PUT Project Group for userid %s email %s and vc %s group %s perm %O', userId, useremail, req.params.vpid, req.params.groupid, req.listVPPerm.getPerm(req.params.vpid));
@@ -2210,6 +2319,16 @@ router.route('/:vpid/audit')
 					groups: [req.oneGroup]
 				});
 			});
+			if (delUser.userId.toString() == req.oneVP.managerId.toString()) {
+				logger4js.info('Delete Project Manager from Project', delUser.email);
+				delete req.oneVP.managerId;
+				req.oneVP.save(function(err) {
+					if (err) {
+						errorHandler(err, res, 'DB: DELETE VP Manager from VP', 'Error delete VP Manager from Project');
+						return;
+					}
+				});
+			}
 		});
 
 router.route('/:vpid/lock')
@@ -2309,6 +2428,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
+		req.auditTTLMode = 1;
 		var listLockNew = lockVP.lockCleanup(req.oneVP.lock);
 		req.oneVP.lock = listLockNew;
 
@@ -2402,6 +2522,7 @@ router.route('/:vpid/lock')
 				lock: req.oneVP.lock
 			});
 		}
+		req.auditTTLMode = 1;
 
 		logger4js.debug('Delete Lock for VP :%s: after perm check has %d Locks', req.oneVP.name, req.oneVP.lock.length);
 		req.oneVP.lock.splice(resultLock.lockindex, 1);  // remove the found lock
@@ -2691,7 +2812,7 @@ router.route('/:vpid/variant/:vid')
 
 router.route('/:vpid/portfolio')
 /**
-	* @api {get} /vp/:vpid/portfolio Get Portfolio Versions
+	* @api {get} /vp/:vpid/portfolio Get Portfolio Lists
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName GetPortfolio
@@ -2719,7 +2840,7 @@ router.route('/:vpid/portfolio')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Returned Portfolio Lists',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -2746,7 +2867,7 @@ router.route('/:vpid/portfolio')
 	*   }]
   * }
 	*/
-// Get Portfolio Versions
+// Get Portfolio Lists
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 
@@ -2789,7 +2910,7 @@ router.route('/:vpid/portfolio')
 		}
 		query.deletedAt = {$exists: checkDeleted};
 
-		logger4js.debug('Get Portfolio Version for user %s with query parameters %O', userId, query);
+		logger4js.debug('Get Portfolio Lists for user %s with query parameters %O', userId, query);
 
 		var queryVPF = VisboPortfolio.find(query);
 		if (req.query.refNext)
@@ -2822,7 +2943,7 @@ router.route('/:vpid/portfolio')
 				verifyVp.squeezePortfolio(listVPFfiltered);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Portfolios',
+					message: 'Returned Portfolio Lists',
 					count: listVPFfiltered.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
@@ -2832,7 +2953,7 @@ router.route('/:vpid/portfolio')
 				verifyVp.squeezePortfolio(req, listVPF);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Returned Portfolios',
+					message: 'Returned Portfolio Lists',
 					count: listVPF.length,
 					vpid: req.oneVP._id,
 					name: req.oneVP.name,
@@ -2843,7 +2964,7 @@ router.route('/:vpid/portfolio')
 	})
 
 /**
-	* @api {post} /vp/:vpid/portfolio Create a Portfolio Version
+	* @api {post} /vp/:vpid/portfolio Create a Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName CreatePortfolio
@@ -2908,10 +3029,12 @@ router.route('/:vpid/portfolio')
 		var useremail = req.decoded.email;
 
 		req.auditDescription = 'Portfolio List Create';
+		req.auditInfo = req.oneVP.name;
+		if (req.body.variantName) {
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.variantName);
+		}
 
 		logger4js.info('POST Portfolio for userid %s email %s and vp %s perm %O', userId, useremail, req.params.vpid, req.listVPPerm.getPerm(req.params.vpid));
-
-		logger4js.debug('Variant %s Portfolio %O', variantName || 'None', req.body);
 
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName;
 		var variantIndex = 0;
@@ -3007,7 +3130,7 @@ router.route('/:vpid/portfolio')
 				updateVPFCount(req.oneVPF.vpid, variantName, 1);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Created Portfolio Version',
+					message: 'Created Portfolio List',
 					vpf: [onePortfolio]
 				});
 			});
@@ -3016,12 +3139,12 @@ router.route('/:vpid/portfolio')
 
 router.route('/:vpid/portfolio/:vpfid')
 /**
-	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio Version
+	* @api {get} /vp/:vpid/portfolio/:vpfid Get specific Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName GetVISBOPortfolio
 	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Versions in the specified Project
+	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Lists in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
 	* @apiParam (Parameter) {Boolean} [deletedVPF=false]  Request Deleted VPFs, only allowed for users with DeleteVP Permission.
@@ -3035,7 +3158,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Returned Portfolio Lists',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -3062,7 +3185,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
-// Get specific portfolio version
+// Get specific portfolio list
 	.get(function(req, res) {
 		// no need to check authentication, already done centrally
 		var isSysAdmin = req.query.sysadmin ? true : false;
@@ -3071,7 +3194,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		req.auditSysAdmin = isSysAdmin;
 		req.auditTTLMode = 1;
 
-		logger4js.trace('Get Portfolio Versions');
+		logger4js.trace('Get Portfolio Lists');
 		var query = {};
 		query._id = req.params.vpfid;
 		query.vpid = req.oneVP._id;
@@ -3097,7 +3220,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			verifyVp.squeezePortfolio(req, listVPF);
 			return res.status(200).send({
 				state: 'success',
-				message: 'Returned Portfolio',
+				message: 'Returned Portfolio Lists',
 				vpid: req.oneVP._id,
 				name: req.oneVP.name,
 				vpf: listVPF
@@ -3106,15 +3229,15 @@ router.route('/:vpid/portfolio/:vpfid')
 	})
 
 /**
-	* @api {put} /vp/:vpid/portfolio/:vpfid Update Portfolio Version
+	* @api {put} /vp/:vpid/portfolio/:vpfid Update Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName UpdateVISBOPortfolio
-	* @apiDescription Put updates a specific Portfolio Version can also be used for undelete
+	* @apiDescription Put updates a specific Portfolio List can also be used for undelete
 	* the system checks if the user has VP.Modify permission to the Project and in case of Undelete the user needs to have the VP.Delete Permission.
 	* @apiHeader {String} access-key User authentication token.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
-	* @apiError {number} 400 not allowed to change Portfolio Version or bad values in body
+	* @apiError {number} 400 not allowed to change Portfolio List or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Un-Delete Portfolio
 	* @apiExample Example usage:
@@ -3123,7 +3246,7 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Returned Portfolios',
+	*   'message':'Updated Portfolio List',
 	*   'vpf': [{
 	*   'updatedAt': '2018-06-07T13:17:35.434Z',
 	*   'createdAt': '2018-06-07T13:17:35.434Z',
@@ -3150,13 +3273,17 @@ router.route('/:vpid/portfolio/:vpfid')
 	*   }]
   * }
 	*/
-// Update Portfolio Version including undelete
+// Update Portfolio List including undelete
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
 		var variantName = req.body.variantName == undefined ? '' : req.body.variantName.trim();
 
 		req.auditDescription = 'Portfolio List Update';
+		req.auditInfo = req.oneVP.name;
+		if (req.body.variantName) {
+			req.auditInfo = req.auditInfo.concat(' / ', req.body.variantName);
+		}
 
 		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s', userId, useremail, req.params.vpfid);
 		// undelete the VPF in case of PUT
@@ -3265,15 +3392,17 @@ router.route('/:vpid/portfolio/:vpfid')
 	})
 
 /**
-	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio Version
+	* @api {delete} /vp/:vpid/portfolio/:vpfid Delete a Portfolio List
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Portfolio
 	* @apiName DeleteVISBOPortfolio
-	* @apiDescription Deletes a specific Portfolio List Version
-	* the user needs to have Delete Project Permission to the Project
+	* @apiDescription Deletes a specific Portfolio List
+	* the user needs to have either Delete Project Permission to the Project or
+	* he can delete portfolio lists that belong to his variant that he could modify.
+	* This means he needs either Modify or CreateVariant Permission and is the owner of the project variant, where he wants to delete the portfolio list.
 	* @apiHeader {String} access-key User authentication token.
 	*
-	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
+	* @apiPermission Authenticated and VP.View and VP.Delete or VP.Modify or VP.CreateVariant Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project or no Delete Permission to delete the Version
 	* @apiError {number} 423 Portfolio locked by another user
@@ -3284,19 +3413,38 @@ router.route('/:vpid/portfolio/:vpfid')
 	* HTTP/1.1 200 OK
 	* {
 	*   'state':'success',
-	*   'message':'Deleted Portfolio Version',
+	*   'message':'Deleted Portfolio List',
 	*   'vp': [vpList]
 	* }
 	*/
-// Delete Portfolio Version
+// Delete Portfolio List
 	.delete(function(req, res) {
 		var useremail = req.decoded.email;
 		var vpfid = req.params.vpfid;
 
 		req.auditDescription = 'Portfolio List Delete';
 
-		logger4js.debug('DELETE Portfolio in Project %s', req.oneVP.name);
-		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
+		var variantIndex;
+		var variantName = req.oneVPF?.variantName;
+		if (variantName != '') {
+			// check that the Variant exists
+			variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
+			if (variantIndex < 0) {
+				logger4js.warn('VPV Delete Variant does not exist %s %s', req.params.vpvid, variantName);
+				// Allow Deleting of a version where Variant does not exists for Admins
+				variantName = '';
+			}
+		}
+		var hasPerm = false;
+		var perm = req.listVPPerm.getPerm(req.params.vpid);
+		logger4js.debug('DELETE Portfolio in Project %s %O', req.oneVP.name, perm);
+		if (perm.vp & constPermVP.Delete) {
+			hasPerm = true;
+		} else if (variantName != '' && variantName != 'pfv'
+		&& perm.vp & (constPermVP.Modify + constPermVP.CreateVariant) && req.oneVP.variant[variantIndex].email == useremail) {
+			hasPerm = true;
+		}
+		if (!hasPerm) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to delete Portfolio List'
@@ -3348,7 +3496,7 @@ router.route('/:vpid/portfolio/:vpfid')
 				logger4js.warn('VP Portfolio List Delete no Permission %s %s', req.params.vpid, variantName);
 				return res.status(403).send({
 					state: 'failure',
-					message: 'No permission to delete Portfolio List Version'
+					message: 'No permission to delete Portfolio List'
 				});
 			}
 			oneVPF.deletedAt = new Date();
@@ -3373,10 +3521,10 @@ router.route('/:vpid/portfolio/:vpfid')
 	/**
 		* @api {get} /vp/:vpid/portfolio/:vpfid/capacity Get Capacity of VISBO Portfolio
 		* @apiVersion 1.0.0
-		* @apiGroup VISBO Project Properties
+		* @apiGroup VISBO Project Portfolio
 		* @apiName GetVISBOPortfolioCapacity
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio Version.
+		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio List.
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
 		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
@@ -3384,8 +3532,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		* Date Format is in the form: 2018-10-30T10:00:00Z
 		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
 		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisaion, default is complete organisation
-		* @apiParam {String} parentID Deliver the capacity planning for the specified organisaion with the specified parentID, default is complete organisation
+		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
+		* @apiParam {String} parentID Deliver the capacity planning for the specified organisation with the specified parentID, default is complete organisation
 		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
 		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
 		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
@@ -3418,10 +3566,6 @@ router.route('/:vpid/portfolio/:vpfid')
 		.get(function(req, res) {
 			var userId = req.decoded._id;
 			var useremail = req.decoded.email;
-			var roleID = req.query.roleID;
-			var parentID = req.query.parentID;
-			var hierarchy = req.query.hierarchy == true;
-			var perProject = req.query.perProject == true;
 
 			req.auditDescription = 'Portfolio Capacity Read';
 
@@ -3430,6 +3574,25 @@ router.route('/:vpid/portfolio/:vpfid')
 					state: 'failure',
 					message: 'No Permission to calculate Portfolio Capacity'
 				});
+			}
+
+			// validate the parameters
+			var roleID = validate.validateNumber(req.query.roleID, false);
+			if (roleID == undefined ) {
+				return res.status(400).send({
+					state: 'failure',
+					message: 'No roleID given to Calculate Capacities'
+				});
+			}
+			var perProject = req.query.perProject == true;
+			var hierarchy = req.query.hierarchy == true;
+			var parentID = validate.validateNumber(req.query.parentID);
+			var startDate, endDate;
+			if (req.query.startDate) {
+				startDate = validate.validateDate(req.query.startDate, false, true);
+			}
+			if (req.query.endDate) {
+				endDate = validate.validateDate(req.query.endDate, false, true);
 			}
 
 			var onlyPT = false;
@@ -3476,9 +3639,9 @@ router.route('/:vpid/portfolio/:vpfid')
 			logger4js.info('Get VISBO Portfolio Capacity for userid %s email %s and vc %s roleID %s Hierarchy %s', userId, useremail, req.params.vcid, roleID, hierarchy);
 			var capacity = undefined;
 			if (perProject) {
-				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, onlyPT);
+				capacity = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
 			} else {
-				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, req.query.startDate, req.query.endDate, req.visboOrganisations, hierarchy, onlyPT);
+				capacity = visboBusiness.calcCapacities(req.listVPV, req.listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
 			}
 
 			req.auditInfo = '';

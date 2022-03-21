@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-// var Const = require('../models/constants');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -56,7 +55,6 @@ function initVPV(vpv) {
 	var newVPV = new VisboProjectVersion();
 	if (!vpv
 		|| !validate.validateName(vpv.variantDescription, true)
-		|| !validate.validateName(vpv.leadPerson, true)
 		|| !validate.validateName(vpv.ampelErlaeuterung, true)
 		|| !validate.validateName(vpv.VorlagenName, true)
 		|| !validate.validateName(vpv.description, true)
@@ -90,7 +88,6 @@ function initVPV(vpv) {
 	newVPV.customStringFields = vpv.customStringFields;
 	newVPV.actualDataUntil = vpv.actualDataUntil;
 	newVPV.Erloes = vpv.Erloes;
-	newVPV.leadPerson = vpv.leadPerson;
 	newVPV.startDate = vpv.startDate;
 	newVPV.endDate = vpv.endDate;
 	newVPV.earliestStart = vpv.earliestStart;
@@ -194,7 +191,7 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 			var baseVPV = initVPV(oneVPV);
 			baseVPV.variantName = '';
 			baseVPV.timestamp = new Date();
-			baseVPV.keyMetrics = calcKeyMetrics ? calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisations) : undefined;
+			baseVPV.keyMetrics = calcKeyMetrics ? calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisation) : undefined;
 			baseVPV.save(function(err, oneVPV) {
 				if (err) {
 					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
