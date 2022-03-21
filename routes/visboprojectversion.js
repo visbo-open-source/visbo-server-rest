@@ -533,7 +533,7 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp keyMetrics status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName VorlagenName description updatedAt createdAt deletedAt');
+				queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName VorlagenName description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
@@ -552,10 +552,10 @@ router.route('/')
 				req.listVPV = listVPV;
 				for (var i = 0; i < listVPV.length; i++) {
 					perm = req.listVPPerm.getPerm(sysAdmin ? 0 : listVPV[i].vpid);
-					if ((perm.vp & constPermVP.ViewAudit) == 0
-					&& listVPV[i].keyMetrics) {
+					if ((perm.vp & constPermVP.ViewAudit) == 0) {
 						// cleanup Cost Information
-						helperVpv.cleanupKM(listVPV[i].keyMetrics);
+						if (listVPV[i].keyMetrics) helperVpv.cleanupKM(listVPV[i].keyMetrics);
+						delete listVPV[i].Erloes;
 					}
 				}
 				if (keyMetrics == 2) {
