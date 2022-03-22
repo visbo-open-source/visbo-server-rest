@@ -1346,24 +1346,21 @@ if (currentVersion < dateBlock) {
   
   // find the newest orga of every vc
   var todoList=[];
-  if (OrgListAll.length == 1) {
-      todoList.push(OrgListAll[0]);
-  }
+  
   for (let i = 0; i < OrgListAll.length - 1; i++){
     //compare current item with previous and ignore if it is the same vcid       
     if (OrgListAll[i].vcid.toString() != OrgListAll[i+1].vcid.toString()) {
-      todoList.push(OrgListAll[i]);
-      //print("VisboCenters todo: " + OrgListAll[i].vcid.toString());
+      todoList.push(OrgListAll[i]);      
     }
   };
-  // In the case that it exists only one vcid with several orgas
-  if ((OrgListAll.length > 0) && (todoList < 1)) {
+  // In any case add the last orga in the todoList
+  if (OrgListAll.length > 0)  {
     todoList.push(OrgListAll[OrgListAll.length-1]);
   }
   print("VisboCenters todo: " + todoList.length);
   
   var isActualDataRelevant = "";
-  var noActData = "";
+  var noActData = 0;
   var updatedCount = 0;
   // run through all newest orgas and look for the isActDataRelevant - role-uids
   todoList.forEach(orga => {  
@@ -1388,19 +1385,18 @@ if (currentVersion < dateBlock) {
               // some older visbocenters have this information in the customization - allianzIstDatenReferate
               customization.value.isActualDataRelevant = customization.value.allianzIstDatenReferate;
           };
-          print("Orga:   " + "VisboCenter: " + orga.vcid + ":"  + " : " + orga.timestamp.toString() + " " + "isActualDataRelevant - uids ", customization.value.isActualDataRelevant );
 
           // store the new custiomization setting
           result = db.vcsettings.replaceOne({_id: customization._id}, customization);            
-          updatedCount += result.matchedCount;
-          print("customization: '" +  customization._id + "' is updated");            
+          updatedCount += result.matchedCount;                  
       }
     }
     else {
-      noActData= noActData + orga.vcid  + " : ";
+      noActData += 1;
     }   
   }); 
-  //print("customization: updatedCount: " +  updatedCount.toString()); 
+  print("customization: updated count: " +  updatedCount.toString());
+  print("customization: not found count: " +  noActData.toString());
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
