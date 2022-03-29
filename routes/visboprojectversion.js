@@ -357,7 +357,7 @@ router.route('/')
 		req.auditSysAdmin = sysAdmin;
 		var checkDeleted = req.query.deleted == true;
 
-		logger4js.info('Get Project Versions for user %s with query params %O ', userId, req.query);
+		logger4js.debug('Get Project Versions for user %s with query params %O ', userId, req.query);
 		var queryvpv = {};
 		var queryvpvids = {};
 		var latestOnly = false; 	// as default show all project version of all projects

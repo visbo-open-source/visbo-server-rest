@@ -45,13 +45,13 @@ var validateDate = function(dateString, allowEmpty, dateObject) {
 	if (allowEmpty && !dateString) {
 		dateValue = new Date();
 	} else if (!dateString) {
-		logger4js.info('validate Date: DateString is empty! :%s:', !dateString);
+		logger4js.trace('validate Date: DateString is empty! :%s:', !dateString);
 		return undefined;
 	} else {
 		dateValue = new Date(dateString);
 	}
 	if (isNaN(dateValue)) {
-		logger4js.info('validate Date: String contains no Date %s', dateString);
+		logger4js.debug('validate Date: String contains no Date %s', dateString);
 		return undefined;
 	}
 	return dateObject ? dateValue : dateValue.toISOString();
@@ -63,7 +63,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 		return 0;
 	}
 	if (isNaN(numberValue)) {
-		logger4js.info('validate Number: String contains no Number %s', numberValue);
+		logger4js.debug('validate Number: String contains no Number %s', numberValue);
 		return undefined;
 	}
 	return Number(numberValue);
@@ -74,7 +74,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 var validateObjectId = function(id, allowEmpty) {
 	logger4js.trace('validate ObjectID: %s Allow empty %s', id, allowEmpty);
 	if (allowEmpty != true && !id) {
-		logger4js.info('validate ObjectID: ID is empty!', id);
+		logger4js.debug('validate ObjectID: ID is empty!', id);
 		return false;
 	}
 	if (!id) {
@@ -98,25 +98,25 @@ var validateEmail = function(email, allowEmpty) {
 	}
 	email = email || '';
 	if (email.replace(/[ \t!\\/%,:;]/ig,'') != email) {
-		logger4js.info('Check Name: Name contains Illegal Characters? %s', email);
+		logger4js.debug('Check Name: Name contains Illegal Characters? %s', email);
 		return false;
 	}
 	var emailPart = email.split('@');
 	if (emailPart.length != 2) {
-		logger4js.info('Check Name: No user/domain separator? %s', email);
+		logger4js.debug('Check Name: No user/domain separator? %s', email);
 		return false;
 	}
 	if (!emailPart[0].length) {
-		logger4js.info('Check Name: No User address part? %s', email);
+		logger4js.debug('Check Name: No User address part? %s', email);
 		return false;
 	}
 	if (!emailPart[1].length) {
-		logger4js.info('Check Name: No Domain part? %s', email);
+		logger4js.debug('Check Name: No Domain part? %s', email);
 		return false;
 	}
 	emailPart = emailPart[1].split('.');
 	if (emailPart.length < 2 || emailPart[0].length == 0 || emailPart[1].length == 0) {
-		logger4js.info('Check Name: No correct domain separator ? %s', email);
+		logger4js.debug('Check Name: No correct domain separator ? %s', email);
 		return false;
 	}
 	return true;

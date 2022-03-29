@@ -670,7 +670,7 @@ function reduceOrga(orga) {
 				newRole.calcid = index;
 				allUnits[index] = newRole;
 			} else {
-				logger4js.info(`SubRole already exists ${role.uid} SubRole ${index}`);
+				logger4js.trace(`SubRole already exists ${role.uid} SubRole ${index}`);
 			}
 			if (!allUnits[index].pid) {
 				allUnits[index].pid = role.uid;
