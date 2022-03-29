@@ -69623,7 +69623,7 @@
 											"script": {
 												"exec": [
 													"pm.test(\"Status code Check\", function () {",
-													"    pm.response.to.have.status(409);",
+													"    pm.response.to.have.status(200);",
 													"});",
 													""
 												],
