@@ -977,13 +977,17 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 		var timeZones = splitInTimeZones(organisation, pfv.startDate, pfv.endDate);
 		if (timeZones) {
 			var maxTimeZoneIndex = getTimeZoneIndex(timeZones, pfv.timestamp);
-			keyMetrics.costBaseLastTotal = getSummeKosten(pfv, indexTotal, timeZones, maxTimeZoneIndex);
-			keyMetrics.costBaseLastActual = getSummeKosten(pfv, indexActual, timeZones, maxTimeZoneIndex);
+			var sumCosts = getSummeKosten(pfv, indexTotal, timeZones, maxTimeZoneIndex);
+			keyMetrics.costBaseLastTotal = sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
+			sumCosts = getSummeKosten(pfv, indexActual, timeZones, maxTimeZoneIndex);
+			keyMetrics.costBaseLastActual = sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
 
 			indexTotal = getColumnOfDate(vpv.endDate) - getColumnOfDate(vpv.startDate) + 1;
 			indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate) + 1;
-			keyMetrics.costCurrentTotal= getSummeKosten(vpv, indexTotal, timeZones);
-			keyMetrics.costCurrentActual= getSummeKosten(vpv, indexActual, timeZones);
+			sumCosts = getSummeKosten(vpv, indexTotal, timeZones);
+			keyMetrics.costCurrentTotal= sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
+			sumCosts = getSummeKosten(vpv, indexActual, timeZones)
+			keyMetrics.costCurrentActual= sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
 		}
 	}
 
@@ -1008,8 +1012,8 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 		keyMetrics.timeCompletionBaseLastTotal = timeKeyMetric.timeCompletionBaseLastTotal;
 
 		var timeDelayMetric = getTimeDelayOfDeadlinesMetric(allDeadlines, vpv.timestamp);
-		keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished;
-		keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished;
+		keyMetrics.timeDelayFinished = timeDelayMetric.timeDelayFinished && Math.round(timeDelayMetric.timeDelayFinished*100)/100;
+		keyMetrics.timeDelayUnFinished = timeDelayMetric.timeDelayUnFinished && Math.round(timeDelayMetric.timeDelayUnFinished*100)/100;
 	}
 
 	// look for the deliverables of pfv (take all)
@@ -1472,19 +1476,22 @@ function splitInTimeZones(organisation, startDate, endDate) {
 		}
 	}
 
-	// set indexMonth from start to end so that it references the correct organisation
-	// initialise so that the first for loop sets the correct value
-	var orgaIndex = -1;
-	var maxIndexMonth = -1;
+	var orgaIndex = 0;
+	var maxIndexMonth;
+	// set the maxIndex to the last month where this orga is valid (for the next month a new orga is valid)
+	if (orgaIndex + 1 < split.organisation.length) {
+		maxIndexMonth = getColumnOfDate(split.organisation[orgaIndex + 1].timestamp);
+	} else {
+		maxIndexMonth = split.endIndex + 1;
+	}
 	for (var i = split.startIndex; i <= split.endIndex; i++) {
+		// set the maxIndex to the last month where this orga is valid (for the next month a new orga is valid)
 		if (i >= maxIndexMonth) {
-			maxIndexMonth = split.endIndex;
-			// switch to next orga if avilable
-			if (orgaIndex < split.organisation.length - 1) {
-				orgaIndex++;
-				if (orgaIndex < split.organisation.length - 1) {
-					maxIndexMonth = getColumnOfDate(organisation[orgaIndex + 1].timestamp);
-				}
+			orgaIndex++;
+			if (orgaIndex + 1 < split.organisation.length) {
+				maxIndexMonth = getColumnOfDate(split.organisation[orgaIndex + 1].timestamp);
+			} else {
+				maxIndexMonth = split.endIndex + 1;
 			}
 		}
 		// set orga[orgaIndex] active for the month

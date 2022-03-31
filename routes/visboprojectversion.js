@@ -141,7 +141,7 @@ function saveRecalcKM(req, res, message) {
 					return;
 				}
 				// update the original keyMetric with predictedKM
-				req.oneVPV.keyMetrics.costCurrentTotalPredict = predictVPV[0].costCurrentTotal;
+				req.oneVPV.keyMetrics.costCurrentTotalPredict = predictVPV[0].costCurrentTotal && Math.round(predictVPV[0].costCurrentTotal*1000)/1000; //round to euros
 				req.oneVPV.save(function(err, oneVPV) {
 					if (err) {
 						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
