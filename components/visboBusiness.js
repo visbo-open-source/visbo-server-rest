@@ -986,7 +986,7 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 			indexActual = getColumnOfDate(endDatePreviousMonthVPV) - getColumnOfDate(vpv.startDate) + 1;
 			sumCosts = getSummeKosten(vpv, indexTotal, timeZones);
 			keyMetrics.costCurrentTotal= sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
-			sumCosts = getSummeKosten(vpv, indexActual, timeZones)
+			sumCosts = getSummeKosten(vpv, indexActual, timeZones);
 			keyMetrics.costCurrentActual= sumCosts && Math.round(sumCosts*1000)/1000; //round to euros
 		}
 	}
