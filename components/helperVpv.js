@@ -192,6 +192,10 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 			baseVPV.variantName = '';
 			baseVPV.timestamp = new Date();
 			baseVPV.keyMetrics = calcKeyMetrics ? calcKeyMetrics(baseVPV, oneVPV, req.visboOrganisation) : undefined;
+			if (baseVPV.keyMetrics) {
+				baseVPV.keyMetrics.baselineDate = oneVPV.timestamp;
+				baseVPV.keyMetrics.baselineVPVID = oneVPV._id;
+			}
 			baseVPV.save(function(err, oneVPV) {
 				if (err) {
 					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
