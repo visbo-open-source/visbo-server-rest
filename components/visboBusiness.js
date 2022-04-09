@@ -2461,7 +2461,17 @@ function aggregateRoles(phase, orgalist){
 		// Step one: replace the role with its parent with uid = pid, if role is a person
 		var roleSett = orgalist[role.RollenTyp];
 
-		if (roleSett &&  roleSett.sumRole && !roleSett.aggreID) {
+		if ( !roleSett?.isSummaryRole && roleSett?.pid) {
+			// if role is no summaryRole map it to the parent
+			roleSett = orgalist[roleSett.pid];
+		}
+		if (!roleSett) {
+			logger4js.debug( 'aggregateRoles Role not foud %s', role.RollenTyp);
+			continue;
+		}
+
+		if (roleSett.isSummaryRole && !roleSett.aggregationID) {
+			// roleSett is a summary role but does not have an aggregation Role above
 			oneRole.RollenTyp = role.RollenTyp;
 			oneRole.teamID = role.teamID;
 			oneRole.Bedarf = role.Bedarf;
@@ -2469,7 +2479,8 @@ function aggregateRoles(phase, orgalist){
 			continue;
 		}
 
-		if (roleSett &&  roleSett.sumRole && (roleSett.aggreID == role.RollenTyp)) {
+		if (roleSett.isSummaryRole && (roleSett.aggregationID == role.RollenTyp)) {
+			// roleSett is a summary role and is an aggregation Role itself
 			oneRole.RollenTyp = role.RollenTyp;
 			oneRole.teamID = role.teamID;
 			oneRole.Bedarf = role.Bedarf;
@@ -2477,13 +2488,8 @@ function aggregateRoles(phase, orgalist){
 			continue;
 		}
 
-		if (roleSett && roleSett.aggreID){
-			oneRole.RollenTyp = roleSett.aggreID;
-			oneRole.teamID = role.teamID;
-		}
-		// there is no aggregation role defined; the needs will be added to the parentID
-		if (roleSett && !roleSett.aggreID && !roleSett.sumRole) {
-			oneRole.RollenTyp = roleSett.pid;
+		if (roleSett && roleSett.aggregationID){
+			oneRole.RollenTyp = roleSett.aggregationID;
 			oneRole.teamID = role.teamID;
 		}
 
