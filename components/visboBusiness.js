@@ -1081,8 +1081,6 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
-	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1215,8 +1213,6 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
-	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1406,10 +1402,18 @@ function calcCapacityVPVs(vpvs, roleID, parentID, timeZones, hierarchy) {
 			roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Sub role
 		});
 	}
+	if (!hierarchy && !timeZones.allConcerningRoles) {
+		// calculate concerning roles once, getting roles, which are connected with roleID in the given organisation
+		calcConcerningRoles(timeZones, roleID, parentID);
+	}
 	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
 	roleIDs.forEach(item => {
 		roleID = item.uid;
+		if (hierarchy) {
+			// recalculate the concerning roles for every role that is calculate. Getting roles, which are connected with roleID in the given organisation
+			calcConcerningRoles(timeZones, roleID, parentID);
+		}
 		var roleName = item.roleName;
 		logger4js.debug('calculate capacity for Role %s', roleID);
 		var monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones);
@@ -1673,8 +1677,9 @@ function getRessourcenBedarfe(roleID, vpv, timeZones) {
 	if (!vpv.AllPhases) {
 		return costValues;
 	}
-	var roleIDisTeam = timeZones.role.type == 2;
-	var roleIDisTeamMember = timeZones.teamID != -1 && !timeZones.mergedOrganisation[roleID].isSummaryRole;
+	var roleIDisTeam = timeZones.role.type == 2; // root role is checked not the Children
+	var actRole = timeZones.mergedOrganisation[roleID];
+	var roleIDisTeamMember = actRole.teamID > 0 && !actRole.isSummaryRole;
 
 	logger4js.trace('Combine Capacity Values for Project Version %s',  vpv._id);
 	// Treatment, if the roleID is a orgaUnit, no parentID is given
