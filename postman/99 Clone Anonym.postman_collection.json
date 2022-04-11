@@ -1,15 +1,50 @@
 {
 	"info": {
-		"_postman_id": "6a4d4607-af83-4a7a-ab0e-57985723be49",
+		"_postman_id": "2f6f81f1-3416-404e-9af3-72ce4eeed075",
 		"name": "99 Clone Anonym",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "99-00 Clone Login",
+			"name": "99-01 VC Clone",
 			"item": [
 				{
-					"name": "99-00-01 Login Admin",
+					"name": "99-01-01 Check Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									" pm.test(\"Check Clone Type\", function () {",
+									"   var varIterationCount = Number(pm.variables.get(\"varIterationCount\") || \"1\")",
+									"    if (varIterationCount > 1) {",
+									"        postman.setNextRequest(\"99-01-05 Get Input Status\");",
+									"    }",
+									"    pm.variables.set(\"varIterationCount\", varIterationCount + 1)",
+									" })"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-02 Login Admin",
 					"event": [
 						{
 							"listen": "test",
@@ -61,104 +96,27 @@
 					"response": []
 				},
 				{
-					"name": "99-01-12 Enable Predict",
+					"name": "99-01-05 Get Input Status",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    postman.setNextRequest(\"99-01-99 Final\")",
-									"    if (jsonData.state != 'success') {",
-									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
-									"        varRunErrors += 1;",
-									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
-									"    }",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Check that VC Testname does not exist\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length >= 0).to.be.eql(true, \"No setting List found\");",
-									"    var searchName = \"EnablePredict\";",
-									"    var list = jsonData.vcsetting;",
-									"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-									"    pm.expect(index >= 0).to.be.eql(true, \"EnablePredict not found\");",
-									"    var varPredict = pm.variables.get(\"varPredict\")",
-									"    pm.expect(list[index].value.VCEnabled).to.be.eql(varPredict, \"EnablePredict not set as expected\");",
-									"});",
-									"",
-									""
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"var predict = pm.environment.get(\"Predict\") == '0' ? false : true;",
-									"pm.variables.set(\"varPredict\", predict);"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"value\": {\n        \"VCEnabled\": {{varPredict}}\n    }\n}   ",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{url}}/vc/{{vcID}}/setting/{{settingID}}",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"vc",
-								"{{vcID}}",
-								"setting",
-								"{{settingID}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "99-01 VC Clone",
-			"item": [
-				{
-					"name": "99-01-01 Get Input Status",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"    var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									" pm.test(\"Check Clone Type\", function () {",
+									"   var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
 									"    if (varRunErrors >= 10) {",
 									"        postman.setNextRequest(\"99-01-99 Final\");",
-									"        // pm.expect(\"Error\").to.be.eql(\"Stop Execution too many errors\", varRunErrors)",
+									"        pm.expect(\"Error\").to.be.eql(\"Stop Execution too many errors\", varRunErrors)",
 									"    }",
 									"    var exportType = pm.iterationData.get(\"exportType\");",
 									"    if (exportType == 'VC') {",
 									"        postman.setNextRequest(\"99-01-10 Create VC\");",
 									"    } else if (exportType == \"VCSetting\") {",
 									"        postman.setNextRequest(\"99-01-20 Create VCSetting\");",
+									"    } else if (exportType == \"VCOrganisation\") {",
+									"        postman.setNextRequest(\"99-01-25 Create VCOrganisation\");",
+									"    } else if (exportType == \"VCCapacity\") {",
+									"        postman.setNextRequest(\"99-01-27 Create VCCapacity\");",
 									"    } else if (exportType == \"VP\") {",
 									"        postman.setNextRequest(\"99-01-30 Create VP\");",
 									"    } else if (exportType == \"VPV\") {",
@@ -166,10 +124,11 @@
 									"    } else if (exportType == \"VPF\") {",
 									"        postman.setNextRequest(\"99-01-60 Create VPF\");",
 									"    } else {",
+									"        pm.expect(exportType).to.be.eql(\"Unknown exportType\");",
 									"        postman.setNextRequest(\"99-01-99 Final\");",
 									"    }    ",
 									"",
-									""
+									" })"
 								],
 								"type": "text/javascript"
 							}
@@ -230,22 +189,24 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"var baseName = pm.environment.get(\"VCBaseName\");",
+									"var sequence = '_' + (new Date()).toISOString();",
 									"var vcNewName = pm.iterationData.get(\"name\");",
-									"var vcDescription = pm.iterationData.get(\"description\")  + ' vcid:' + vcNewName;",
+									"var vcOrigId = pm.iterationData.get(\"_id\");",
+									"var vcDescription = pm.iterationData.get(\"description\")  + ' vcid:' + vcOrigId;",
 									"vcDescription = vcDescription.replace(/\\n/g, ' ');",
 									"",
-									"console.log(\"Description:\", vcDescription, ':');",
+									"//console.log(\"Description:\", vcDescription, ':');",
 									"var exportType = pm.iterationData.get(\"exportType\")",
 									"",
 									"pm.expect(vcNewName || '').to.be.not.eql(\"\", \"No VC Name in Import Entry\");",
 									"pm.expect(exportType).to.be.eql(\"VC\", \"No VC Type Import File\");",
 									"",
-									"pm.variables.set(\"vcNewName\", 'Anno-' + baseName + ' ' + vcNewName);",
+									"pm.variables.set(\"vcNewName\", vcNewName + sequence);",
 									"pm.variables.set(\"vcDescription\", vcDescription);",
 									"",
 									"var list = [];",
 									"pm.globals.set(\"vcAnnoList\", JSON.stringify(list));",
+									"pm.globals.set(\"vpAnnoList\", JSON.stringify(list));",
 									""
 								],
 								"type": "text/javascript"
@@ -432,6 +393,163 @@
 					"response": []
 				},
 				{
+					"name": "99-01-25 Create VCOrganisation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var vcOrganisation = {};",
+									"",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VCOrganisation\", \"No VC Organisation Type Import Entry\");",
+									"",
+									"vcOrganisation.name = pm.iterationData.get(\"name\")",
+									"vcOrganisation.timestamp = pm.iterationData.get(\"timestamp\")",
+									"var value = pm.iterationData.get(\"value\")",
+									"if (value) {",
+									"    value = JSON.parse(value);",
+									"}",
+									"pm.expect(value).to.be.not.eql(undefined, \"No valid JSON\");",
+									"vcOrganisation.allRoles = value.allRoles; ",
+									"vcOrganisation.allCosts = value.allCosts; ",
+									"pm.variables.set('vcOrganisation', JSON.stringify(vcOrganisation));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vcOrganisation}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/organisation",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"organisation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-27 Create VCCapacity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var vcCapacity = {};",
+									"",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VCCapacity\", \"No VC Capacity Type Import Entry\");",
+									"",
+									"var value = pm.iterationData.get(\"value\")",
+									"if (value) {",
+									"    value = JSON.parse(value);",
+									"}",
+									"pm.expect(value).to.be.not.eql(undefined, \"No valid JSON\");",
+									"console.log(\"Start Create Capacity\");",
+									"",
+									"vcCapacity.roleID = value.roleID;",
+									"vcCapacity.startOfYear = value.startOfYear;",
+									"vcCapacity.capaPerMonth = value.capaPerMonth;",
+									"pm.variables.set(\"vcCapacity\", JSON.stringify(vcCapacity));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vcCapacity}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/capa",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"capa"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "99-01-30 Create VP",
 					"event": [
 						{
@@ -461,7 +579,7 @@
 									"    }",
 									"    var vpItem = {};",
 									"    vpItem.vpid = vp._id;",
-									"    vpItem.vpidOrg = pm.iterationData.get(\"name\");",
+									"    vpItem.vpidOrg = pm.iterationData.get(\"_id\");",
 									"    vpItem.vcid = vp.vcid;",
 									"    vpItem.name = vp.name;",
 									"    vpAnnoList.push(vpItem);",
@@ -505,7 +623,7 @@
 									"pm.variables.set(\"vpDescription\", vpDescription);",
 									"pm.variables.set(\"vpKundennummer\", vpKundennummer);",
 									"pm.variables.set(\"vpType\", vpType);",
-									"pm.variables.set(\"vpNewName\", 'Anno-' + baseName + ' ' + vpNewName);",
+									"pm.variables.set(\"vpNewName\", vpNewName);",
 									"",
 									""
 								],
@@ -555,7 +673,6 @@
 									"        varRunErrors += 1;",
 									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
 									"    }",
-									"    pm.response.to.have.status(200);",
 									"});",
 									""
 								],
@@ -622,6 +739,7 @@
 							"script": {
 								"exec": [
 									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\");",
 									"    pm.response.to.have.status(200);",
 									"    var jsonData = pm.response.json();",
 									"    if (jsonData.state != 'success') {",
@@ -629,7 +747,6 @@
 									"        varRunErrors += 1;",
 									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
 									"    }",
-									"    postman.setNextRequest(\"99-01-99 Final\");",
 									"});",
 									""
 								],
@@ -709,13 +826,13 @@
 								"exec": [
 									"pm.test(\"Status code Check\", function () {",
 									"    postman.setNextRequest(\"99-01-99 Final\");",
+									"    pm.response.to.have.status(200);",
 									"    var jsonData = pm.response.json();",
 									"    if (jsonData.state != 'success') {",
 									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
 									"        varRunErrors += 1;",
 									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
 									"    }",
-									"    pm.response.to.have.status(200);",
 									"});",
 									""
 								],
