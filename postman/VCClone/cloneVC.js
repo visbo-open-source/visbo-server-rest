@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 VCName='Test-MS-VC03';
-VCName='Test Productmanagement';
+VCName='Skill Demo VISBO Center';
 VPName='^';
 
 DoNotAnnonymise=true;

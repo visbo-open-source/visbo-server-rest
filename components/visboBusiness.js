@@ -1081,8 +1081,6 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
-	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1215,8 +1213,6 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
 	}
 	mergeCapacity(capacity, timeZones, startDate);
-	// getting roles, which are concerned/connected with roleID in the given organisation not regarding the teams
-	calcConcerningRoles(timeZones, roleID, parentID);
 
 	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
 	var newvpvs = [];
@@ -1406,10 +1402,18 @@ function calcCapacityVPVs(vpvs, roleID, parentID, timeZones, hierarchy) {
 			roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Sub role
 		});
 	}
+	if (!hierarchy && !timeZones.allConcerningRoles) {
+		// calculate concerning roles once, getting roles, which are connected with roleID in the given organisation
+		calcConcerningRoles(timeZones, roleID, parentID);
+	}
 	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
 	roleIDs.forEach(item => {
 		roleID = item.uid;
+		if (hierarchy) {
+			// recalculate the concerning roles for every role that is calculate. Getting roles, which are connected with roleID in the given organisation
+			calcConcerningRoles(timeZones, roleID, parentID);
+		}
 		var roleName = item.roleName;
 		logger4js.debug('calculate capacity for Role %s', roleID);
 		var monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones);
@@ -1673,8 +1677,9 @@ function getRessourcenBedarfe(roleID, vpv, timeZones) {
 	if (!vpv.AllPhases) {
 		return costValues;
 	}
-	var roleIDisTeam = timeZones.role.type == 2;
-	var roleIDisTeamMember = timeZones.teamID != -1 && !timeZones.mergedOrganisation[roleID].isSummaryRole;
+	var roleIDisTeam = timeZones.role.type == 2; // root role is checked not the Children
+	var actRole = timeZones.mergedOrganisation[roleID];
+	var roleIDisTeamMember = actRole.teamID > 0 && !actRole.isSummaryRole;
 
 	logger4js.trace('Combine Capacity Values for Project Version %s',  vpv._id);
 	// Treatment, if the roleID is a orgaUnit, no parentID is given
@@ -2461,35 +2466,24 @@ function aggregateRoles(phase, orgalist){
 		// Step one: replace the role with its parent with uid = pid, if role is a person
 		var roleSett = orgalist[role.RollenTyp];
 
-		if ( !roleSett?.isSummaryRole && roleSett?.pid) {
-			// if role is no summaryRole map it to the parent
-			roleSett = orgalist[roleSett.pid];
-		}
 		if (!roleSett) {
-			logger4js.debug( 'aggregateRoles Role not foud %s', role.RollenTyp);
+			logger4js.warning('aggregateRoles Role not foud %s', role.RollenTyp);
 			continue;
 		}
-
-		if (roleSett.isSummaryRole && !roleSett.aggregationID) {
-			// roleSett is a summary role but does not have an aggregation Role above
-			oneRole.RollenTyp = role.RollenTyp;
-			oneRole.teamID = role.teamID;
-			oneRole.Bedarf = role.Bedarf;
-			newAllRoles.push(oneRole);
-			continue;
-		}
-
-		if (roleSett.isSummaryRole && (roleSett.aggregationID == role.RollenTyp)) {
-			// roleSett is a summary role and is an aggregation Role itself
-			oneRole.RollenTyp = role.RollenTyp;
-			oneRole.teamID = role.teamID;
-			oneRole.Bedarf = role.Bedarf;
-			newAllRoles.push(oneRole);
-			continue;
-		}
-
-		if (roleSett && roleSett.aggregationID){
-			oneRole.RollenTyp = roleSett.aggregationID;
+		if (roleSett.isSummaryRole) {
+			if (!roleSett.aggregationID || roleSett.aggregationID == role.RollenTyp) {
+				// roleSett is a summary role but does not have an aggregation Role or is an aggregation role itself
+				oneRole.RollenTyp = role.RollenTyp;
+				oneRole.teamID = role.teamID;
+				oneRole.Bedarf = role.Bedarf;
+				newAllRoles.push(oneRole);
+				continue;
+			} else {
+				oneRole.RollenTyp = roleSett.aggregationID;
+				oneRole.teamID = role.teamID;
+			}
+		} else { // no summary role
+			oneRole.RollenTyp = roleSett.pid;
 			oneRole.teamID = role.teamID;
 		}
 

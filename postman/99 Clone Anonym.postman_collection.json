@@ -6,10 +6,45 @@
 	},
 	"item": [
 		{
-			"name": "99-00 Clone Login",
+			"name": "99-01 VC Clone",
 			"item": [
 				{
-					"name": "99-00-01 Login Admin",
+					"name": "99-01-01 Check Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									" pm.test(\"Check Clone Type\", function () {",
+									"   var varIterationCount = Number(pm.variables.get(\"varIterationCount\") || \"1\")",
+									"    if (varIterationCount > 1) {",
+									"        postman.setNextRequest(\"99-01-05 Get Input Status\");",
+									"    }",
+									"    pm.variables.set(\"varIterationCount\", varIterationCount + 1)",
+									" })"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-02 Login Admin",
 					"event": [
 						{
 							"listen": "test",
@@ -61,89 +96,7 @@
 					"response": []
 				},
 				{
-					"name": "99-01-12 Enable Predict",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code Check\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    postman.setNextRequest(\"99-01-99 Final\")",
-									"    if (jsonData.state != 'success') {",
-									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
-									"        varRunErrors += 1;",
-									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
-									"    }",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Check that VC Testname does not exist\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length >= 0).to.be.eql(true, \"No setting List found\");",
-									"    var searchName = \"EnablePredict\";",
-									"    var list = jsonData.vcsetting;",
-									"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
-									"    pm.expect(index >= 0).to.be.eql(true, \"EnablePredict not found\");",
-									"    var varPredict = pm.variables.get(\"varPredict\")",
-									"    pm.expect(list[index].value.VCEnabled).to.be.eql(varPredict, \"EnablePredict not set as expected\");",
-									"});",
-									"",
-									""
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"var predict = pm.environment.get(\"Predict\") == '0' ? false : true;",
-									"pm.variables.set(\"varPredict\", predict);"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"value\": {\n        \"VCEnabled\": {{varPredict}}\n    }\n}   ",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{url}}/vc/{{vcID}}/setting/{{settingID}}",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"vc",
-								"{{vcID}}",
-								"setting",
-								"{{settingID}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "99-01 VC Clone",
-			"item": [
-				{
-					"name": "99-01-01 Get Input Status",
+					"name": "99-01-05 Get Input Status",
 					"event": [
 						{
 							"listen": "test",
@@ -153,7 +106,7 @@
 									"   var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
 									"    if (varRunErrors >= 10) {",
 									"        postman.setNextRequest(\"99-01-99 Final\");",
-									"        // pm.expect(\"Error\").to.be.eql(\"Stop Execution too many errors\", varRunErrors)",
+									"        pm.expect(\"Error\").to.be.eql(\"Stop Execution too many errors\", varRunErrors)",
 									"    }",
 									"    var exportType = pm.iterationData.get(\"exportType\");",
 									"    if (exportType == 'VC') {",
