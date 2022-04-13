@@ -122,12 +122,13 @@ function getRoleTZ(role, timeZones, index, maxTZ) {
 	}
 	// check if the role is a concerningRole for this TSO
 	var orga = timeZones.organisation[orgaIndex];
-	if (!orga.concerningRoles?.find(item => item.role.uid == role.uid)) {
+	var concerningRole = orga.concerningRoles?.find(item => item.role.uid == role.uid);
+	if (!concerningRole) {
 		// role is not concerning for this TSO
 		return undefined;
 	}
-	var roleTZ = orga.indexedRoles[role.uid];
-	if (role?.pid != roleTZ?.pid) {
+	var roleTZ = orga.indexedRoles[concerningRole.role?.uid];
+	if (concerningRole.role?.pid != roleTZ?.pid) {
 		return undefined;
 	}
 	return roleTZ;
@@ -1066,19 +1067,24 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 		return [];
 	}
 	var role, parentRole;
-	if (!roleID) {
+	if (roleID) {
+		role = timeZones.mergedOrganisation[roleID];
+	} else {
 		role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
 		roleID = role?.uid;
-	} else {
-		role = timeZones.mergedOrganisation[roleID];
+	}
+	if (!role) {
+		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
+		return [];
 	}
 	if (parentID > 0) {
 		parentRole = timeZones.mergedOrganisation[parentID];
 	} else if (role?.pid) {
 		parentRole = timeZones.mergedOrganisation[role.pid];
 	}
-	if (!role || (role?.pid && !parentRole)) {
-		logger4js.warn('Calculate Concerning Roles not found, Role: %d found: %s, Parent: %d, found %s', roleID, role != undefined, parentID, parentRole != undefined);
+	if (!role.isSummaryRole) {
+		// for normal users ignore the parent we want to get them all, even they have moved in the orga
+		parentID = undefined;
 	}
 	mergeCapacity(capacity, timeZones, startDate);
 
@@ -1388,18 +1394,18 @@ function calcCapacityVPVs(vpvs, roleID, parentID, timeZones, hierarchy) {
 	if (!(vpvs?.length > 0) || timeZones.duration <= 0 ) {
 		return 	allCalcCapaValuesIndexed;
 	}
-	var role = timeZones.mergedOrganisation[roleID];
+	var role = findCurrentRole(timeZones, roleID, parentID);
 	if (!role) {
 		return allCalcCapaValuesIndexed;
 	}
-	roleIDs.push({uid: role.uid, roleName: role.name}); // Main role
+	roleIDs.push({uid: roleID, pid: parentID, roleName: role.name}); // Main role
 	if (hierarchy && role.isSummaryRole) {
 		role.subRoleIDs?.forEach(item => {
 			var subrole = timeZones.mergedOrganisation[item.key];
 			if (!subrole) {
 				return;
 			}
-			roleIDs.push({uid: subrole.uid, roleName: subrole.name}); // Sub role
+			roleIDs.push({uid: subrole.uid, pid: role.uid, roleName: subrole.name}); // Sub role
 		});
 	}
 	if (!hierarchy && !timeZones.allConcerningRoles) {
@@ -1408,22 +1414,21 @@ function calcCapacityVPVs(vpvs, roleID, parentID, timeZones, hierarchy) {
 	}
 	logger4js.debug('calculate for the role & subrole', JSON.stringify(roleIDs));
 
-	roleIDs.forEach(item => {
-		roleID = item.uid;
+	roleIDs.forEach(roleItem => {
 		if (hierarchy) {
 			// recalculate the concerning roles for every role that is calculate. Getting roles, which are connected with roleID in the given organisation
-			calcConcerningRoles(timeZones, roleID, parentID);
+			calcConcerningRoles(timeZones, roleItem.uid, roleItem.pid);
 		}
-		var roleName = item.roleName;
-		logger4js.debug('calculate capacity for Role %s', roleID);
-		var monthlyNeeds = getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones);
+		var roleName = roleItem.roleName;
+		logger4js.debug('calculate capacity for Role %s', roleItem.uid);
+		var monthlyNeeds = getCapacityFromTimeZone(vpvs, roleItem.uid, roleItem.pid, timeZones);
 		monthlyNeeds?.forEach((item, index) => {
 			var currentDate = new Date(timeZones.startDate);
 			currentDate.setMonth(currentDate.getMonth() + index);
-			const currentIndex = currentDate.toISOString().concat('_', roleID);
+			const currentIndex = currentDate.toISOString().concat('_', roleItem.uid);
 			allCalcCapaValues[currentIndex] = {
 				'currentDate': currentDate.toISOString(),
-				'roleID': roleID,
+				'roleID': roleItem.uid,
 				'roleName': roleName,
 				'actualCost_PT': monthlyNeeds[index].actCost_PT || 0,
 				'plannedCost_PT': monthlyNeeds[index].plannedCost_PT || 0 ,
@@ -1439,7 +1444,7 @@ function calcCapacityVPVs(vpvs, roleID, parentID, timeZones, hierarchy) {
 		});
 	});
 	var endCalc = new Date();
-	logger4js.debug('Calculate Capacity Costs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	logger4js.debug('Calculate Capacity VPVs duration %s ms ', endCalc.getTime() - startCalc.getTime());
 	return allCalcCapaValues;
 }
 
@@ -1553,13 +1558,9 @@ function getTimeZoneIndex(timeZones, timestamp) {
 
 function getCapacityFromTimeZone(vpvs, roleID, parentID, timeZones) {
 	// var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
-	if (!roleID || !timeZones.mergedOrganisation[roleID]) {
+	var role = findCurrentRole(timeZones, roleID, parentID);
+	if (!role) {
 		// given roleID isn't defined in this organisation
-		return undefined;
-	}
-	if (parentID && isNaN(parentID) && !timeZones.mergedOrganisation[parentID]) {
-		// given parent isn't defined in this organisation
-		logger4js.warn('given parentID is not defined in this organisation roleID/parentID  %s/%s',  roleID, parentID);
 		return undefined;
 	}
 
@@ -1653,9 +1654,6 @@ function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZon
 function isConcerningRole(roleID, month, timeZones) {
 	var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
 	var cRole = timeZones.organisation[orgaIndex]?.concerningRoles.find(item => item.role?.uid == roleID);
-	if (roleID == 11) {
-		logger4js.trace('check if role is concerning for month', roleID, month, cRole != undefined);
-	}
 	return cRole != undefined;
 }
 
@@ -1744,8 +1742,43 @@ function getCapaValues(timeZones) {
 	return capaValues;
 }
 
+// find the latest role definition in the orgas that have roleID & parentID if specified
+function findCurrentRole(timeZones, roleID, parentID) {
+	var role;
+	var actDate = new Date();
+	if (roleID >= 0) {
+		timeZones?.organisation?.forEach(orga => {
+			if (orga.timestamp.getTime() > actDate.getTime()) {
+				// orga of the future
+				return;
+			}
+			var tzRole = orga.indexedRoles[roleID];
+			if (tzRole) {
+				if (parentID && tzRole.pid == parentID) {
+					// normal role/parent role search
+					role = tzRole;
+				} else if (parentID) {
+					// check if parentID is Team and roleID is Team Member
+					tzParentRole = orga.indexedRoles[parentID];
+					if (tzParentRole && tzParentRole.type == 2) {
+						if (tzParentRole.subRoleIDs.find(item => item.key == tzRole.uid)) {
+							// team member found
+							role = tzRole;
+						}
+					}
+				} else if (!parentID) {
+					// no parent is specified i.e. for the root role
+					role = tzRole;
+				}
+			}
+		});
+	}
+	logger4js.trace('Find Role', roleID, parentID, JSON.stringify(role));
+	return role;
+}
+
 /* Calculate the related/concerning Roles that belong to this role, means the role itself and all Children
- * With TSO this can be different for every organisation, so the concerningRoles were calculated per Orga
+ * With TSO this can be different for every organisation, so the concerning Roles were calculated per Orga
  * and stored in the timeZone Structure for easy access
  * in addition the root role that is used for the calculation is also stored to allow distinction between teams and normal orga units
  */
@@ -1782,8 +1815,7 @@ function calcConcerningRoles(timeZones, roleID, parentID) {
 	}
 
 	// find the role in the latest organisation
-	var orga = timeZones.organisation[timeZones.organisation.length - 1];
-	timeZones.role = orga?.indexedRoles[roleID];
+	timeZones.role = findCurrentRole(timeZones, roleID, parentID);
 
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	timeZones.allConcerningRoles = [];
@@ -1791,7 +1823,7 @@ function calcConcerningRoles(timeZones, roleID, parentID) {
 		orga.concerningRoles = [];
 		var allRoles = orga.indexedRoles;
 		var role = allRoles[roleID];
-		if (role) {
+		if (role && (!parentID || role.pid == parentID)) {
 			var crElem = {};
 			crElem.role = role;
 			crElem.teamID = -1;
