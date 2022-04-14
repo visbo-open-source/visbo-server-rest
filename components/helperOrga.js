@@ -335,7 +335,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if ((role.type == 3) && !isNaN(role.uid) && role.uid > maxCostID) {
 				maxCostID = role.uid;
 			}
-		})
+		});
 	}
 	orgaList.forEach((role, index) => {
 		if (!(role.name || '').trim()) {
