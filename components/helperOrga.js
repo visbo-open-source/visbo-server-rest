@@ -321,22 +321,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	newOrga.allCosts = [];
 	var uniqueRoleNames = [];
 	var uniqueCostNames = [];
-	var maxRoleID, maxCostID;
-	if (oldOrga) {
-		maxRoleID = getMaxID(oldOrga, 1);
-		maxCostID = getMaxID(oldOrga, 3);
-	} else {
-		maxRoleID = 0;
-		maxCostID = 0;
-		orgaList.forEach(role => {
-			if ((role.type == 1 || role.type == 2) && !isNaN(role.uid) && role.uid > maxRoleID) {
-				maxRoleID = role.uid;
-			}
-			if ((role.type == 3) && !isNaN(role.uid) && role.uid > maxCostID) {
-				maxCostID = role.uid;
-			}
-		});
-	}
+	var maxRoleID = getMaxID(oldOrga, 1);
+	var maxCostID = getMaxID(oldOrga, 3);
 	orgaList.forEach((role, index) => {
 		if (!(role.name || '').trim()) {
 			// skip empty entry
@@ -380,7 +366,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (role.type == 1 || role.type == 2) {
 			var newRole;
 			if (role.uid == undefined) {
-				if (role.type == 1 || (role.type == 2 && role.isSummaryRole)) {
+				if (role.type == 1) {
 					role.uid = ++maxRoleID;
 				} else {
 					var originalRole = newOrga.allRoles.find(item => item.name == role.name);
