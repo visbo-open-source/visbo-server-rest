@@ -142,14 +142,10 @@ function checkNextRun() {
             task.value.nextRun.setMinutes(0);
             task.value.nextRun.setSeconds(0);
           } else if (task.value.interval == 60 * 60 * 24) { // start at the beginning of the day
-            task.value.nextRun.setHours(0);
-            task.value.nextRun.setMinutes(0);
-            task.value.nextRun.setSeconds(0);
+            task.value.nextRun.setHours(0, 0, 0, 0);
           } else if (task.value.interval == 60 * 60 * 24 * 30) { // start at the beginning of the month
-            task.value.nextRun.setDate(0);
-            task.value.nextRun.setHours(0);
-            task.value.nextRun.setMinutes(0);
-            task.value.nextRun.setSeconds(0);
+            task.value.nextRun.setDate(1);
+            task.value.nextRun.setHours(0, 0, 0, 0);
           }
           var lockPeriod = 5*60;
           if (task.name == 'Predict Training') { logger4js.trace('Prepare Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun && task.value.nextRun.toISOString(), task.value.lockedUntil && task.value.lockedUntil.toISOString()); }
@@ -224,9 +220,7 @@ function taskTest(task, finishedTask) {
   logger4js.trace('TaskTest Execute %s Value %O', task && task._id, task.value);
   task.value.taskSpecific = {};
   task.value.taskSpecific.lastPeriod = new Date();
-  task.value.taskSpecific.lastPeriod.setHours(0);
-  task.value.taskSpecific.lastPeriod.setMinutes(0);
-  task.value.taskSpecific.lastPeriod.setSeconds(0);
+  task.value.taskSpecific.lastPeriod.setHours(0, 0, 0, 0);
 
   finishedTask(task, true);
   logger4js.debug('TaskTest Done %s Result %O', task._id, task.value.taskSpecific);

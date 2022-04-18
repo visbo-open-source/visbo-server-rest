@@ -30,6 +30,7 @@ require('./models/visboproject');
 require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcsetting');
+require('./models/vccapacities');
 
 var systemVC = require('./components/systemVC');
 var visboAudit = require('./components/visboAudit');
@@ -167,7 +168,7 @@ function dbConnect(dbconnection, launchServer) {
     var cleanString = dbconnection.substring(0, position);
     position = dbconnection.indexOf('@', position + 1);
     cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length));
-    logger4js.mark('Connecting database %s', cleanString);
+    logger4js.warn('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri
       dbconnection,
@@ -293,7 +294,7 @@ i18n.configure({
     directory: __dirname + '/i18n'
 });
 app.use(i18n.init);
-logger4js.warn('Internationalisation done');
+logger4js.info('Internationalisation done');
 
 app.set('view engine', 'ejs');
 app.engine('.html', require('ejs').renderFile);
@@ -304,13 +305,13 @@ app.use(logger(function (tokens, req, res) {
   if (['GET', 'POST', 'PUT', 'DELETE'].indexOf(tokens.method(req, res)) >= 0 ) {
     visboAudit.visboAudit(tokens, req, res);
     var webLog = [
-      tokens.method(req, res),
+      tokens.method(req, res).padEnd(6, ' '),
       // 'base url', req.baseUrl,
       //'Url', req.originalUrl,
-      tokens.url(req, res),
       tokens.status(req, res),
-      tokens.res(req, res, 'content-length')||0+' Bytes',
-      Math.round(tokens['response-time'](req, res))+'ms',
+      (Math.round(tokens['response-time'](req, res)) + 'ms').padStart(8, ' '),
+      ((tokens.res(req, res, 'content-length')||0) + 'B').padStart(8, ' '),
+      tokens.url(req, res),
       req.headers['x-real-ip'] || req.ip,
       req.get('User-Agent'),
       ''
@@ -329,7 +330,7 @@ app.use(logger(function (tokens, req, res) {
 // set CORS Options (Cross Origin Ressource Sharing)
 app.use(cors(corsOptions));
 
-logger4js.warn('Connecting Database');
+logger4js.debug('Connecting Database');
 dbConnect(process.env.NODE_VISBODB, launchServer);
 
 module.exports = app;
