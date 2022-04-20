@@ -9,3 +9,4 @@ logging/
 dump.rdb
 postman/VCClone/*.json
 data/
+postman/environment

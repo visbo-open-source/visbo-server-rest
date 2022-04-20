@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "63d387c6-75b2-4721-8dd7-70cfce69dfb6",
+		"_postman_id": "0b57ab34-9b17-492b-87a1-4a1b7c74aff2",
 		"name": "60 Copy VC",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -63,7 +63,7 @@
 			]
 		},
 		{
-			"name": "60-10 Copy",
+			"name": "60-10 Copy VC",
 			"item": [
 				{
 					"name": "60-10-01 Get VC",
@@ -81,7 +81,7 @@
 									"    var jsonData = pm.response.json();",
 									"    var list = jsonData.vc;",
 									"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
-									"    var searchName = pm.environment.get(\"VCBaseName\");",
+									"    var searchName = pm.environment.get(\"VCCopyName\");",
 									"    var index = list.findIndex(item => item.name == searchName);",
 									"    if (index >= 0) {",
 									"        console.log(\"Found:\", list[index].name)",
@@ -89,7 +89,7 @@
 									"        pm.globals.set(\"copyJSON\", JSON.stringify(list[index]));",
 									"    } else {",
 									"        console.log(\"Item not found\", searchName)",
-									"        postman.setNextRequest(\"60-10-99 Final\");",
+									"        postman.setNextRequest(\"60-99-01 Final\");",
 									"        pm.expect(searchName).to.be.eql(\"\", \"Stop Executing Collection\");",
 									"    }",
 									"});"
@@ -129,9 +129,7 @@
 									"pm.test(\"Status code Check\", function () {",
 									"    var jsonData = pm.response.json();",
 									"    if (jsonData.state != 'success') {",
-									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
-									"        varRunErrors += 1;",
-									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"        postman.setNextRequest(\"60-99-01 Final\");",
 									"    }",
 									"    pm.response.to.have.status(200);",
 									"});",
@@ -199,9 +197,35 @@
 						}
 					},
 					"response": []
+				}
+			],
+			"description": "Create two Visbo Centers as Admin Test User.\n\nFirst one VC the normal user is also Admin and therefore can create projects later on\nSecond VC is created with Admin permission for both test users and later on changed to normal user for the normal tester. \n\n\nMissing Tests here are: \n\nCreate VC with the same name\nCreate VP with duplicate name",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				},
 				{
-					"name": "60-10-12 Get VC Enable/Disable System",
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "60-15 Copy Settings",
+			"item": [
+				{
+					"name": "60-15-01 Get VC Enable/Disable System",
 					"event": [
 						{
 							"listen": "test",
@@ -225,12 +249,12 @@
 									"    var newList = list.filter(item => item.type == '_VCConfig' && item.value && item.value.systemLimit != true)",
 									"",
 									"    // skip creation of this setting it requires a PUT",
-									"    postman.setNextRequest(\"60-10-15 Get VC Setting\")",
+									"    postman.setNextRequest(\"60-15-99 Final\")",
 									"    if (newList.length > 0) {",
 									"        pm.globals.set(\"copyJSON\", JSON.stringify(newList));",
 									"    } else {",
 									"        pm.globals.set(\"copyJSON\", '');",
-									"        postman.setNextRequest(\"60-10-15 Get VC Setting\")",
+									"        postman.setNextRequest(\"60-15-99 Final\")",
 									"    }",
 									"    pm.expect(newList.length >= 0).to.be.eql(true, \"VC Setting not found\");",
 									"});",
@@ -270,7 +294,70 @@
 					"response": []
 				},
 				{
-					"name": "60-10-13 Create VC Setting System",
+					"name": "60-15-02 Get newVC Enable/Disable System Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check VC Settings\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length).to.be.gte(0, \"No setting List found\");",
+									"",
+									"    var list = jsonData.vcsetting;",
+									"    var newList = list.filter(item => item.type == '_VCConfig' && item.value && item.value.systemLimit != true)",
+									"    pm.globals.set(\"listItems\", JSON.stringify(newList));",
+									"    if (newList.length == 0) {",
+									"        postman.setNextRequest(\"60-15-99 Final\");",
+									"    }",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDNew}}/setting?type=_VCConfig",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDNew}}",
+								"setting"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "_VCConfig"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-15-05 Update VC Setting System",
 					"event": [
 						{
 							"listen": "test",
@@ -295,21 +382,23 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
-									"pm.expect(list.length > 0).to.be.eql(true, \"No more settings\");",
-									"var vcSetting = list[0];",
-									"list.shift();",
-									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
-									"console.log(\"Settings remaining\", list.length);",
-									"if (list.length == 0) {",
-									"    postman.setNextRequest(\"60-10-15 Get VC Setting\");",
-									"} else {",
-									"    postman.setNextRequest(\"60-10-13 Create VC Setting System\");",
+									"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+									"vcSetting = listItems.shift();",
+									"console.log(\"listItems remaining\", listItems.length);",
+									"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+									"if (listItems.length > 0) {",
+									"    postman.setNextRequest(\"60-15-05 Update VC Setting System\");",
 									"}",
-									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
-									"",
+									"pm.globals.set(\"TempID\", vcSetting._id)",
 									"delete vcSetting._id; ",
 									"delete vcSetting.vcid",
+									"",
+									"var orgSettings = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"var orgSetting = orgSettings.find(item => item.name == vcSetting.name)",
+									"if (orgSetting) {",
+									"    console.log(\"Found Original Config\", orgSetting.name)",
+									"    vcSetting.value = orgSetting.value;",
+									"}",
 									"console.log(\"Start Create Setting\", vcSetting.name, vcSetting.type, \"Timestamp\", vcSetting.timestamp, \"Value\", JSON.stringify(vcSetting.value));",
 									"pm.variables.set('vcSetting', JSON.stringify(vcSetting));",
 									""
@@ -319,7 +408,7 @@
 						}
 					],
 					"request": {
-						"method": "POST",
+						"method": "PUT",
 						"header": [
 							{
 								"key": "access-key",
@@ -335,14 +424,15 @@
 							"raw": "{{vcSetting}}"
 						},
 						"url": {
-							"raw": "{{url}}/vc/{{vcIDNew}}/setting?sysAdmin=1",
+							"raw": "{{url}}/vc/{{vcIDNew}}/setting/{{TempID}}?sysAdmin=1",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"vc",
 								"{{vcIDNew}}",
-								"setting"
+								"setting",
+								"{{TempID}}"
 							],
 							"query": [
 								{
@@ -355,7 +445,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-15 Get VC Setting",
+					"name": "60-15-10 Get VC Setting",
 					"event": [
 						{
 							"listen": "test",
@@ -376,14 +466,14 @@
 									"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length >= 0).to.be.eql(true, \"No setting List found\");",
 									"",
 									"    var list = jsonData.vcsetting;",
-									"    var newList = list.filter(item => item.type != '_VCConfig' && item.value)",
+									"    var newList = list.filter(item => item.type != '_VCConfig' && item.type != 'organisation' && item.value)",
 									"    console.log(\"VC Settings found:\", newList.length)",
 									"    if (newList.length > 0) {",
 									"        newList.sort((a,b) => (new Date(a.timestamp || '1900-01-01').getTime() - (new Date(b.timestamp || '1900-01-01').getTime())));",
 									"        pm.globals.set(\"copyJSON\", JSON.stringify(newList));",
 									"    } else {",
 									"        pm.globals.set(\"copyJSON\", '');",
-									"        postman.setNextRequest(\"60-10-20 Get VC Groups\")",
+									"        postman.setNextRequest(\"60-15-99 Final\")",
 									"    }",
 									"    pm.expect(newList.length >= 0).to.be.eql(true, \"VC Setting not found\");",
 									"});",
@@ -417,7 +507,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-16 Create VC Setting",
+					"name": "60-15-12 Create VC Setting",
 					"event": [
 						{
 							"listen": "test",
@@ -448,10 +538,8 @@
 									"list.shift();",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"Settings remaining\", list.length);",
-									"if (list.length == 0) {",
-									"    postman.setNextRequest(\"60-10-20 Get VC Groups\");",
-									"} else {",
-									"    postman.setNextRequest(\"60-10-16 Create VC Setting\");",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-15-12 Create VC Setting\");",
 									"}",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"",
@@ -496,7 +584,46 @@
 					"response": []
 				},
 				{
-					"name": "60-10-20 Get VC Groups",
+					"name": "60-15-99 Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "60-20 Copy Group & User",
+			"item": [
+				{
+					"name": "60-20-10 Get VC Groups",
 					"event": [
 						{
 							"listen": "test",
@@ -523,7 +650,7 @@
 									"        pm.globals.set(\"copyJSON\", JSON.stringify(newList));",
 									"    } else {",
 									"        pm.globals.set(\"copyJSON\", '');",
-									"        postman.setNextRequest(\"60-10-30 Get VP\")",
+									"        postman.setNextRequest(\"60-20-99 Final\")",
 									"    }",
 									"    pm.expect(newList.length >= 0).to.be.eql(true, \"VC Groups not found\");",
 									"});",
@@ -557,7 +684,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-21 Create VC Groups",
+					"name": "60-20-12 Create VC Groups",
 					"event": [
 						{
 							"listen": "test",
@@ -597,10 +724,10 @@
 									"    // no users to create",
 									"    if (list.length == 0) {",
 									"        // no more groups to create",
-									"        postman.setNextRequest(\"60-10-30 Get VP\");",
+									"        postman.setNextRequest(\"60-20-99 Final\");",
 									"    } else {",
 									"        // continue create next group",
-									"        postman.setNextRequest(\"60-10-21 Create VC Groups\"); ",
+									"        postman.setNextRequest(\"60-20-12 Create VC Groups\"); ",
 									"    }",
 									"}",
 									"",
@@ -650,7 +777,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-25 Create VC User",
+					"name": "60-20-14 Create VC User",
 					"event": [
 						{
 							"listen": "test",
@@ -681,9 +808,14 @@
 									"list.shift();",
 									"pm.globals.set(\"vcUsers\", JSON.stringify(list));",
 									"groupID = pm.globals.get(\"groupID\");",
-									"console.log(\"Users remaining\", list.length);",
+									"var groupList = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"console.log(\"Users remaining\", list.length, \"Groups remaining\", groupList.length);",
+									"",
+									"",
 									"if (list.length > 0) {",
-									"    postman.setNextRequest(\"60-10-25 Create VC User\");",
+									"    postman.setNextRequest(\"60-20-14 Create VC User\");",
+									"} else if (groupList.length > 0) {",
+									"    postman.setNextRequest(\"60-20-12 Create VC Groups\");",
 									"}",
 									"pm.variables.set(\"varEMail\", vcUser.email)",
 									"",
@@ -727,17 +859,13 @@
 					"response": []
 				},
 				{
-					"name": "60-10-29 Get Status",
+					"name": "60-20-99 Final",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
-									"if (list.length > 0) {",
-									"    // still groups remaining to create",
-									"    postman.setNextRequest(\"60-10-21 Create VC Groups\");",
-									"}"
+									""
 								],
 								"type": "text/javascript"
 							}
@@ -763,9 +891,322 @@
 						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
 					},
 					"response": []
+				}
+			]
+		},
+		{
+			"name": "60-25 Copy Orga & Capa",
+			"item": [
+				{
+					"name": "60-25-10 Get VC Orga",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check VC Organisations\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.organisation?.length).to.be.gte(0, \"No Organisation List found\");",
+									"",
+									"    var newList = jsonData.organisation;",
+									"    console.log(\"VC Organisations found:\", newList.length)",
+									"    if (newList.length > 0) {",
+									"        newList.sort((a,b) => (new Date(a.timestamp).getTime() - (new Date(b.timestamp).getTime())));",
+									"        pm.globals.set(\"copyJSON\", JSON.stringify(newList));",
+									"    } else {",
+									"        pm.globals.set(\"copyJSON\", '');",
+									"        postman.setNextRequest(\"60-25-99 Final\")",
+									"    }",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDOrg}}/organisation",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDOrg}}",
+								"organisation"
+							]
+						}
+					},
+					"response": []
 				},
 				{
-					"name": "60-10-30 Get VP",
+					"name": "60-25-12 Create VC Orga",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"pm.expect(list.length > 0).to.be.eql(true, \"No more settings\");",
+									"var orga = list[0];",
+									"list.shift();",
+									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
+									"console.log(\"Settings remaining\", list.length);",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-25-12 Create VC Orga\");",
+									"}",
+									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
+									"",
+									"delete orga._id; ",
+									"console.log(\"Start Create Setting\", orga.name, \"Timestamp\", orga.timestamp, \"allUnits\", orga.allUnits.length);",
+									"pm.variables.set('varOrganisation', JSON.stringify(orga));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{varOrganisation}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDNew}}/organisation",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDNew}}",
+								"organisation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-25-20 Get VC Capa",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check VC Capa\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.capacity?.length).to.be.gte(0, \"No Capacity List found\");",
+									"",
+									"    var newList = jsonData.capacity;",
+									"    console.log(\"VC Capacity found:\", newList.length)",
+									"    if (newList.length > 0) {",
+									"        pm.globals.set(\"copyJSON\", JSON.stringify(newList));",
+									"    } else {",
+									"        pm.globals.set(\"copyJSON\", '');",
+									"        postman.setNextRequest(\"60-25-99 Final\")",
+									"    }",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDOrg}}/capa",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDOrg}}",
+								"capa"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-25-22 Create VC Capa",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"pm.expect(list.length > 0).to.be.eql(true, \"No more capa items\");",
+									"var capa = list.shift();",
+									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
+									"console.log(\"Capas remaining\", list.length);",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-25-22 Create VC Capa\");",
+									"}",
+									"",
+									"delete capa._id; ",
+									"console.log(\"Start Create Capa\", capa.roleID, \"startOfYear\", capa.startOfYear);",
+									"pm.variables.set('varCapa', JSON.stringify(capa));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{varCapa}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcIDNew}}/capa",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcIDNew}}",
+								"capa"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "60-25-99 Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "60-30 Copy VP",
+			"item": [
+				{
+					"name": "60-30-10 Get VP",
 					"event": [
 						{
 							"listen": "test",
@@ -821,7 +1262,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-31 Create VP",
+					"name": "60-30-12 Create VP",
 					"event": [
 						{
 							"listen": "test",
@@ -871,6 +1312,9 @@
 									"vpNew.name = vpOrg.name;",
 									"vpNew.description = vpOrg.description;",
 									"vpNew.vpType = vpOrg.vpType;",
+									"vpNew.vpStatus = vpOrg.vpStatus;",
+									"vpNew.managerId = vpOrg.managerId;",
+									"",
 									"vpNew.kundennummer = vpOrg.kundennummer;",
 									"vpNew.customFieldDouble = vpOrg.customFieldDouble;",
 									"vpNew.customFieldString = vpOrg.customFieldString;",
@@ -912,7 +1356,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-32 Get VP Specific",
+					"name": "60-30-14 Get VP Specific",
 					"event": [
 						{
 							"listen": "test",
@@ -931,7 +1375,7 @@
 									"    vpOrg = list[0];",
 									"    console.log(\"Visbo Project Variants found:\", vpOrg.variant.length);",
 									"    if (vpOrg.variant.length == 0) {",
-									"        postman.setNextRequest(\"60-10-34 Get VP Groups\");",
+									"        postman.setNextRequest(\"60-30-20 Get VP Groups\");",
 									"    }",
 									"    pm.globals.set(\"copyJSON\", JSON.stringify(vpOrg.variant));",
 									"});"
@@ -963,7 +1407,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-31 Create Variant",
+					"name": "60-30-16 Create Variant",
 					"event": [
 						{
 							"listen": "test",
@@ -993,10 +1437,8 @@
 									"list.shift();",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"Variants remaining\", list.length);",
-									"if (list.length == 0) {",
-									"    postman.setNextRequest(\"60-10-34 Get VP Groups\");",
-									"} else {",
-									"    postman.setNextRequest(\"60-10-31 Create Variant\");",
+									"if (list.length > 0) {",
+									"    postman.setNextRequest(\"60-30-16 Create Variant\");",
 									"}",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"",
@@ -1041,7 +1483,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-34 Get VP Groups",
+					"name": "60-30-20 Get VP Groups",
 					"event": [
 						{
 							"listen": "test",
@@ -1060,7 +1502,7 @@
 									"    console.log(\"VP Groups found:\", groups.length)",
 									"    pm.globals.set(\"copyJSON\", JSON.stringify(groups));",
 									"    if (groups.length == 0) {",
-									"        postman.setNextRequest(\"60-10-50 Get VPV\");",
+									"        postman.setNextRequest(\"60-30-30 Get VPV\");",
 									"    }",
 									"});"
 								],
@@ -1092,7 +1534,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-35 Create VP Groups",
+					"name": "60-30-22 Create VP Groups",
 					"event": [
 						{
 							"listen": "test",
@@ -1123,18 +1565,17 @@
 									"var vcGroup = list[0];",
 									"list.shift();",
 									"var vcUsers = vcGroup.users.filter(user => (user.email.indexOf('@visbo') > 0 || user.email.indexOf('@seyfried') > 0));",
-									"console.log(\"Found Users in Group\", vcUsers.length)",
 									"pm.globals.set(\"vcUsers\", JSON.stringify(vcUsers));",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
-									"console.log(\"Groups remaining\", list.length);",
+									"console.log(\"Found Users in Group\", vcUsers.length, \"Groups remaining\", list.length);",
 									"if (vcUsers.length == 0) {",
 									"    // no users to create",
 									"    if (list.length == 0) {",
 									"        // no more groups to create",
-									"        postman.setNextRequest(\"60-10-50 Get VPV\");",
+									"        postman.setNextRequest(\"60-30-30 Get VPV\");",
 									"    } else {",
 									"        // continue create next group",
-									"        postman.setNextRequest(\"60-10-35 Create VP Groups\"); ",
+									"        postman.setNextRequest(\"60-30-22 Create VP Groups\"); ",
 									"    }",
 									"}",
 									"",
@@ -1182,7 +1623,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-36 Create VP User",
+					"name": "60-30-24 Create VP User",
 					"event": [
 						{
 							"listen": "test",
@@ -1213,9 +1654,13 @@
 									"list.shift();",
 									"pm.globals.set(\"vcUsers\", JSON.stringify(list));",
 									"groupID = pm.globals.get(\"groupID\");",
-									"console.log(\"Users remaining\", list.length);",
+									"",
+									"var groupList = JSON.parse(pm.globals.get(\"copyJSON\"));",
+									"console.log(\"Found Users in Group\", list.length, \"Groups remaining\", groupList.length);",
 									"if (list.length > 0) {",
-									"    postman.setNextRequest(\"60-10-36 Create VP User\");",
+									"    postman.setNextRequest(\"60-30-24 Create VP User\");",
+									"} else if (groupList.length > 0) {",
+									"    postman.setNextRequest(\"60-30-22 Create VP Groups\");",
 									"}",
 									"pm.variables.set(\"varEMail\", vcUser.email)",
 									"",
@@ -1259,45 +1704,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-39 Get Status",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var list = JSON.parse(pm.globals.get(\"copyJSON\"));",
-									"if (list.length > 0) {",
-									"    // still groups remaining to create",
-									"    postman.setNextRequest(\"60-10-35 Create VP Groups\");",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "access-key",
-								"value": "{{token}}"
-							}
-						],
-						"url": {
-							"raw": "{{url}}/status",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"status"
-							]
-						},
-						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
-					},
-					"response": []
-				},
-				{
-					"name": "60-10-50 Get VPV",
+					"name": "60-30-30 Get VPV",
 					"event": [
 						{
 							"listen": "test",
@@ -1316,7 +1723,7 @@
 									"    list.sort((a,b) => (new Date(a.timestamp)).getTime() - (new Date(b.timestamp)).getTime());",
 									"    console.log(\"Visbo Project Versions found:\", list.length);",
 									"    if (list.length == 0) {",
-									"        postman.setNextRequest(\"60-10-60 Check VP List\");",
+									"        postman.setNextRequest(\"60-30-40 Check VP List\");",
 									"    }",
 									"    pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"});"
@@ -1357,7 +1764,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-51 Create VPV",
+					"name": "60-30-32 Create VPV",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -1370,7 +1777,7 @@
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"VPV remaining\", list.length);",
 									"if (list.length > 0) {",
-									"    postman.setNextRequest(\"60-10-51 Create VPV\");",
+									"    postman.setNextRequest(\"60-30-32 Create VPV\");",
 									"}",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"",
@@ -1434,7 +1841,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-60 Check VP List",
+					"name": "60-30-40 Check VP List",
 					"event": [
 						{
 							"listen": "test",
@@ -1454,9 +1861,7 @@
 									"    var list = JSON.parse(pm.globals.get(\"vpList\"));",
 									"    // no more VPs to create",
 									"    if (list.length > 0) {",
-									"        postman.setNextRequest(\"60-10-31 Create VP\");",
-									"    } else {",
-									"        postman.setNextRequest(\"60-10-70 Create VP List Org\");",
+									"        postman.setNextRequest(\"60-30-12 Create VP\");",
 									"    }",
 									"",
 									"});"
@@ -1493,7 +1898,46 @@
 					"response": []
 				},
 				{
-					"name": "60-10-70 Create VP List Org",
+					"name": "60-30-99 Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "60-35 Copy VPF",
+			"item": [
+				{
+					"name": "60-35-10 Get VP List Org",
 					"event": [
 						{
 							"listen": "test",
@@ -1507,8 +1951,9 @@
 									"pm.test(\"Check List of VP of VC\", function () {",
 									"    var jsonData = pm.response.json();",
 									"    var list = jsonData.vp;",
+									"    list = list.filter(vp => vp.vpType != 2);",
 									"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No VP List found\");",
-									"",
+									"    console.log(\"Original VPs\", list.length)",
 									"    pm.globals.set(\"vpListOrg\", JSON.stringify(list));",
 									"});"
 								],
@@ -1544,7 +1989,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-71 Create VP List New",
+					"name": "60-35-14 Build VP Mapping",
 					"event": [
 						{
 							"listen": "test",
@@ -1558,7 +2003,7 @@
 									"pm.test(\"Check List of VP of VC\", function () {",
 									"    var jsonData = pm.response.json();",
 									"    var vpListNew = jsonData.vp;",
-									"    pm.expect(vpListNew && vpListNew.length >= 0).to.be.eql(true, \"No VP List found\");",
+									"    pm.expect(vpListNew?.length).to.be.gte(0, \"No VP List found\");",
 									"",
 									"    var vpListOrg = JSON.parse(pm.globals.get(\"vpListOrg\"));",
 									"    var vpMapping = [];",
@@ -1572,6 +2017,9 @@
 									"        vpMapping.push(entry);",
 									"    })",
 									"    vpListNew.forEach(item => {",
+									"        if (item.vpType == 2) {",
+									"            return; // ignore templates",
+									"        }",
 									"        entry = vpMapping.find(vp => vp.name == item.name && vp.vpType == item.vpType);",
 									"        if (entry) {",
 									"            unMapped -= 1;",
@@ -1583,7 +2031,7 @@
 									"        }",
 									"    })",
 									"    if (unMapped) {",
-									"        postman.setNextRequest(\"60-10-99 Final\");",
+									"        postman.setNextRequest(\"60-35-99 Final\");",
 									"        list = vpMapping.filter(item => item.vpidNew == undefined);",
 									"        pm.expect(unMapped).to.be.eql(0, \"umapped Projects found: \" + JSON.stringify(list));",
 									"    }",
@@ -1592,7 +2040,7 @@
 									"    pm.globals.set(\"vpList\", JSON.stringify(vpfMapping));",
 									"    console.log(\"Portfolios to copy:\", vpfMapping.length);",
 									"    if (vpfMapping.length == 0) {",
-									"        postman.setNextRequest(\"60-10-99 Final\");",
+									"        postman.setNextRequest(\"60-35-99 Final\");",
 									"    }",
 									"});"
 								],
@@ -1628,7 +2076,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-72 Get VP Portfolios",
+					"name": "60-35-16 Get VP Portfolios",
 					"event": [
 						{
 							"listen": "test",
@@ -1716,7 +2164,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-75 Create Portfolio Version",
+					"name": "60-35-18 Create Portfolio Version",
 					"event": [
 						{
 							"listen": "test",
@@ -1747,7 +2195,7 @@
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"console.log(\"VPF remaining\", list.length);",
 									"if (list.length > 0) {",
-									"    postman.setNextRequest(\"60-10-75 Create Portfolio Version\");",
+									"    postman.setNextRequest(\"60-35-18 Create Portfolio Version\");",
 									"}",
 									"pm.globals.set(\"copyJSON\", JSON.stringify(list));",
 									"vpMapping = JSON.parse(pm.globals.get(\"vpMapping\"));",
@@ -1806,7 +2254,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-79 Check VP List",
+					"name": "60-35-20 Check VP List",
 					"event": [
 						{
 							"listen": "test",
@@ -1821,9 +2269,10 @@
 									"    var list = JSON.parse(pm.globals.get(\"vpList\"));",
 									"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No VPF List found\");",
 									"",
+									"    console.log(\"remaining portfolios to copy\", list.length)",
 									"    // no more VPs to create",
 									"    if (list.length > 0) {",
-									"        postman.setNextRequest(\"60-10-72 Get VP Portfolios\");",
+									"        postman.setNextRequest(\"60-35-16 Get VP Portfolios\");",
 									"    } ",
 									"",
 									"});"
@@ -1864,7 +2313,7 @@
 					"response": []
 				},
 				{
-					"name": "60-10-99 Final",
+					"name": "60-35-99 Final",
 					"event": [
 						{
 							"listen": "test",
@@ -1896,26 +2345,43 @@
 					},
 					"response": []
 				}
-			],
-			"description": "Create two Visbo Centers as Admin Test User.\n\nFirst one VC the normal user is also Admin and therefore can create projects later on\nSecond VC is created with Admin permission for both test users and later on changed to normal user for the normal tester. \n\n\nMissing Tests here are: \n\nCreate VC with the same name\nCreate VP with duplicate name",
-			"event": [
+			]
+		},
+		{
+			"name": "60-99 Final",
+			"item": [
 				{
-					"listen": "prerequest",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							""
-						]
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							""
-						]
-					}
+					"name": "60-99-01 Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}
