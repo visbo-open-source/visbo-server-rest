@@ -216,6 +216,38 @@ function saveAuditEntry(tokens, req, res, factor) {
 	logger4js.trace('saveAudit %s %s', auditEntry.url, auditEntry.result.status);
 }
 
+function systemStartUp(systemVC, result = true) {
+	var auditEntry = new VisboAudit();
+
+	auditEntry.action = 'GET';
+	auditEntry.host = os.hostname().split('.')[0];
+	auditEntry.sysAdmin = true;
+	auditEntry.url = '/';
+	auditEntry.actionDescription = 'GET';
+	auditEntry.actionInfo = 'ReST Server Started';
+	auditEntry.user = {};
+	auditEntry.user.email = 'System';
+
+	auditEntry.vpv = {};
+	auditEntry.vp = {};
+	auditEntry.vc = {};
+	if (systemVC) {
+		auditEntry.vc.vcid = systemVC._id;
+		auditEntry.vc.name = systemVC.name;
+	}
+	auditEntry.result = {};
+	auditEntry.result.time = 0;
+	var status = result ? 200 : 500;
+	auditEntry.result.status = status;
+	auditEntry.result.statusText = result ? 'Success' : 'Server Error';
+	auditEntry.result.size = 0;
+	auditEntry.save(function(err) {
+		if (err) {
+			logger4js.error('Save Audit failed to save %O', err);
+		}
+	});
+}
+
 function savePropertyEntry(tokens, req, res, property) {
 	var auditEntry = new VisboAudit();
 
@@ -317,5 +349,6 @@ function visboAudit(tokens, req, res) {
 module.exports = {
 	visboAudit: visboAudit,
 	cleanupAudit: cleanupAudit,
-	squeezeAudit: squeezeAudit
+	squeezeAudit: squeezeAudit,
+	systemStartUp: systemStartUp
 };
