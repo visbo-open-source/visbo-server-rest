@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "8a52c482-e974-4d06-8151-76cd81aeeb08",
-		"name": "98 Clean UP Destroy Deleted VCs",
+		"name": "98_CleanUpDestroyDeletedVCs",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
