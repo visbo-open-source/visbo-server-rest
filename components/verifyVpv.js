@@ -269,8 +269,8 @@ function getVPV(req, res, next, vpvid) {
 	// we dont need it to save back to DB
 	if (req.method == 'GET') {
 		queryVPV.lean();
-	} else if (req.method == 'DELETE' || req.method == 'PUT') {
-		// we don't need the full VPV for PUT/DELETE
+	} else if (req.method == 'DELETE') {
+		// we don't need the full VPV for DELETE
 		queryVPV.select('-hierarchy -AllPhases');
 	}
 	queryVPV.exec(function (err, oneVPV) {
@@ -327,6 +327,31 @@ function getVPV(req, res, next, vpvid) {
 			}
 		});
 	});
+}
+
+// Get the organisations for calculation
+function getVPVOrgs(req, res, next) {
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	// fetch the organization in case of POST/PUT VPV to calculate keyMetrics
+
+	let skip = true;
+	if (urlComponent[1] == 'vpv' && (req.method == 'POST' || req.method == 'PUT')) {
+		skip = false;
+	}
+	if (skip) {
+		return next();
+	}
+
+	let vcid = req.oneVP?.vcid;
+	if (!vcid) {
+		logger4js.warn('No VISBO Center identified');
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No VISBO Center'
+		});
+	}
+	verifyVc.getVCOrganisation(vcid, false, req, res, next);
 }
 
 // Generate the Portfolio List of VPs and the List of VPs including the Variant
@@ -848,5 +873,6 @@ module.exports = {
 	getOneVP: getOneVP,
 	getVCVPVs: getVCVPVs,
 	getAllVPVsShort: getAllVPVsShort,
-	getVPVwoPerm: getVPVwoPerm
+	getVPVwoPerm: getVPVwoPerm,
+	getVPVOrgs: getVPVOrgs
 };

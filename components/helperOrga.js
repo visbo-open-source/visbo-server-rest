@@ -366,9 +366,11 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (role.type == 1 || role.type == 2) {
 			var newRole;
 			if (role.uid == undefined) {
-				if (role.type == 1) {
+				if (role.type == 1 || role.isSummaryRole) {
+					// role is either in normal organisation or is a summary role in skills, create a new uid
 					role.uid = ++maxRoleID;
 				} else {
+					// role is a person inside the skill groups, must be found in the normal hierarchy
 					var originalRole = newOrga.allRoles.find(item => item.name == role.name);
 					role.uid = originalRole?.uid;
 					if (!role.uid)  {
@@ -602,7 +604,8 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 		return false;
 	}
 	oldOrga.allRoles.forEach(role => {
-		if (!uniqueRoleNames[role.name]) {
+		var newRole = uniqueRoleNames[role.name];
+		if (!newRole) {
 			// role name is missing in new Orga because of rename or delete
 			var checkRole;
 			newOrga.allRoles.forEach(item => {
@@ -619,6 +622,14 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 				var errorstring = `Orga Role Deleted not allowed: ${role.uid} / ${role.name} with exitDate ${role.exitDate?.toISOString()}`;
 				listError?.push(errorstring);
 				logger4js.info('CheckOrgaUnitDelete: ', errorstring);
+				isOrgaValid = false;
+			}
+		} else {
+			// role name found in new orgaList
+			if (role.uid != newRole.uid) {
+				var errorstring = `Orga Role Changed uid from: ${role.uid} to ${newRole.uid} / ${newRole.name} `;
+				listError?.push(errorstring);
+				logger4js.info('CheckOrgaUnitChange: ', errorstring);
 				isOrgaValid = false;
 			}
 		}

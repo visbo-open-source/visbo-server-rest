@@ -324,14 +324,10 @@ function checkVCOrgs(req, res, next) {
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
-	// fetch the organization in case of POST VPV to calculate keyMetrics
-	// or in case of capacity calculation
+	// fetch organisation in case of capacity calculation
 
 	let skip = true;
 	let withCapa = false;
-	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
-		skip = false;
-	}
 	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa')) >= 0) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
@@ -350,6 +346,9 @@ function getVCOrgs(req, res, next) {
 	}
 
 	let vcid = req.oneVC?._id || req.oneVCID;
+	if (!vcid && req.oneVP) {
+		vcid = req.oneVP.vcid;
+	}
 	if (!vcid) {
 		logger4js.warn('No VISBO Center identified');
 		return res.status(400).send({

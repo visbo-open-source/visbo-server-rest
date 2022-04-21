@@ -36,7 +36,7 @@ router.use('/:vpvid', verifyVpv.getAllVPVsShort);
 // register the middleware to collect get the related VP if required
 router.use('/', verifyVpv.getOneVP);
 // register the organisation middleware to get the related organisation
-router.use('/', verifyVc.getVCOrgs);
+router.use('/', verifyVpv.getVPVOrgs);
 // register the base line middleware to get the related base line version
 router.use('/', verifyVpv.getVPVpfv);
 
@@ -984,7 +984,7 @@ router.route('/:vpvid')
 					return;
 				}
 				if (listPFV && listPFV.length > 0) {
-					req.onePFV = listPFV[0];
+					req.visboPFV = listPFV[0];
 				}
 				saveRecalcKM(req, res, 'Successfully updated Project Version');
 			});
