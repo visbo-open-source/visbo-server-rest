@@ -366,7 +366,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (role.type == 1 || role.type == 2) {
 			var newRole;
 			if (role.uid == undefined) {
-				if (role.type == 1) {
+				if (role.type == 1 || role.isSummaryRole) {
 					role.uid = ++maxRoleID;
 				} else {
 					var originalRole = newOrga.allRoles.find(item => item.name == role.name);
