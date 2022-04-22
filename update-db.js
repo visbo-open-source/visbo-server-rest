@@ -1321,9 +1321,9 @@ if (currentVersion < dateBlock) {
   var updatedCount = 0;
   OrgListAll.forEach(orga => {
     orga.value.allRoles.forEach(role => {
-      role.dailyRate = role.tagessatz;
-      role.defCapaMonth = role.defaultKapa;
-      role.defCapaDay = role.defCapaDay;
+      role.dailyRate = role.tagessatz || 0;
+      if (role.defaultKapa) role.defCapaMonth = role.defaultKapa;
+      if (role.defaultDayCapa) role.defCapaDay = role.defaultDayCapa;
     });
     result = db.vcsettings.replaceOne({_id: orga._id}, orga);
     updatedCount += result.matchedCount;
@@ -1337,20 +1337,20 @@ if (currentVersion < dateBlock) {
 
 dateBlock = "2022-03-21T00:00:00";
 if (currentVersion < dateBlock) {
-  // Change Orga isActDataRelevant-property of a role to the list isActualDataRelevant, 
+  // Change Orga isActDataRelevant-property of a role to the list isActualDataRelevant,
   // which contains the role-Uids of these roles an save it in the vcsettings type customization
-  //  - ? - fields in organisation isActDataRelevant will be removed     
+  //  - ? - fields in organisation isActDataRelevant will be removed
 
   var OrgListAll = db.vcsettings.find({type: 'organisation'}).sort({vcid:1, timestamp:1}).toArray();
   print("Orga List Length ", OrgListAll.length);
-  
+
   // find the newest orga of every vc
   var todoList=[];
-  
+
   for (let i = 0; i < OrgListAll.length - 1; i++){
-    //compare current item with previous and ignore if it is the same vcid       
+    //compare current item with previous and ignore if it is the same vcid
     if (OrgListAll[i].vcid.toString() != OrgListAll[i+1].vcid.toString()) {
-      todoList.push(OrgListAll[i]);      
+      todoList.push(OrgListAll[i]);
     }
   };
   // In any case add the last orga in the todoList
@@ -1358,43 +1358,43 @@ if (currentVersion < dateBlock) {
     todoList.push(OrgListAll[OrgListAll.length-1]);
   }
   print("VisboCenters todo: " + todoList.length);
-  
+
   var isActualDataRelevant = "";
   var noActData = 0;
   var updatedCount = 0;
   // run through all newest orgas and look for the isActDataRelevant - role-uids
-  todoList.forEach(orga => {  
+  todoList.forEach(orga => {
     isActualDataRelevant = "";
 
     orga.value.allRoles.forEach(role => {
       if (role.isActDataRelevant) {
             isActualDataRelevant =  isActualDataRelevant + role.uid + ";"
-      };        
+      };
     });
 
     // store into customizationSetting of this visbocenter
-    var customizationSettings = db.vcsettings.find({vcid: orga.vcid , type: 'customization'}).toArray();    
-    if (customizationSettings.length > 0) {  
+    var customizationSettings = db.vcsettings.find({vcid: orga.vcid , type: 'customization'}).toArray();
+    if (customizationSettings.length > 0) {
       var customization = customizationSettings[0];
-      if (customization) {                
+      if (customization) {
           if (isActualDataRelevant != "") {
               customization.value.allianzIstDatenReferate = isActualDataRelevant;
-              customization.value.isActualDataRelevant = isActualDataRelevant;		
-          }	
+              customization.value.isActualDataRelevant = isActualDataRelevant;
+          }
           else {
               // some older visbocenters have this information in the customization - allianzIstDatenReferate
               customization.value.isActualDataRelevant = customization.value.allianzIstDatenReferate;
           };
 
           // store the new custiomization setting
-          result = db.vcsettings.replaceOne({_id: customization._id}, customization);            
-          updatedCount += result.matchedCount;                  
+          result = db.vcsettings.replaceOne({_id: customization._id}, customization);
+          updatedCount += result.matchedCount;
       }
     }
     else {
       noActData += 1;
-    }   
-  }); 
+    }
+  });
   print("customization: updated count: " +  updatedCount.toString());
   print("customization: not found count: " +  noActData.toString());
 
