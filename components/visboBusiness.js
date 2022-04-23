@@ -230,6 +230,13 @@ function getAllInvoices(vpv) {
 		if (phase.invoice) {
 			invoiceValues[phaseEnd] += phase.invoice.Key || 0;
 		}
+		phase.AllResults?.forEach(item => {
+			if (item.invoice) {
+				var msDate = addDays(vpv.startDate, (phase.startOffsetinDays + item.offset));
+				var msIndex = getColumnOfDate(msDate) - startIndex;
+				invoiceValues[msIndex] += item.invoice.Key || 0;
+			}
+		});
 	});
 	var endCalc = new Date();
 	logger4js.debug('Calculate all Invoices duration %s ', endCalc.getTime() - startCalc.getTime());
