@@ -452,7 +452,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			// validate against old entry if it exists
 			var oldRole = oldOrgaIndexed[newRole.uid];
 			if (oldRole) {
-				if ((oldRole.isSummaryRole == true) != (newRole.isSummaryRole == true)) {
+				// check also outdated isTeam Flag for old orgas
+				if ((oldRole.isSummaryRole == true || oldRole.isTeam == true) != (newRole.isSummaryRole == true)) {
 					errorstring = `${index+2}: Changed Orga Role isSummaryRole, uid: ${newRole.uid}, name: ${newRole.name}`;
 					listError?.push(errorstring);
 					logger4js.info('InitOrgaList: ', errorstring);
@@ -659,10 +660,12 @@ function reduceOrga(orga) {
 		if (role.defCapaMonth) { allUnits[role.uid].defCapaMonth = role.defCapaMonth; }
 		if (role.defCapaDay) { allUnits[role.uid].defCapaDay = role.defCapaDay; }
 		if (role.dailyRate >= 0) { allUnits[role.uid].dailyRate = role.dailyRate; }
-		if (role.entryDate?.getTime() > minDate.getTime()) {
+		var entryDate = validate.validateDate(role.entryDate, true, true);
+		if (entryDate?.getTime() > minDate.getTime()) {
 			allUnits[role.uid].entryDate = role.entryDate;
 		}
-		if (role.exitDate?.getTime() < maxDate.getTime()) {
+		var exitDate = validate.validateDate(role.exitDate, true, true);
+		if (exitDate?.getTime() < maxDate.getTime()) {
 			allUnits[role.uid].exitDate = role.exitDate;
 		}
 		if (role.aliases) { allUnits[role.uid].aliases = role.aliases; }
