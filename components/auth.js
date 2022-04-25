@@ -41,16 +41,18 @@ var isAllowedPassword = function(password){
 function verifyUser(req, res, next) {
 
 	var apiToken = false;
+	var options = {};
 	var token = req.headers['access-key'];
 	if (!token) {
 		token = req.headers['api-key'];
 		apiToken = true;
+		options.ignoreExpiration = true;
 	}
 
 	// decode token
   if (token) {
     // verifies secret and checks exp
-    jwt.verify(token, jwtSecret.user.secret, function(err, decoded) {
+    jwt.verify(token, jwtSecret.user.secret, options, function(err, decoded) {
       if (err) {
 				logger4js.debug('Authentication with token. Decode Issue', JSON.stringify(req.headers));
 				if (decoded) req.decoded = decoded;
