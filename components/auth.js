@@ -40,7 +40,12 @@ var isAllowedPassword = function(password){
 // Verify User Authentication
 function verifyUser(req, res, next) {
 
+	var apiToken = false;
 	var token = req.headers['access-key'];
+	if (!token) {
+		token = req.headers['api-key'];
+		apiToken = true;
+	}
 
 	// decode token
   if (token) {
@@ -56,13 +61,15 @@ function verifyUser(req, res, next) {
       } else {
         // if everything is good, check IP and User Agent to prevent session steeling
 				var sessionValid = true;
-				if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
-					logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
-					sessionValid = false;
-				}
-				if (decoded.session.ticket != req.get('User-Agent')) {
-					logger4js.info('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
-					sessionValid = false;
+				if (!apiToken) {
+					if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
+						logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
+						sessionValid = false;
+					}
+					if (decoded.session.ticket != req.get('User-Agent')) {
+						logger4js.info('User %s: Different UserAgents for Session %s vs %s', decoded.email, decoded.session.ticket, req.get('User-Agent'));
+						sessionValid = false;
+					}
 				}
 				if (!sessionValid) {
 					return res.status(401).send({
@@ -71,8 +78,8 @@ function verifyUser(req, res, next) {
 					});
 				}
 				var redisClient = visboRedis.VisboRedisInit();
-				var token = req.headers['access-key'].split('.')[2];
-				redisClient.get('token.'+token, function(err, reply) {
+				var tokenID = token.split('.')[2];
+				redisClient.get('token.'+tokenID, function(err, reply) {
 					// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
 					if (err) {
 						return res.status(500).send({
