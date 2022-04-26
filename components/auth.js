@@ -4,6 +4,7 @@ var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
 var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
+var getSystemUrl = systemVC.getSystemUrl;
 var errorHandler = require('./../components/errorhandler').handler;
 
 var jwt = require('jsonwebtoken');
@@ -45,8 +46,11 @@ function verifyUser(req, res, next) {
 	var token = req.headers['access-key'];
 	if (!token) {
 		token = req.headers['api-key'];
-		apiToken = true;
-		options.ignoreExpiration = true;
+		var uiUrl =  getSystemUrl();
+		if (token && process.env.NODE_ENV == 'development' && (uiUrl == 'http://localhost:4200' || uiUrl == 'https://dev.visbo.net') && req.body.debug) {
+			apiToken = true;
+			options.ignoreExpiration = true;
+		}
 	}
 
 	// decode token
