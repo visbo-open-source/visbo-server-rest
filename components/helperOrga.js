@@ -662,11 +662,11 @@ function reduceOrga(orga) {
 		if (role.dailyRate >= 0) { allUnits[role.uid].dailyRate = role.dailyRate; }
 		var entryDate = validate.validateDate(role.entryDate, true, true);
 		if (entryDate?.getTime() > minDate.getTime()) {
-			allUnits[role.uid].entryDate = role.entryDate;
+			allUnits[role.uid].entryDate = entryDate;
 		}
 		var exitDate = validate.validateDate(role.exitDate, true, true);
 		if (exitDate?.getTime() < maxDate.getTime()) {
-			allUnits[role.uid].exitDate = role.exitDate;
+			allUnits[role.uid].exitDate = exitDate;
 		}
 		if (role.aliases) { allUnits[role.uid].aliases = role.aliases; }
 		allUnits[role.uid].type = role.type;
