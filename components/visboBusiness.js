@@ -1084,7 +1084,7 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 	if (!role.isSummaryRole && parentID > 0) {
 		// find the parent team for a person in this orga
 		var teamRole = findCurrentRole(timeZones, parentID);
-		if (teamRole.type == 2) {
+		if (teamRole?.type == 2) {
 			// if parent is a team set the teamID
 			teamID = teamRole.uid;
 		}
