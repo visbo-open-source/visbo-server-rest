@@ -594,7 +594,7 @@ function getCurrentVPVpfv(req, res, next) {
 function getVPFVPVs(req, res, next) {
 	var userId = req.decoded._id;
 
-	logger4js.info('Get Project Versions of VPF for user %s with query params %O ', userId, req.query);
+	logger4js.info('Get Project Versions of VPF for user %s ', userId);
 	var queryvpv = {};
 	var queryvpvids = {};
 	var nowDate = new Date();

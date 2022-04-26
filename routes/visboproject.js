@@ -1674,7 +1674,7 @@ router.route('/:vpid/audit')
 					errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting Project Groups');
 					return;
 				}
-				logger4js.info('Found %d Groups for VP', listVPGroup.length);
+				logger4js.debug('Found %d Groups for VP', listVPGroup.length);
 				if (req.query.userlist) {
 					var listVPUsers = [];
 					for (var i = 0; i < listVPGroup.length; i++) {
@@ -2582,7 +2582,7 @@ router.route('/:vpid/variant')
 		req.auditDescription = 'Project Variant Create';
 		req.auditInfo = req.body.variantName;
 
-		logger4js.info('POST Project Variant for userid %s email %s and vp %s Variant %O Perm %O', userId, useremail, req.params.vpid, req.body, req.listVPPerm.getPerm(req.params.vpid));
+		logger4js.info('POST Project Variant for userid %s email %s and vp %s VariantName %s Perm %O', userId, useremail, req.params.vpid, req.body?.variantName, req.listVPPerm.getPerm(req.params.vpid));
 
 		var variantList = req.oneVP.variant;
 		var variantName = (req.body.variantName || '').trim();
@@ -2677,7 +2677,7 @@ router.route('/:vpid/variant/:vid')
 		req.auditDescription = 'Project Variant Update';
 		req.auditInfo = variantId;
 
-		logger4js.info('Update Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
+		logger4js.info('Update Project Variant for userid %s vp %s variantID :%s:', userId, req.params.vpid, req.params.vid);
 
 		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString());
 		if (variantIndex < 0) {
@@ -2754,7 +2754,7 @@ router.route('/:vpid/variant/:vid')
 		req.auditDescription = 'Project Variant Delete';
 		req.auditInfo = req.body.variantId;
 
-		logger4js.info('DELETE Project Variant for userid %s email %s and vp %s variant :%s:', userId, useremail, req.params.vpid, req.params.vid);
+		logger4js.info('DELETE Project Variant for userid %s vp %s variantID :%s:', userId, req.params.vpid, req.params.vid);
 
 		var variantIndex = req.oneVP.variant.findIndex(variant => variant._id.toString() == variantId.toString());
 		if (variantIndex < 0) {

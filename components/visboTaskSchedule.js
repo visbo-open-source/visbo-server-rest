@@ -153,7 +153,7 @@ function checkNextRun() {
           task.value.lockedUntil = new Date(actual);
           task.value.lockedUntil.setTime(task.value.lockedUntil.getTime() + lockPeriod * 1000);
           task.value.lastRun = new Date(); // now set it to current date as the last StartDate
-          logger4js.info('CheckNextRun Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun.toISOString().substr(11, 8), task.value.lockedUntil.toISOString().substr(11, 8));
+          logger4js.debug('CheckNextRun Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun.toISOString().substr(11, 8), task.value.lockedUntil.toISOString().substr(11, 8));
           // Do not update if locked and check result that it has updated the item
           var updateQuery = {_id: task._id, '$or': [{'value.lockedUntil': {$exists: false}}, {'value.lockedUntil': {$lt: new Date()}}]};
           var updateOption = {upsert: false};

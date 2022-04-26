@@ -148,7 +148,7 @@ router.route('/user/login')
 		var currentDate = new Date();
 		req.auditDescription = 'Login';
 
-		logger4js.info('Try to Login %s', req.body.email);
+		logger4js.debug('Try to Login %s', req.body.email);
 		logger4js.debug('Login Headers %O', req.headers);
 		var lang = validate.evaluateLanguage(req);
     logger4js.debug('The Accepted Language is: ' + lang);

@@ -90,7 +90,7 @@ function getVCGroups(req, res, next) {
 			errorHandler(err, res, `DB: GET VC Groups find ${query}`, 'Error getting VC Groups');
 			return;
 		}
-		logger4js.info('Found %d Groups for VC', listVCGroup.length);
+		logger4js.debug('Found %d Groups for VC', listVCGroup.length);
 		req.listVCGroup = listVCGroup;
 		return next();
 	});
@@ -127,7 +127,7 @@ function getVPGroups(req, res, next) {
 			errorHandler(err, res, `DB: GET VP Groups find ${query}`, 'Error getting Project Groups');
 			return;
 		}
-		logger4js.info('Found %d Groups for VP', listVPGroup.length);
+		logger4js.debug('Found %d Groups for VP', listVPGroup.length);
 		req.listVPGroup = listVPGroup;
 		return next();
 	});

@@ -398,7 +398,7 @@ router.route('/')
 					}
 					var settingList = systemVC.getSystemSettingList(undefined, '_VCConfig');
 					if (settingList.length > 0) {
-						logger4js.warn('VC Post Setting %d ', settingList.length);
+						logger4js.debug('VC Post _VCConfig Setting %d ', settingList.length);
 						settingList.forEach(item => item.vcid = req.oneVC._id);
 						VCSetting.insertMany(settingList, function (err) {
 							if (err){
@@ -1100,7 +1100,7 @@ router.route('/:vcid/group')
 				errorHandler(err, res, `DB: GET VC Groups ${req.oneVC._id} `, `Error getting Groups for VISBO Center ${req.oneVC.name}`);
 				return;
 			}
-			logger4js.info('Found %d Groups for VC', listVCGroup.length);
+			logger4js.debug('Found %d Groups for VC', listVCGroup.length);
 			if (req.query.userlist) {
 				var listVCUsers = [];
 				for (var i = 0; i < listVCGroup.length; i++) {
