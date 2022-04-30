@@ -301,7 +301,7 @@ var checkPredictConfigured = function () {
 
 var getPredictModel = function () {
 	return predictConfigured ? fsModell : undefined;
-}
+};
 
 module.exports = {
 	createSystemVC: createSystemVC,

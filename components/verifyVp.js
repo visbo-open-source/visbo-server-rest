@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants');
-var constPermVP = Const.constPermVP;
+var ConstPerm = require('../models/constPerm');
+var constPermVP = ConstPerm.constPermVP;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -8,13 +8,13 @@ var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 
 var validate = require('./../components/validate');
-var verifyVpv = require('./../components/verifyVpv');
+var verifyVc = require('./../components/verifyVc');
 var errorHandler = require('./../components/errorhandler').handler;
 
 var logModule = 'VP';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var VisboPermission = Const.VisboPermission;
+var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of and has VP Permission
 function getAllGroups(req, res, next) {
@@ -352,6 +352,7 @@ function getVPOrgs(req, res, next) {
 	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
 
 	let skip = true;
+	let withCapa = false;
 	if (req.method == 'POST' && baseUrl == '/vp') {	// create VP request
 		if (req.query.vpid) { // with a VP Template that requires keyMetrics calculation
 			skip = false;
@@ -368,7 +369,7 @@ function getVPOrgs(req, res, next) {
 			message: 'No VISBO Center specified'
 		});
 	}
-	verifyVpv.getVCOrganisation(req.body.vcid, req, res, next);
+	verifyVc.getVCOrganisation(req.body.vcid, withCapa, req, res, next);
 }
 
 

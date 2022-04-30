@@ -47,7 +47,7 @@ function verifyUser(req, res, next) {
     // verifies secret and checks exp
     jwt.verify(token, jwtSecret.user.secret, function(err, decoded) {
       if (err) {
-				logger4js.debug('Authentication with token. Decode Issue', JSON.stringify(decoded));
+				logger4js.debug('Authentication with token. Decode Issue', JSON.stringify(req.headers));
 				if (decoded) req.decoded = decoded;
         return res.status(401).send({
 					state: 'failure',

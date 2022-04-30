@@ -62,7 +62,6 @@ router.route('/profile')
 	*    'updatedAt':'2018-03-20T10:31:27.216Z',
 	*    'createdAt':'2018-02-28T09:38:04.774Z',
 	*    'email':'first.last@visbo.de',
-	*    '__v':0,
 	*    'profile': {
 	*      'firstname': 'First',
 	*      'lastname': 'Last',

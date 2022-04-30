@@ -41,13 +41,17 @@ var validatePath = function(path, allowEmpty) {
 
 // validate a date to prevent XSS
 var validateDate = function(dateString, allowEmpty, dateObject) {
-	if (!allowEmpty && !dateString) {
+	var dateValue;
+	if (allowEmpty && !dateString) {
+		dateValue = new Date();
+	} else if (!dateString) {
 		logger4js.trace('validate Date: DateString is empty! :%s:', !dateString);
 		return undefined;
+	} else {
+		dateValue = new Date(dateString);
 	}
-	var dateValue = dateString ? new Date(dateString) : new Date();
 	if (isNaN(dateValue)) {
-		logger4js.info('validate Date: String contains no Date %s', dateString);
+		logger4js.debug('validate Date: String contains no Date %s', dateString);
 		return undefined;
 	}
 	return dateObject ? dateValue : dateValue.toISOString();
@@ -55,15 +59,14 @@ var validateDate = function(dateString, allowEmpty, dateObject) {
 
 // validate a number to prevent XSS
 var validateNumber = function(numberValue, allowEmpty) {
-	if (!allowEmpty && isNaN(numberValue)) {
-		logger4js.info('validate Number: Number is NaN! :%s:', numberValue);
-		return undefined;
-	}
-	if (isNaN(numberValue)) {
-		logger4js.trace('validate Number: String contains no Number %s', numberValue);
+	if (allowEmpty && !numberValue) {
 		return 0;
 	}
-	return numberValue;
+	if (isNaN(numberValue)) {
+		logger4js.debug('validate Number: String contains no Number %s', numberValue);
+		return undefined;
+	}
+	return Number(numberValue);
 };
 
 // check if string has invalid content
@@ -71,7 +74,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 var validateObjectId = function(id, allowEmpty) {
 	logger4js.trace('validate ObjectID: %s Allow empty %s', id, allowEmpty);
 	if (allowEmpty != true && !id) {
-		logger4js.info('validate ObjectID: ID is empty!', id);
+		logger4js.debug('validate ObjectID: ID is empty!', id);
 		return false;
 	}
 	if (!id) {
@@ -95,25 +98,25 @@ var validateEmail = function(email, allowEmpty) {
 	}
 	email = email || '';
 	if (email.replace(/[ \t!\\/%,:;]/ig,'') != email) {
-		logger4js.info('Check Name: Name contains Illegal Characters? %s', email);
+		logger4js.debug('Check Name: Name contains Illegal Characters? %s', email);
 		return false;
 	}
 	var emailPart = email.split('@');
 	if (emailPart.length != 2) {
-		logger4js.info('Check Name: No user/domain separator? %s', email);
+		logger4js.debug('Check Name: No user/domain separator? %s', email);
 		return false;
 	}
 	if (!emailPart[0].length) {
-		logger4js.info('Check Name: No User address part? %s', email);
+		logger4js.debug('Check Name: No User address part? %s', email);
 		return false;
 	}
 	if (!emailPart[1].length) {
-		logger4js.info('Check Name: No Domain part? %s', email);
+		logger4js.debug('Check Name: No Domain part? %s', email);
 		return false;
 	}
 	emailPart = emailPart[1].split('.');
 	if (emailPart.length < 2 || emailPart[0].length == 0 || emailPart[1].length == 0) {
-		logger4js.info('Check Name: No correct domain separator ? %s', email);
+		logger4js.debug('Check Name: No correct domain separator ? %s', email);
 		return false;
 	}
 	return true;
@@ -126,6 +129,32 @@ function convertNumber(str) {
 		result = Number(convert);
 	}
 	return result;
+}
+
+function compareDate(first, second) {
+	if (first === undefined) { first = new Date(-8640000000000000); }
+	if (second === undefined) { second = new Date(-8640000000000000); }
+	if (typeof first == 'number' || typeof first == 'string') first = new Date(first);
+	if (typeof second == 'number' || typeof second == 'string') second = new Date(second);
+	return first.getTime() - second.getTime();
+}
+
+function isSameDay(dateA, dateB) {
+	if (!dateA && !dateB) { return true; }
+  if (!dateA || !dateB) { return false; }
+  const localA = new Date(dateA);
+  const localB = new Date(dateB);
+  localA.setHours(0, 0, 0, 0);
+  localB.setHours(0, 0, 0, 0);
+  return localA.toISOString() === localB.toISOString();
+}
+
+function getBeginningOfMonth(dateA) {
+	if (dateA === undefined) { dateA = new Date(); }
+	var result = new Date(dateA);
+  result.setHours(0, 0, 0, 0);
+  result.setDate(1);
+  return result;
 }
 
 var evaluateLanguage = function(req) {
@@ -146,5 +175,8 @@ module.exports = {
 	validateDate: validateDate,
 	validateNumber: validateNumber,
 	evaluateLanguage: evaluateLanguage,
-	convertNumber: convertNumber
+	convertNumber: convertNumber,
+	compareDate: compareDate,
+	isSameDay: isSameDay,
+	getBeginningOfMonth: getBeginningOfMonth
 };

@@ -935,9 +935,7 @@ if (currentVersion < dateBlock) {
 
 dateBlock = "2021-02-08T00:00:00"
 if (currentVersion < dateBlock) {
-  // Delete uused Properties from vpv
-  // vpv.farbe, vpv.Schrift, vpv.Schriftfarbe, vpv.AllPhases[].farbe
-
+  // Delete unused Properties from vpv
   db.visboprojectversions.updateMany({farbe: {$exists: true}}, {$unset: {farbe: '', Schrift: '', Schriftfarbe: '', volumen: ''}});
 
   db.visboprojectversions.updateMany({'AllPhases.farbe': {$exists: true}},
@@ -1136,6 +1134,269 @@ if (currentVersion < dateBlock) {
     }
   })
   print("Updated VP Status", count);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+dateBlock = "2022-01-16T00:00:00"
+if (currentVersion < dateBlock) {
+  // DB Collection and Index Checks
+  print ("Upgrade DB: Migrate Split Orga & Capacity")
+  var collectionName = 'vccapacities';
+  var collection = db.getCollectionInfos({name: collectionName});
+  if (!collection || collection.length == 0) {
+    // print ("Need to Create Visbo Capacity Collection ", collectionName)
+    db.createCollection( collectionName );
+    db.vccapacities.createIndex( { vcid: 1, roleID: 1, startOfYear: -1 }, { name: "unique", unique: true } );
+    print ("Visbo Capacity Collection Created")
+  }
+  // migrate capacity from latest orga per VC to vccapacities
+  var vcList = db.visbocenters.find({system: {$exists: false}}).toArray();
+  var vcIDList = [];
+  vcList.forEach(vc => {vcIDList.push(vc._id);});
+
+  var vcOrgaList = db.vcsettings.find({type: 'organisation', vcid: {$in: vcIDList}, 'value.allRoles.kapazitaet': {$exists: true}}).toArray();
+  print ("VC Orga List for capacity conversion", vcOrgaList.length)
+
+  vcList.forEach(vc => {
+    // print ("VC capacity conversion", vc.name, vc._id);
+    var orga = vcOrgaList.find(item => item.vcid.toString() == vc._id.toString());
+    if (!orga) {
+      // print ("VC has no capacity to convert", vc.name);
+      return;
+    }
+    // print ("VC has orga", vc.name, orga.name, orga.type, orga.timestamp.toISOString());
+    orgaHasCapacity = 0;
+    if (orga.value && orga.value.allRoles) {
+      orga.value.allRoles.forEach(role => {
+        if (role.kapazitaet && role.kapazitaet.length > 0) {
+          // print ("Role Add kapazitaet", role.name, role.kapazitaet.length, role.startOfCal.toISOString());
+          orgaHasCapacity += 1;
+        }
+      });
+    }
+    if (orgaHasCapacity) {
+      print ("VC has orga with old capacity", vc.name, orgaHasCapacity);
+      // remove capacity information from vccapacities
+      result = db.vccapacities.deleteMany({vcid: vc._id});
+      if (result.deletedCount) print ("VC old capacity deleted", result.deletedCount);
+      var allRoles = orga.value.allRoles;
+      var newCapacities = 0;
+      allRoles.forEach(role => {
+        if (role.kapazitaet && role.kapazitaet.length > 0) {
+          role.kapazitaet.shift(); // first element is unused
+          var startOfCal = new Date(role.startOfCal);
+          var startMonth = startOfCal.getMonth();
+          var startOfYear = new Date(startOfCal);
+          startOfYear.setMonth(0);
+          startOfYear.setDate(1);
+          startOfYear.setHours(0, 0, 0, 0);
+          while (role.kapazitaet.length > 0) {
+            var capaPerMonth = [role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa,
+                                role.defaultKapa, role.defaultKapa, role.defaultKapa
+                                ];
+            // print ("Role Add kapazitaet", role.name, role.kapazitaet.length, role.startOfCal.toISOString(), startMonth);
+            for (var i = startMonth; i < 12 && role.kapazitaet.length > 0; i++) {
+              capaPerMonth[i] = role.kapazitaet.shift();
+            }
+            // create the new capacity entry for one year
+            db.vccapacities.insertOne({vcid: vc._id, roleID: role.uid, startOfYear: startOfYear, capaPerMonth: capaPerMonth, createdAt: new Date(), updatedAt: new Date()})
+            startMonth = 0;
+            startOfYear.setFullYear(startOfYear.getFullYear() + 1);
+            newCapacities++;
+          }
+        }
+      });
+      print ("VC new capacity created", newCapacities);
+    }
+    // remove the old kapazitaet & startOfCal
+    var result = db.vcsettings.updateMany(
+        {vcid: vc._id, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].kapazitaet': true}},
+        {arrayFilters: [ { "elem.kapazitaet": { $exists: true } } ] }
+      )
+    db.vcsettings.updateMany(
+        {vcid: vc._id, type: 'organisation'},
+        {$unset: {'value.allRoles.$[elem].startOfCal': true}},
+        {arrayFilters: [ { "elem.startOfCal": { $exists: true } } ] }
+      )
+    print ("VC updated Orgas for VC", vc.name, result.matchedCount, result.modifiedCount);
+  });
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2022-01-31T00:00:00"
+if (currentVersion < dateBlock) {
+  // Remove capa values without VC and remove (only in 2022) capa values for 2024 and later the far future (240 month array)
+  var vcList = db.visbocenters.find({system: {$exists: false}}).toArray();
+  var vcIDList = [];
+  vcList.forEach(vc => {vcIDList.push(vc._id);});
+
+  var resultOrphan = db.vccapacities.deleteMany({vcid: {$nin: vcIDList}});
+  if (resultOrphan.deletedCount) print ("Removed orphan capacity entries for destroyed VCs", resultOrphan.deletedCount);
+
+  var resultFuture = db.vccapacities.deleteMany({startOfYear: {$gt: new Date('2023-12-01')}});
+  if (resultFuture.deletedCount) print ("Removed far future capacity entries", resultFuture.deletedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2022-01-31T10:00:00"
+if (currentVersion < dateBlock) {
+  // set ttl for Create&Delete Lock
+  var ttlDate = new Date();
+  ttlDate.setMonth(ttlDate.getMonth() - 3);
+  var result = db.visboaudits.updateMany({ actionDescription: {$in: ['Project Lock Create', 'Project Lock Delete']} },
+    {$set: {ttl: ttlDate}}, {upsert: false, multi: "true"}
+  )
+  print("Updated TTL for Lock Items: ", result.modifiedCount);
+
+  // remove farbe & tagessatzIntern from organisation
+  var result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$unset: {'value.allRoles.$[elem].tagessatzIntern': true}},
+      {arrayFilters: [ { "elem.tagessatz": { $exists: true } } ] }
+    )
+  print ("Updated VC Orgas removed tagessatzIntern", result.modifiedCount);
+
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$unset: {'value.allRoles.$[elem].farbe': true}},
+      {arrayFilters: [ { "elem.farbe": { $exists: true } } ] }
+    )
+  print ("Updated VC Orgas removed farbe", result.modifiedCount);
+
+  result = db.visboprojectversions.updateMany(
+      {leadPerson: {$exists: true}},
+      {$unset: {leadPerson: true}}
+    )
+  print ("Updated VPVs removed leadPerson", result.modifiedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2022-02-15T00:00:00"
+if (currentVersion < dateBlock) {
+  // Update type of role/cost in Organisation
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allRoles.$[elem].type': 2}},
+      {arrayFilters: [ { "elem.isTeam": true } ] }
+    )
+  print ("Updated VC Orgas set team type 2", result.modifiedCount);
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allRoles.$[elem].type': 1}},
+      {arrayFilters: [ { "elem.isTeam": {$exists: false} } ] }
+    )
+  print ("Updated VC Orgas set orga unit type 1", result.modifiedCount);
+  result = db.vcsettings.updateMany(
+      {type: 'organisation'},
+      {$set: {'value.allCosts.$[elem].type': 3}},
+      {arrayFilters: [ { "elem.uid": {$exists: true} } ] }
+    )
+  print ("Updated VC Orgas set cost type 3", result.modifiedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2022-02-16T00:00:00"
+if (currentVersion < dateBlock) {
+  // Change Orga Terms to english
+  // Duplicate fields in organisation (tagessatz - dailyRate, defaultKapa - defCapaMonth, defaultDayCapa - defCapaDay)
+  var OrgListAll = db.vcsettings.find({type: 'organisation'}).toArray();
+  print("Orga List Length ", OrgListAll.length)
+  var updatedCount = 0;
+  OrgListAll.forEach(orga => {
+    orga.value.allRoles.forEach(role => {
+      role.dailyRate = role.tagessatz || 0;
+      if (role.defaultKapa) role.defCapaMonth = role.defaultKapa;
+      if (role.defaultDayCapa) role.defCapaDay = role.defaultDayCapa;
+    });
+    result = db.vcsettings.replaceOne({_id: orga._id}, orga);
+    updatedCount += result.matchedCount;
+  });
+  print("Orgas Updated", updatedCount);
+
+  // Set the currentVersion in Script and in DB
+  db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+  currentVersion = dateBlock
+}
+
+dateBlock = "2022-03-21T00:00:00";
+if (currentVersion < dateBlock) {
+  // Change Orga isActDataRelevant-property of a role to the list isActualDataRelevant,
+  // which contains the role-Uids of these roles an save it in the vcsettings type customization
+  //  - ? - fields in organisation isActDataRelevant will be removed
+
+  var OrgListAll = db.vcsettings.find({type: 'organisation'}).sort({vcid:1, timestamp:1}).toArray();
+  print("Orga List Length ", OrgListAll.length);
+
+  // find the newest orga of every vc
+  var todoList=[];
+
+  for (let i = 0; i < OrgListAll.length - 1; i++){
+    //compare current item with previous and ignore if it is the same vcid
+    if (OrgListAll[i].vcid.toString() != OrgListAll[i+1].vcid.toString()) {
+      todoList.push(OrgListAll[i]);
+    }
+  };
+  // In any case add the last orga in the todoList
+  if (OrgListAll.length > 0)  {
+    todoList.push(OrgListAll[OrgListAll.length-1]);
+  }
+  print("VisboCenters todo: " + todoList.length);
+
+  var isActualDataRelevant = "";
+  var noActData = 0;
+  var updatedCount = 0;
+  // run through all newest orgas and look for the isActDataRelevant - role-uids
+  todoList.forEach(orga => {
+    isActualDataRelevant = "";
+
+    orga.value.allRoles.forEach(role => {
+      if (role.isActDataRelevant) {
+            isActualDataRelevant =  isActualDataRelevant + role.uid + ";"
+      };
+    });
+
+    // store into customizationSetting of this visbocenter
+    var customizationSettings = db.vcsettings.find({vcid: orga.vcid , type: 'customization'}).toArray();
+    if (customizationSettings.length > 0) {
+      var customization = customizationSettings[0];
+      if (customization) {
+          if (isActualDataRelevant != "") {
+              customization.value.allianzIstDatenReferate = isActualDataRelevant;
+              customization.value.isActualDataRelevant = isActualDataRelevant;
+          }
+          else {
+              // some older visbocenters have this information in the customization - allianzIstDatenReferate
+              customization.value.isActualDataRelevant = customization.value.allianzIstDatenReferate;
+          };
+
+          // store the new custiomization setting
+          result = db.vcsettings.replaceOne({_id: customization._id}, customization);
+          updatedCount += result.matchedCount;
+      }
+    }
+    else {
+      noActData += 1;
+    }
+  });
+  print("customization: updated count: " +  updatedCount.toString());
+  print("customization: not found count: " +  noActData.toString());
 
   // Set the currentVersion in Script and in DB
   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})

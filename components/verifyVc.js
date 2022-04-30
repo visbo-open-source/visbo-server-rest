@@ -1,15 +1,15 @@
 var mongoose = require('mongoose');
-var Const = require('../models/constants');
-var constPermSystem = Const.constPermSystem;
-var constPermVC = Const.constPermVC;
+var ConstPerm = require('../models/constPerm');
+var constPermSystem = ConstPerm.constPermSystem;
+var constPermVC = ConstPerm.constPermVC;
 
 var systemVC = require('./../components/systemVC');
-var verifyVpv = require('./../components/verifyVpv');
 
 var VisboCenter = mongoose.model('VisboCenter');
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
 var VCSetting = mongoose.model('VCSetting');
+var VCCapacity = mongoose.model('VCCapacity');
 
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -17,7 +17,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var logModule = 'VC';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var VisboPermission = Const.VisboPermission;
+var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of System / VC depending on the case
 function getAllGroups(req, res, next) {
@@ -33,10 +33,10 @@ function getAllGroups(req, res, next) {
 
 	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
+	} else if (urlComponent.length >= 2) {
+		vcid = urlComponent[1];
 	} else if (req.method == 'POST' && req.body.vcid) {
 		vcid = req.body.vcid;
-	} else if (req.method == 'GET' && urlComponent.length >= 2) {
-		vcid = urlComponent[1];
 	}
 	if (!validate.validateObjectId(vcid, true)) {
 		logger4js.warn('VC Get all Groups Bad Parameter vcid %s', vcid);
@@ -174,7 +174,12 @@ function checkSettingId(req, res, next, settingID) {
 			});
 		}
 		req.oneVCSetting = oneVCSetting;
-		return next();
+		if (oneVCSetting.type == 'organisation') {
+			// get also the other organisations to verify that only newest can be deleted
+			getVCOrganisation(vcid, false, req, res, next);
+		} else {
+			return next();
+		}
 	});
 }
 
@@ -286,16 +291,116 @@ function checkVCOrgs(req, res, next) {
 	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
 		// User does a POST of a setting, check if it is an organisation
 		if (req.body.type == 'organisation') {
-			logger4js.debug('Check old Organisation');
-			verifyVpv.getVCOrganisation(req.oneVC._id, req, res, next);
+			logger4js.debug('Check old Organisation without Capacity');
+			getVCOrganisation(req.oneVC._id, false, req, res, next);
 		} else {
 			logger4js.debug('No POST Setting', req.method, 'urlComponent', urlComponent);
+			return next();
+		}
+	} else if (req.method == 'GET') {
+		var withCapa = false;
+		if (urlComponent.length == 4 && urlComponent[3] == 'setting'
+		&& req.originalUrl.indexOf('type=organisation') >= 0) {
+			withCapa = true;
+		}
+		if (urlComponent.length == 4 && urlComponent[3] == 'organisation'
+		&& req.originalUrl.indexOf('withCapa=') >= 0) {
+			withCapa = true;
+		}
+		if (withCapa) {
+			logger4js.debug('Get Organisation with Capacity');
+			getVCOrganisation(req.oneVC._id, true, req, res, next);
+		} else {
+			logger4js.debug('No GET Setting of organisation', req.method, 'urlComponent', urlComponent);
 			return next();
 		}
 	} else {
 		logger4js.debug('Other Request', req.method, 'urlComponent', urlComponent);
 		return next();
 	}
+}
+
+// Get the organisations for calculation
+function getVCOrgs(req, res, next) {
+	var baseUrl = req.originalUrl.split('?')[0];
+	var urlComponent = baseUrl.split('/');
+	// fetch the organization in case of POST VPV to calculate keyMetrics
+	// or in case of capacity calculation
+
+	let skip = true;
+	let withCapa = false;
+	if ((req.method == 'POST' && baseUrl == '/vpv') || req.method == 'PUT') {
+		skip = false;
+	}
+	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa')) >= 0) {
+		if ( req.oneVC ) {
+			req.oneVCID = req.oneVC._id;
+		} else if (req.oneVP) {
+			req.oneVCID = req.oneVP.vcid;
+		}
+		skip = false;
+		withCapa = true;
+	}
+	if (urlComponent.findIndex(comp => comp == 'organisation') >= 0) {
+		skip = false;
+		withCapa = (req.method == 'GET' && req.originalUrl.indexOf('withCapa=') >= 0);
+	}
+	if (skip) {
+		return next();
+	}
+
+	let vcid = req.oneVC?._id || req.oneVCID;
+	if (!vcid) {
+		logger4js.warn('No VISBO Center identified');
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No VISBO Center'
+		});
+	}
+	getVCOrganisation(vcid, withCapa, req, res, next);
+}
+
+function getVCOrganisation(vcid, withCapa, req, res, next) {
+	logger4js.debug('VPV getVCOrgs organization for VCID %s', vcid);
+	var startCalc = new Date();
+	var query = {};
+	query.vcid = vcid;
+	query.type = 'organisation';
+
+	logger4js.debug('getVCOrgs: Find VC Settings with query %O', query);
+	var queryVCSetting = VCSetting.find(query);
+	queryVCSetting.lean();
+	queryVCSetting.exec(function (err, listVCSetting) {
+		if (err) {
+			errorHandler(err, res, `DB: GET VC Settings ${req.oneVC._id} Find`, `Error getting Setting for VISBO Center ${req.oneVC.name}`);
+			return;
+		}
+		logger4js.debug('getVCOrgs: Organisations(%d) found in vcid: %s', listVCSetting.length, vcid);
+		listVCSetting.sort(function(a, b) { return validate.compareDate(b.timestamp, a.timestamp); });
+		req.visboOrganisation = listVCSetting;
+		if (withCapa) {
+			var query = {};
+			query.vcid = vcid;
+			var queryVCCapacity = VCCapacity.find(query);
+			queryVCCapacity.sort('vcid roleID startOfYear');
+			queryVCCapacity.lean();
+			queryVCCapacity.exec(function (err, listVCCapacity) {
+				if (err) {
+					errorHandler(err, res, `DB: GET VC Capacity ${req.oneVC._id} Find`, `Error getting Capacity for VISBO Center ${req.oneVC.name}`);
+					return;
+				}
+				logger4js.debug('GetVCOrgs: Capacities(%d) found in vcid: %s', listVCCapacity.length, vcid);
+				req.visboVCCapacity = listVCCapacity;
+				var endCalc = new Date();
+				logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+				return next();
+			});
+		} else {
+			var endCalc = new Date();
+			logger4js.debug('Calculate GetVCOrganisation %s ms', endCalc.getTime() - startCalc.getTime());
+			return next();
+		}
+	});
 }
 
 function isVCEnabled(req, name, level) {
@@ -320,12 +425,13 @@ function isVCEnabled(req, name, level) {
 }
 
 module.exports = {
-	// verifyVc: verifyVc,
 	getAllGroups: getAllGroups,
 	getVC: getVC,
 	getVCVP: getVCVP,
 	getSystemGroups: getSystemGroups,
 	checkVCOrgs: checkVCOrgs,
+	getVCOrgs: getVCOrgs,
+	getVCOrganisation: getVCOrganisation,
 	checkSettingId: checkSettingId,
 	getVCSetting: getVCSetting,
 	isVCEnabled: isVCEnabled

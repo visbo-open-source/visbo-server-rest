@@ -1,17 +1,23 @@
 /* eslint-disable */
 
-VCName='InstartGroup';
-VCName='Test-MS-VC01';
+VCName='Test-MS-VC03';
+VCName='Skill Demo VISBO Center';
 VPName='^';
+
+DoNotAnnonymise=true;
 
 print('STDERR: Export VC: ', VCName);
 
 var VCID='';
 
-function annonymise(value) {
+function annonymise(value, marker) {
   strAnonymise = /[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g;
-  if (!value || value == '') {
+  if (DoNotAnnonymise) {
     return value;
+  } else if ((!value || value == '') && marker) {
+    return marker;
+  } else if (value && marker) {
+    return value.replace(strAnonymise, 'x').concat('_', marker);
   } else if (value) {
     return value.replace(strAnonymise, 'x');
   }
@@ -50,8 +56,8 @@ if (vc) {
   var item = {};
   item.exportType = 'VC';
   item._id = '' + vc._id;
-  item.name = '' + vc._id
-  item.description = '' + vc._id + annonymise(vc.description);
+  item.name = DoNotAnnonymise ? vc.name : 'Anno_' + vc._id
+  item.description = annonymise(vc.description, '' + vc._id);
   item.detail = undefined;
   exportList.push(item);
 }
@@ -64,18 +70,49 @@ vcSettingList.forEach(setting => {
   item.name = '' + setting.name;
   item.type = setting.type;
   item.timestamp = setting.timestamp;
-  if (setting.type == 'organisation' && setting.value && setting.value.allRoles) {
-    // annonymise the user names
-    setting.value.allRoles.forEach(orgaUnit => {
-      orgaUnit.name = 'U'.concat(orgaUnit.uid, '-', annonymise(orgaUnit.name));
-    })
-  }
   item.value = JSON.stringify(setting.value);
-  if (setting.type != '_VCConfig' && setting.type != 'customroles' && !setting.userId) {
+  if (setting.type != 'organisation' && setting.type != '_VCConfig' && setting.type != 'customroles' && !setting.userId) {
     exportList.push(item);
   }
 })
 print('STDERR: VCSettings found ', vcSettingList.length, 'exported', exportList.length - len);
+
+len = exportList.length;
+var vcOrgaList = db.vcsettings.find({vcid: VCID, type: 'organisation', deletedAt: {$exists: false} }).sort({timestamp:1}).toArray();
+vcOrgaList.forEach(setting => {
+  var item = {};
+  item.exportType = 'VCOrganisation';
+  item.name = '' + setting.name;
+  item.type = setting.type;
+  item.timestamp = setting.timestamp;
+  if (setting.value && setting.value.allRoles && !DoNotAnnonymise) {
+    // annonymise the user names
+    setting.value.allRoles.forEach(orgaUnit => {
+      orgaUnit.name = 'U'.concat(orgaUnit.uid, '-', annonymise(orgaUnit.name));
+      if (orgaUnit.aliases) {
+        var aliases = [];
+        orgaUnit.aliases.forEach(alias => aliases.push('A'.concat(orgaUnit.uid, '-', annonymise(alias))));
+        orgaUnit.aliases = aliases;
+        // print('STDERR: Aliases found ', orgaUnit.aliases);
+      }
+    })
+  }
+  item.value = JSON.stringify(setting.value);
+  exportList.push(item);
+})
+print('STDERR: VCOrga found ', vcOrgaList.length, 'exported', exportList.length - len);
+
+len = exportList.length;
+var vcCapaList = db.vccapacities.find({vcid: VCID}).sort({startOfYear:1}).toArray();
+vcCapaList.forEach(capa => {
+  var item = {};
+  item.exportType = 'VCCapacity';
+  item.name = '';
+  item.type = 'Capacity';
+  item.value = JSON.stringify(capa);
+  exportList.push(item);
+})
+print('STDERR: VCCapacity found ', vcCapaList.length, 'exported', exportList.length - len);
 
 len = exportList.length;
 vpIDList = [];
@@ -85,7 +122,7 @@ vpList.forEach(vp => {
   var item = {};
   item.exportType = 'VP';
   item._id = '' + vp._id;
-  item.name = '' + vp._id
+  item.name = DoNotAnnonymise ? vp.name : 'Anno_' + vp._id
   item.vpType = '' + vp.vpType;
   item.description = annonymise(vp.description);
   if (vp.kundennummer) item.kundennummer = annonymise(vp.kundennummer);
@@ -104,7 +141,7 @@ vpvList.forEach(vpv => {
   item.exportType = 'VPV';
   item._id = '' + vpv._id;
   item.vpid = '' + vpv.vpid;
-  item.name = '' + vpv.vpid;
+  item.name = DoNotAnnonymise ? vpv.name : 'Anno_' + vpv.vpid
   item.timestamp = vpv.timestamp;
 
   // strAnonymise VPV
@@ -115,10 +152,12 @@ vpvList.forEach(vpv => {
     // collect Hieararchy Mapping
     vpv.hierarchy.allNodes.forEach( node => {
         var shortName = namePart(node.hryNodeKey);
-        var name = '';
-        if (shortName.length != node.hryNodeKey.length) {
-            var sequencer = ('0000' + index.toString()).slice(-4);
-            name = shortName.concat('_', sequencer);
+        var name = shortName;
+        if (!DoNotAnnonymise) {
+          if (shortName.length != node.hryNodeKey.length) {
+              var sequencer = ('0000' + index.toString()).slice(-4);
+              name = shortName.concat('_', sequencer);
+          }
         }
         mappingName[shortName] = name;
         index++;
@@ -231,8 +270,6 @@ vpvList.forEach(vpv => {
       if (phase.shortName) phase.shortName = annonymise(phase.shortName)
       if (phase.originalName) phase.originalName = annonymise(phase.originalName)
   });
-  delete vpv.name; delete vpv._id;
-  if (vpv.keyMetrics) delete vpv.keyMetrics._id;
   if (vpv.variantDescription) vpv.variantDescription = annonymise(vpv.variantDescription)
   if (vpv.leadPerson) vpv.leadPerson = annonymise(vpv.leadPerson)
   if (vpv.ampelErlaeuterung) vpv.ampelErlaeuterung = annonymise(vpv.ampelErlaeuterung)
@@ -240,6 +277,8 @@ vpvList.forEach(vpv => {
   if (vpv.description) vpv.description = annonymise(vpv.description)
   if (vpv.businessUnit) vpv.businessUnit = annonymise(vpv.businessUnit)
   if (vpv.VorlagenName) vpv.VorlagenName = annonymise(vpv.VorlagenName)
+  delete vpv.name; delete vpv._id;
+  if (vpv.keyMetrics) delete vpv.keyMetrics._id;
 
   item.detail = JSON.stringify(vpv);
   exportList.push(item);
@@ -253,7 +292,7 @@ vpfList.forEach(vpf => {
   item.exportType = 'VPF';
   item._id = '' + vpf._id;
   item.vpid = '' + vpf.vpid;
-  item.name = '' + vpf.vpid;
+  item.name = DoNotAnnonymise ? vpf.name : 'Anno_' + vp.vpid
   item.timestamp = vpf.timestamp;
   // strAnonymise VPF
   delete vpf.updatedAt;

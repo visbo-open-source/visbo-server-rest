@@ -31,10 +31,7 @@ function cleanupLogFiles(task, finishedTask) {
 	var deleteLogDate = new Date();
 	var deletedCount = 0;
 	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays);
-	deleteLogDate.setHours(0);
-	deleteLogDate.setMinutes(0);
-	deleteLogDate.setSeconds(0);
-	deleteLogDate.setMilliseconds(0);
+	deleteLogDate.setHours(0, 0, 0, 0);
 
 	var dir = path.join(__dirname, '../logging');
 	if (process.env.LOGPATH != undefined) {
@@ -107,8 +104,8 @@ function initLog4js(fsLogPath) {
 		logConfig = {
 			appenders: {
 				out: { type: 'stdout' },
-				everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
-				emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, daysToKeep: 30 },
+				everything: { type: 'dateFile', filename: fsLogPath + '/all-the-logs', maxLogSize: 4096000, backups: 30, numBackups: 30 },
+				emergencies: {  type: 'dateFile', filename: fsLogPath + '/oh-no-not-again', maxLogSize: 4096000, backups: 30, numBackups: 30 },
 				'just-errors': { type: 'logLevelFilter', appender: 'emergencies', level: 'error' },
 				'just-errors2': { type: 'logLevelFilter', appender: 'out', level: 'warn' }
 			},

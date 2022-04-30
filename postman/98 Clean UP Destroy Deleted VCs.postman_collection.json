@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "8fa53e69-5c49-43e8-bd8f-89800b572539",
+		"_postman_id": "8a52c482-e974-4d06-8151-76cd81aeeb08",
 		"name": "98 Clean UP Destroy Deleted VCs",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -74,7 +74,7 @@
 							"    pm.expect(list && list.length >= 0).to.be.eql(true, \"No List found\");",
 							"    var searchName = pm.environment.get(\"VCBaseName\");",
 							"    var listItems = [];",
-							"    list = list.filter(item => item.name.indexOf(searchName) >= 0);",
+							"    list = list.filter(item => item.name.indexOf(searchName) == 0);",
 							"    list.forEach(item => listItems.push(item._id));",
 							"    pm.globals.set(\"listItems\", JSON.stringify(listItems));",
 							"    console.log(\"List Items:\", listItems.length);",

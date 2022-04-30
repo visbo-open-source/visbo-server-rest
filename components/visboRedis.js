@@ -44,7 +44,7 @@ function VisboRedisInit(host, port) {
 
 			if (maxErrorLog > 0) {
 				maxErrorLog -= 1;
-				logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
+                logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
 			}
 			if (host != 'localhost') throw Error('Error connecting to Redis Server');
 		});

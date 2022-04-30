@@ -7,5 +7,6 @@ public/ui/
 .env
 logging/
 dump.rdb
-postman/VCClone/exportJSON.json
+postman/VCClone/*.json
 data/
+postman/environment
