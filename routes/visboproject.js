@@ -571,8 +571,8 @@ router.route('/')
   *
 	* @apiPermission Authenticated and VP.View and VP.Create Permission for the Project.
 	*
-	* @apiParam {String} vpid Create the first Versions based on the VP Template referenced with vpid
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiQuery {String} vpid Create the first Versions based on the VP Template referenced with vpid
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 missing name or VISBO Center ID of Project during Creation
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create Project
@@ -896,12 +896,13 @@ router.route('/:vpid')
  	* @apiGroup VISBO Project
  	* @apiName GetVISBOProject
  	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiDescription Get a specific Project
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiPermission Authenticated and  VP.View or VP.ViewRestricted Permission for the Project.
-	* @apiParam (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
+	* @apiQuery (Parameter) {Boolean} [deleted=false]  Request Deleted VPs only with additional Permission DeleteVP
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false]  Optional Request VCs for Appl. Admin User
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project
  	* @apiExample Example usage:
@@ -978,9 +979,10 @@ router.route('/:vpid')
 	* If the Project Name has changed, the Name will be populated to the Project Versions.
 	* In case of success, the system delivers an array of VPs, with one element in the array that is the info about the VP
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Project.
 	* In case of undelete a Project the user needs to have VP.Delete Permission in addition.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 400 no Data provided in Body for updating the Visbo Project
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Modify Project
@@ -1276,8 +1278,9 @@ router.route('/:vpid')
 	* @apiName DeleteVISBOProject
 	* @apiDescription Deletes a specific Project.
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Delete Project
 	* @apiError {number} 423 Project is locked by another user
@@ -1399,13 +1402,14 @@ router.route('/:vpid/audit')
 	* the system checks if the user has access permission to it.
 	* In case of success, the system delivers an array of Audit Trail Activities
  	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project
-	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
-	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
-	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
-	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
-	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiQuery (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
+	* @apiQuery (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiQuery (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiQuery (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiQuery (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
@@ -1532,9 +1536,10 @@ router.route('/:vpid/audit')
 		* @apiName GetVISBOProjectUser
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all users of the specified Project
+		* @apiParam {String} vpid The requested VISBO Project ID.
 		*
 		* @apiPermission Authenticated and VP.View Permission for the Project.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project, or Project does not exists
 		* @apiExample Example usage:
@@ -1618,10 +1623,11 @@ router.route('/:vpid/audit')
 		* @apiName GetVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Gets all groups of the specified Project
+		* @apiParam {String} vpid The requested VISBO Project ID.
 		*
 		* @apiPermission Authenticated and VP.View Permission for the Project.
-		* @apiParam (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiQuery (Parameter) {Boolean} [userlist=false]  Request User List with Group IDs in addition to the group list.
+		* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to View Project, or Project does not exists
 		* @apiExample Example usage:
@@ -1713,8 +1719,29 @@ router.route('/:vpid/audit')
 		* @apiGroup VISBO Project Permission
 		* @apiName PostVISBOProjectGroup
 		* @apiHeader {String} access-key User authentication token.
-		* @apiDescription Post creates a new group inside the Project
+		* @apiDescription Post creates a new group inside the Project. The group object consists of a unique group id and a unique group name inside the VISBO Project.
+		* In addition the group has a reference to the related VISBO Center an indicator if this group is a predefined group from VISBO or not and also an indicator if this group is a global group from the VC otherwise it is a local VISBO Project group.
+		* The group object contains also a permission definition, that describes what permission is assigned to the group. The permission is split into areas like vc for VISBO Center Permissions and vp for VISBO Project Permission.
+		* Each of the area contains a number value that is a combination of Bit values where each bit respresents a specific permission. For the VISBO Project we have the following permissions:
 		*
+		* VP.View permission (Value 1), means users with this permission can see this project at all.
+		*
+		* VP.Audit permission (Value 2), means users with this permission can view the audit trail of the project and in addition this permissions also allows the user to see cost values for the project.
+		*
+		* VP.Modify permission (Value 16), means users with this permission can modify the project. Like project name & description but also create new versions for the project.
+		*
+		* VP.ManagePerm permission (Value 32), means users with this permission can change permissions for all VP Groups and also add/remove users from any of the VP groups.
+		*
+		* VP.CreateVariant permission (Value 256), means users with this permission can create new variants for this project and create/delete project versions for their created variants.
+		*
+		* VP.ViewRestricted permission (Value 512), means users with this permission (and without the general VP.View permission can onyl view restricted parts of the project, that were defined in the restriction list.
+		*
+    * VP.Delete permission (Value 1024), means users with this permission can delete the VISBO Project or individual versions of the project. If a version was deleted and should be restored, the user also needs the VP.Delete permission.
+		*
+		* The group contains also a list of users who were member of the group and therefore have the permission that is assigned to the group.
+		* If a user belongs to several groups, ther relevant permission for the user is the combination of all permissions from all groups where the user is member of.
+		*
+		* @apiParam {String} vpid The requested VISBO Project ID.
 		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 missing name of Project Group during Creation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1724,7 +1751,6 @@ router.route('/:vpid/audit')
 		*   url: https://my.visbo.net/api/vp/:vpid/groups
 		*  {
 		*     'name':'Group Name',
-		*     'global': true,
 		*     'permission': {vp: 307 }
 		*  }
 		* @apiSuccessExample {json} Success-Response:
@@ -1735,8 +1761,7 @@ router.route('/:vpid/audit')
 		*   'groups':[{
 		*     '_id':'vpgroup5c754feaa',
 		*     'name':'My first Group',
-		*     'vpid': 'vc5c754feaa',
-		*     'global': true
+		*     'vpid': 'vc5c754feaa'
 		*   }]
 		* }
 		*/
@@ -1848,6 +1873,8 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Deletes the specified group in the Project
 		*
+		* @apiParam {String} vpid The requested VISBO Project ID.
+		* @apiParam {String} groupid The requested VISBO Project Group ID.
 		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 delete of internal Project Group or a VISBO Center Group inside the Project not allowed.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1906,8 +1933,10 @@ router.route('/:vpid/audit')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Put updates a group inside the Project
 		*
+		* @apiParam {String} vpid The requested VISBO Project ID.
+		* @apiParam {String} groupid The requested VISBO Project Group ID.
 		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
-		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 		* @apiError {number} 400 Not allowed to change a VISBO Center Group inside the Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create a Project Group
@@ -2028,8 +2057,10 @@ router.route('/:vpid/audit')
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Adds the specified user from body to the group
 			*
+			* @apiParam {String} vpid The requested VISBO Project ID.
+			* @apiParam {String} groupid The requested VISBO Project Group ID.
 			* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
-			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+			* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 			* @apiError {number} 400 missing user name to add to the Project Group or the Group is a VISBO Center Group
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 			* @apiError {number} 403 No Permission to Add a User to Project Group
@@ -2254,6 +2285,9 @@ router.route('/:vpid/audit')
 			* @apiHeader {String} access-key User authentication token.
 			* @apiDescription Deletes the specified user in the Project Group
 			*
+			* @apiParam {String} vpid The requested VISBO Project ID.
+			* @apiParam {String} groupid The requested VISBO Project Group ID.
+			* @apiParam {String} userid The requested VISBO User ID.
 			* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 			* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 			* @apiError {number} 400 the group is a VISBO Center Group
@@ -2342,6 +2376,7 @@ router.route('/:vpid/lock')
 	* In case a lock is already active for another user, the lock request fails, in case a lock exists for the current user, it gets replaced by the new lock.
 	* A User who can not Modify the Project can not lock the Project only a Variant of a Project, if the user has CreateVariant Permission.
   *
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 400 no valid lock date or a variant that does not exist
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2463,12 +2498,13 @@ router.route('/:vpid/lock')
 	* @apiVersion 1.0.0
 	* @apiGroup VISBO Project Properties
 	* @apiName DeleteLock
+	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Deletes a lock for a specific project and a specific variant
 	* the user needs to have read access to the Project and either owns the lock or has Modify Permission in the Project
-	* @apiHeader {String} access-key User authentication token.
-	* @apiParam {String} variantID The Variant ID of the Project for the Lock
-	* @apiParam {String} variantName The Variant Name of the Project for the Lock (outdated)
-	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiParam {String} vpid The requested VISBO Project ID.
+	* @apiQuery {String} variantID The Variant ID of the Project for the Lock
+	* @apiQuery {String} variantName The Variant Name of the Project for the Lock (outdated)
+	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	*
 	* @apiPermission Authenticated and VP.View and optional VP.Modify Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2549,6 +2585,7 @@ router.route('/:vpid/variant')
 	* @apiName CreateVISBOProjectVariant
 	* @apiDescription Post creates a new Variant for the Project
 	*
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to Create a Variant for the Project
@@ -2650,6 +2687,8 @@ router.route('/:vpid/variant/:vid')
 	* @apiDescription Updates the description of a Variant.
 	* The user needs to either own the Variant or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
+	* @apiParam {String} vid The requested Variant ID.
 	*
 	* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2727,6 +2766,8 @@ router.route('/:vpid/variant/:vid')
 	* @apiDescription Deletes a specific Variant for a project if the variant does not contain versions.
 	* The user needs to either own the Variant or has Modify Permission in the Project
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO Project ID.
+	* @apiParam {String} vid The requested Variant ID.
 	*
 	* @apiPermission Authenticated and VP.View and optional VP.Modify or VP.CreateVariant Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -2820,6 +2861,7 @@ router.route('/:vpid/portfolio')
 	* @apiDescription GET /vp/:vpid/portfolio returns all Portfolio List Versions in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
+	* @apiParam {String} vpid The requested VISBO Project (Portfolio) ID.
 	* @apiPermission Authenticated and VP.View Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View the Project
@@ -2827,11 +2869,11 @@ router.route('/:vpid/portfolio')
 	* With additional query paramteters the amount of versions can be restricted. Available Restirctions are: refDate, refNext, variantName.
 	* to query only the main version of a project, use variantID= in the query string.
 	*
-	* @apiParam {Date} refDate only the latest version before the reference date for the project and variant is delivered
+	* @apiQuery {Date} refDate only the latest version before the reference date for the project and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
-	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
-	* @apiParam {String} variantID Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
-	* @apiParam {String} variantName Deliver only versions for the specified variant (outdated)
+	* @apiQuery {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
+	* @apiQuery {String} variantID Deliver only versions for the specified variant, if client wants to have only versions from the main branch, use variantName=
+	* @apiQuery {String} variantName Deliver only versions for the specified variant (outdated)
 	*
 	* @apiExample Example usage:
 	*   url: https://my.visbo.net/api/vp/vp5aaf992/portfolio
@@ -2971,6 +3013,7 @@ router.route('/:vpid/portfolio')
 	* @apiHeader {String} access-key User authentication token.
 	* @apiDescription Post creates a new Definition of a Portfolio for the Project
 	*
+	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.Modify Permission for the Portfolio.
 	* @apiError {number} 400 no Project Items specified for Portfolio or Project is not a Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -3147,6 +3190,8 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiDescription GET /vp/:vpid/portfolio retruns all Portfolio Lists in the specified Project
 	* In case of success it delivers an array of Portfolio Lists, the array contains in each element a Portfolio List
 	*
+	* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+	* @apiParam {String} vpfid The requested VISBO Portfolio List ID.
 	* @apiParam (Parameter) {Boolean} [deletedVPF=false]  Request Deleted VPFs, only allowed for users with DeleteVP Permission.
 	* @apiPermission Authenticated and VP.View Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -3236,6 +3281,8 @@ router.route('/:vpid/portfolio/:vpfid')
 	* @apiDescription Put updates a specific Portfolio List can also be used for undelete
 	* the system checks if the user has VP.Modify permission to the Project and in case of Undelete the user needs to have the VP.Delete Permission.
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+	* @apiParam {String} vpfid The requested VISBO Portfolio List ID.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Portfolio.
 	* @apiError {number} 400 not allowed to change Portfolio List or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -3401,6 +3448,8 @@ router.route('/:vpid/portfolio/:vpfid')
 	* he can delete portfolio lists that belong to his variant that he could modify.
 	* This means he needs either Modify or CreateVariant Permission and is the owner of the project variant, where he wants to delete the portfolio list.
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+	* @apiParam {String} vpfid The requested VISBO Portfolio List ID.
 	*
 	* @apiPermission Authenticated and VP.View and VP.Delete or VP.Modify or VP.CreateVariant Permission for the Portfolio.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -3524,19 +3573,21 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiGroup VISBO Project Portfolio
 		* @apiName GetVISBOPortfolioCapacity
 		* @apiHeader {String} access-key User authentication token.
+		* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+		* @apiParam {String} vpfid The requested VISBO Portfolio List ID.
 		* @apiDescription Gets the capacity numbers for the specified VISBO Portfolio List.
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
 		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
-		* @apiParam {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
+		* @apiQuery {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
 		* Date Format is in the form: 2018-10-30T10:00:00Z
-		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
-		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
-		* @apiParam {String} parentID Deliver the capacity planning for the specified organisation with the specified parentID, default is complete organisation
-		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
-		* @apiParam {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
-		* @apiParam {Boolean} perProject Deliver the capacity per project and cumulative
+		* @apiQuery {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
+		* @apiQuery {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
+		* @apiQuery {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
+		* @apiQuery {String} parentID Deliver the capacity planning for the specified organisation with the specified parentID, default is complete organisation
+		* @apiQuery {Boolean} hierarchy Deliver the capacity planning including all dircect childs of roleID
+		* @apiQuery {Boolean} pfv Deliver the capacity planning compared to PFV instead of total capacity
+		* @apiQuery {Boolean} perProject Deliver the capacity per project and cumulative
 		*
 		* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
 		* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
@@ -3674,6 +3725,7 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiDescription Post creates a new group inside the Project
 		*
+		* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
 		* @apiPermission Authenticated and VP.View and VP.ManagePerm Permission for the Project.
 		* @apiError {number} 400 missing name or group of Project Restriction during Creation
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -3783,6 +3835,8 @@ router.route('/:vpid/portfolio/:vpfid')
 		* @apiDescription Deletes a specific Restriction for a group
 		* the user needs to have read access to the Project and Modify Permission in the Project
 		* @apiHeader {String} access-key User authentication token.
+		* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+		* @apiParam {String} rid The requested Restriction ID.
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modfiy Permission for the Project.
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid

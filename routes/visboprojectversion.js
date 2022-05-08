@@ -310,16 +310,16 @@ router.route('/')
 	* With an additional paramter keyMetrics the result is a short VPV that includes the keyMetrics values. In this only Project Versions from Projects with Audit Permissions are delivered.
 	* to query only the main version of a project, use variantName= in the query string, to query specific variantNames concatenate them separated with comma, to include the main variant use an empty string after/before the comma. i.e. get the main plus the pfv Version use 'variantName=pfv,'
 	*
-	* @apiParam {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
+	* @apiQuery {Date} refDate only the latest version before the reference date for each selected project  and variant is delivered
 	* Date Format is in the form: 2018-10-30T10:00:00Z
-	* @apiParam {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
-	* @apiParam {String} vcid Deliver only versions for projects inside a specific VISBOCenter
-	* @apiParam {String} vpid Deliver only versions for the specified project
-	* @apiParam {String} vpfid Deliver only versions for the specified project portfolio version
-	* @apiParam {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
-	* @apiParam {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
-	* @apiParam {String} longList if set deliver all details instead of a short version info for the project version
-	* @apiParam {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
+	* @apiQuery {String} refNext If refNext is not empty the system delivers not the version before refDate instead it delivers the version after refDate
+	* @apiQuery {String} vcid Deliver only versions for projects inside a specific VISBOCenter
+	* @apiQuery {String} vpid Deliver only versions for the specified project
+	* @apiQuery {String} vpfid Deliver only versions for the specified project portfolio version
+	* @apiQuery {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
+	* @apiQuery {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
+	* @apiQuery {String} longList if set deliver all details instead of a short version info for the project version
+	* @apiQuery {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
 	*
 	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the VP.View or VP.ViewRestricted Permission for the specified object.
 	* @apiError {number} 400 Bad Values in paramter in URL
@@ -805,6 +805,7 @@ router.route('/:vpvid')
 	* If the user has only VP.ViewRestricted Permission the Version is cleaned up to contain only information about the Deadlines & Deliveries the User is allowed to see.
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element with a VPV
 	*
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	* @apiPermission Authenticated and VP.View or VP.ViewRestricted Permission for the Project.
 	* @apiError {number} 400 Bad Values in paramter in URL
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -892,6 +893,7 @@ router.route('/:vpvid')
 	* @apiDescription Put updates a specific Project Version used for undelete
 	* the system checks if the user has Delete permission to the Project.
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project.
 	* @apiError {number} 400 not allowed to change Project Version or bad values in body
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1024,6 +1026,7 @@ router.route('/:vpvid')
 	* @apiName DeleteVISBOProjectVersion
 	* @apiDescription Deletes a specific Project Version.
 	* @apiHeader {String} access-key User authentication token.
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	*
 	* @apiPermission Authenticated and VP.View and VP.Delete Permission for the Project
 	* or user has VP.Modify or VP.CreateVariant permission and it is a version that belongs to a variant that was created by the user
@@ -1168,9 +1171,10 @@ router.route('/:vpvid/copy')
 		* In case the new Variant is an PFV, the version gets squeezed regarding Organisation (no individual user roles) and regarding Phases/Deadlines/Deliveries that is reduced to the previous PFV
 		*
  		* @apiHeader {String} access-key User authentication token.
+		* @apiParam {String} vpvid The requested VISBO Project Version ID.
 		*
-		* @apiParam {number} scaleFactor scale planned ressources with the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
-		* @apiParam {number} level in case the vpv is copied to a pfv, the level specifies on what level the hierarchy of the pfv should be reduced (0: no reduction, 1: reduce to the project only, 2: reduce to all Phases directly below project, etc.)
+		* @apiQuery {number} scaleFactor scale planned ressources with the scaleFactor, but only values after actualDataUntil in the original version and actualDataUntil from the new Version if set
+		* @apiQuery {number} level in case the vpv is copied to a pfv, the level specifies on what level the hierarchy of the pfv should be reduced (0: no reduction, 1: reduce to the project only, 2: reduce to all Phases directly below project, etc.)
 		*
 		* @apiPermission Authenticated and VP.View and VP.Modify or VP.CreateVariant Permission for the Project.
 		* @apiError {number} 400 missing name or ID of Project during Creation, or other bad content in body
@@ -1407,10 +1411,11 @@ router.route('/:vpvid/capacity')
 		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
 		* A roleID must be specified. If hierarchy is true, the capacity for the first level of subroles are delivered in addition to the main role.
 		*
-		* @apiParam {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
-		* @apiParam {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
-		* @apiParam {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
-		* @apiParam {Boolean} hierarchy Deliver the capacity planning including all direct childs of roleID
+		* @apiParam {String} vpvid The requested VISBO Project Version ID.
+		* @apiQuery {Date} startDate Deliver only capacity values beginning with month of startDate, default is today
+		* @apiQuery {Date} endDate Deliver only capacity values ending with month of endDate, default is today + 6 months
+		* @apiQuery {String} roleID Deliver the capacity planning for the specified organisation, default is complete organisation
+		* @apiQuery {Boolean} hierarchy Deliver the capacity planning including all direct childs of roleID
 		*
 		* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
 		* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
@@ -1519,6 +1524,7 @@ router.route('/:vpvid/keyMetrics')
 	* @apiDescription Get returns the VPV and recalculates the keyMetrics including prediction if configured for this specific Project Version the user has access permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	*
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
@@ -1587,6 +1593,7 @@ router.route('/:vpvid/cost')
 	* In case of success it delivers an array of VPVPropertiesList, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	* With Permission Restricted View, the deliveries were filtered to the restricted View
 	*
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version
@@ -1671,7 +1678,8 @@ router.route('/:vpvid/delivery')
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	* With Permission VP.ViewRestriced, the deliveries were filtered to the restricted View
 	*
-	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
+	* @apiQuery {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
 	* @apiPermission Authenticated and VP.View or VP.ViewRestriced Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
@@ -1763,7 +1771,8 @@ router.route('/:vpvid/deadline')
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	* With Permission VP.ViewRestriced, the deadlines were filtered to the restricted View
 	*
-	* @apiParam {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
+	* @apiQuery {String='pfv','vpv'} ref specifies if only values from pfv or vpv should be delivered but in both cases compared between pfv and vpv.
 	* if nothing specified all vpv items were delivered without a reference to pfv
 	* @apiPermission Authenticated and VP.View or VP.ViewRestriced Permission for the Project.
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid

@@ -1789,6 +1789,8 @@ function calcConcerningRoles(timeZones, roleID, teamID) {
 		var crElem = {};
 		crElem.role = roles[hroleID];
 		crElem.teamID = -1;
+		// crElem.teamID = crElem.role?.type == 2 ? hroleID : -1;
+
 		crElem.faktor = 1.0;
 
 		if (parentRole.type == 2) {

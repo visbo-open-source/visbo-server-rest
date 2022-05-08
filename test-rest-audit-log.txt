@@ -3,17 +3,20 @@
 async  <2.6.4
 Severity: high
 Prototype Pollution in async - https://github.com/advisories/GHSA-fwr7-v2mv-hh25
-fix available via `npm audit fix --force`
-Will install ejs@3.0.2, which is a breaking change
+fix available via `npm audit fix`
 node_modules/async
-  jake  >=8.0.1
+  jake  8.0.1 - 10.8.4
   Depends on vulnerable versions of async
   node_modules/jake
-    ejs  >=3.1.2
-    Depends on vulnerable versions of jake
-    node_modules/ejs
+
+ejs  <3.1.7
+Severity: high
+Template injection in ejs - https://github.com/advisories/GHSA-phwq-j96m-2c2q
+fix available via `npm audit fix`
+node_modules/ejs
 
 3 high severity vulnerabilities
 
-To address all issues (including breaking changes), run:
-  npm audit fix --force
+To address all issues, run:
+  npm audit fix
+Executed on Di 3 Mai 2022 08:09:57 CEST
