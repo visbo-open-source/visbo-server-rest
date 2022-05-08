@@ -1598,20 +1598,6 @@ function getCapacityFromTimeZone(vpvs, roleID, teamID, timeZones) {
 	return costValues;
 }
 
-function checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity) {
-	var result;
-	if (otherActivity) {
-		result = (rolePhase.RollenTyp == roleID && rolePhase.teamID != teamID);
-	} else {
-		if (isTeamMember) {
-			result = (rolePhase.RollenTyp == roleID && rolePhase.teamID == teamID);
-		} else {
-			result = (rolePhase.RollenTyp == roleID || rolePhase.teamID == teamID);
-		}
-	}
-	return result;
-}
-
 function addCostValues(vpv, calcTeam, timeZones, costValues) {
 	var maxTimeZoneIndex;
 	if (vpv.variantName == 'pfv') {
