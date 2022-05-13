@@ -423,7 +423,7 @@ router.route('/')
 			}
 			if (variantID != undefined) {
 				logger4js.debug('GET VPV VariantID String :%s:', variantID);
-				if (req.oneVP) {
+				if (variantID != '' && req.oneVP) {
 					var variantList = convertVariantList(variantID.split(','), req.oneVP);
 					logger4js.debug('VariantList for VP %s: %s', req.oneVP.name, variantList);
 					queryvpv.variantName = {$in: variantList};
