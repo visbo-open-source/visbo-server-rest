@@ -1183,12 +1183,14 @@ router.route('/:vpid')
 		if (req.body.description != undefined) {
 			req.oneVP.description = req.body.description.trim();
 		}
+		req.auditProperty = [];
 		let propertyChange = false;
 		if (req.body.kundennummer != undefined && req.body.kundennummer != req.oneVP.kundennummer) {
 			req.oneVP.kundennummer = req.body.kundennummer.trim();
+			let entry = {action: 'Project Update', name: 'Customer ID', newValue: req.oneVP.kundennummer};
+			req.auditProperty = req.auditProperty.concat(entry);
 			propertyChange = true;
 		}
-		req.auditProperty = [];
 		if (vpManagerNew) {
 			req.oneVP.managerId = req.body.managerId;
 			let entry = {action: 'Project Update', name: 'Manager', newValue: vpManagerNew};

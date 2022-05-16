@@ -1776,8 +1776,8 @@ function calcConcerningRoles(timeZones, roleID, teamID) {
 			crElem.teamIDs = [];
 			crElem.faktor = 1.0;
 			// collect all uids of concerning roles
-			orga.concerningRoles.push(crElem);
 		}
+		orga.concerningRoles.push(crElem);
 
 		if (parentRole.type == 2) {
 			for (var t = 0 ; t < crElem.role.teamIDs?.length; t++) {
