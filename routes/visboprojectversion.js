@@ -482,10 +482,10 @@ router.route('/')
 					var filterVPV = [];
 					for (let i = 0; i < listVPV.length; i++){
 						//check if vpid & variant are member of portfolio
-						logger4js.debug('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
+						// logger4js.debug('check: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
 						var itemSearch = {vpid: listVPV[i].vpid, variantName: listVPV[i].variantName};
 						if (req.listPortfolioVPVariant.find(findVPVariantList, itemSearch)) {
-							logger4js.debug('found: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
+							logger4js.trace('found: Index %d :%s: Variant :%s: ', i, listVPV[i].vpid, listVPV[i].variantName);
 							filterVPV.push(listVPV[i]);
 						}
 					}
@@ -499,7 +499,7 @@ router.route('/')
 					}
 					for (let i = 1; i < listVPV.length; i++){
 						//compare current item with previous and ignore if it is the same vpid & variantname
-						logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
+						// logger4js.trace('compare: Index %d :%s: vs. :%s: Variant :%s: vs. :%s: TS %s vs. %s', i, listVPV[i].vpid, listVPV[i-1].vpid, listVPV[i].variantName, listVPV[i-1].variantName, listVPV[i].timestamp, listVPV[i-1].timestamp);
 						if (listVPV[i].vpid.toString() != listVPV[i-1].vpid.toString()
 							|| listVPV[i].variantName != listVPV[i-1].variantName
 						) {
