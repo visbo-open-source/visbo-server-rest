@@ -3429,7 +3429,6 @@ router.route('/:vpid/portfolio/:vpfid')
 						return;
 					}
 					req.oneVPF = oneVPF;
-					updateVPFCount(req.oneVPF.vpid, req.oneVPF.variantName, 1);
 					return res.status(200).send({
 						state: 'success',
 						message: 'Portfolio List updated',
