@@ -1,0 +1,977 @@
+{
+	"info": {
+		"_postman_id": "2f6f81f1-3416-404e-9af3-72ce4eeed075",
+		"name": "99_CloneAnonym",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "99-01 VC Clone",
+			"item": [
+				{
+					"name": "99-01-01 Check Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									" pm.test(\"Check Clone Type\", function () {",
+									"   var varIterationCount = Number(pm.variables.get(\"varIterationCount\") || \"1\")",
+									"    if (varIterationCount > 1) {",
+									"        postman.setNextRequest(\"99-01-05 Get Input Status\");",
+									"    }",
+									"    pm.variables.set(\"varIterationCount\", varIterationCount + 1)",
+									" })"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-02 Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"01 Login: Check Login Success\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.globals.set(\"token\", jsonData.token);",
+									"    pm.expect(jsonData.state).to.eql(\"success\");",
+									"    pm.variables.set(\"varRunErrors\", 0);",
+									"    pm.globals.unset(\"vcID\")",
+									"});",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{UserAdmin}}\",\n  \"password\": \"{{password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/token/user/login",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"token",
+								"user",
+								"login"
+							]
+						},
+						"description": "Successful Login Request  "
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-05 Get Input Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									" pm.test(\"Check Clone Type\", function () {",
+									"   var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"    if (varRunErrors >= 10) {",
+									"        postman.setNextRequest(\"99-01-99 Final\");",
+									"        pm.expect(\"Error\").to.be.eql(\"Stop Execution too many errors\", varRunErrors)",
+									"    }",
+									"    var exportType = pm.iterationData.get(\"exportType\");",
+									"    if (exportType == 'VC') {",
+									"        postman.setNextRequest(\"99-01-10 Create VC\");",
+									"    } else if (exportType == \"VCSetting\") {",
+									"        postman.setNextRequest(\"99-01-20 Create VCSetting\");",
+									"    } else if (exportType == \"VCOrganisation\") {",
+									"        postman.setNextRequest(\"99-01-25 Create VCOrganisation\");",
+									"    } else if (exportType == \"VCCapacity\") {",
+									"        postman.setNextRequest(\"99-01-27 Create VCCapacity\");",
+									"    } else if (exportType == \"VP\") {",
+									"        postman.setNextRequest(\"99-01-30 Create VP\");",
+									"    } else if (exportType == \"VPV\") {",
+									"        postman.setNextRequest(\"99-01-50 Create VPV\");",
+									"    } else if (exportType == \"VPF\") {",
+									"        postman.setNextRequest(\"99-01-60 Create VPF\");",
+									"    } else {",
+									"        pm.expect(exportType).to.be.eql(\"Unknown exportType\");",
+									"        postman.setNextRequest(\"99-01-99 Final\");",
+									"    }    ",
+									"",
+									" })"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Get VC List and Check if the VC with Admin permission exists, if so skip the creation"
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-10 Create VC",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check Created VCID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var vcName = pm.variables.get(\"vcNewName\");",
+									"    pm.expect(jsonData.vc && jsonData.vc[0].name).to.eql(vcName);",
+									"    pm.globals.set(\"vcID\", jsonData.vc[0]._id);",
+									"    var vcAnnoList = [];",
+									"    var vc = {};",
+									"    vc.vcid = jsonData.vc[0]._id;",
+									"    vc.name = jsonData.vc[0].name;",
+									"    vcAnnoList.push(vc);",
+									"    pm.globals.set(\"vcAnnoList\", JSON.stringify(vcAnnoList));",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var sequence = '_' + (new Date()).toISOString();",
+									"var vcNewName = pm.iterationData.get(\"name\");",
+									"var vcOrigId = pm.iterationData.get(\"_id\");",
+									"var vcDescription = pm.iterationData.get(\"description\")  + ' vcid:' + vcOrigId;",
+									"vcDescription = vcDescription.replace(/\\n/g, ' ');",
+									"",
+									"//console.log(\"Description:\", vcDescription, ':');",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"",
+									"pm.expect(vcNewName || '').to.be.not.eql(\"\", \"No VC Name in Import Entry\");",
+									"pm.expect(exportType).to.be.eql(\"VC\", \"No VC Type Import File\");",
+									"",
+									"pm.variables.set(\"vcNewName\", vcNewName + sequence);",
+									"pm.variables.set(\"vcDescription\", vcDescription);",
+									"",
+									"var list = [];",
+									"pm.globals.set(\"vcAnnoList\", JSON.stringify(list));",
+									"pm.globals.set(\"vpAnnoList\", JSON.stringify(list));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{  \n   \"name\":\"{{vcNewName}}\",\n   \"description\": \"{{vcDescription}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/vc?sysadmin=true",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc"
+							],
+							"query": [
+								{
+									"key": "sysadmin",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-11 Get VC Enable/Disable",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check VC enable Predict\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.vcsetting && jsonData.vcsetting.length >= 0).to.be.eql(true, \"No setting List found\");",
+									"    var searchName = \"EnablePredict\";",
+									"    var list = jsonData.vcsetting;",
+									"    var index = list.findIndex(item => item.name.indexOf(searchName) == 0);",
+									"    pm.expect(index >= 0).to.be.eql(true, \"EnablePredict not found\");",
+									"    if (index >= 0) {",
+									"        pm.globals.set(\"settingID\", list[index]._id);",
+									"",
+									"    } else {",
+									"        postman.setNextRequest(\"99-01-99 Final\")",
+									"    }",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/setting?type=_VCConfig",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"setting"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "_VCConfig"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-20 Create VCSetting",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var vcSetting = {};",
+									"",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VCSetting\", \"No VC Setting Type Import Entry\");",
+									"",
+									"vcSetting.name = pm.iterationData.get(\"name\")",
+									"vcSetting.type = pm.iterationData.get(\"type\")",
+									"vcSetting.timestamp = pm.iterationData.get(\"timestamp\")",
+									"var value = pm.iterationData.get(\"value\")",
+									"if (value) {",
+									"    vcSetting.value = JSON.parse(value);",
+									"}",
+									"console.log(\"Start Create Setting\", vcSetting.name, vcSetting.type, \"Timestamp\", vcSetting.timestamp);",
+									"pm.expect(value).to.be.not.eql(undefined, \"No valid JSON\");",
+									"pm.variables.set('vcSetting', JSON.stringify(vcSetting));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vcSetting}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/setting",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"setting"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-25 Create VCOrganisation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var vcOrganisation = {};",
+									"",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VCOrganisation\", \"No VC Organisation Type Import Entry\");",
+									"",
+									"vcOrganisation.name = pm.iterationData.get(\"name\")",
+									"vcOrganisation.timestamp = pm.iterationData.get(\"timestamp\")",
+									"var value = pm.iterationData.get(\"value\")",
+									"if (value) {",
+									"    value = JSON.parse(value);",
+									"}",
+									"pm.expect(value).to.be.not.eql(undefined, \"No valid JSON\");",
+									"vcOrganisation.allRoles = value.allRoles; ",
+									"vcOrganisation.allCosts = value.allCosts; ",
+									"pm.variables.set('vcOrganisation', JSON.stringify(vcOrganisation));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vcOrganisation}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/organisation",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"organisation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-27 Create VCCapacity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\")",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var vcCapacity = {};",
+									"",
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VCCapacity\", \"No VC Capacity Type Import Entry\");",
+									"",
+									"var value = pm.iterationData.get(\"value\")",
+									"if (value) {",
+									"    value = JSON.parse(value);",
+									"}",
+									"pm.expect(value).to.be.not.eql(undefined, \"No valid JSON\");",
+									"console.log(\"Start Create Capacity\");",
+									"",
+									"vcCapacity.roleID = value.roleID;",
+									"vcCapacity.startOfYear = value.startOfYear;",
+									"vcCapacity.capaPerMonth = value.capaPerMonth;",
+									"pm.variables.set(\"vcCapacity\", JSON.stringify(vcCapacity));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vcCapacity}}"
+						},
+						"url": {
+							"raw": "{{url}}/vc/{{vcID}}/capa",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vc",
+								"{{vcID}}",
+								"capa"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-30 Create VP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check VP has Variants\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var vp = jsonData.vp[0];",
+									"    pm.globals.set(\"vpID\", vp._id);",
+									"",
+									"    var vpAnnoList = pm.globals.get(\"vpAnnoList\");",
+									"    if (vpAnnoList) {",
+									"        vpAnnoList = JSON.parse(vpAnnoList)",
+									"    } else {",
+									"        vpAnnoList = [];",
+									"    }",
+									"    var vpItem = {};",
+									"    vpItem.vpid = vp._id;",
+									"    vpItem.vpidOrg = pm.iterationData.get(\"_id\");",
+									"    vpItem.vcid = vp.vcid;",
+									"    vpItem.name = vp.name;",
+									"    vpAnnoList.push(vpItem);",
+									"    pm.globals.set(\"vpAnnoList\", JSON.stringify(vpAnnoList));",
+									"    ",
+									"    var vpVariants = pm.iterationData.get(\"detail\");",
+									"    var variant = [];",
+									"    if (vpVariants) {",
+									"        variant = JSON.parse(vpVariants);",
+									"    }",
+									"    console.log(\"Create Variants:\", JSON.stringify(variant));",
+									"    pm.globals.set(\"listItems\", JSON.stringify(variant));        ",
+									"    if (variant.length == 0) {",
+									"        postman.setNextRequest(\"99-01-99 Final\");",
+									"    }",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VP\", \"No VP Type Import Entry\");",
+									"",
+									"var baseName = pm.environment.get(\"VPBaseName\");",
+									"var vcAnnoList = pm.globals.get(\"vcAnnoList\")",
+									"if (vcAnnoList) { vcAnnoList = JSON.parse(vcAnnoList); }",
+									"pm.expect(vcAnnoList && vcAnnoList.length == 1).to.be.eql(true, \"No vcAnnoList found\");",
+									"",
+									"var vpNewName = pm.iterationData.get(\"name\");",
+									"var vpDescription = pm.iterationData.get(\"description\") + ' vpid:' + vpNewName;",
+									"var vpKundennummer = pm.iterationData.get(\"kundennummer\");",
+									"var vpType = pm.iterationData.get(\"vpType\");",
+									"",
+									"pm.expect(vpNewName || '').to.be.not.eql(\"\", \"No VP Name in Import File\");",
+									"",
+									"pm.variables.set(\"vpDescription\", vpDescription);",
+									"pm.variables.set(\"vpKundennummer\", vpKundennummer);",
+									"pm.variables.set(\"vpType\", vpType);",
+									"pm.variables.set(\"vpNewName\", vpNewName);",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{  \n   \"name\":\"{{vpNewName}}\",\n   \"vcid\":\"{{vcID}}\",\n   \"vpType\": {{vpType}},\n   \"description\": \"{{vpDescription}}\",\n   \"kundennummer\": \"{{vpKundennummer}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/vp",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-31 Create Variant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var listItems = JSON.parse(pm.globals.get(\"listItems\"));",
+									"pm.expect(listItems.length).to.be.above(0, \"No more Variants to create\");",
+									"var vpVariantName = listItems[0];",
+									"listItems.shift();",
+									"pm.globals.set(\"listItems\", JSON.stringify(listItems));",
+									"pm.variables.set(\"vpVariantName\", vpVariantName);",
+									"console.log(\"Remaining Items\", listItems.length);",
+									"if (listItems.length > 0) {",
+									"    postman.setNextRequest(\"99-01-31 Create Variant\");",
+									"} else {",
+									"    postman.setNextRequest(\"99-01-99 Final\");",
+									"}",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{  \n   \"variantName\":\"{{vpVariantName}}\"\n}"
+						},
+						"url": {
+							"raw": "{{url}}/vp/{{vpID}}/variant",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vp",
+								"{{vpID}}",
+								"variant"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-50 Create VPV",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\");",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VPV\", \"No VPV Type Import Entry\");",
+									"",
+									"var vpAnnoList = pm.globals.get(\"vpAnnoList\")",
+									"if (vpAnnoList) { vpAnnoList = JSON.parse(vpAnnoList); }",
+									"pm.expect(vpAnnoList && vpAnnoList.length >= 1).to.be.eql(true, \"No vpAnnoList found\");",
+									"",
+									"var vpv = pm.iterationData.get(\"detail\");",
+									"if (vpv) vpv = JSON.parse(vpv);",
+									"pm.expect(vpv && vpv.timestamp != undefined).to.be.eql(true, \"vpv in environment missing\");",
+									"",
+									"var vpidOrg = pm.iterationData.get(\"vpid\");",
+									"console.log(\"vpidOrg\", JSON.stringify(vpidOrg), vpidOrg.toString());",
+									"var vpMapping = vpAnnoList.find(item => item.vpidOrg == vpidOrg);",
+									"pm.expect(vpMapping != undefined).to.be.eql(true, \"vp Mapping missing for \" + vpidOrg);",
+									"",
+									"console.log(\"Store VPV of VPID\", vpidOrg, \"to VP\", vpMapping.vpid, \"with TS\", vpv.timestamp);",
+									"vpv.vpid = vpMapping.vpid;",
+									"delete vpv.keyMetrics",
+									"pm.variables.set('vpvTemp', JSON.stringify(vpv));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{vpvTemp}}"
+						},
+						"url": {
+							"raw": "{{url}}/vpv?noValidate=1",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vpv"
+							],
+							"query": [
+								{
+									"key": "noValidate",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-60 Create VPF",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code Check\", function () {",
+									"    postman.setNextRequest(\"99-01-99 Final\");",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.state != 'success') {",
+									"        var varRunErrors = Number(pm.variables.get(\"varRunErrors\") || \"0\")",
+									"        varRunErrors += 1;",
+									"        pm.variables.set(\"varRunErrors\", varRunErrors);",
+									"    }",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var exportType = pm.iterationData.get(\"exportType\")",
+									"pm.expect(exportType).to.be.eql(\"VPF\", \"No VPF Type Import Entry\");",
+									"",
+									"var vpAnnoList = pm.globals.get(\"vpAnnoList\")",
+									"if (vpAnnoList) { vpAnnoList = JSON.parse(vpAnnoList); }",
+									"pm.expect(vpAnnoList && vpAnnoList.length >= 1).to.be.eql(true, \"No vpAnnoList found\");",
+									"",
+									"var vpf = pm.iterationData.get(\"detail\");",
+									"if (vpf) vpf = JSON.parse(vpf);",
+									"pm.expect(vpf && vpf.timestamp != undefined).to.be.eql(true, \"vpf in export missing\");",
+									"",
+									"var vpidOrg = pm.iterationData.get(\"vpid\");",
+									"// console.log(\"vpidOrg\", vpidOrg);",
+									"var vpMapping = vpAnnoList.find(item => item.vpidOrg == vpidOrg);",
+									"pm.expect(vpMapping != undefined).to.be.eql(true, \"vp Mapping missing for \" + vpidOrg);",
+									"pm.globals.set(\"vpID\", vpMapping.vpid);",
+									"// console.log(\"Store VPF of VPID\", vpidOrg, \"to VP\", vpMapping.vpid, \"with TS\", vpf.timestamp);",
+									"vpf.vpid = vpMapping.vpid;",
+									"var mapError = 0;",
+									"",
+									"vpf.allItems.forEach(itemVPF => {",
+									"    var vpidOrg = itemVPF.vpid;",
+									"    // console.log(\"Map VPID in VPF\", itemVPF.vpid);",
+									"    var vpMapping = vpAnnoList.find(item => itemVPF.vpid == item.vpidOrg);",
+									"    if (vpMapping) {",
+									"        // console.log(\"Map VPID in VPF from / to \", itemVPF.vpid, vpMapping.vpid);",
+									"        itemVPF.vpid = vpMapping.vpid;",
+									"    } else {",
+									"        mapError += 1;",
+									"        itemVPF.remove = true;",
+									"    }",
+									"})",
+									"if (mapError) {",
+									"    console.log(\"Map Errors for vpid\", vpidOrg, mapError);",
+									"    vpf.allItems = vpf.allItems.filter(item => item.remove == undefined);",
+									"}",
+									"console.log(\"Store VPF\", JSON.stringify(vpf));",
+									"pm.variables.set('varPFVList', JSON.stringify(vpf));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{varPFVList}}"
+						},
+						"url": {
+							"raw": "{{url}}/vp/{{vpID}}/portfolio",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"vp",
+								"{{vpID}}",
+								"portfolio"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "99-01-99 Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "access-key",
+								"value": "{{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{url}}/status",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Create two Visbo Centers as Admin Test User.\n\nFirst one VC the normal user is also Admin and therefore can create projects later on\nSecond VC is created with Admin permission for both test users and later on changed to normal user for the normal tester. \n\n\nMissing Tests here are: \n\nCreate VC with the same name\nCreate VP with duplicate name",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	]
+}
