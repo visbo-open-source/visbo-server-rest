@@ -42,6 +42,8 @@
     "useragent": "^2.3.0"
   },
   "devDependencies": {
-    "eslint": "^8.14.0"
+    "ejs-lint": "^1.2.2",
+    "eslint": "^8.14.0",
+    "npm": "^8.13.2"
   }
 }
