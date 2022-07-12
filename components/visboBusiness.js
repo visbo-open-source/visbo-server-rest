@@ -628,7 +628,7 @@ function getMsDate(hrchy, vpv, elemId){
 		var msIndex = currentNode.indexOfElem;
 		if (phase && phase.name ) {
 			var ms = phase.AllResults[msIndex-1];
-			if (ms && vpv.startDate && phase.startOffsetinDays >= 0 && ms.offset >= 0) {
+			if (ms && vpv.startDate && phase.startOffsetinDays >= 0 ) {
 				logger4js.trace('get the Date of Milestone %s in %s ', ms.name, phase.name);
 				msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
 			}
@@ -2689,7 +2689,7 @@ function ensureValidVPV(myVPV) {
 	// C2 (stop criterium) : does no Phase is having a start-Date earlier than project startdate ?
 	// C3 (stop criterium) : does no Phase is having a end-Date later than project endDate ?
 	// C3 (can be healed, enforceHealing=true)
-	// C4 (stop criterium) : is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
+	// C4 (only information): is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
 	// C4 (only information, no healing , no abort criterium) :
 	// before C5 check (can be healed): are relStart and relEnde corresponding to phaseStartDate and phaseEndDate?
 	// C5 (stop criterium) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?
