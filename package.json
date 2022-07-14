@@ -8,6 +8,7 @@
     "audit": "npm audit | tee test-rest-audit-log.txt; echo Executed on $(date) >> test-rest-audit-log.txt",
     "auditWin": "npm audit > test-rest-audit-log.txt & echo Executed on %date% %time% >> test-rest-audit-log.txt & type test-rest-audit-log.txt",
     "test": "bash testPostman.sh | tee test-rest-postman-log.txt",
+    "testWin": "testPostman.bat > test-rest-postman-log.txt & type test-rest-postman-log.txt",
     "lint": "eslint --ignore-path .gitignore .",
     "maillint": "ejslint emailTemplates "
   },
