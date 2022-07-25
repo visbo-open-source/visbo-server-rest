@@ -5,8 +5,10 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "audit": "npm audit >test-rest-audit-log.txt",
-    "test": "bash testPostman.sh >test-rest-postman-log.txt",
+    "audit": "npm audit | tee test-rest-audit-log.txt; echo Executed on $(date) >> test-rest-audit-log.txt",
+    "auditWin": "npm audit > test-rest-audit-log.txt & echo Executed on %date% %time% >> test-rest-audit-log.txt & type test-rest-audit-log.txt",
+    "test": "bash testPostman.sh | tee test-rest-postman-log.txt",
+    "testWin": "testPostman.bat > test-rest-postman-log.txt & type test-rest-postman-log.txt",
     "lint": "eslint --ignore-path .gitignore .",
     "maillint": "ejslint emailTemplates "
   },
@@ -22,10 +24,10 @@
     "cors": "^2.8.5",
     "debug": "^4.2.0",
     "delay": "^5.0.0",
-    "dotenv": "^9.0.0",
+    "dotenv": "^16.0.0",
     "ejs": "^3.1.5",
     "express": "^4.17.1",
-    "i18n": "^0.13.0",
+    "i18n": "^0.14.2",
     "jsonwebtoken": "^8.5.1",
     "log4js": "^6.4.2",
     "moment": "^2.29.1",
@@ -42,6 +44,8 @@
     "useragent": "^2.3.0"
   },
   "devDependencies": {
-    "eslint": "^7.18.0"
+    "ejs-lint": "^1.2.2",
+    "eslint": "^8.14.0",
+    "npm": "^8.13.2"
   }
 }

@@ -1,19 +1,14 @@
 # npm audit report
 
-async  <2.6.4
-Severity: high
-Prototype Pollution in async - https://github.com/advisories/GHSA-fwr7-v2mv-hh25
+passport  <0.6.0
+Severity: moderate
+Passport before 0.6.0 vulnerable to session regeneration when a users logs in or out - https://github.com/advisories/GHSA-v923-w3x8-wh69
 fix available via `npm audit fix --force`
-Will install ejs@3.0.2, which is a breaking change
-node_modules/async
-  jake  >=8.0.1
-  Depends on vulnerable versions of async
-  node_modules/jake
-    ejs  >=3.1.2
-    Depends on vulnerable versions of jake
-    node_modules/ejs
+Will install passport@0.6.0, which is a breaking change
+node_modules/passport
 
-3 high severity vulnerabilities
+1 moderate severity vulnerability
 
 To address all issues (including breaking changes), run:
   npm audit fix --force
+Executed on 25.07.2022 20:44:13,63  

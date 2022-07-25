@@ -1,0 +1,9 @@
+export NODE_OPTIONS=--max_old_space_size=16384
+# newman run "99_MigrateBHTC.postman_collection.json" -e "environment/VisboReST_AWS_Development.postman_environment.json" -d "VCMigrate/export/exportBHTC.json"
+
+newman run "99_MigrateBHTC.postman_collection.json" -e "environment/VisboReST_AWS_Development.postman_environment.json" -d "VCMigrate/export/exportBHTC_VC.json"
+for VARIABLE in VCMigrate/export/exportBHTC_VP*.json
+do
+    echo "Process:" $VARIABLE
+    newman run "99_MigrateBHTC.postman_collection.json" -e "environment/VisboReST_AWS_Development.postman_environment.json" -d $VARIABLE
+done
