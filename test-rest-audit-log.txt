@@ -2,7 +2,7 @@
 
 passport  <0.6.0
 Severity: moderate
-Improper session management in passport - https://github.com/advisories/GHSA-v923-w3x8-wh69
+Passport before 0.6.0 vulnerable to session regeneration when a users logs in or out - https://github.com/advisories/GHSA-v923-w3x8-wh69
 fix available via `npm audit fix --force`
 Will install passport@0.6.0, which is a breaking change
 node_modules/passport
@@ -11,4 +11,4 @@ node_modules/passport
 
 To address all issues (including breaking changes), run:
   npm audit fix --force
-Executed on 13.07.2022 10:24:42,26  
+Executed on 25.07.2022 20:44:13,63  
