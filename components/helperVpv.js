@@ -127,8 +127,8 @@ function cleanupVPV(vpv) {
 		vpv.AllPhases.forEach(phase => {
 			// if (phase.latestStart == -999) { phase.latestStart = undefined; }
 			// if (phase.earliestStart == -999) { phase.earliestStart = undefined; }
-			if (phase.invoice && phase.invoice.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
-			if (phase.penalty && phase.penalty.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
+			if (phase?.invoice?.Key == 0 && phase.invoice.Value == 0) { phase.invoice = undefined; }
+			if (phase?.penalty?.Key.indexOf('9999-12-31') == 0 && phase.penalty.Value == 0) { phase.penalty = undefined; }
 			if (phase.AllResults) {
 				phase.AllResults.forEach(result => {
 					if (result.invoice && result.invoice.Key == 0 && result.invoice.Value == 0) { result.invoice = undefined; }

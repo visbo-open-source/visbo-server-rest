@@ -208,6 +208,7 @@ function launchServer() {
   var status = require('./routes/status');
 
   logger4js.warn('Launch Server after DB Connection');
+  visboAudit.systemStartUp(systemVC.getSystemVC(), true);
 
   visboTaskScheduleInit();
   app.use(express.static(path.join(__dirname, 'public'), options));

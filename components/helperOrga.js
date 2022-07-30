@@ -592,6 +592,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 
 function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 	var isOrgaValid = true;
+	var errorstring;
 	var deleteExitDate = new Date();
 	deleteExitDate.setDate(1);
 	deleteExitDate.setHours(0, 0, 0, 0);
@@ -599,7 +600,7 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 	if (!newOrga || !oldOrga) return true;
 
 	if (!oldOrga?.allRoles || !uniqueRoleNames || !newOrga?.allRoles) {
-		var errorstring = `Orga Role Check for Deleted has no valid oldOrga: ${oldOrga?.allRoles?.length} list: ${uniqueRoleNames?.length}`;
+		errorstring = `Orga Role Check for Deleted has no valid oldOrga: ${oldOrga?.allRoles?.length} list: ${uniqueRoleNames?.length}`;
 		listError?.push(errorstring);
 		logger4js.info('CheckOrgaUnitDelete: ', errorstring);
 		return false;
@@ -620,7 +621,7 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 			} else if (role.exitDate?.getTime() <= deleteExitDate.getTime()) {
 				logger4js.debug('CheckOrgaUnitDelete Accepted: ', role.uid, role.name);
 			} else {
-				var errorstring = `Orga Role Deleted not allowed: ${role.uid} / ${role.name} with exitDate ${role.exitDate?.toISOString()}`;
+				errorstring = `Orga Role Deleted not allowed: ${role.uid} / ${role.name} with exitDate ${role.exitDate?.toISOString()}`;
 				listError?.push(errorstring);
 				logger4js.info('CheckOrgaUnitDelete: ', errorstring);
 				isOrgaValid = false;
@@ -660,6 +661,7 @@ function reduceOrga(orga) {
 		if (role.defCapaMonth) { allUnits[role.uid].defCapaMonth = role.defCapaMonth; }
 		if (role.defCapaDay) { allUnits[role.uid].defCapaDay = role.defCapaDay; }
 		if (role.dailyRate >= 0) { allUnits[role.uid].dailyRate = role.dailyRate; }
+		if (role.employeeNr) { allUnits[role.uid].employeeNr = role.employeeNr; }
 		var entryDate = role.entryDate && validate.validateDate(role.entryDate, false, true);
 		if (entryDate?.getTime() > minDate.getTime()) {
 			allUnits[role.uid].entryDate = entryDate;

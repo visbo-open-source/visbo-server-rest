@@ -628,7 +628,7 @@ function getMsDate(hrchy, vpv, elemId){
 		var msIndex = currentNode.indexOfElem;
 		if (phase && phase.name ) {
 			var ms = phase.AllResults[msIndex-1];
-			if (ms && vpv.startDate && phase.startOffsetinDays >= 0 && ms.offset >= 0) {
+			if (ms && vpv.startDate && phase.startOffsetinDays >= 0 ) {
 				logger4js.trace('get the Date of Milestone %s in %s ', ms.name, phase.name);
 				msDate = addDays(vpv.startDate, (phase.startOffsetinDays + ms.offset));
 			}
@@ -1598,21 +1598,7 @@ function getCapacityFromTimeZone(vpvs, roleID, teamID, timeZones) {
 	return costValues;
 }
 
-function checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity) {
-	var result;
-	if (otherActivity) {
-		result = (rolePhase.RollenTyp == roleID && rolePhase.teamID != teamID);
-	} else {
-		if (isTeamMember) {
-			result = (rolePhase.RollenTyp == roleID && rolePhase.teamID == teamID);
-		} else {
-			result = (rolePhase.RollenTyp == roleID || rolePhase.teamID == teamID);
-		}
-	}
-	return result;
-}
-
-function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZones, costValues) {
+function addCostValues(vpv, calcTeam, timeZones, costValues) {
 	var maxTimeZoneIndex;
 	if (vpv.variantName == 'pfv') {
 		maxTimeZoneIndex = getTimeZoneIndex(timeZones, vpv.timestamp);
@@ -1620,20 +1606,37 @@ function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZon
 	var vpvStartIndex = getColumnOfDate(vpv.startDate);
 	var actualDataIndex = getColumnOfDate(vpv.actualDataUntil) + 1;
 
-	logger4js.trace('Calculate Phases with roleID %s Phases %s', roleID, vpv.AllPhases?.length);
+	logger4js.trace('Calculate Cost Phases Phases %s', vpv.AllPhases?.length);
 	vpv.AllPhases?.forEach(phase => {
 		var phaseStart = vpvStartIndex + phase.relStart - 1;
 		phase.AllRoles?.forEach(rolePhase => {
-			if (rolePhase.Bedarf && checkAddRessource(rolePhase, roleID, teamID, isTeamMember, otherActivity)) {
+			if (rolePhase.Bedarf) {
 				var dimension = rolePhase.Bedarf.length;
 				var maxStart = Math.max(phaseStart, timeZones.startIndex);
 				var minEnd = Math.min(phaseStart + dimension, timeZones.endIndex + 1);
 				for (var l = maxStart; l < minEnd ; l++) {
-					if (!isConcerningRole(roleID, l, timeZones)) {
-						continue;
+					var cRole = isConcerningRole(rolePhase.RollenTyp, l, timeZones);
+					if (l == maxStart) {
+						logger4js.debug('Calculate Phases roleID %s calcTeam %s Bedarf %s/%s', cRole?.role?.uid, calcTeam, rolePhase.RollenTyp, rolePhase.teamID);
+					}
+					var otherActivity = false;
+					if (!cRole) {
+						// if role not found in concerning roles but teamID is set, check if the team is in concerning role and add this entry
+						if (rolePhase.teamID > 0) {
+							cRole = isConcerningRole(rolePhase.teamID, l, timeZones);
+						}
+						if (!cRole) {
+							continue;
+						}
+						// team is part of concerning role means no other activities
+					} else {
+						// role is a concerning Role
+						if (calcTeam) {
+							otherActivity = cRole.teamIDs.findIndex(item => item == rolePhase.teamID) < 0;
+						}
 					}
 					// result in euro and in personnel day
-					var dailyRate = getDailyRateTZ(roleID, - 1, timeZones, l - timeZones.startIndex, maxTimeZoneIndex);
+					var dailyRate = getDailyRateTZ(rolePhase.RollenTyp, - 1, timeZones, l - timeZones.startIndex, maxTimeZoneIndex);
 					var bedarf = rolePhase.Bedarf[l - phaseStart];
 					if (l < actualDataIndex) {
 						costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
@@ -1654,7 +1657,7 @@ function addCostValues(roleID, teamID, isTeamMember, otherActivity, vpv, timeZon
 function isConcerningRole(roleID, month, timeZones) {
 	var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
 	var cRole = timeZones.organisation[orgaIndex]?.concerningRoles.find(item => item.role?.uid == roleID);
-	return cRole != undefined;
+	return cRole;
 }
 
 function getRessourcenBedarfe(role, teamID, vpv, timeZones) {
@@ -1676,30 +1679,9 @@ function getRessourcenBedarfe(role, teamID, vpv, timeZones) {
 	if (!vpv.AllPhases) {
 		return costValues;
 	}
-	var roleIDisTeam = timeZones.role.type == 2; // root role is checked not the Children
-	var roleIDisTeamMember = teamID > 0 && !role.isSummaryRole;
-
 	logger4js.trace('Combine Capacity Values for Project Version %s',  vpv._id);
-	// Treatment, if the role is a orgaUnit, no parentID is given
-	if (!roleIDisTeam && !roleIDisTeamMember) {
-		timeZones.allConcerningRoles.forEach(crole => {
-			addCostValues(crole.role.uid, crole.role.uid, false, false, vpv, timeZones, costValues);
-		});
-	} else if (roleIDisTeam) {
-		// add all needs with the choosen teamID
-		addCostValues(role.uid, role.uid, false, false, vpv, timeZones, costValues);
-		// add all needs of the persons in the Team teamID, but not as this teamMember
-		timeZones.allConcerningRoles.forEach(crole => {
-			addCostValues(crole.role.uid, crole.teamID, false, true, vpv, timeZones, costValues);
-		});
-	} else if (roleIDisTeamMember) {
-		timeZones.allConcerningRoles.forEach(crole => {
-			// add all needs of the person roleID as TeamMember in the Team teamID
-			addCostValues(crole.role.uid, crole.teamID, true, false, vpv, timeZones, costValues);
-			// add all needs of the person roleID as non TeamMember
-			addCostValues(crole.role.uid, crole.teamID, true, true, vpv, timeZones, costValues);
-		});
-	}
+	var calcTeam = timeZones.role.type == 2 || teamID > 0;
+	addCostValues(vpv, calcTeam, timeZones, costValues);
 	return costValues;
 }
 
@@ -1786,20 +1768,26 @@ function calcConcerningRoles(timeZones, roleID, teamID) {
 	function findConcerningRoles(orga, roles, value, parentRole) {
 		//value is the Id of one subrole
 		var hroleID = value.key;
-		var crElem = {};
-		crElem.role = roles[hroleID];
-		crElem.teamID = -1;
-		crElem.faktor = 1.0;
+		var crElem = allConcerningRoles[hroleID];
+		if (!crElem) {
+			crElem = {};
+			crElem.role = roles[hroleID];
+			crElem.teamID = -1;
+			crElem.teamIDs = [];
+			crElem.faktor = 1.0;
+			// collect all uids of concerning roles
+		}
+		orga.concerningRoles.push(crElem);
 
 		if (parentRole.type == 2) {
 			for (var t = 0 ; t < crElem.role.teamIDs?.length; t++) {
 				var team = crElem.role.teamIDs[t];
 				if (parentRole.uid != team.key) { continue; }
 				crElem.teamID = team.key;
+				crElem.teamIDs.push(team.key);
 				crElem.faktor = team.value;
 			}
 		}
-		orga.concerningRoles.push(crElem);
 		allConcerningRoles[hroleID] = crElem;
 
 		var newParent = crElem.role;
@@ -1817,14 +1805,17 @@ function calcConcerningRoles(timeZones, roleID, teamID) {
 	// find all roles corresponding to this one roleID all over the organisation - result in concerningRoles
 	timeZones.allConcerningRoles = [];
 	timeZones.organisation.forEach(orga => {
-		orga.concerningRoles = [];
 		var allRoles = orga.indexedRoles;
+		orga.concerningRoles = [];
 		var role = allRoles[roleID];
 		if (role) {
 			var crElem = {};
 			crElem.role = role;
 			crElem.teamID = teamID || -1;
+			crElem.teamIDs = [];
+			if (teamID) crElem.teamIDs.push(teamID);
 			crElem.faktor = 1;
+			// MS TODO:check if it was already added?
 			orga.concerningRoles.push(crElem);
 			allConcerningRoles[role.uid] = crElem;
 			role.subRoleIDs?.forEach(subrole => {
@@ -2698,7 +2689,7 @@ function ensureValidVPV(myVPV) {
 	// C2 (stop criterium) : does no Phase is having a start-Date earlier than project startdate ?
 	// C3 (stop criterium) : does no Phase is having a end-Date later than project endDate ?
 	// C3 (can be healed, enforceHealing=true)
-	// C4 (stop criterium) : is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
+	// C4 (only information): is no Milestone-Date earlier than parent-phase start and not later than parent phase endDate ?
 	// C4 (only information, no healing , no abort criterium) :
 	// before C5 check (can be healed): are relStart and relEnde corresponding to phaseStartDate and phaseEndDate?
 	// C5 (stop criterium) : are array lengths of each role identical to relEnde-relStart + 1 of the phase ?

@@ -1,0 +1,68 @@
+# server='mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboDevelopment?retryWrites=true'
+server='mongodb+srv://ms:SjUYBm8iNHe7NsDJmXA9@visbo03.3p7ni.mongodb.net/visboMigration?retryWrites=true'
+
+file="export/exportBHTC_VC.json"
+fileVP="export/exportBHTC_VP"
+tmpFile=$TMPDIR"tmpExport.json"
+rm -f $tmpFile
+mongo --quiet $server migrateVC.js | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > $file
+# head - 5 $tmpFile
+echo "Process VPV"
+rm -f "$fileVP"*
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2018-01-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".01.json
+# head - 5 $tmpFile
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2018-04-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".02.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2018-07-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".03.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2018-10-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".04.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2019-01-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".05.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2019-04-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".06.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2019-07-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".07.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2019-10-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".08.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2020-01-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".10.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2020-04-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".11.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2020-07-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".12.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2020-10-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".13.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2021-01-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".14.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2021-04-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".15.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2021-07-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".16.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2021-10-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".17.json
+rm -f $tmpFile
+
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2022-01-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".20.json
+rm -f $tmpFile
+mongo --quiet $server migrateVP.js --eval "var paramFrom='2022-04-01'" | tee $tmpFile | egrep "^>|^STDERR"
+egrep -v "^>|^STDERR" $tmpFile > "$fileVP".21.json
+rm -f $tmpFile

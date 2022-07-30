@@ -148,7 +148,7 @@ router.route('/user/login')
 		var currentDate = new Date();
 		req.auditDescription = 'Login';
 
-		logger4js.info('Try to Login %s', req.body.email);
+		logger4js.debug('Try to Login %s', req.body.email);
 		logger4js.debug('Login Headers %O', req.headers);
 		var lang = validate.evaluateLanguage(req);
     logger4js.debug('The Accepted Language is: ' + lang);
@@ -805,7 +805,7 @@ router.route('/user/pwforgotten')
 							};
 							mail.VisboSendMail(message);
 							logger4js.trace('PW Reset Env %s uiUrl %s debug %s.', process.env.NODE_ENV, uiUrl, req.body.debug);
-							if (process.env.NODE_ENV == 'development' && uiUrl == 'http://localhost:4200' && req.body.debug) {
+							if (process.env.NODE_ENV == 'development' && (uiUrl == 'http://localhost:4200' || uiUrl == 'https://dev.visbo.net') && req.body.debug) {
 								// deliver more details to do automatic testing without mail verification
 								return res.status(200).send({
 									state: 'success',
