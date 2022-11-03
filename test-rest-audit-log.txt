@@ -1,14 +1,2 @@
-# npm audit report
-
-passport  <0.6.0
-Severity: moderate
-Passport before 0.6.0 vulnerable to session regeneration when a users logs in or out - https://github.com/advisories/GHSA-v923-w3x8-wh69
-fix available via `npm audit fix --force`
-Will install passport@0.6.0, which is a breaking change
-node_modules/passport
-
-1 moderate severity vulnerability
-
-To address all issues (including breaking changes), run:
-  npm audit fix --force
-Executed on 25.07.2022 20:44:13,63  
+found 0 vulnerabilities
+Executed on 28.10.2022 10:41:45,89  
