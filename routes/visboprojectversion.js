@@ -1336,7 +1336,7 @@ router.route('/:vpvid/copy')
 				// check that the last VPV has the same date
 				var actualDataUntil = new Date(req.oneVPV.actualDataUntil);
 				if (lastVPV) {
-					logger4js.debug('last VPV: updatedAt Body %s last Version %s', actualDataUntil.getTime(), lastVPV.actualDataUntil.getTime());
+					logger4js.debug('last VPV: updatedAt Body %s last Version %s', actualDataUntil?.getTime(), lastVPV.actualDataUntil?.getTime());
 					if ((variantName == '') && (lastVPV.actualDataUntil.getTime() != actualDataUntil.getTime())) {
 						return res.status(409).send({
 							state: 'failure',
