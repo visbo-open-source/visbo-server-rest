@@ -1312,7 +1312,6 @@ router.route('/:vpvid/copy')
 				perm: perm
 			});
 		}
-
 		
 // ur:20.10.22 inserted
 		// find the latest VPV of the Variante
@@ -1332,21 +1331,23 @@ router.route('/:vpvid/copy')
 				return;
 			}
 			// actualDataUntil check
-			if (req.oneVPV.actualDataUntil && Date.parse(req.oneVPV.actualDataUntil)) {
-				// check that the last VPV has the same date
-				var actualDataUntil = new Date(req.oneVPV.actualDataUntil);
-				if (lastVPV) {
-					logger4js.debug('last VPV: updatedAt Body %s last Version %s', actualDataUntil.getTime(), lastVPV.actualDataUntil.getTime());
-					if ((variantName == '') && (lastVPV.actualDataUntil.getTime() != actualDataUntil.getTime())) {
+			logger4js.debug('this VPV VariantName: %s', req.oneVPV.variantName);
+			// check that the last VPV has the same date
+			var actualDataUntil = new Date(req.oneVPV.actualDataUntil);
+			logger4js.debug('this VPV Variant: actualData %s ', actualDataUntil?.getTime());
+			if (lastVPV) {
+				if (lastVPV.actualDataUntil) {
+					logger4js.debug('last VPV Variant: actualData Variant %s  - last Version %s', actualDataUntil?.getTime(), lastVPV.actualDataUntil?.getTime());
+					if ((variantName == '') && lastVPV.actualDataUntil && (lastVPV.actualDataUntil.getTime() != actualDataUntil.getTime())) {
 						return res.status(409).send({
 							state: 'failure',
 							message: 'Conflict with actualDataUntil Dates',
 							vpv: [lastVPV]
 						});
 					}
-				}
-			}		
-// ur:20.10.22 inserted
+				}					
+			}
+// ur:20.10.22 inserted	
 			var newVPV = helperVpv.initVPV(req.oneVPV);
 			if (!newVPV) {
 				errorHandler(undefined, res, 'DB: POST VPV Copy of ${req.oneVPV._id}', 'Error creating Project Versions during copy ');
