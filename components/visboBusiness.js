@@ -196,7 +196,7 @@ function getAllOtherCost(vpv, timeZones) {
 		var phaseStart = phase.relStart - 1;
 		phase.AllCosts?.forEach(cost => {
 			cost.Bedarf?.forEach((item, index) => {
-				othercostValues[phaseStart + index] = (othercostValues[phaseStart + index] || 0) + cost.Bedarf[index] * faktor / 1000;
+				othercostValues[phaseStart + index] = (othercostValues[phaseStart + index] || 0) + cost.Bedarf[index] * faktor;
 			});
 		});
 	});
