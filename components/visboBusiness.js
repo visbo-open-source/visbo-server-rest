@@ -3152,7 +3152,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		scaleFromDate.setDate(15);
 		scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 		scaleFromDate.setDate(1);
-		newVPV.actualDataUntil = new Date(scaleFromDate);
+		newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 	} else {
 		if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 			// there was given a actualDataUntil and a scaleFromDate
@@ -3161,10 +3161,13 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 				scaleFromDate.setDate(15);
 				scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 				scaleFromDate.setDate(1);
-				newVPV.actualDataUntil = new Date(scaleFromDate);
+				newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 			} else {
 				// scaleFromDate is later than actualDataUntil, then it is just ok
 				scaleFromDate = new Date(newVPV.actualDataUntil);
+				// because scaleFromDate was provided in newVPV.actualDataUntil it now needs to be set
+				// to the real value which needs to be the same than oldVPV.actualDataUntil
+				newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
 			}
 		}
 	}
@@ -3192,7 +3195,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		}
 
 		// check whether nothing should be scaled
-		if (scaleFromDate > oldVPV.endDate) {
+		if (scaleFromDate && (scaleFromDate > oldVPV.endDate)) {
 			logger4js.warn('no action: scaleFromDate is after endDate of Project: ', oldVPV.endDate, ' scale From Date:', scaleFromDate);
 			return undefined;
 		}
