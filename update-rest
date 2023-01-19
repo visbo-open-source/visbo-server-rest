@@ -2,24 +2,24 @@
 rest=$HOME/GitHub/visbo-server-rest
 predictkm=$HOME/GitHub/predictkm
 // if prediction is installed update it
-//if test -d "$predictkm"; then
-//  cd $predictkm
-//  echo "01 Predict: Checking Local Status of Branch"
-//  git status
-//  if [ $? -ne 0 ]
-//  then
-//    echo "Predict: FATAL: Local Changes have to be checked first before upgrading."
-//    exit 1
-//  fi
-//
-//  echo "02 Predict: Pull Branch from Repository Server"
-//  pullOutput=`git pull`
-//  if [ $? -ne 0 ]
-//  then
-//    echo "FATAL Predict: Pull Failed to update Predict Branch."
-//    exit 1
-//  fi
-//fi
+if test -d "$predictkm"; then
+  cd $predictkm
+  echo "01 Predict: Checking Local Status of Branch"
+  git status
+  if [ $? -ne 0 ]
+  then
+    echo "Predict: FATAL: Local Changes have to be checked first before upgrading."
+    exit 1
+  fi
+
+  echo "02 Predict: Pull Branch from Repository Server"
+  pullOutput=`git pull`
+  if [ $? -ne 0 ]
+  then
+    echo "FATAL Predict: Pull Failed to update Predict Branch."
+    exit 1
+  fi
+fi
 
 cd $rest
 continueOnEmptyPull=0
