@@ -1312,91 +1312,129 @@ router.route('/:vpvid/copy')
 				perm: perm
 			});
 		}
-
-		var newVPV = helperVpv.initVPV(req.oneVPV);
-		if (!newVPV) {
-			errorHandler(undefined, res, 'DB: POST VPV Copy of ${req.oneVPV._id}', 'Error creating Project Versions during copy ');
-			return;
-		}
-		// change variantName if defined in body
-		newVPV.variantName = variantName;
-		newVPV.timestamp = timestamp;
-		newVPV.status = undefined;
-		if (req.oneVP && req.oneVP.vpStatus) {
-			newVPV.vpStatus = req.oneVP.vpStatus;
-		}
-		if (req.visboPFV) {
-			newVPV.Erloes = req.visboPFV.Erloes;
-			newVPV.Risiko = req.visboPFV.Risiko;
-			newVPV.StrategicFit = req.visboPFV.StrategicFit;
-		}
-		if (req.oneVP && req.oneVP.customFieldString) {
-			customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
-			if (customField) { newVPV.businessUnit = customField.value; }
-		}
-		if (req.oneVP && req.oneVP.customFieldDouble) {
-			customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
-			if (customField) { newVPV.Risiko = customField.value; }
-			customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
-			if (customField) { newVPV.StrategicFit = customField.value; }
-		}
-		if (req.oneVP && req.oneVP.customFieldDate) {
-			customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
-			//if (customField) { newVPV.pmCommit = customField.value; }
-		}
-		var keyVPV = helperVpv.getKeyAttributes(newVPV);
-		if (variantName == 'pfv') {
-			var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisation, level);
-			if (!tmpVPV) {
-				logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisation?.length || 0);
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Visbo Project Version inconsistent after conversion',
-					perm: perm
-				});
-			} else {
-				newVPV = tmpVPV;
+		
+// ur:20.10.22 inserted
+		// find the latest VPV of the Variante
+		logger4js.debug('User has permission to create a new Version in %s Variant :%s:', req.oneVP.name, variantName);
+		// get the latest VPV to check the actualDataUntil		
+		var queryvpv = {};
+		queryvpv.deletedAt = {$exists: false};
+		queryvpv.vpid = vpid;
+		queryvpv.variantName = req.body.variantName || '';
+		var queryVPV = VisboProjectVersion.findOne(queryvpv);
+		queryVPV.sort('-timestamp');
+		queryVPV.select('_id vpid name timestamp variantName actualDataUntil createdAt');
+		queryVPV.lean();
+		queryVPV.exec(function (err, lastVPV) {
+			if (err) {
+				errorHandler(err, res, 'DB: POST VPV Find VPV', 'Error creating Project Versions ');
+				return;
 			}
-			delete newVPV.keyMetrics;
-		}
-		// check if we have to do scaling
-		var scale = 0;
-		var scaleVPV = helperVpv.initVPV(newVPV);
-		if (req.body.startDate) {
-			scale = 1;
-			scaleVPV.startDate = validate.validateDate(req.body.startDate, false, true);
-		} else {
-			scaleVPV.startDate = newVPV.startDate;
-		}
-		if (req.body.endDate) {
-			scale = 1;
-			scaleVPV.endDate = validate.validateDate(req.body.endDate, false, true);
-		} else {
-			scaleVPV.endDate = newVPV.endDate;
-		}
-		if (req.body.actualDataUntil) {
-			scale = 1;
-			scaleVPV.actualDataUntil = validate.validateDate(req.body.actualDataUntil, false, true);
-		}
-		if (req.query.scaleFactor) {
-			scale = validate.validateNumber(req.query.scaleFactor) || 1;
-		}
-
-		// first version just move start & end Date without scaling
-		if (scale) {
-			newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+			// actualDataUntil check
+			logger4js.debug('this VPV VariantName: %s', req.oneVPV.variantName);
+			// check that the last VPV has the same date
+			var actualDataUntil = new Date(req.oneVPV.actualDataUntil);
+			logger4js.debug('this VPV Variant: actualData %s ', actualDataUntil?.getTime());
+			if (lastVPV) {
+				if (lastVPV.actualDataUntil) {
+					logger4js.debug('last VPV Variant: actualData Variant %s  - last Version %s', actualDataUntil?.getTime(), lastVPV.actualDataUntil?.getTime());
+					if ((variantName == '') && lastVPV.actualDataUntil && (lastVPV.actualDataUntil.getTime() != actualDataUntil.getTime())) {
+						return res.status(409).send({
+							state: 'failure',
+							message: 'Conflict with actualDataUntil Dates',
+							vpv: [lastVPV]
+						});
+					}
+				}					
+			}
+// ur:20.10.22 inserted	
+			var newVPV = helperVpv.initVPV(req.oneVPV);
 			if (!newVPV) {
-				return res.status(400).send({
-					state: 'failure',
-					message: 'Visbo Project Version inconsistent',
-					perm: perm
-				});
+				errorHandler(undefined, res, 'DB: POST VPV Copy of ${req.oneVPV._id}', 'Error creating Project Versions during copy ');
+				return;
+			};
+			// change variantName if defined in body
+			newVPV.variantName = variantName;
+			newVPV.timestamp = timestamp;
+			newVPV.status = undefined;
+			if (req.oneVP && req.oneVP.vpStatus) {
+				newVPV.vpStatus = req.oneVP.vpStatus;
 			}
-		}
-		helperVpv.setKeyAttributes(newVPV, keyVPV);
-		req.oneVPV = newVPV;
+			if (req.visboPFV) {
+				newVPV.Erloes = req.visboPFV.Erloes;
+				newVPV.Risiko = req.visboPFV.Risiko;
+				newVPV.StrategicFit = req.visboPFV.StrategicFit;
+			}
+			if (req.oneVP && req.oneVP.customFieldString) {
+				customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
+				if (customField) { newVPV.businessUnit = customField.value; }
+			}
+			if (req.oneVP && req.oneVP.customFieldDouble) {
+				customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
+				if (customField) { newVPV.Risiko = customField.value; }
+				customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
+				if (customField) { newVPV.StrategicFit = customField.value; }
+			}
+			if (req.oneVP && req.oneVP.customFieldDate) {
+				customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+				//if (customField) { newVPV.pmCommit = customField.value; }
+			}
+			var keyVPV = helperVpv.getKeyAttributes(newVPV);
+			if (variantName == 'pfv') {
+				var tmpVPV = visboBusiness.convertVPV(newVPV, req.visboPFV, req.visboOrganisation, level);
+				if (!tmpVPV) {
+					logger4js.warn('Post a copy Project Version for user %s for Project %s failed to convertVPV PFV %s Orgas %d', userId, newVPV.vpid, req.visboPFV != undefined, req.visboOrganisation?.length || 0);
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Visbo Project Version inconsistent after conversion',
+						perm: perm
+					});
+				} else {
+					newVPV = tmpVPV;
+				}
+				delete newVPV.keyMetrics;
+			}
+			// check if we have to do scaling
+			var scale = 0;
+			var scaleVPV = helperVpv.initVPV(newVPV);
+			if (req.body.startDate) {
+				scale = 1;
+				scaleVPV.startDate = validate.validateDate(req.body.startDate, false, true);
+			} else {
+				scaleVPV.startDate = newVPV.startDate;
+			}
+			if (req.body.endDate) {
+				scale = 1;
+				scaleVPV.endDate = validate.validateDate(req.body.endDate, false, true);
+			} else {
+				scaleVPV.endDate = newVPV.endDate;
+			}
+			if (req.body.actualDataUntil) {
+				scale = 1;
+				scaleVPV.actualDataUntil = validate.validateDate(req.body.actualDataUntil, false, true);
+			}				
+			if (req.query.scaleFactor) {
+				scale = validate.validateNumber(req.query.scaleFactor) || 1;
+			}
 
-		saveRecalcKM(req, res, 'Successfully copied new Project Version');
+			// first version just move start & end Date without scaling
+			if (scale) {
+				newVPV = visboBusiness.scaleVPV(newVPV, scaleVPV, scale);
+				if (!newVPV) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Visbo Project Version inconsistent',
+						perm: perm
+					});
+				}
+			}
+			helperVpv.setKeyAttributes(newVPV, keyVPV);
+			req.oneVPV = newVPV;
+
+			saveRecalcKM(req, res, 'Successfully copied new Project Version');	
+						
+		});
+
 	});
 
 router.route('/:vpvid/capacity')
