@@ -1,14 +1,14 @@
 {
   "name": "VISBO ReST Server",
-  "version": "1.0.1",
+  "version": "5.1.0",
   "description": "REST API documentation for VISBO ReST Server",
   "title": "API Documentation - VISBO ReST Server",
   "footer": {
-  	"title": "2022 © VISBO GmbH"
+    "title": "2023 © VISBO GmbH"
   },
   "order": [
-  	"Authentication",
-  	"UserProfile",
+    "Authentication",
+    "UserProfile",
     "VISBO Center",
     "VISBO Center Properties",
     "VISBO Center Permission",
@@ -17,6 +17,6 @@
     "VISBO Project Properties",
     "VISBO Project Permission",
     "VISBO Project Version",
-  	"VISBO System"
+    "VISBO System"
   ]
 }
