@@ -189,12 +189,12 @@ function checkNextRun() {
                 case 'System Config':
                   refreshSystemSetting(task, finishedTask);
                   break;
-                case 'Predict Collect':
-                  visboPredict.kmCollect(task, finishedTask, vcSystemId);
-                  break;
-                case 'Predict Training':
-                  visboPredict.kmTraining(task, finishedTask, vcSystemId);
-                  break;
+                // case 'Predict Collect':
+                //   visboPredict.kmCollect(task, finishedTask, vcSystemId);
+                //   break;
+                // case 'Predict Training':
+                //   visboPredict.kmTraining(task, finishedTask, vcSystemId);
+                //   break;
                 case 'Task Test':
                   taskTest(task, finishedTask);
                   break;
