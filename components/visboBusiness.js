@@ -3120,7 +3120,7 @@ function ensureValidVPV(myVPV) {
 function sumOF(accumulator, currentValue) {
 	return accumulator + currentValue;
 }
-// templateVPV, newVPV, scaleFactor
+
 function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a modified oldVPV and returns it to the caller
 	// the function scales the oldVPV (valid vpv) that contains old start & endDate and Bedarfe
