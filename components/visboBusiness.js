@@ -3167,6 +3167,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 				scaleFromDate.setDate(15);
 				scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 				scaleFromDate.setDate(1);
+			// 	newVPV.actualDataUntil = new Date(scaleFromDate);
+			// } else {
 			} 
 
 			if (diffActualScale > 0) {				
