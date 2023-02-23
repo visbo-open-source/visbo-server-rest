@@ -1035,6 +1035,9 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 		keyMetrics.deliverableCompletionCurrentTotal = deliverableKeyMetric.deliverableCompletionCurrentTotal;
 	}
 
+	keyMetrics.RACBaseLast = pfv.Erloes;
+	keyMetrics.RACCurrent = vpv.Erloes;
+
 	var endCalc = new Date();
 	logger4js.debug('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
 
@@ -3132,6 +3135,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	}
 	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', newVPV._id, 'scaleFactor', scaleFactor);
 
+	
+
 	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
 	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed
 	// all other dates and resource/cost values being before thet scaleFromDate, will remain unchanged
@@ -3156,13 +3161,18 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	} else {
 		if (oldVPV.actualDataUntil && newVPV.actualDataUntil) {
 			// there was given a actualDataUntil and a scaleFromDate
-			if (diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil) >= 0) {
+			const diffActualScale = diffDays(oldVPV.actualDataUntil, newVPV.actualDataUntil)
+			if (diffActualScale >= 0) {
 				scaleFromDate = new Date(oldVPV.actualDataUntil);
 				scaleFromDate.setDate(15);
 				scaleFromDate.setMonth(scaleFromDate.getMonth() + 1);
 				scaleFromDate.setDate(1);
-				newVPV.actualDataUntil = new Date(oldVPV.actualDataUntil);
-			} else {
+			} 
+			if (diffActualScale > 0) {				
+				newVPV.actualDataUntil = new Date(scaleFromDate);
+			}
+
+			if (diffActualScale < 0) {
 				// scaleFromDate is later than actualDataUntil, then it is just ok
 				scaleFromDate = new Date(newVPV.actualDataUntil);
 				// because scaleFromDate was provided in newVPV.actualDataUntil it now needs to be set
@@ -3208,6 +3218,12 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 		return undefined;
 	}
 	let timeScalingFactor = newDauerInDays / oldDauerInDays;
+	let sumOfInvoices = 0;
+	
+	// determin the oldVPV_sumOfInvoices saved in oldVPV.Erloes, which will be used to calculate the relation between all existing Invoices
+	helperVpv.setErloesWithSumOfInvoice(oldVPV);
+	let oldVPV_sumOfInvoices = oldVPV.Erloes;
+
 	oldVPV.AllPhases.forEach(phase => {
 		// if not scaleFromDate, no special handling necessary
 		// if scaleFromDate , then
@@ -3269,8 +3285,25 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 					newOffsetInDays = newOffsetInDays + difference;
 				}
 			}
+		}	
+
+
+		// determin the sum of Invoices all over the project
+		if (phase.invoice) {
+			invoiceQuotient = phase.invoice.Key / oldVPV_sumOfInvoices;
+			phase.invoice.Key = newVPV.Erloes * invoiceQuotient;
+			sumOfInvoices += phase.invoice.Key;
 		}
 
+		phase.AllResults.forEach(result => {					
+			if (result.invoice){					
+				invoiceQuotient = result.invoice.Key / oldVPV_sumOfInvoices;
+				result.invoice.Key = newVPV.Erloes * invoiceQuotient;
+				sumOfInvoices += result.invoice.Key;
+			}	
+		});	
+
+	
 		if (somethingToDo == true) {
 			// now it has been checked that values are valid
 			phase.startOffsetinDays = newOffsetInDays;
@@ -3281,6 +3314,8 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 			// for sake of consistency
 			phase.relStart = getColumnOfDate(newPhStartDate) - getColumnOfDate(newVPV.startDate) + 1;
 			phase.relEnde = getColumnOfDate(newPhEndDate) - getColumnOfDate(newVPV.startDate) + 1;
+			
+
 			// now - do calculate the new values ..
 			// each role, each cost will have the same length for the 'Bedarf" array
 			// provide oldDates and newDates so that method can find out, whether or not the 'characteristic of distribution' should be preserved
@@ -3309,10 +3344,22 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 					}
 				}
 				result.offset = newMsOffset;
+		
 			});
+			
 		}
 	});
 
+	// an existing RAC will be put in the invoice of the first phase
+	if (newVPV.Erloes > 0 && sumOfInvoices == 0) {
+		oldVPV.AllPhases[0].invoice.Key = newVPV.Erloes;
+	}
+	// existing sum of Invoices will be the new Erloes/RAC
+	if (sumOfInvoices !== newVPV.Erloes) {		
+		logger4js.warn('scaleVPV: given RAC = %s and sumInvoices = %s  ', newVPV.Erloes, sumOfInvoices);
+		newVPV.Erloes = sumOfInvoices;
+	}
+	
 	// now copy by reference to allPhases of oldVPV
 	newVPV.AllPhases = oldVPV.AllPhases;
 	newVPV.Dauer = getColumnOfDate(newVPV.endDate) - getColumnOfDate(newVPV.startDate) + 1;

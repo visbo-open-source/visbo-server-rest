@@ -75,6 +75,8 @@ var clsPhase = new Schema({
 });
 
 var clsKeyMetrics = new Schema({
+	RACBaseLast: { type: Number },
+	RACCurrent: { type: Number },
 	costCurrentActual: { type: Number },
 	costCurrentTotal: { type: Number },
 	costCurrentTotalPredict: { type: Number },
@@ -85,7 +87,7 @@ var clsKeyMetrics = new Schema({
 	timeCompletionCurrentTotal: { type: Number },
 	timeCompletionBaseLastTotal: { type: Number },
 	timeDelayFinished: { type: Number },
-  timeDelayUnFinished: { type: Number },
+  	timeDelayUnFinished: { type: Number },
 	endDateCurrent: { type: Date },
 	endDateBaseLast: { type: Date },
 	deliverableCompletionCurrentActual: { type: Number },
@@ -93,7 +95,7 @@ var clsKeyMetrics = new Schema({
 	deliverableCompletionBaseLastActual: { type: Number },
 	deliverableCompletionBaseLastTotal: { type: Number },
 	deliverableDelayFinished: { type: Number },
-  deliverableDelayUnFinished: { type: Number },
+  	deliverableDelayUnFinished: { type: Number },
 	baselineDate: { type: Date },
 	baselineVPVID: {type: Schema.Types.ObjectId, ref: 'visboProjectVersionSchema', required: false}
 });
