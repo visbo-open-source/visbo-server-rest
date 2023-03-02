@@ -1360,9 +1360,10 @@ router.route('/:vpvid/copy')
 			newVPV.status = undefined;
 			if (req.oneVP && req.oneVP.vpStatus) {
 				newVPV.vpStatus = req.oneVP.vpStatus;
-			}
+			}	
+			
 			if (req.visboPFV) {
-				newVPV.Erloes = req.visboPFV.Erloes;
+			// 	newVPV.Erloes = req.visboPFV.Erloes;
 				newVPV.Risiko = req.visboPFV.Risiko;
 				newVPV.StrategicFit = req.visboPFV.StrategicFit;
 			}
