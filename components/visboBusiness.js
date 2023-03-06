@@ -3364,7 +3364,14 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	// an existing RAC will be put in the invoice of the first phase
 	if (newVPV.Erloes > 0 && sumOfInvoices == 0) {
-		oldVPV.AllPhases[0].invoice.Key = newVPV.Erloes;
+		if (oldVPV.AllPhases[0].invoice) {
+			oldVPV.AllPhases[0].invoice.Key = newVPV.Erloes;
+		} else {
+			var h_invoice = {};
+			h_invoice.Key = newVPV.Erloes;
+			h_invoice.Value = 0;
+			oldVPV.AllPhases[0].invoice = h_invoice;
+		}
 	}
 	// existing sum of Invoices will be the new Erloes/RAC
 	if (sumOfInvoices > 0 && sumOfInvoices !== newVPV.Erloes) {		
