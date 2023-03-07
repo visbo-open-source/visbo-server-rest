@@ -2041,6 +2041,9 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		newPFV.description = oldVPV.description;
 		newPFV.businessUnit = oldVPV.businessUnit;
 
+		// variables to calc the sum of Invoices
+		var sumOfInvoices = 0;
+
 		// newPFV.AllPhases have to be created new ones	and the ressources will be aggregated to sumRoles
 		newPFV.AllPhases = [];
 		oldVPV.AllPhases?.forEach(phase => {
@@ -2074,6 +2077,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 				oneResult.appearance = milestone.appearance ;
 				oneResult.percentDone = milestone.percentDone ;
 				oneResult.invoice = milestone.invoice ;
+				sumOfInvoices = sumOfInvoices + (milestone?.invoice?.Key || 0);
 				oneResult.penalty = milestone.penalty ;
 				oneResult.deliverables = [];
 				milestone.deliverables?.forEach(item => {
@@ -2092,6 +2096,7 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 
 			onePhase.percentDone= phase.percentDone;
 			onePhase.invoice= phase.invoice;
+			sumOfInvoices = sumOfInvoices + (phase?.invoice?.Key || 0);
 			onePhase.penalty= phase.penalty;
 			onePhase.responsible= phase.responsible;
 			onePhase.ampelStatus= phase.ampelStatus;
@@ -2110,6 +2115,9 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 			onePhase.appearance= phase.appearance;
 			newPFV.AllPhases.push(onePhase);
 		});
+		if (sumOfInvoices > 0) { 
+			newPFV.Erloes = sumOfInvoices; 
+		};
 	}
 
 	var reducedPFV = oldPFV || newPFV;
@@ -3290,16 +3298,20 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 		// determin the sum of Invoices all over the project
 		if (phase.invoice) {
-			invoiceQuotient = phase.invoice.Key / oldVPV_sumOfInvoices;
-			phase.invoice.Key = newVPV.Erloes * invoiceQuotient;
-			sumOfInvoices += phase.invoice.Key;
+			if (oldVPV_sumOfInvoices != 0) { 
+				const invoiceQuotient = phase.invoice.Key / oldVPV_sumOfInvoices; 
+				phase.invoice.Key = newVPV.Erloes * invoiceQuotient;
+			}
+			sumOfInvoices += phase?.invoice?.Key || 0;
 		}
 
 		phase.AllResults.forEach(result => {					
 			if (result.invoice){					
-				invoiceQuotient = result.invoice.Key / oldVPV_sumOfInvoices;
-				result.invoice.Key = newVPV.Erloes * invoiceQuotient;
-				sumOfInvoices += result.invoice.Key;
+				if (oldVPV_sumOfInvoices != 0) { 
+					const invoiceQuotient = result.invoice.Key / oldVPV_sumOfInvoices; 
+					result.invoice.Key = newVPV.Erloes * invoiceQuotient;
+				}
+				sumOfInvoices += result?.invoice?.Key || 0;
 			}	
 		});	
 
@@ -3352,11 +3364,18 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 
 	// an existing RAC will be put in the invoice of the first phase
 	if (newVPV.Erloes > 0 && sumOfInvoices == 0) {
-		oldVPV.AllPhases[0].invoice.Key = newVPV.Erloes;
+		if (oldVPV.AllPhases[0].invoice) {
+			oldVPV.AllPhases[0].invoice.Key = newVPV.Erloes;
+		} else {
+			var h_invoice = {};
+			h_invoice.Key = newVPV.Erloes;
+			h_invoice.Value = 0;
+			oldVPV.AllPhases[0].invoice = h_invoice;
+		}
 	}
 	// existing sum of Invoices will be the new Erloes/RAC
-	if (sumOfInvoices !== newVPV.Erloes) {		
-		logger4js.warn('scaleVPV: given RAC = %s and sumInvoices = %s  ', newVPV.Erloes, sumOfInvoices);
+	if (sumOfInvoices > 0 && sumOfInvoices !== newVPV.Erloes) {		
+		logger4js.warn('scaleVPV: given RAC = %s and sumOfInvoices = %s  ', newVPV.Erloes, sumOfInvoices);
 		newVPV.Erloes = sumOfInvoices;
 	}
 	
