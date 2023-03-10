@@ -219,6 +219,31 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 	});
 }
 
+
+function setErloesWithSumOfInvoice(vpv) {
+
+	var sumOfInvoice = 0;
+	if (!vpv) {
+		return;
+	}
+
+	if (vpv.AllPhases) {
+		vpv.AllPhases.forEach(phase => {
+			if (phase && phase.invoice && phase.invoice.Key && phase?.invoice?.Key !== 0 ) { sumOfInvoice += phase.invoice.Key; }
+			if (phase.AllResults) {
+				phase.AllResults.forEach(result => {
+					if (result && result.invoice && result.invoice.Key && result?.invoice?.Key !== 0  ) { sumOfInvoice += result.invoice.Key; }
+				});
+			}
+		});	
+
+		if (sumOfInvoice > 0 ) {
+			vpv.Erloes = sumOfInvoice;
+		}	
+	}
+}
+
+
 module.exports = {
 	updateVPVCount: updateVPVCount,
 	createInitialVersions: createInitialVersions,
@@ -227,5 +252,6 @@ module.exports = {
 	getKeyAttributes: getKeyAttributes,
 	setKeyAttributes: setKeyAttributes,
 	checkValidKeyMetrics: checkValidKeyMetrics,
-	cleanupKM: cleanupKM
+	cleanupKM: cleanupKM,
+	setErloesWithSumOfInvoice: setErloesWithSumOfInvoice
 };

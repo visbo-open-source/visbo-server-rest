@@ -750,7 +750,8 @@ router.route('/')
 					}
 				}
 
-				var newVPV = helperVpv.initVPV(req.body);
+				var newVPV = helperVpv.initVPV(req.body);				
+				helperVpv.setErloesWithSumOfInvoice(newVPV);
 				helperVpv.cleanupVPV(newVPV);
 				if (!newVPV) {
 					logger4js.info('POST Project Version contains illegal strings body %O', req.body);
@@ -764,9 +765,9 @@ router.route('/')
 				newVPV.name = oneVP.name;
 				newVPV.vpid = oneVP._id;
 				newVPV.variantName = variantName;
-				if (req.visboPFV) {
-					newVPV.Erloes = req.visboPFV.Erloes;
-				}
+				// if (req.visboPFV) {
+				// 	newVPV.Erloes = req.visboPFV.Erloes;
+				// }
 				var customField;
 				if (req.oneVP.customFieldString) {
 					customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
@@ -1359,9 +1360,10 @@ router.route('/:vpvid/copy')
 			newVPV.status = undefined;
 			if (req.oneVP && req.oneVP.vpStatus) {
 				newVPV.vpStatus = req.oneVP.vpStatus;
-			}
+			}	
+			
 			if (req.visboPFV) {
-				newVPV.Erloes = req.visboPFV.Erloes;
+			// 	newVPV.Erloes = req.visboPFV.Erloes;
 				newVPV.Risiko = req.visboPFV.Risiko;
 				newVPV.StrategicFit = req.visboPFV.StrategicFit;
 			}
