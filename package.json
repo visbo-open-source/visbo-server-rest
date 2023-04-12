@@ -10,7 +10,10 @@
     "test": "bash testPostman.sh | tee test-rest-postman-log.txt",
     "testWin": "testPostman.bat > test-rest-postman-log.txt & type test-rest-postman-log.txt",
     "lint": "eslint --ignore-path .gitignore .",
-    "maillint": "ejslint emailTemplates "
+    "maillint": "ejslint emailTemplates ",
+    "docker:network": "docker network create -d bridge redis_network",
+    "docker:redis": "docker run --name redis -d --network redis_network -p 6379:6379 redis",
+    "docker:rest-up": "docker build -f Dockerfile -t visbo-rest ."
   },
   "engines": {
     "node": ">=16"
