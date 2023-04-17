@@ -532,14 +532,14 @@ router.route('/')
 			queryvpvids._id = {$in: vpvidsList};
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
-				// deliver only the short info about project versions
-				queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName VorlagenName description updatedAt createdAt deletedAt');
+				// deliver only the short info about project versions + customFields (Ute)
+				queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
-					queryVPV.select('_id vpid name timestamp variantName description updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName description customDblFields customStringFields customBoolFields updatedAt createdAt deletedAt');
 				} else {
-					queryVPV.select('_id vpid name timestamp variantName startDate endDate status ampelStatus VorlagenName description updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName startDate endDate status ampelStatus customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
 				}
 			}
 			queryVPV.lean();

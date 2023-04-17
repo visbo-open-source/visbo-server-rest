@@ -3009,12 +3009,14 @@ function ensureValidVPV(myVPV) {
 
 			// Criterium
 			// checks whether all elements of an array are >= 0
-			let c6tmp = (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
-			c6 = c6 && c6tmp;
-			if (!c6tmp) {
-				logger4js.warn('ensureValidVPV severe violation C6: Role Array with negative values (vpvId: %s, phase: %s, RoleId: %s) ',
-				myVPV._id, phase.name, role.RollenTyp);
-			}
+			if (role.Bedarf.length != 0) {
+				let c6tmp = (role.Bedarf && role.Bedarf.map(value => value >= 0).reduce((accumulator, currentValue) => accumulator && currentValue));
+				c6 = c6 && c6tmp;
+				if (!c6tmp) {
+					logger4js.warn('ensureValidVPV severe violation C6: Role Array with negative values (vpvId: %s, phase: %s, RoleId: %s) ',
+					myVPV._id, phase.name, role.RollenTyp);
+				}
+			}			
 		});
 
 		phase.AllCosts.forEach(cost => {
