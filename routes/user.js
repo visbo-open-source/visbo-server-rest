@@ -148,17 +148,18 @@ router.route('/timetracker/:id')
 	.patch(async function (req, res) {
 		try {
 			const newValues = await updateTimeEntry(req.params.id, req.body);
-			if (!newValues) {
-				return res.status(500).send({
-					state: 'error',
-					message: 'Error in updating time entry'
+			if (newValues) {
+				return res.status(200).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully updated',
+					'timeEntry': newValues
 				});
 			}
-			res.status(200).send({
-				'state': 'success',
-				'message': 'Time tracker data successfully updated',
-				'timeEntry': newValues
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in updating time entry'
 			});
+			
 		} catch (error) {
 			logger4js.error('Error in update time entry: %O', error);
 		}
@@ -185,16 +186,16 @@ router.route('/timetracker')
 	.post(async function (req, res) {
 		try {
 			const newEntry = await createTimeEntry(req.body);
-			if (!newEntry) {
-				return res.status(500).send({
-					state: 'error',
-					message: 'Error in creating time entry'
+			if (newEntry) {
+				return res.status(201).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully saved',
+					'timeEntry': newEntry
 				});
 			}
-			res.status(201).send({
-				'state': 'success',
-				'message': 'Time tracker data successfully saved',
-				'timeEntry': newEntry
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in creating time entry'
 			});
 		} catch (error) {
 			logger4js.error('Error in create time entry: %O', error);

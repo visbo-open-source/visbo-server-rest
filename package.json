@@ -49,6 +49,7 @@
   "devDependencies": {
     "ejs-lint": "^1.2.2",
     "eslint": "^8.14.0",
+    "nodemon": "^2.0.22",
     "npm": "^9.6.2"
   }
 }

@@ -9,8 +9,9 @@ async function createTimeEntry(transaction) {
 }
 
 async function updateTimeEntry(id, transaction) {
-    var timeEntry = TimeTracker.findByIdAndUpdate(id, transaction);
-    return timeEntry;
+    await TimeTracker.updateOne({ _id: id }, transaction);
+    var updatedEntry = await TimeTracker.findById(id);
+    return updatedEntry;
 }
 
 async function deleteTimeEntry(id) {
