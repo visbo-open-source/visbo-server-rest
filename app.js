@@ -31,6 +31,7 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcsetting');
 require('./models/vccapacities');
+require('./models/timeTracker');
 
 var systemVC = require('./components/systemVC');
 var visboAudit = require('./components/visboAudit');
@@ -42,7 +43,8 @@ var dbOptions = {
   // autoReconnect: true,
   // reconnectInterval: 3000,
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  useFindAndModify: false,
 };
 
 // CORS Config, whitelist is an array

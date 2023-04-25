@@ -4,6 +4,7 @@ var Schema = mongoose.Schema;
 var timeTracker = new mongoose.Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     vpid: { type: Schema.Types.ObjectId, ref: 'VisboProject', required: true },
+    vpvid: { type: Schema.Types.ObjectId, ref: 'VisboProjectVersion', required: true },
     vcid: { type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true },
     roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true },
     date: { type: Schema.Types.Date, required: true },
@@ -14,11 +15,7 @@ var timeTracker = new mongoose.Schema({
     status: { type: Schema.Types.String, required: true },
     aggreUID: { type: Schema.Types.String, required: false },
     aggreDate: { type: Schema.Types.Date, required: false },
-    vpvid: { type: Schema.Types.ObjectId, ref: 'VisboProjectVersion', required: true },
-    timestamp: { type: Date, required: false },
-});
-// Set Creation and modification date automatically
-timeTracker.set('timestamps', true);
+}, { timestamps: true });
 
 // declare a model
 mongoose.model('TimeTracker', timeTracker);
