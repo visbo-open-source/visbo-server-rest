@@ -15,12 +15,12 @@ async function updateTimeEntry(id, transaction) {
 }
 
 async function deleteTimeEntry(id) {
-    var timeEntry = TimeTracker.findByIdAndRemove(id);
+    var timeEntry = await TimeTracker.findByIdAndRemove(id);
     return timeEntry;
 }
 
 async function getTimeEntry(id) {
-    var timeEntry = TimeTracker.find({ userId: id });
+    var timeEntry = await TimeTracker.find({ userId: id });
     return timeEntry;
 }
 
