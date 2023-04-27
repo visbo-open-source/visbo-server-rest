@@ -2,8 +2,8 @@ var mongoose = require('mongoose');
 
 var TimeTracker = mongoose.model('TimeTracker');
 
-async function createTimeEntry(transaction) {
-    var timeTracker = new TimeTracker(transaction);
+async function createTimeEntry(userId, transaction) {
+    var timeTracker = new TimeTracker({ userId: userId, ...transaction });
     await timeTracker.save();
     return timeTracker;
 }

@@ -1,0 +1,271 @@
+{
+	"info": {
+		"_postman_id": "fdd6d62a-bb79-4b5e-a3d7-c7e3e302b9c7",
+		"name": "Visbo time tracker",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16258319"
+	},
+	"item": [
+		{
+			"name": "User Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"01 Time tracker: Check Login Success\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.globals.set(\"token\", jsonData.token);",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{UserRead}}\",\n  \"password\": \"{{password}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/token/user/login",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"token",
+						"user",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create time entry",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"02 Time tracker: Create new entry \", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.globals.set(\"entryId\", jsonData._id);",
+							"    pm.globals.set(\"userId\", jsonData.userId);",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"vpid\": \"644733a1957f2611d00a80a6\",\n    \"vpvid\": \"644733b1957f2611d00a80a9\",\n    \"vcid\": \"644733b1957f2611d00a80a8\",\n    \"roleId\": \"5a1f1b0b1c9d440000e1b1b1\",\n    \"date\": \"2017-11-30T00:00:00.000Z\",\n    \"time\": 5,\n    \"notes\": \"Some information about particular task\",\n    \"approvalDate\": \"2017-11-30T00:00:00.000Z\",\n    \"approvalId\": \"5a1f1b0b1c9d440000e1b1b2\",\n    \"status\": \"Not Started\",\n    \"aggreUID\": \"5a1f1b0b1c9d440000e1b1b4\",\n    \"aggreDate\": \"2017-11-30T00:00:00.000Z\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/user/timetracker",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"user",
+						"timetracker"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update time entry",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"03 Time tracker: Update time entry\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"time\": 3,\n    \"notes\": \"Additional info about task\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/user/timetracker/{{entryId}}",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"user",
+						"timetracker",
+						"{{entryId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get time entries",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"04 Time tracker: Get time entries\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/user/timetracker/{{entryId}}",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"user",
+						"timetracker",
+						"{{entryId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete time entry",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"05 Time tracker: Delete time entry\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.state).to.eql(\"success\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/user/timetracker/{{entryId}}",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"user",
+						"timetracker",
+						"{{entryId}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "url",
+			"value": "localhost:3484",
+			"type": "string"
+		}
+	]
+}

@@ -433,7 +433,7 @@ router.route('/timetracker')
 	.post(async function (req, res) {
 		try {
 			logger4js.info('Post Time entry %s', req.decoded._id);
-			const newEntry = await createTimeEntry(req.body);
+			const newEntry = await createTimeEntry(req.decoded._id, req.body);
 			if (newEntry) {
 				return res.status(201).send({
 					'state': 'success',
