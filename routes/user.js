@@ -36,172 +36,6 @@ var isValidPassword = function (user, password) {
 	return bCrypt.compareSync(password, user.password);
 };
 
-router.route('/timetracker/:id')
-	/**
-		* @api {get} /user/timetracker/:id Get time tracker data by employee id
-		* @apiVersion 1.0.0
-		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Authentication
-		* @apiName Get time tracker data
-		* @apiError {number} 401 user not authenticated
-		* @apiError {number} 303 Not Found
-		* @apiError {number} 500 Internal Server Error
-		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*  'state':'success',
-		*  'message':'Time tracker data retrived successfully',
-		*  'timeTracker': [
-			{
-				'_id': '5a1f1b0b1c9d440000e1b1b1',
-				'userId': '5a1f1b0b1c9d440000e1b1b1',
-				'vpid': 'John Doe',
-				'vpvid': 'johndoe@email.com',
-				'vcid': 'John Doe',
-				'roleId': '5a1f1b0b1c9d440000e1b1b1',
-				'date': '2017-11-30T00:00:00.000Z',
-				'time': 5.5,
-				'notes': 'John Doe',
-				'approvalDate': '2017-11-30T00:00:00.000Z',
-				'approvalId': '5a1f1b0b1c9d440000e1b1b1',
-				'status': 'Not Started',
-				'aggreUID': '5a1f1b0b1c9d440000e1b1b1',
-				'aggreDate': '2017-11-30T00:00:00.000Z',
-			}...
-		]
-		* }
-		*/
-	.get(async function (req, res) {
-		try {
-			// req.auditDescription = 'Retrieve Time Tracker Data';
-			// req.auditTTLMode = 3;
-			// logger4js.info('Get time tracker by user with id %s', req.decoded._id);
-			var timeEntries = await getTimeEntry(req.params.id);
-			if(timeEntries) {
-				res.status(200).send({
-					state: 'success',
-					message: 'Time tracker data retrived successfully',
-					timeEntries: timeEntries
-				});
-			}
-			res.status(404).send({
-				state: 'error',
-				message: 'Time tracker data not found'
-			});
-		} catch (error) {
-			logger4js.error('Error in get time entry: %O', error);
-		}
-	})
-	/**
-		* @api {delete} /user/timetracker/:id Delete specific time entry
-		* @apiVersion 1.0.0
-		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Authentication
-		* @apiName Delete time tracker data
-		* @apiError {number} 401 user not authenticated
-		* @apiError {number} 500 Internal Server Error
-		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker/:id
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*  'state':'success',
-		*  'message':'Time tracker data successfully deleted'
-		* }
-		*/
-	.delete(async function (req, res) {
-		try {
-			const deletedEntry = await deleteTimeEntry(req.params.id);
-			if (!deletedEntry) {
-				return res.status(404).send({
-					state: 'error',
-					message: 'Time entry not found'
-				});
-			}
-			res.status(200).send({
-				state: 'success',
-				message: 'Time tracker data successfully deleted'
-			});
-		} catch (error) {
-			log4js.error('Error in delete time entry: %O', error);
-		}
-	})
-	/**
-		* @api {patch} /user/timetracker Update specific time entry
-		* @apiVersion 1.0.0
-		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Authentication
-		* @apiName Update time tracker data
-		* @apiError {number} 401 user not authenticated
-		* @apiError {number} 500 Internal Server Error
-		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*  'state':'success',
-		*  'message':'Time tracker data successfully updated',
-		* }
-		*/
-	.patch(async function (req, res) {
-		try {
-			const newValues = await updateTimeEntry(req.params.id, req.body);
-			if (newValues) {
-				return res.status(200).send({
-					'state': 'success',
-					'message': 'Time tracker data successfully updated',
-					'timeEntry': newValues
-				});
-			}
-			return res.status(500).send({
-				state: 'error',
-				message: 'Error in updating time entry'
-			});
-			
-		} catch (error) {
-			logger4js.error('Error in update time entry: %O', error);
-		}
-	});
-
-router.route('/timetracker')
-	/**
-			* @api {post} /user/timetracker Create a time entry
-			* @apiVersion 1.0.0
-			* @apiHeader {String} access-key User authentication token.
-			* @apiGroup Authentication
-			* @apiName Create time tracker data
-			* @apiError {number} 401 user not authenticated
-			* @apiError {number} 500 Internal Server Error
-			* @apiExample Example usage:
-			*  url: https://my.visbo.net/api/user/timetracker
-			* @apiSuccessExample {json} Success-Response:
-			* HTTP/1.1 201 Created
-			* {
-			*  'state':'success',
-			*  'message':'Time tracker data successfully saved',
-			* }
-			*/
-	.post(async function (req, res) {
-		try {
-			const newEntry = await createTimeEntry(req.body);
-			if (newEntry) {
-				return res.status(201).send({
-					'state': 'success',
-					'message': 'Time tracker data successfully saved',
-					'timeEntry': newEntry
-				});
-			}
-			return res.status(500).send({
-				state: 'error',
-				message: 'Error in creating time entry'
-			});
-		} catch (error) {
-			logger4js.error('Error in create time entry: %O', error);
-		}
-	});
-
 //Register the authentication middleware
 router.use('/', auth.verifyUser);
 
@@ -578,6 +412,176 @@ router.route('/ott')
 		);
 	});
 
+router.route('/timetracker')
+	/**
+			* @api {post} /user/timetracker Create a time entry
+			* @apiVersion 1.0.0
+			* @apiHeader {String} access-key User authentication token.
+			* @apiGroup Authentication
+			* @apiName Create time tracker data
+			* @apiError {number} 401 user not authenticated
+			* @apiError {number} 500 Internal Server Error
+			* @apiExample Example usage:
+			*  url: https://my.visbo.net/api/user/timetracker
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 201 Created
+			* {
+			*  'state':'success',
+			*  'message':'Time tracker data successfully saved',
+			* }
+			*/
+	.post(async function (req, res) {
+		try {
+			logger4js.info('Post Time entry %s', req.decoded._id);
+			const newEntry = await createTimeEntry(req.body);
+			if (newEntry) {
+				return res.status(201).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully saved',
+					'timeEntry': newEntry
+				});
+			}
+			logger4js.error('Error in creating time entry');
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in creating time entry'
+			});
+		} catch (error) {
+			logger4js.error('Error in create time entry: %O', error);
+		}
+	});
 
+router.route('/timetracker/:id')
+	/**
+		* @api {get} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Get time tracker data by employee id
+		* @apiVersion 1.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Get time tracker data
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 303 Not Found
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data retrived successfully',
+		*  'timeTracker': [
+			{
+				'_id': '5a1f1b0b1c9d440000e1b1b1',
+				'userId': '5a1f1b0b1c9d440000e1b1b1',
+				'vpid': 'John Doe',
+				'vpvid': 'johndoe@email.com',
+				'vcid': 'John Doe',
+				'roleId': '5a1f1b0b1c9d440000e1b1b1',
+				'date': '2017-11-30T00:00:00.000Z',
+				'time': 5.5,
+				'notes': 'John Doe',
+				'approvalDate': '2017-11-30T00:00:00.000Z',
+				'approvalId': '5a1f1b0b1c9d440000e1b1b1',
+				'status': 'Not Started',
+				'aggreUID': '5a1f1b0b1c9d440000e1b1b1',
+				'aggreDate': '2017-11-30T00:00:00.000Z',
+			}...
+		]
+		* }
+		*/
+	.get(async function (req, res) {
+		try {
+			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
+			var timeEntries = await getTimeEntry(req.params.id);
+			if (timeEntries) {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Time tracker data retrived successfully',
+					timeEntries: timeEntries
+				});
+			}
+			logger4js.error('Time tracker data not found with id %s', req.params.id);
+			return res.status(404).send({
+				state: 'error',
+				message: 'Time tracker data not found'
+			});
+		} catch (error) {
+			logger4js.error('Error in get time entry: %O', error);
+		}
+	})
+	/**
+		* @api {delete} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Delete specific time entry
+		* @apiVersion 1.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Delete time tracker data
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data successfully deleted'
+		* }
+		*/
+	.delete(async function (req, res) {
+		try {
+			logger4js.info('Delete time entry %s', req.decoded._id);
+
+			const deletedEntry = await deleteTimeEntry(req.params.id);
+			if (deletedEntry) {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Time tracker data successfully deleted'
+				});
+			}
+			logger4js.error('Time entry not found with id %s', req.params.id);
+			return res.status(404).send({
+				state: 'error',
+				message: 'Time entry not found'
+			});
+		} catch (error) {
+			log4js.error('Error in delete time entry: %O', error);
+		}
+	})
+	/**
+		* @api {patch} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Update specific time entry
+		* @apiVersion 1.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Update time tracker data
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data successfully updated',
+		* }
+		*/
+	.patch(async function (req, res) {
+		try {
+			logger4js.info('Update time entry %s', req.decoded._id);
+			const newValues = await updateTimeEntry(req.params.id, req.body);
+			if (newValues) {
+				return res.status(200).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully updated',
+					'timeEntry': newValues
+				});
+			}
+			logger4js.error('Error in updating time entry with id %s', req.params.id);
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in updating time entry'
+			});
+
+		} catch (error) {
+			logger4js.error('Error in update time entry: %O', error);
+		}
+	});
 
 module.exports = router;
