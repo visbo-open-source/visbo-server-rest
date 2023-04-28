@@ -1,6 +1,12 @@
 PORT=3484
 NODE_ENV=production
-LOGPATH="/var/log/visbo"
+LOGPATH="/var/log/visbo" # On windows change to CRLF 'var\log\visbo'
+
+#Secret keys for JWT path secret/jwt.js
+USER_SECRET=""
+ADMIN_SECRET=""
+REGISTER_SECRET=""
+INTERNAL_ENCRYPTION=""
 
 # Atlas  Mongo DB
 NODE_VISBODB="mongodb+srv://USER:PASSWORD@visbo02-3p7ni.mongodb.net/visboStaging?retryWrites=true"
