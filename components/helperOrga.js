@@ -39,6 +39,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		}
 		if (validate.validateNumber(role.uid, false) == undefined
 			|| !validate.validateName(role.name, false)
+			|| !validate.validateEmail(role.email, true)
 			|| !validate.validateDate(role.entryDate, true)
 			|| !validate.validateDate(role.exitDate, true)
 			|| !validate.validateDate(role.startOfCal, true)
@@ -71,6 +72,15 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (role.aliases) {
 			newRole.aliases = role.aliases;
 		}
+		if (role.email) {
+			newRole.email = role.email;
+		} 
+		if (!newRole.isSummaryRole && !newRole.email) {
+			errorstring = `Orga Role has to have email: uid: ${newRole.uid} email: ${newRole.dailyRate}`;
+			listError?.push(errorstring);
+			logger4js.info('InitOrga: ', errorstring);
+			isOrgaValid = false;
+		}	
 		newRole.dailyRate = role.dailyRate;
 		// check Rule3: orga units need to have a valid dailyRate
 		if (!(newRole.dailyRate >= 0)) {
@@ -328,13 +338,19 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			// skip empty entry
 			return;
 		}
+		let errorDetails = [];
+		if (role.isSummaryRole || role.isExternRole || role.type == 3 || role.type == 2){		// ???? TODO UR	
+			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`email not accepted: ${role.email || ''}`);}
+		} else {
+			if (!validate.validateEmail(role.email, false)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
+		}		
 		if (role.type == undefined) {
 			role.type = 1;
 		} else {
 			role.type = validate.validateNumber(role.type, false);
 		}
 		role.dailyRate = validate.validateNumber(role.dailyRate, true);
-		let errorDetails = [];
+		
 		if (validate.validateNumber(role.uid, true) == undefined) {errorDetails.push(`uid not accepted: ${role.uid || ''}`);}
 		if (role.type < 1 || role.type > 3) {errorDetails.push(`type not accepted: ${role.type}`);}
 		if (!validate.validateName(role.path, true)) {errorDetails.push(`path not accepted: ${role.path || ''}`);}
@@ -382,6 +398,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				}
 			}
 			newRole = new VCOrgaRole(role.uid, role.name);
+			newRole.email = role.email;
 			newRole.type = role.type;
 			if (role.type == 1 || role.isSummaryRole) {
 				newRole.parent = getParent(role.path, role.name);
@@ -407,8 +424,9 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				}
 				// check Rule2: Group should not have a defCapaMonth or defCapaDay
 				// this is automatically true, as the values are not set for a group
-			} else {
+			} else {				
 				if (role.employeeNr) { newRole.employeeNr = role.employeeNr; }
+
 				if (role.entryDate) {
 					if (role.entryDate.getTime() > minDate.getTime()) {
 						newRole.entryDate = role.entryDate;
@@ -655,6 +673,7 @@ function reduceOrga(orga) {
 			allUnits[role.uid] = newRole;
 		}
 		allUnits[role.uid].name = role.name;
+		if (role.email) { allUnits[role.uid].email = role.email; }
 		if (role.isSummaryRole) { allUnits[role.uid].isSummaryRole = role.isSummaryRole; }
 		if (role.isAggregationRole) { allUnits[role.uid].isAggregationRole = role.isAggregationRole; }
 		if (role.isExternRole) { allUnits[role.uid].isExternRole = role.isExternRole; }
@@ -715,6 +734,7 @@ function reduceOrga(orga) {
 				allUnits[maxid].type = 2;
 				allUnits[maxid].pid = role.uid;
 				allUnits[maxid].name = userRole.name;
+				if (userRole.email) { allUnits[maxid].email = userRole.email; }
 				if (userRole.employeeNr) { allUnits[maxid].employeeNr = userRole.employeeNr; }
 				if (userRole.isExternRole) { allUnits[maxid].isExternRole = userRole.isExternRole; }
 				if (userRole.defCapaDay >= 0) { allUnits[maxid].defCapaDay = userRole.defCapaDay; }
