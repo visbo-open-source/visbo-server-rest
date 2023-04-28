@@ -1,5 +1,9 @@
 var mongoose = require('mongoose');
 
+var logModule = 'OTHER';
+var log4js = require('log4js');
+var logger4js = log4js.getLogger(logModule);
+
 var TimeTracker = mongoose.model('TimeTracker');
 
 async function createTimeEntry(userId, transaction) {
@@ -9,9 +13,14 @@ async function createTimeEntry(userId, transaction) {
 }
 
 async function updateTimeEntry(id, transaction) {
-    await TimeTracker.updateOne({ _id: id }, transaction);
-    var updatedEntry = await TimeTracker.findById(id);
-    return updatedEntry;
+    const entry = await TimeTracker.findById(id);
+    if (entry.status === 'Approved') {
+        logger4js.error('Cannot update approved time record with id: %s', id);
+    } else {
+        await TimeTracker.updateOne({ _id: id }, transaction);
+        var updatedEntry = await TimeTracker.findById(id);
+        return updatedEntry;
+    }
 }
 
 async function deleteTimeEntry(id) {
