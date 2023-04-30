@@ -85,7 +85,8 @@ function initVPV(vpv) {
 	newVPV.Risiko = vpv.Risiko;
 	newVPV.StrategicFit = vpv.StrategicFit;
 	newVPV.customDblFields = vpv.customDblFields;
-	newVPV.customStringFields = vpv.customStringFields;
+	newVPV.customStringFields = vpv.customStringFields;	
+	newVPV.customBoolFields = vpv.customBoolFields;
 	newVPV.actualDataUntil = vpv.actualDataUntil;
 	newVPV.Erloes = vpv.Erloes;
 	newVPV.startDate = vpv.startDate;
