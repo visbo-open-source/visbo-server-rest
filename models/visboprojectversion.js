@@ -112,6 +112,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	StrategicFit: { type: Number, required: false},
 	customDblFields: [{str: {type: String, required: true}, dbl: {type: Number, required: true}}],
 	customStringFields: [{strkey: {type: String, required: true}, strvalue: {type: String, required: true}}],
+	customBoolFields: [{str: {type: String, required: true}, bool: {type: Boolean, required: true}}],
 	Erloes: { type: Number, required: false},
 	actualDataUntil: { type: Date, required: false},
 	startDate: { type: Date, required: false},
