@@ -305,7 +305,7 @@ app.engine('.html', require('ejs').renderFile);
 // define the log entry for processing pages
 app.use(logger(function (tokens, req, res) {
   // ignore calls for OPTIONS
-  if (['GET', 'POST', 'PUT', 'DELETE'].indexOf(tokens.method(req, res)) >= 0 ) {
+  if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].indexOf(tokens.method(req, res)) >= 0 ) {
     visboAudit.visboAudit(tokens, req, res);
     var webLog = [
       tokens.method(req, res).padEnd(6, ' '),
