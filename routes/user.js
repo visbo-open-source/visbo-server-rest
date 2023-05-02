@@ -431,6 +431,8 @@ router.route('/timetracker')
 			* }
 			*/
 	.post(async function (req, res) {
+		req.auditDescription = 'Time tracker Create';
+		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Post Time entry %s', req.decoded._id);
 			const newEntry = await createTimeEntry(req.decoded._id, req.body);
@@ -489,6 +491,8 @@ router.route('/timetracker/:id')
 		* }
 		*/
 	.get(async function (req, res) {
+		req.auditDescription = 'Time tracker Read';
+		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
 			var timeEntries = await getTimeEntry(req.params.id);
@@ -526,6 +530,8 @@ router.route('/timetracker/:id')
 		* }
 		*/
 	.delete(async function (req, res) {
+		req.auditDescription = 'Time tracker Delete';
+		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Delete time entry %s', req.decoded._id);
 
@@ -563,6 +569,8 @@ router.route('/timetracker/:id')
 		* }
 		*/
 	.patch(async function (req, res) {
+		req.auditDescription = 'Time tracker Update';
+		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Update time entry %s', req.decoded._id);
 			const newValues = await updateTimeEntry(req.params.id, req.body);
