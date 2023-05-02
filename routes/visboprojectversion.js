@@ -537,7 +537,8 @@ router.route('/')
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
-					queryVPV.select('_id vpid name timestamp variantName description customDblFields customStringFields customBoolFields updatedAt createdAt deletedAt');
+					// queryVPV.select('_id vpid name timestamp variantName description customDblFields customStringFields customBoolFields updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName description updatedAt createdAt deletedAt');
 				} else {
 					queryVPV.select('_id vpid name timestamp variantName startDate endDate status ampelStatus customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
 				}
