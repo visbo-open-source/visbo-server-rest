@@ -12,8 +12,6 @@ var timeTracker = new mongoose.Schema({
     approvalDate: { type: Schema.Types.Date, required: false },
     approvalId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     status: { type: Schema.Types.String, required: true },
-    aggreUID: { type: Schema.Types.String, required: false },
-    aggreDate: { type: Schema.Types.Date, required: false },
 }, { timestamps: true });
 
 // declare a model
