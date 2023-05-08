@@ -8,21 +8,20 @@ async function createTimeEntry(userId, transaction) {
     return timeTracker;
 }
 
-async function updateTimeEntry(id, transaction) {
-    if (transaction.approvalList && transaction.approvalList.lenght > 0) {
-        const array = [];
-        transaction.approvalList.forEach(async (id) => {
-            await TimeTracker.updateOne({ _id: id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
-            var updatedEntry = await TimeTracker.findById(id);
-            array.push(updatedEntry);
-        });
-        return array;
-    } else {
-        await TimeTracker.updateOne({ _id: id }, transaction);
+async function updateMany(transaction) {
+    const array = [];
+    transaction.approvalList.forEach(async (id) => {
+        await TimeTracker.updateOne({ _id: id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
         var updatedEntry = await TimeTracker.findById(id);
-        return updatedEntry;
-    }
+        array.push(updatedEntry);
+    });
+    return array;
+}
 
+async function updateTimeEntry(id, transaction) {
+    await TimeTracker.updateOne({ _id: id }, transaction);
+    var updatedEntry = await TimeTracker.findById(id);
+    return updatedEntry;
 }
 
 async function deleteTimeEntry(id) {
@@ -39,5 +38,6 @@ module.exports = {
     createTimeEntry,
     updateTimeEntry,
     deleteTimeEntry,
-    getTimeEntry
+    getTimeEntry,
+    updateMany
 };

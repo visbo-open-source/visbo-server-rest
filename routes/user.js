@@ -13,6 +13,7 @@ var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 var createTimeEntry = require('./../components/timeTracker').createTimeEntry;
 var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
+var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
 
@@ -450,6 +451,49 @@ router.route('/timetracker')
 			});
 		} catch (error) {
 			logger4js.error('Error in create time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
+		}
+	})
+	/**
+		* @api {patch} /user/timetracker Update specific time entry
+		* @apiVersion 1.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Update time tracker data
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data successfully updated',
+		* }
+		*/
+	.patch(async function (req, res) {
+		req.auditDescription = 'Time tracker Update many';
+		req.auditTTLMode = 1;
+		try {
+			// logger4js.info('Update time entry %s', req.decoded._id);
+			const newValues = await updateMany(req.body);
+			if (newValues) {
+				return res.status(200).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully updated',
+					'timeEntry': newValues
+				});
+			}
+			logger4js.error('Error in updating time entry with id %s', req.params.id);
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in updating time entry'
+			});
+		} catch (error) {
+			logger4js.error('Error in update time entry: %O', error);
 			return res.status(500).send({
 				state: 'error',
 				message: error
