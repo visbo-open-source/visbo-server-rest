@@ -14,7 +14,7 @@ async function createTimeEntry(userId, transaction) {
 
 async function updateTimeEntry(id, transaction) {
     const entry = await TimeTracker.findById(id);
-    if (entry.status === 'Approved') {
+    if (entry.status && entry.status === 'Approved') {
         logger4js.error('Cannot update approved time record with id: %s', id);
         return;
     } else {
