@@ -7,7 +7,7 @@ var logger4js = log4js.getLogger(logModule);
 var TimeTracker = mongoose.model('TimeTracker');
 
 async function createTimeEntry(userId, transaction) {
-    var timeTracker = new TimeTracker({ userId: userId, ...transaction });
+    var timeTracker = new TimeTracker({ userId: userId, status: 'Not Started' , ...transaction });
     await timeTracker.save();
     return timeTracker;
 }
