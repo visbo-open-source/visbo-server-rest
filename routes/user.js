@@ -450,6 +450,10 @@ router.route('/timetracker')
 			});
 		} catch (error) {
 			logger4js.error('Error in create time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
 		}
 	});
 
@@ -510,6 +514,10 @@ router.route('/timetracker/:id')
 			});
 		} catch (error) {
 			logger4js.error('Error in get time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
 		}
 	})
 	/**
@@ -549,6 +557,10 @@ router.route('/timetracker/:id')
 			});
 		} catch (error) {
 			log4js.error('Error in delete time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
 		}
 	})
 	/**
@@ -586,9 +598,12 @@ router.route('/timetracker/:id')
 				state: 'error',
 				message: 'Error in updating time entry'
 			});
-
 		} catch (error) {
 			logger4js.error('Error in update time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
 		}
 	});
 

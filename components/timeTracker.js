@@ -16,6 +16,7 @@ async function updateTimeEntry(id, transaction) {
     const entry = await TimeTracker.findById(id);
     if (entry.status === 'Approved') {
         logger4js.error('Cannot update approved time record with id: %s', id);
+        return;
     } else {
         await TimeTracker.updateOne({ _id: id }, transaction);
         var updatedEntry = await TimeTracker.findById(id);
@@ -29,8 +30,8 @@ async function deleteTimeEntry(id) {
 }
 
 async function getTimeEntry(id) {
-    var timeEntry = await TimeTracker.find({ userId: id });
-    return timeEntry;
+        var timeEntry = await TimeTracker.find({userId: id});
+        return timeEntry;
 }
 
 module.exports = {
