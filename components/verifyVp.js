@@ -373,6 +373,15 @@ function getVPOrgs(req, res, next) {
 }
 
 
+async function verifyManager(vpid, userId) {
+	var vp = await VisboProject.findById(vpid);
+	if(vp.managerId === userId){
+		return true;
+	} else {
+		return false;
+	}
+}
+
 
 module.exports = {
 	getAllGroups: getAllGroups,
@@ -381,5 +390,6 @@ module.exports = {
 	checkVpfid: checkVpfid,
 	squeezePortfolio: squeezePortfolio,
 	getVPTemplate: getVPTemplate,
-	getVPOrgs: getVPOrgs
+	getVPOrgs: getVPOrgs,
+	verifyManager: verifyManager,
 };

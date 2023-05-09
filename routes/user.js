@@ -9,13 +9,16 @@ var jwtSecret = require('./../secrets/jwt');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
+var VisboProject = mongoose.model('VisboProject');
 var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
+var verifyManager = require('./../components/verifyVp').verifyManager;
 var createTimeEntry = require('./../components/timeTracker').createTimeEntry;
 var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
 var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
+var findEntry = require('./../components/timeTracker').findEntry;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -478,7 +481,7 @@ router.route('/timetracker')
 		req.auditDescription = 'Time tracker Update many';
 		req.auditTTLMode = 1;
 		try {
-			// logger4js.info('Update time entry %s', req.decoded._id);
+			logger4js.info('Update time entry %s', req.decoded._id);
 			const newValues = await updateMany(req.body);
 			if (newValues) {
 				return res.status(200).send({
@@ -628,6 +631,32 @@ router.route('/timetracker/:id')
 		req.auditDescription = 'Time tracker Update';
 		req.auditTTLMode = 1;
 		try {
+			if (req.body.status === 'Approved' || req.body.status === 'inQuestion') {
+				var entry = await findEntry(req.params.id);
+				var canUpdate = await verifyManager(entry.vpid, req.decoded._id);
+				if (!canUpdate) {
+					logger4js.error('Error in updating time entry with id %s', req.params.id);
+					return res.status(403).send({
+						'state': 'error',
+						'message': 'Only manager of the project could update status'
+					});
+				} else {
+					logger4js.info('Update time entry %s', req.decoded._id);
+					const newValues = await updateTimeEntry(req.params.id, req.body);
+					if (newValues) {
+						return res.status(200).send({
+							'state': 'success',
+							'message': 'Time tracker data successfully updated',
+							'timeEntry': newValues
+						});
+					}
+					logger4js.error('Error in updating time entry with id %s', req.params.id);
+					return res.status(500).send({
+						state: 'error',
+						message: 'Error in updating time entry'
+					});
+				}
+			}
 			logger4js.info('Update time entry %s', req.decoded._id);
 			const newValues = await updateTimeEntry(req.params.id, req.body);
 			if (newValues) {

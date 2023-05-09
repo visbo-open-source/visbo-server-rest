@@ -1,10 +1,11 @@
 var mongoose = require('mongoose');
 
-var logModule = 'VC';
+var logModule = 'USER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var TimeTracker = mongoose.model('TimeTracker');
+// var VisboProject = mongoose.model('VisboProject');
 
 async function createTimeEntry(userId, transaction) {
     var timeTracker = new TimeTracker({ userId: userId, status: 'New', ...transaction });
@@ -55,8 +56,13 @@ async function validateStatus(id) {
     }
 }
 
-async function getTimeEntry(id) {
-    var timeEntry = await TimeTracker.find({ userId: id });
+async function getTimeEntry(userId) {
+    var timeEntry = await TimeTracker.find({ userId: userId });
+    return timeEntry;
+}
+
+async function findEntry(id) {
+    var timeEntry = await TimeTracker.findById(id);
     return timeEntry;
 }
 
@@ -65,5 +71,6 @@ module.exports = {
     updateTimeEntry,
     deleteTimeEntry,
     getTimeEntry,
-    updateMany
+    updateMany,
+    findEntry
 };
