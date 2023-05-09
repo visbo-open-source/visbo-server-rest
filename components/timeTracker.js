@@ -16,14 +16,14 @@ async function updateMany(transaction) {
     const list = transaction.approvalList;
     const array = [];
     for (var i = 0; i < list.length; i++) {
-        var canUpdate = validateStatus(list[i]);
+        var canUpdate = validateStatus(list[i].id);
         var isManager  = verifyManager(list[i].vpid, transaction.approvalId);
         if (canUpdate && isManager) {
-            await TimeTracker.updateOne({ _id: list[i] }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
-            var updatedEntry = await TimeTracker.findById(list[i]);
+            await TimeTracker.updateOne({ _id: list[i].id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
+            var updatedEntry = await TimeTracker.findById(list[i].id);
             array.push(updatedEntry);
         } else {
-            logger4js.error('Error in updating time entry with id %s', list[i]);
+            logger4js.error('Error in updating time entry with id %s', list[i].id);
             continue;
         }
     }
