@@ -3,9 +3,8 @@ var mongoose = require('mongoose');
 var logModule = 'USER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-
+var verifyManager = require('./../components/verifyVp').verifyManager;
 var TimeTracker = mongoose.model('TimeTracker');
-// var VisboProject = mongoose.model('VisboProject');
 
 async function createTimeEntry(userId, transaction) {
     var timeTracker = new TimeTracker({ userId: userId, status: 'New', ...transaction });
@@ -18,12 +17,13 @@ async function updateMany(transaction) {
     const array = [];
     for (var i = 0; i < list.length; i++) {
         var canUpdate = validateStatus(list[i]);
-        if (canUpdate) {
+        var isManager  = verifyManager(list[i].vpid, transaction.approvalId);
+        if (canUpdate && isManager) {
             await TimeTracker.updateOne({ _id: list[i] }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
             var updatedEntry = await TimeTracker.findById(list[i]);
             array.push(updatedEntry);
         } else {
-            logger4js.error('Error in updating approved time entry with id %s', list[i]);
+            logger4js.error('Error in updating time entry with id %s', list[i]);
             continue;
         }
     }
