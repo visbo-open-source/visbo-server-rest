@@ -57,11 +57,7 @@ async function validateStatus(id) {
 }
 
 async function getTimeEntry(userId) {
-    var timeEntry = TimeTracker.find({ userId: userId }).populate('userId').exec((err, result) => {
-        if (err) throw new Error('Cannot retrieve time tracker');
-
-        return result;
-    });
+    var timeEntry = TimeTracker.find({ userId: userId });
     return timeEntry;
 }
 
