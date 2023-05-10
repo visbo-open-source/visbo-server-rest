@@ -3,7 +3,7 @@ var Schema = mongoose.Schema;
 
 var timeTracker = new mongoose.Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    name: { type: Schema.Types.String, required: false },
+    name: { type: Schema.Types.String, required: true },
     vpid: { type: Schema.Types.ObjectId, ref: 'VisboProject', required: true },
     vcid: { type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true },
     roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true },
