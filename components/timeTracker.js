@@ -5,9 +5,11 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var verifyManager = require('./../components/verifyVp').verifyManager;
 var TimeTracker = mongoose.model('TimeTracker');
+var User = mongoose.model('User');
 
 async function createTimeEntry(userId, transaction) {
-    var timeTracker = new TimeTracker({ userId: userId, status: 'New', ...transaction });
+    var user = await User.findById(userId);
+    var timeTracker = new TimeTracker({ userId: userId, status: 'New', name: user.name, ...transaction });
     await timeTracker.save();
     return timeTracker;
 }
@@ -17,7 +19,7 @@ async function updateMany(transaction) {
     const array = [];
     for (var i = 0; i < list.length; i++) {
         var canUpdate = validateStatus(list[i].id);
-        var isManager  = verifyManager(list[i].vpid, transaction.approvalId);
+        var isManager = verifyManager(list[i].vpid, transaction.approvalId);
         if (canUpdate && isManager) {
             await TimeTracker.updateOne({ _id: list[i].id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
             var updatedEntry = await TimeTracker.findById(list[i].id);
@@ -61,6 +63,7 @@ async function getTimeEntry(userId) {
     return timeEntry;
 }
 
+
 async function findEntry(id) {
     var timeEntry = await TimeTracker.findById(id);
     return timeEntry;
@@ -72,5 +75,6 @@ module.exports = {
     deleteTimeEntry,
     getTimeEntry,
     updateMany,
-    findEntry
+    findEntry,
+    
 };
