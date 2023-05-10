@@ -5,11 +5,9 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var verifyManager = require('./../components/verifyVp').verifyManager;
 var TimeTracker = mongoose.model('TimeTracker');
-var User = mongoose.model('User');
 
 async function createTimeEntry(userId, transaction) {
-    var user = await User.findById(userId);
-    var timeTracker = new TimeTracker({ userId: userId, status: 'New', name: user.name, ...transaction });
+    var timeTracker = new TimeTracker({ userId: userId, ...transaction });
     await timeTracker.save();
     return timeTracker;
 }
@@ -59,7 +57,11 @@ async function validateStatus(id) {
 }
 
 async function getTimeEntry(userId) {
-    var timeEntry = await TimeTracker.find({ userId: userId });
+    var timeEntry = TimeTracker.find({ userId: userId }).populate('userId').exec((err, result) => {
+        if (err) throw new Error('Cannot retrieve time tracker');
+
+        return result;
+    });
     return timeEntry;
 }
 
@@ -76,5 +78,4 @@ module.exports = {
     getTimeEntry,
     updateMany,
     findEntry,
-    
-};
+}
