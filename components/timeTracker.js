@@ -49,7 +49,7 @@ async function deleteTimeEntry(id) {
 
 async function validateStatus(id) {
     var entry = TimeTracker.findById(id);
-    if (entry.status === 'Approved') {
+    if (entry.status === 'Yes') {
         return false;
     } else {
         return true;
