@@ -74,4 +74,4 @@ module.exports = {
     getTimeEntry,
     updateMany,
     findEntry,
-}
+};

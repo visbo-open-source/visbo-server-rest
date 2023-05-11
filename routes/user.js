@@ -9,7 +9,6 @@ var jwtSecret = require('./../secrets/jwt');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var User = mongoose.model('User');
-var VisboProject = mongoose.model('VisboProject');
 var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 var verifyManager = require('./../components/verifyVp').verifyManager;
