@@ -20,7 +20,7 @@ var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
 var findEntry = require('./../components/timeTracker').findEntry;
 var getSettings = require('./../components/timeTracker').getSettings;
 var filterRoles = require('./../components/timeTracker').filterSubRoles;
-var findTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
+var findSubRolesTimeTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -33,7 +33,6 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
-const { findSubRolesTimeTracker } = require('./../components/timeTracker');
 
 // Generates hash using bCrypt
 var createHash = function (secret) {

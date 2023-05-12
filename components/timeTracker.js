@@ -59,17 +59,17 @@ async function validateStatus(id) {
 
 async function getTimeEntry(userId) {
     var timeEntry = TimeTracker.find({ userId: userId });
-    return timeEntry;
+    return timeEntry ? timeEntry : [];
 }
 
 
 async function findEntry(id) {
     var timeEntry = await TimeTracker.findById(id);
-    return timeEntry;
+    return timeEntry ? timeEntry : [];
 }
 
 async function getSettings(email) {
-    var settings = await VCSettings.find({ value: { allRoles: { $elemMatch: { email: email } } } });
+    var settings = await VCSettings.find({ value: { allRoles: { $elemMatch: { email: email, isSammaryRole: true } } } });
     return settings;
 }
 
@@ -80,11 +80,11 @@ async function filterSubRoles(list, email) {
             subRolesList.push(item.subRoleIDs);
         }
     });
-    return subRolesList;
+    return subRolesList.flat();
 }
 
 async function findSubRolesTimeTracker(roles) {
-    const flatArray = roles.flat();
+    const flatArray = roles;
     const timeEntries = [];
     flatArray.forEach(async (item) => {
         const timeTracker = await TimeTracker.find({ $and: [{ roleId: item }, { status: 'No' }] });
