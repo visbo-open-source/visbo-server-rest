@@ -549,14 +549,19 @@ router.route('/timetracker/:id')
 		try {
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
 			var settings = await getSettings(req.decoded.email);
-			if (settings) {
-				var filteredList = await filterRoles(settings.value.allRoles, req.decoded.email);
-				var subRoles = await findSubRolesTimeTracker(filteredList);
+			if (settings.length > 0) {
+				const managerView = [];
+				settings.forEach(async (item) => {
+					var filteredList = await filterRoles(item.value.allRoles, req.decoded.email);
+					var subRoles = await findSubRolesTimeTracker(filteredList);
+					managerView.push(subRoles);
+				});
+
 				var userView = await getTimeEntry(req.params.id);
 				return res.status(200).send({
 					state: 'success',
 					message: 'Time tracker data retrieved for manager',
-					managerView: subRoles,
+					managerView: managerView.flat(),
 					timeEntries: userView
 				});
 			} else {

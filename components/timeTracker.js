@@ -69,7 +69,7 @@ async function findEntry(id) {
 }
 
 async function getSettings(email) {
-    var settings = await VCSettings.find({ value: { allRoles: { $elemMatch: { email: email, isSammaryRole: true } } } });
+    var settings = await VCSettings.find({'value.allRoles': {$elemMatch: { email: email, isSummaryRole: true}}});
     return settings;
 }
 
