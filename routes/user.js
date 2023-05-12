@@ -18,6 +18,9 @@ var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
 var findEntry = require('./../components/timeTracker').findEntry;
+var getSettings = require('./../components/timeTracker').getSettings;
+var filterRoles = require('./../components/timeTracker').filterSubRoles;
+var findTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -30,6 +33,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
+const { findSubRolesTimeTracker } = require('./../components/timeTracker');
 
 // Generates hash using bCrypt
 var createHash = function (secret) {
@@ -545,19 +549,32 @@ router.route('/timetracker/:id')
 		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
-			var timeEntries = await getTimeEntry(req.params.id);
-			if (timeEntries) {
+			var settings = await getSettings(req.decoded.email);
+			if (settings) {
+				var filteredList = await filterRoles(settings.value.allRoles, req.decoded.email);
+				var subRoles = await findSubRolesTimeTracker(filteredList);
+				var userView = await getTimeEntry(req.params.id);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Time tracker data retrived successfully',
-					timeEntries: timeEntries
+					message: 'Time tracker data retrieved for manager',
+					managerView: subRoles,
+					timeEntries: userView
+				});
+			} else {
+				var timeEntries = await getTimeEntry(req.params.id);
+				if (timeEntries) {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Time tracker data retrived for user',
+						timeEntries: timeEntries
+					});
+				}
+				logger4js.error('Time tracker data not found with id %s', req.params.id);
+				return res.status(404).send({
+					state: 'error',
+					message: 'Time tracker data not found'
 				});
 			}
-			logger4js.error('Time tracker data not found with id %s', req.params.id);
-			return res.status(404).send({
-				state: 'error',
-				message: 'Time tracker data not found'
-			});
 		} catch (error) {
 			logger4js.error('Error in get time entry: %O', error);
 			return res.status(500).send({
