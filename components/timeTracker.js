@@ -62,12 +62,6 @@ async function getTimeEntry(userId) {
     return timeEntry ? timeEntry : [];
 }
 
-
-async function findEntry(id) {
-    var timeEntry = await TimeTracker.findById(id);
-    return timeEntry ? timeEntry : [];
-}
-
 async function getSettings(email) {
     var settings = await VCSettings.find({'value.allRoles': {$elemMatch: { email: email, isSummaryRole: true}}});
     return settings;
@@ -76,10 +70,11 @@ async function getSettings(email) {
 async function filterSubRoles(list, email) {
     const subRolesList = [];
     list.forEach((item) => {
-        if (item.isSammaryRole === true && item.email === email) {
+        if (item.isSummaryRole === true && item.email === email) {
             subRolesList.push(item.subRoleIDs);
         }
     });
+    console.log(JSON.stringify(subRolesList));
     return subRolesList.flat();
 }
 
@@ -87,7 +82,7 @@ async function findSubRolesTimeTracker(roles) {
     const flatArray = roles;
     const timeEntries = [];
     flatArray.forEach(async (item) => {
-        const timeTracker = await TimeTracker.find({ $and: [{ roleId: item }, { status: 'No' }] });
+        const timeTracker = await TimeTracker.find({ $and: [{ roleId: item.key }, { status: 'No' }] });
         timeEntries.push(timeTracker);
     });
     return timeEntries.flat();
@@ -102,5 +97,4 @@ module.exports = {
     filterSubRoles,
     getSettings,
     findSubRolesTimeTracker,
-    findEntry
 };

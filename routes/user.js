@@ -561,7 +561,7 @@ router.route('/timetracker/:id')
 				return res.status(200).send({
 					state: 'success',
 					message: 'Time tracker data retrieved for manager',
-					managerView: managerView.flat(),
+					managerView: managerView ? managerView.flat() : [],
 					timeEntries: userView
 				});
 			} else {
