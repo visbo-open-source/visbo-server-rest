@@ -51,7 +51,7 @@ async function validateStatus(id) {
     if (entry.status === 'Yes') {
         return false;
     } else {
-        return { canUpdate: true, roleId: entry.roleId };
+        return true;
     }
 }
 
