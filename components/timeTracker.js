@@ -5,6 +5,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var verifyManager = require('./../components/verifyVp').verifyManager;
 var TimeTracker = mongoose.model('TimeTracker');
+var VCSettings = mongoose.model('VCSetting');
 
 async function createTimeEntry(userId, transaction) {
     var timeTracker = new TimeTracker({ userId: userId, ...transaction });
@@ -58,13 +59,42 @@ async function validateStatus(id) {
 
 async function getTimeEntry(userId) {
     var timeEntry = TimeTracker.find({ userId: userId });
-    return timeEntry;
+    return timeEntry ? timeEntry : [];
 }
 
+async function getSettings(email) {
+    var settings = await VCSettings.find({ 'value.allRoles': { $elemMatch: { email: email, isSummaryRole: true } } });
+    return settings;
+}
 
-async function findEntry(id) {
-    var timeEntry = await TimeTracker.findById(id);
-    return timeEntry;
+async function filterSubRoles(list, email, vcid) {
+    const subRolesList = [];
+    list.forEach((item) => {
+        if (item.isSummaryRole === true && item.email === email) {
+            subRolesList.push({ vcid: vcid, subRoles: item.subRoleIDs });
+        }
+    });
+    return subRolesList;
+}
+
+async function findSubRolesTimeTracker(roles) {
+    const subRoleEntries = [];
+    for(let role of roles) {
+        const roleEntry = await parseRoles(role);
+        subRoleEntries.push(roleEntry);
+    }
+    return subRoleEntries.flat();
+}
+
+async function parseRoles(lists) {
+    const arrayList = [];
+    for (let item of lists.subRoles) {
+        const timeTracker = await TimeTracker.find({ roleId: item.key, status: 'No', vcid: lists.vcid });
+        if (timeTracker) {
+            arrayList.push(timeTracker);
+        }
+    }
+    return arrayList.flat();
 }
 
 module.exports = {
@@ -73,5 +103,7 @@ module.exports = {
     deleteTimeEntry,
     getTimeEntry,
     updateMany,
-    findEntry,
+    filterSubRoles,
+    getSettings,
+    findSubRolesTimeTracker,
 };

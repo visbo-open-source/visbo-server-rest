@@ -17,7 +17,9 @@ var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
 var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
-var findEntry = require('./../components/timeTracker').findEntry;
+var getSettings = require('./../components/timeTracker').getSettings;
+var filterSubRoles = require('./../components/timeTracker').filterSubRoles;
+var findSubRolesTimeTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -545,19 +547,43 @@ router.route('/timetracker/:id')
 		req.auditTTLMode = 1;
 		try {
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
-			var timeEntries = await getTimeEntry(req.params.id);
-			if (timeEntries) {
+			var settings = await getSettings(req.decoded.email);
+			if (settings.length > 0) {
+				const managerView = [];
+				for (let setting of settings) {
+					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
+					var subRoles = await findSubRolesTimeTracker(filteredList);
+					console.log(JSON.stringify(subRoles));
+					managerView.push(subRoles);
+				}
+				// settings.forEach(async (item) => {
+				// 	var filteredList = await filterSubRoles(item.value.allRoles, req.decoded.email, item.vcid);
+				// 	var subRoles = await findSubRolesTimeTracker(filteredList);
+				// 	console.log(JSON.stringify(subRoles));
+				// 	managerView.push(subRoles);
+				// });
+				var userView = await getTimeEntry(req.params.id);
 				return res.status(200).send({
 					state: 'success',
-					message: 'Time tracker data retrived successfully',
-					timeEntries: timeEntries
+					message: 'Time tracker data retrieved for manager',
+					managerView: managerView ? managerView.flat() : [],
+					timeEntries: userView
+				});
+			} else {
+				var timeEntries = await getTimeEntry(req.params.id);
+				if (timeEntries) {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Time tracker data retrived for user',
+						timeEntries: timeEntries
+					});
+				}
+				logger4js.error('Time tracker data not found with id %s', req.params.id);
+				return res.status(404).send({
+					state: 'error',
+					message: 'Time tracker data not found'
 				});
 			}
-			logger4js.error('Time tracker data not found with id %s', req.params.id);
-			return res.status(404).send({
-				state: 'error',
-				message: 'Time tracker data not found'
-			});
 		} catch (error) {
 			logger4js.error('Error in get time entry: %O', error);
 			return res.status(500).send({
