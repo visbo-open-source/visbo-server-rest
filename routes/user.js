@@ -11,15 +11,17 @@ var auth = require('./../components/auth');
 var User = mongoose.model('User');
 var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
-var verifyManager = require('./../components/verifyVp').verifyManager;
 var createTimeEntry = require('./../components/timeTracker').createTimeEntry;
 var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
 var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
 var getSettings = require('./../components/timeTracker').getSettings;
+var findEntry = require('./../components/timeTracker').findEntry;
 var filterSubRoles = require('./../components/timeTracker').filterSubRoles;
 var findSubRolesTimeTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
+var verifyManager = require('./../components/timeTracker').verifyManager;
+
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -553,15 +555,9 @@ router.route('/timetracker/:id')
 				for (let setting of settings) {
 					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
 					var subRoles = await findSubRolesTimeTracker(filteredList);
-					console.log(JSON.stringify(subRoles));
 					managerView.push(subRoles);
 				}
-				// settings.forEach(async (item) => {
-				// 	var filteredList = await filterSubRoles(item.value.allRoles, req.decoded.email, item.vcid);
-				// 	var subRoles = await findSubRolesTimeTracker(filteredList);
-				// 	console.log(JSON.stringify(subRoles));
-				// 	managerView.push(subRoles);
-				// });
+
 				var userView = await getTimeEntry(req.params.id);
 				return res.status(200).send({
 					state: 'success',
@@ -656,31 +652,22 @@ router.route('/timetracker/:id')
 		req.auditDescription = 'Time tracker Update';
 		req.auditTTLMode = 1;
 		try {
-			if (req.body.status === 'Approved' || req.body.status === 'inQuestion') {
-				var entry = await findEntry(req.params.id);
-				var canUpdate = await verifyManager(entry.vpid, req.decoded._id);
-				if (!canUpdate) {
-					logger4js.error('Error in updating time entry with id %s', req.params.id);
-					return res.status(403).send({
-						'state': 'error',
-						'message': 'Only manager of the project could update status'
-					});
-				} else {
-					logger4js.info('Update time entry %s', req.decoded._id);
-					const newValues = await updateTimeEntry(req.params.id, req.body);
-					if (newValues) {
-						return res.status(200).send({
-							'state': 'success',
-							'message': 'Time tracker data successfully updated',
-							'timeEntry': newValues
-						});
-					}
-					logger4js.error('Error in updating time entry with id %s', req.params.id);
-					return res.status(500).send({
-						state: 'error',
-						message: 'Error in updating time entry'
+			if (req.body.status === 'Yes') {
+				logger4js.info('Update time entry %s', req.decoded._id);
+				const newValues = await updateTimeEntry(req.params.id, req.body);
+				if (newValues) {
+					return res.status(200).send({
+						'state': 'success',
+						'message': 'Time tracker data successfully updated',
+						'timeEntry': newValues
 					});
 				}
+				logger4js.error('Error in updating time entry with id %s', req.params.id);
+				return res.status(500).send({
+					state: 'error',
+					message: 'Error in updating time entry'
+				});
+
 			}
 			logger4js.info('Update time entry %s', req.decoded._id);
 			const newValues = await updateTimeEntry(req.params.id, req.body);

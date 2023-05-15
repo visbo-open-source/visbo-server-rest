@@ -3,7 +3,6 @@ var mongoose = require('mongoose');
 var logModule = 'USER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
-var verifyManager = require('./../components/verifyVp').verifyManager;
 var TimeTracker = mongoose.model('TimeTracker');
 var VCSettings = mongoose.model('VCSetting');
 
@@ -18,8 +17,7 @@ async function updateMany(transaction) {
     const array = [];
     for (var i = 0; i < list.length; i++) {
         var canUpdate = validateStatus(list[i].id);
-        var isManager = verifyManager(list[i].vpid, transaction.approvalId);
-        if (canUpdate && isManager) {
+        if (canUpdate) {
             await TimeTracker.updateOne({ _id: list[i].id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
             var updatedEntry = await TimeTracker.findById(list[i].id);
             array.push(updatedEntry);
@@ -53,13 +51,18 @@ async function validateStatus(id) {
     if (entry.status === 'Yes') {
         return false;
     } else {
-        return true;
+        return { canUpdate: true, roleId: entry.roleId };
     }
 }
 
 async function getTimeEntry(userId) {
     var timeEntry = TimeTracker.find({ userId: userId });
     return timeEntry ? timeEntry : [];
+}
+
+async function findEntry(id) {
+    const entryForUpdate = await TimeTracker.findById(id);
+    return entryForUpdate ? entryForUpdate : [];
 }
 
 async function getSettings(email) {
@@ -79,7 +82,7 @@ async function filterSubRoles(list, email, vcid) {
 
 async function findSubRolesTimeTracker(roles) {
     const subRoleEntries = [];
-    for(let role of roles) {
+    for (let role of roles) {
         const roleEntry = await parseRoles(role);
         subRoleEntries.push(roleEntry);
     }
@@ -97,6 +100,18 @@ async function parseRoles(lists) {
     return arrayList.flat();
 }
 
+async function verifyManager(vpid, email, roleId) {
+    const vp = await VCSettings.findOne({ vpid: vpid, type: 'organisation' });
+    const role = vp.value.allRolles.find((item) => item.email === email);
+    const subRoles = role.subRoleIDs.find((value) => value.key === roleId);
+    if (subRoles) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 module.exports = {
     createTimeEntry,
     updateTimeEntry,
@@ -106,4 +121,5 @@ module.exports = {
     filterSubRoles,
     getSettings,
     findSubRolesTimeTracker,
+    findEntry
 };
