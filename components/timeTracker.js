@@ -63,29 +63,38 @@ async function getTimeEntry(userId) {
 }
 
 async function getSettings(email) {
-    var settings = await VCSettings.find({'value.allRoles': {$elemMatch: { email: email, isSummaryRole: true}}});
+    var settings = await VCSettings.find({ 'value.allRoles': { $elemMatch: { email: email, isSummaryRole: true } } });
     return settings;
 }
 
-async function filterSubRoles(list, email) {
+async function filterSubRoles(list, email, vcid) {
     const subRolesList = [];
     list.forEach((item) => {
         if (item.isSummaryRole === true && item.email === email) {
-            subRolesList.push(item.subRoleIDs);
+            subRolesList.push({ vcid: vcid, subRoles: item.subRoleIDs });
         }
     });
-    console.log(JSON.stringify(subRolesList));
-    return subRolesList.flat();
+    return subRolesList;
 }
 
 async function findSubRolesTimeTracker(roles) {
-    const flatArray = roles;
-    const timeEntries = [];
-    flatArray.forEach(async (item) => {
-        const timeTracker = await TimeTracker.find({ $and: [{ roleId: item.key }, { status: 'No' }] });
-        timeEntries.push(timeTracker);
-    });
-    return timeEntries.flat();
+    const subRoleEntries = [];
+    for(let role of roles) {
+        const roleEntry = await parseRoles(role);
+        subRoleEntries.push(roleEntry);
+    }
+    return subRoleEntries.flat();
+}
+
+async function parseRoles(lists) {
+    const arrayList = [];
+    for (let item of lists.subRoles) {
+        const timeTracker = await TimeTracker.find({ roleId: item.key, status: 'No', vcid: lists.vcid });
+        if (timeTracker) {
+            arrayList.push(timeTracker);
+        }
+    }
+    return arrayList.flat();
 }
 
 module.exports = {

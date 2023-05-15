@@ -17,9 +17,8 @@ var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
 var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
-var findEntry = require('./../components/timeTracker').findEntry;
 var getSettings = require('./../components/timeTracker').getSettings;
-var filterRoles = require('./../components/timeTracker').filterSubRoles;
+var filterSubRoles = require('./../components/timeTracker').filterSubRoles;
 var findSubRolesTimeTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
 
 var mail = require('../components/mail');
@@ -551,12 +550,18 @@ router.route('/timetracker/:id')
 			var settings = await getSettings(req.decoded.email);
 			if (settings.length > 0) {
 				const managerView = [];
-				settings.forEach(async (item) => {
-					var filteredList = await filterRoles(item.value.allRoles, req.decoded.email);
+				for (let setting of settings) {
+					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
 					var subRoles = await findSubRolesTimeTracker(filteredList);
+					console.log(JSON.stringify(subRoles));
 					managerView.push(subRoles);
-				});
-
+				}
+				// settings.forEach(async (item) => {
+				// 	var filteredList = await filterSubRoles(item.value.allRoles, req.decoded.email, item.vcid);
+				// 	var subRoles = await findSubRolesTimeTracker(filteredList);
+				// 	console.log(JSON.stringify(subRoles));
+				// 	managerView.push(subRoles);
+				// });
 				var userView = await getTimeEntry(req.params.id);
 				return res.status(200).send({
 					state: 'success',
