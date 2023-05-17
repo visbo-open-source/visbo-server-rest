@@ -12,7 +12,7 @@ var timeTracker = new mongoose.Schema({
     status: { type: Schema.Types.String, required: true },
     notes: { type: Schema.Types.String, required: false },
     approvalDate: { type: Schema.Types.Date, required: false },
-    approvalId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
+    approvalId: { type: Schema.Types.Number, required: false },
 }, { timestamps: true });
 
 // declare a model
