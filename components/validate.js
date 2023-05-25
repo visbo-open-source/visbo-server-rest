@@ -92,6 +92,9 @@ var validateObjectId = function(id, allowEmpty) {
 // check if email has invalid content
 // validate a string to prevent XSS
 var validateEmail = function(email, allowEmpty) {
+	if (allowEmpty && !email) {
+		return true;
+	}
 	if (!allowEmpty && !email) {
 		logger4js.trace('Check Name: Name is empty!', email);
 		return false;
