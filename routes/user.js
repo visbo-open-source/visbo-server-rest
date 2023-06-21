@@ -8,7 +8,9 @@ var jwtSecret = require('./../secrets/jwt');
 
 // var assert = require('assert');
 var auth = require('./../components/auth');
+var verifyVc = require('./../components/verifyVc');
 var User = mongoose.model('User');
+var VisboCenter = mongoose.model('VisboCenter');
 var errorHandler = require('./../components/errorhandler').handler;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 var createTimeEntry = require('./../components/timeTracker').createTimeEntry;
@@ -45,6 +47,9 @@ var isValidPassword = function (user, password) {
 
 //Register the authentication middleware
 router.use('/', auth.verifyUser);
+// router.use('/timeTracker', verifyVc.getVC);
+// // register the base line middleware to get the VC Settings if necessary
+// router.use('/timeTracker', verifyVc.getVCSetting);
 
 /////////////////
 // Profile API
@@ -547,15 +552,79 @@ router.route('/timetracker/:id')
 	.get(async function (req, res) {
 		req.auditDescription = 'Time tracker Read';
 		req.auditTTLMode = 1;
+		var userVCs = [];
+
+		// get all VisboCenter the user UserId has access to
+		try {
+			var userId = req.decoded._id;
+			var isSysAdmin = req.query.sysadmin ? true : false;
+	
+			req.auditDescription = 'VISBO Center Read';
+			req.auditSysAdmin = isSysAdmin;
+			req.auditTTLMode = 1;
+	
+			logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
+	
+			var query = {};
+				
+			// check for deleted only for sysAdmins
+			if (isSysAdmin && req.query.deleted) {
+				query.deletedAt = {$exists: true};				//  deleted
+			} else {
+				query.deletedAt = {$exists: false};				// Not deleted
+			}
+			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
+			logger4js.trace('Check for VC query %O', query);
+	
+			var queryVC = VisboCenter.find(query);
+			queryVC.select('-users');
+			queryVC.exec(function (err, listVC) {
+				if (err) {
+					errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
+					return;
+				}
+				logger4js.debug('Found VCs %d', listVC.length);
+				req.auditInfo = listVC.length;
+				userVCs = listVC;
+	
+			});
+		} catch (error) {
+			logger4js.error('Error in get VisboCenter: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
+		}
+
+
 		try {
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
+			var userSettings = [];
 			var settings = await getSettings(req.decoded.email);
-			if (settings.length > 0) {
+			// reduce the list of Settings to only those the user has access to and the newest Orga of a VisboCenter
+			settings.forEach(oneSett => {
+				const vcIndex = userVCs.findIndex(item => item._id.toString() == oneSett.vcid.toString());
+				if ((vcIndex >= 0) ) {
+					const doubleIndex = userSettings.findIndex(item => (item.vcid.toString() == oneSett.vcid.toString()));
+					if (( doubleIndex < 0)) {
+						userSettings.push(oneSett);
+					} else {
+						// only take the newest Orga
+						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom)< new Date(oneSett.value.validFrom))) {
+							userSettings.splice(doubleIndex, 1, oneSett);
+						}
+					}				
+				}
+			});
+
+			if (userSettings.length > 0) {
 				const managerView = [];
-				for (let setting of settings) {
+				for (let setting of userSettings) {
 					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
 					var subRoles = await findSubRolesTimeTracker(filteredList);
-					managerView.push(subRoles);
+					if (subRoles.length > 0) {
+						managerView.push(subRoles);
+					}
 				}
 
 				var userView = await getTimeEntry(req.params.id);
