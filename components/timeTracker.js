@@ -66,19 +66,66 @@ async function findEntry(id) {
 }
 
 async function getSettings(email) {
-    var settings = await VCSettings.find({ 'value.allRoles': { $elemMatch: { email: email, isSummaryRole: true } } });
-    return settings;
+    var settingList = await VCSettings.find({ 'value.allRoles': { $elemMatch: { email: email, isSummaryRole: true } } });
+    return settingList;
+}
+
+
+function isOrgaRoleinternPerson(role) {
+    const isSummaryRole = role && role.isSummaryRole? role.isSummaryRole : false;
+    const hasSubRoles = role && role.subRoleIDs? (role.subRoleIDs?.length <= 0) : false;
+    const isExternal = role && role.isExternRole? role.isExternRole : false;
+    const result = (!isSummaryRole && !hasSubRoles && !isExternal);
+	return result;
+}
+
+function generateIndexedRoles(allRoles) {
+	let listOrga = [];
+	if (!allRoles) {
+		return listOrga;
+	}
+	allRoles.forEach(role => {
+		listOrga[role.uid] = role;
+	});
+	return listOrga;
 }
 
 async function filterSubRoles(list, email, vcid) {
     const subRolesList = [];
-    list.forEach((item) => {
+    let listSubRoles = [];
+    let subRolesFound = [];
+    let listOrga = generateIndexedRoles(list);
+    
+    list.forEach(item => {
         if (item.isSummaryRole === true && item.email === email) {
-            subRolesList.push({ vcid: vcid, subRoles: item.subRoleIDs });
+            const hSubRoles = item.subRoleIDs;
+            hSubRoles.forEach( hsr => listSubRoles.push(listOrga[hsr.key]));
+            checkallSubroles(listSubRoles, listOrga, subRolesFound);
         }
-    });
+    })
+
+    function checkallSubroles(subRoleslist, listOrga, srFound) {        
+        let srlist = [];
+        subRoleslist?.forEach( sr => {
+            let role = listOrga[sr.uid];
+            if (isOrgaRoleinternPerson(role) && !subRolesFound.includes(role)) {
+                subRolesFound.push(role)
+            } else {
+                const hSub = role.subRoleIDs;
+                hSub?.forEach(hsr => srlist.push(listOrga[hsr.key]));
+            }                    
+        })
+        srFound = srFound.concat(subRolesFound);  
+        if (srlist.length > 0) {             
+            checkallSubroles(srlist, listOrga, srFound);
+        } 
+    }
+
+    subRolesList.push({ vcid: vcid.toString(), subRoles: subRolesFound });    
     return subRolesList;
 }
+
+
 
 async function findSubRolesTimeTracker(roles) {
     const subRoleEntries = [];
@@ -92,7 +139,7 @@ async function findSubRolesTimeTracker(roles) {
 async function parseRoles(lists) {
     const arrayList = [];
     for (let item of lists.subRoles) {
-        const timeTracker = await TimeTracker.find({ roleId: item.key, status: 'No', vcid: lists.vcid });
+        const timeTracker = await TimeTracker.find({ roleId: item.uid, status: 'No', vcid: lists.vcid });
         if (timeTracker) {
             arrayList.push(timeTracker);
         }
