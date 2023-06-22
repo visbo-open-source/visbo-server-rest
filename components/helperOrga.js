@@ -75,12 +75,12 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (role.email) {
 			newRole.email = role.email;
 		} 
-		if (!newRole.isSummaryRole && !newRole.email) {
-			errorstring = `Orga Role has to have email: uid: ${newRole.uid} email: ${newRole.dailyRate}`;
-			listError?.push(errorstring);
-			logger4js.info('InitOrga: ', errorstring);
-			isOrgaValid = false;
-		}	
+		// if (!newRole.isSummaryRole && !newRole.email) {
+		// 	errorstring = `Orga Role has to have email: uid: ${newRole.uid} email: ${newRole.dailyRate}`;
+		// 	listError?.push(errorstring);
+		// 	logger4js.info('InitOrga: ', errorstring);
+		// 	isOrgaValid = false;
+		// }	
 		newRole.dailyRate = role.dailyRate;
 		// check Rule3: orga units need to have a valid dailyRate
 		if (!(newRole.dailyRate >= 0)) {
@@ -342,7 +342,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		if (role.isSummaryRole || role.isExternRole || role.type == 3 || role.type == 2){		// ???? TODO UR	
 			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`email not accepted: ${role.email || ''}`);}
 		} else {
-			if (!validate.validateEmail(role.email, false)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
+					// ???? TODO UR	 - change true into false
+			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
 		}		
 		if (role.type == undefined) {
 			role.type = 1;
