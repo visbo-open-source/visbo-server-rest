@@ -55,8 +55,12 @@ async function validateStatus(id) {
     }
 }
 
-async function getTimeEntry(userId) {
-    var timeEntry = TimeTracker.find({ userId: userId });
+async function getTimeEntry(userId, status) {
+    if (status) {
+        var timeEntry = TimeTracker.find({ userId: userId , status: status});
+    } else {
+        var timeEntry = TimeTracker.find({ userId: userId });
+    }    
     return timeEntry ? timeEntry : [];
 }
 

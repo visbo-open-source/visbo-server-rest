@@ -627,20 +627,36 @@ router.route('/timetracker/:id')
 					}
 				}
 
-				var userView = await getTimeEntry(req.params.id);
-				return res.status(200).send({
-					state: 'success',
-					message: 'Time tracker data retrieved for manager',
-					managerView: managerView ? managerView.flat() : [],
-					timeEntries: userView
-				});
+				var userView = await getTimeEntry(req.params.id);	
+				const userViewWithAccess = [];		
+				userView.forEach(userVtr => {
+					const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
+					if (vcIndex > -1) {
+						userViewWithAccess.push(userVtr)
+					}
+				} );				
+				if (userViewWithAccess ) {
+					return res.status(200).send({
+						state: 'success',
+						message: 'Time tracker data retrieved for manager',
+						managerView: managerView ? managerView.flat() : [],
+						timeEntries: userViewWithAccess
+					});
+				}
 			} else {
-				var timeEntries = await getTimeEntry(req.params.id);
-				if (timeEntries) {
+				var timeEntries = await getTimeEntry(req.params.id, "Yes");								
+				const timeEntriesWithAccess = [];		
+				timeEntries.forEach(userVtr => {
+					const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
+					if (vcIndex > -1)  {
+						timeEntriesWithAccess.push(userVtr)
+					}
+				} );				
+				if (timeEntriesWithAccess) {
 					return res.status(200).send({
 						state: 'success',
 						message: 'Time tracker data retrived for user',
-						timeEntries: timeEntries
+						timeEntries: timeEntriesWithAccess
 					});
 				}
 				logger4js.error('Time tracker data not found with id %s', req.params.id);
