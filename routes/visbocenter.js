@@ -26,6 +26,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VCSetting = mongoose.model('VCSetting');
 var VCCapacity = mongoose.model('VCCapacity');
+var TimeTracker = mongoose.model('TimeTracker');
 var PredictKM = mongoose.model('PredictKM');
 var VisboAudit = mongoose.model('VisboAudit');
 
@@ -145,6 +146,21 @@ var unDeleteGroup = function(vcid){
 		logger4js.trace('Updated Groups for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
 	});
 };
+
+// undelete the TimeTracker Records after undelete VC
+var unDeleteTimeTracker = function(vcid){	
+	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}};
+
+	logger4js.debug('Update TimeTracker Records for VC %s ', vcid);
+	TimeTracker.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			errorHandler(err, undefined, `DB: Problem updating TimeTracker Records for VC ${vcid} set undelete`, undefined);
+		}
+		logger4js.trace('Updated TimeTracker Records for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
+	});
+}
 
 // populate _VCConfig Setting from System to all VCs
 var populateVCConfig = function(vcSetting, type) {
@@ -611,6 +627,7 @@ router.route('/:vcid')
 					logger4js.debug('VC PUT %s: Undelete VC and VPs', oneVC._id);
 					unDeleteVP(oneVC._id, oneVC.name);
 					unDeleteGroup(oneVC._id);
+					unDeleteTimeTracker(oneVC._id);
 				}
 				return res.status(200).send({
 					state: 'success',
@@ -693,10 +710,21 @@ router.route('/:vcid')
 							return;
 						}
 						logger4js.debug('VC Delete found %d Groups and updated %d Groups', result.n, result.nModified);
-						return res.status(200).send({
-							state: 'success',
-							message: 'Deleted VISBO Center'
-						});
+						// new URK
+						updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};		
+						var updateUpdate = {$set: {'vc.deletedAt': deleteDate}};
+						var updateOption = {upsert: false, multi: 'true'};
+						TimeTracker.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+							if (err){
+								errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update TimeTracker Records`, `Error deleting VISBO Center ${req.oneVC.name}`);
+								return;
+							}
+							return res.status(200).send({
+								state: 'success',
+								message: 'Deleted VISBO Center'
+							});
+						}); 
+						// new URK
 					});
 				});
 			});
@@ -767,6 +795,14 @@ router.route('/:vcid')
 					logger4js.info('VC Destroy: %s VC Capacities Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 
+				// Delete all TimeRecords of this vcid
+				TimeTracker.deleteMany(queryvcid, function (err, result) {
+					if (err){
+						logger4js.error('DB: Destroy VC %s, Problem deleting TimeTracker Records %s', req.oneVC._id, err.message);
+					}
+					logger4js.info('VC Destroy: TimeTracker Records of VC  %s Deleted %d', req.oneVC._id, result?.deletedCount);
+				});
+
 				// Delete all Groups
 				VisboGroup.deleteMany(queryvcid, function (err, result) {
 					if (err){
@@ -784,6 +820,7 @@ router.route('/:vcid')
 					}
 					logger4js.info('VC Destroy: %s VC Audit Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
+
 				// Delete the VC  itself
 				var queryvc = {_id: req.oneVC._id};
 				VisboCenter.deleteOne(queryvc, function (err, result) {

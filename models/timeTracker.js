@@ -5,6 +5,9 @@ var timeTracker = new mongoose.Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     vpid: { type: Schema.Types.ObjectId, ref: 'VisboProject', required: true },
     vcid: { type: Schema.Types.ObjectId, ref: 'VisboCenter', required: true },
+	vc: {
+		deletedAt: {type: Date, required: false}
+	},
     roleId: { type: Schema.Types.Number, required: true },
     date: { type: Schema.Types.Date, required: true },
     time: { type: Schema.Types.Decimal128, required: true },
