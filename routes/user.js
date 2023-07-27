@@ -9,6 +9,7 @@ var jwtSecret = require('./../secrets/jwt');
 // var assert = require('assert');
 var auth = require('./../components/auth');
 var verifyVc = require('./../components/verifyVc');
+var verifyVg = require('./../components/verifyVg');
 var User = mongoose.model('User');
 var VisboCenter = mongoose.model('VisboCenter');
 var errorHandler = require('./../components/errorhandler').handler;
@@ -18,12 +19,18 @@ var updateTimeEntry = require('./../components/timeTracker').updateTimeEntry;
 var updateMany = require('./../components/timeTracker').updateMany;
 var deleteTimeEntry = require('./../components/timeTracker').deleteTimeEntry;
 var getTimeEntry = require('./../components/timeTracker').getTimeEntry;
+var getTimeTrackerRecords= require('./../components/timeTracker').getTimeTrackerRecords;
 var getSettings = require('./../components/timeTracker').getSettings;
 var findEntry = require('./../components/timeTracker').findEntry;
 var filterSubRoles = require('./../components/timeTracker').filterSubRoles;
 var findSubRolesTimeTracker = require('./../components/timeTracker').findSubRolesTimeTracker;
 var verifyManager = require('./../components/timeTracker').verifyManager;
 
+
+// var ConstPerm = require('../models/constPerm');
+// var constPermVC = ConstPerm.constPermVC;
+// var constPermVP = ConstPerm.constPermVP;
+// var constPermSystem = ConstPerm.constPermSystem;
 
 var mail = require('../components/mail');
 var eMailTemplates = '/../emailTemplates/';
@@ -45,11 +52,12 @@ var isValidPassword = function (user, password) {
 	return bCrypt.compareSync(password, user.password);
 };
 
-//Register the authentication middleware
+// Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
-// router.use('/timeTracker', verifyVc.getVC);
-// // register the base line middleware to get the VC Settings if necessary
-// router.use('/timeTracker', verifyVc.getVCSetting);
+// Register the VC middleware to check the vcid param
+router.param('vcid', verifyVc.getVC);
+// Register the UserId middleware to check the userid param
+router.param('userid', verifyVg.checkUserId);
 
 /////////////////
 // Profile API
@@ -555,85 +563,85 @@ router.route('/timetracker/:id')
 		var userVCs = [];
 
 		// get all VisboCenter the user UserId has access to
-		try {
-			var userId = req.decoded._id;
-			var isSysAdmin = req.query.sysadmin ? true : false;
+			// var userId = req.decoded._id;
+			// var isSysAdmin = req.query.sysadmin ? true : false;
 	
-			req.auditDescription = 'VISBO Center Read';
-			req.auditSysAdmin = isSysAdmin;
-			req.auditTTLMode = 1;
+			// req.auditDescription = 'VISBO Center Read';
+			// req.auditSysAdmin = isSysAdmin;
+			// req.auditTTLMode = 1;
 	
-			logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
+			// logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
 	
-			var query = {};
+			// var query = {};
 				
-			// check for deleted only for sysAdmins
-			if (isSysAdmin && req.query.deleted) {
-				query.deletedAt = {$exists: true};				//  deleted
-			} else {
-				query.deletedAt = {$exists: false};				// Not deleted
-			}
-			query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
-			logger4js.trace('Check for VC query %O', query);
+			// // check for deleted only for sysAdmins
+			// if (isSysAdmin && req.query.deleted) {
+			// 	query.deletedAt = {$exists: true};				//  deleted
+			// } else {
+			// 	query.deletedAt = {$exists: false};				// Not deleted
+			// }
+			// query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
+			// logger4js.trace('Check for VC query %O', query);
 	
-			var queryVC = VisboCenter.find(query);
-			queryVC.select('-users');
-			queryVC.exec(function (err, listVC) {
-				if (err) {
-					errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
-					return;
-				}
-				logger4js.debug('Found VCs %d', listVC.length);
-				req.auditInfo = listVC.length;
-				userVCs = listVC;
-	
-			});
-		} catch (error) {
-			logger4js.error('Error in get VisboCenter: %O', error);
-			return res.status(500).send({
-				state: 'error',
-				message: error
-			});
-		}
+			// var queryVC = VisboCenter.find(query);
+			// queryVC.select('-users');
+			// queryVC.exec(function (err, listVC) {
+			// 	if (err) {
+			// 		errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
+			// 		return;
+			// 	}
+			// 	logger4js.debug('Found VCs %d', listVC.length);
+			// 	req.auditInfo = listVC.length;
+			// 	userVCs = listVC;					
+			// 	userVCs.forEach( item => {		
+			// 		console.log("VC the user %s has access: %s", req.decoded.email, item.name);
+			// 	});
 
+			// });
 
-		try {
+		
+		try {			
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
 			var userSettings = [];
 			var settings = await getSettings(req.decoded.email);
 			// reduce the list of Settings to only those the user has access to and the newest Orga of a VisboCenter
 			settings.forEach(oneSett => {
-				const vcIndex = userVCs.findIndex(item => item._id.toString() == oneSett.vcid.toString());
-				if ((vcIndex >= 0) ) {
+				// const vcIndex = userVCs.findIndex(item => item._id.toString() == oneSett.vcid.toString());
+				// if ((vcIndex >= 0) ) {					
+				// 	console.log("VisboCenter: Name: %s  VCID: %s", userVCs[vcIndex].name, oneSett.vcid.toString());
 					const doubleIndex = userSettings.findIndex(item => (item.vcid.toString() == oneSett.vcid.toString()));
 					if (( doubleIndex < 0)) {
 						userSettings.push(oneSett);
 					} else {
 						// only take the newest Orga
-						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom)< new Date(oneSett.value.validFrom))) {
-							userSettings.splice(doubleIndex, 1, oneSett);
+						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom) < new Date(oneSett.value.validFrom))) {
+							userSettings.splice(doubleIndex, 1, oneSett);										
+							console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
 						}
 					}				
-				}
+				// }
 			});
 
 			if (userSettings.length > 0) {
 				const managerView = [];
 				for (let setting of userSettings) {
 					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
+
 					var subRoles = await findSubRolesTimeTracker(filteredList);
 					if (subRoles.length > 0) {
 						managerView.push(subRoles);
 					}
 				}
 
-				var userView = await getTimeEntry(req.params.id);	
+				
+				var userView = await getTimeEntry(req.params.id);
 				const userViewWithAccess = [];		
 				userView.forEach(userVtr => {
-					const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					if (vcIndex > -1) {
+					// const vcTimeEntries = getTimeTrackerRecords(userVtr.vcid.toString(), userVtr.vpid.toString(), req.params.id, 'Yes');
+					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
+					// if (vcIndex > -1) {
 						userViewWithAccess.push(userVtr)
-					}
+					//}
 				} );				
 				if (userViewWithAccess ) {
 					return res.status(200).send({
@@ -644,13 +652,14 @@ router.route('/timetracker/:id')
 					});
 				}
 			} else {
-				var timeEntries = await getTimeEntry(req.params.id, "Yes");								
+				var timeEntries = await getTimeEntry(req.params.id, "Yes");	
+				// var testEntries = await getTimeTrackerRecords(timeEntries[0].vcid, timeEntries[0].vpid, timeEntries[0].userId, 'Yes');						
 				const timeEntriesWithAccess = [];		
 				timeEntries.forEach(userVtr => {
-					const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					if (vcIndex > -1)  {
+					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
+					// if (vcIndex > -1)  {
 						timeEntriesWithAccess.push(userVtr)
-					}
+					//}
 				} );				
 				if (timeEntriesWithAccess) {
 					return res.status(200).send({
