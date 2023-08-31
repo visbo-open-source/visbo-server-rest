@@ -534,8 +534,8 @@ router.route('/')
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
 				if (longList){
-					// deliver the short info in addition with AllPhases and customFields (Ute)
-					queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName AllPhases description updatedAt createdAt deletedAt');
+					// deliver the short info in addition with AllPhases hierrchy (10.08.2023) and customFields (Ute)
+					queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName AllPhases hierarchy description updatedAt createdAt deletedAt');
 				} else {
 					// deliver only the short info about project versions + customFields (Ute)
 					queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
@@ -963,6 +963,7 @@ router.route('/:vpvid')
 			vpUndelete = true;
 			logger4js.debug('Undelete VPV %s', req.oneVPV._id);
 		}
+		
 		if (!vpUndelete) {
 			return res.status(400).send({
 				state: 'failure',
