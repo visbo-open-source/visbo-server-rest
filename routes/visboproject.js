@@ -332,7 +332,7 @@ var updatePermAddVP = function(vcid, vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating global Groups add VP for VC ${vcid}`, undefined);
 		}
-		logger4js.debug('Updated VC %s Groups with VP %s changed %d %d', vcid, vpid, result.n, result.Modified);
+		logger4js.debug('Updated VC %s Groups with VP %s changed %d %d', vcid, vpid, result.n, result.nModified);
 	});
 };
 
