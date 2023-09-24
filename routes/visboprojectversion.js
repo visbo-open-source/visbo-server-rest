@@ -436,9 +436,10 @@ router.route('/')
 				logger4js.debug('Variant Query String :%s:', variantName);
 				queryvpv.variantName = {$in: variantName.split(',')};
 			}
-			if (keyMetrics){
-				longList = false;
-			}
+			// Ute changed
+			// if (keyMetrics){
+			// 	longList = false;
+			// }
 		}
 
 		logger4js.debug('Get Project Versions for user %s for %d VPs Variant %s, timestamp %O latestOnly %s', userId, vpidList.length, queryvpv.variantName, queryvpv.timestamp, latestOnly);
@@ -532,12 +533,19 @@ router.route('/')
 			queryvpvids._id = {$in: vpvidsList};
 			var queryVPV = VisboProjectVersion.find(queryvpvids);
 			if (keyMetrics) {
-				// deliver only the short info about project versions + customFields (Ute)
-				queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
+				if (longList){
+					// deliver the short info in addition with AllPhases hierrchy (10.08.2023) and customFields (Ute)
+					queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName AllPhases hierarchy description updatedAt createdAt deletedAt');
+				} else {
+					// deliver only the short info about project versions + customFields (Ute)
+					queryVPV.select('_id vpid name timestamp keyMetrics Erloes status startDate endDate actualDataUntil ampelStatus ampelErlaeuterung variantName customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
+				}			
+				
 			} else if (!longList) {
 				// deliver only the short info about project versions
 				if (reducedPerm) {
-					queryVPV.select('_id vpid name timestamp variantName description customDblFields customStringFields customBoolFields updatedAt createdAt deletedAt');
+					// queryVPV.select('_id vpid name timestamp variantName description customDblFields customStringFields customBoolFields updatedAt createdAt deletedAt');
+					queryVPV.select('_id vpid name timestamp variantName description updatedAt createdAt deletedAt');
 				} else {
 					queryVPV.select('_id vpid name timestamp variantName startDate endDate status ampelStatus customDblFields customStringFields customBoolFields VorlagenName description updatedAt createdAt deletedAt');
 				}
@@ -955,6 +963,7 @@ router.route('/:vpvid')
 			vpUndelete = true;
 			logger4js.debug('Undelete VPV %s', req.oneVPV._id);
 		}
+		
 		if (!vpUndelete) {
 			return res.status(400).send({
 				state: 'failure',
