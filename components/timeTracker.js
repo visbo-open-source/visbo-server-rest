@@ -151,6 +151,14 @@ function generateIndexedRoles(allRoles) {
 	return listOrga;
 }
 
+function generateIndexedTimeRecords(timerecordList) {
+    var indexedTimeRecords = [];
+    timerecordList.forEach(item => {
+        indexedTimeRecords[item.vpid + ' : ' + item.roleId + ' : ' + item.date.toString()] = item;        
+    });
+    return indexedTimeRecords;
+}
+
 async function filterSubRoles(list, email, vcid) {
     const subRolesList = [];
     let listSubRoles = [];
@@ -233,5 +241,7 @@ module.exports = {
     filterSubRoles,
     getSettings,
     findSubRolesTimeTracker,
-    findEntry
+    findEntry,
+    generateIndexedTimeRecords,
+    isOrgaRoleinternPerson
 };

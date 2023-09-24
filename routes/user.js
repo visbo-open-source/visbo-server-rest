@@ -541,18 +541,18 @@ router.route('/timetracker/:id')
 			{
 				'_id': '5a1f1b0b1c9d440000e1b1b1',
 				'userId': '5a1f1b0b1c9d440000e1b1b1',
-				'vpid': 'John Doe',
-				'vpvid': 'johndoe@email.com',
-				'vcid': 'John Doe',
-				'roleId': '5a1f1b0b1c9d440000e1b1b1',
+				'vpid': '643ff73ec4a4a77b80260ee8',				
+				'vcid': '643feaa7c4a4a77b8026020d',
+				'roleId': '12',
 				'date': '2017-11-30T00:00:00.000Z',
 				'time': 5.5,
-				'notes': 'John Doe',
+				'name': 'John Doe',
+				'status': 'No/Yes',
+				'notes': 'lorum ipsum',
 				'approvalDate': '2017-11-30T00:00:00.000Z',
 				'approvalId': '5a1f1b0b1c9d440000e1b1b1',
-				'status': 'Not Started',
-				'aggreUID': '5a1f1b0b1c9d440000e1b1b1',
-				'aggreDate': '2017-11-30T00:00:00.000Z',
+				'createdAt': '2023-05-22T09:05:34.295Z',
+				'updatedAt': '2023-05-23T09:10:34.295Z',
 			}...
 		]
 		* }
