@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 
 module.exports = {
@@ -14,5 +15,5 @@ module.exports = {
 		'expiresIn': 900
 	},
 	internalEncryption:
-		{ 'secret': process.env.INTERNAL_ENCRYPTION }
+		{ 'secret': 'M}*/n5jg3P1KLro0)_1-81?/ORBG;W0.' }
 };
