@@ -284,6 +284,12 @@ function launchServer() {
 
 // setup environment variables
 environment.config();
+console.log('NODE_ENV %s', process.env.NODE_ENV);
+console.log('INTERNAL_ENCRYPTION %s', process.env.INTERNAL_ENCRYPTION);
+console.log('REGISTER_SECRET %s', process.env.REGISTER_SECRET);
+console.log('ADMIN_SECRET %s', process.env.ADMIN_SECRET);
+console.log('USER_SECRET %s', process.env.USER_SECRET);
+
 
 // start express app
 var app = express();
