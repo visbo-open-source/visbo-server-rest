@@ -151,12 +151,21 @@ function generateIndexedRoles(allRoles) {
 	return listOrga;
 }
 
-function generateIndexedTimeRecords(timerecordList) {
+function generateIndexedTimeRecords(timerecordList, returnVPIDlist) {
     var indexedTimeRecords = [];
-    timerecordList.forEach(item => {
-        indexedTimeRecords[item.vpid + ' : ' + item.roleId + ' : ' + item.date.toString()] = item;        
+    var vpIDList = [];
+    timerecordList?.forEach(item => {
+        if (!indexedTimeRecords[item.vpid]) {
+            vpIDList.push(item.vpid);
+            indexedTimeRecords[item.vpid] = [];
+        }
+        indexedTimeRecords[item.vpid].push(item) ;        
     });
-    return indexedTimeRecords;
+    if (returnVPIDlist) {
+        return vpIDList;
+    } else {
+        return indexedTimeRecords; 
+    }
 }
 
 async function filterSubRoles(list, email, vcid) {
@@ -211,7 +220,9 @@ async function findSubRolesTimeTracker(roles) {
 async function parseRoles(lists) {
     const arrayList = [];
     for (let item of lists.subRoles) {
-        const timeTracker = await TimeTracker.find({ roleId: item.uid, status: 'No', vcid: lists.vcid });
+        // only entries with status NO
+        //const timeTracker = await TimeTracker.find({ roleId: item.uid, status: 'No', vcid: lists.vcid });
+        const timeTracker = await TimeTracker.find({ roleId: item.uid, vcid: lists.vcid });
         if (timeTracker) {
             arrayList.push(timeTracker);
         }
