@@ -151,7 +151,7 @@ router.route('/user/login')
 		logger4js.debug('Try to Login %s', req.body.email);
 		logger4js.debug('Login Headers %O', req.headers);
 		var lang = validate.evaluateLanguage(req);
-    logger4js.debug('The Accepted Language is: ' + lang);
+    	logger4js.debug('The Accepted Language is: ' + lang);
 		if (!req.body.email || !req.body.password){
 			logger4js.debug('Authentication Missing email or password %s', req.body.email);
 			return res.status(400).send({
@@ -163,7 +163,7 @@ router.route('/user/login')
 		req.visboUserAgent = visboShortUA(req.headers['user-agent']);
 		logger4js.debug('Shortened User Agent ', req.visboUserAgent);
 
-		visbouser.findOne({ 'email' : req.body.email }, function(err, user) {
+		visbouser.findOne({ 'email' : req.body.email }, async function(err, user) {
 			if (err) {
 				errorHandler(err, res, `DB: POST Login ${req.body.email} Find `, 'Error Login Failed');
 				return;
@@ -260,7 +260,17 @@ router.route('/user/login')
 				logger4js.debug('Try to Login %s username&password accepted', req.body.email);
 				var passwordCopy = user.password;
 				user.password = undefined;
-				if (!user.status) user.status = {};
+				if (!user.status) user.status = {};		
+						
+				// set  the status isApprover 
+				//console.log("vor auth.isApprover: ",user.status.isApprover);
+				if (await auth.isApprover(user.email)) {
+					user.status.isApprover = true;
+				} else {
+					user.status.isApprover = false;
+				}						
+				//console.log("nach auth.isApprover:", user.status.isApprover);		
+
 				// add info about the session ip and userAgent to verify during further requests to avoid session steeling
 				user.session = {};
 				user.session.ip = req.headers['x-real-ip'] || req.ip;
@@ -276,7 +286,7 @@ router.route('/user/login')
 				// jwt.sign(user.toJSON(), jwtSecret.user.secret,
 				jwt.sign(userReduced, jwtSecret.user.secret,
 					{ expiresIn: jwtSecret.user.expiresIn },
-					function(err, token) {
+					async function(err, token) {
 						if (err) {
 							logger4js.error('JWT Signing Error %s ', err.message);
 							return res.status(500)({
@@ -286,9 +296,14 @@ router.route('/user/login')
 							});
 						}
 						logger4js.trace('JWT Signing Success ');
-						// set the last login and reset the password retries
 
+						// set  the status isApprover and the last login and reset the password retries
 						if (!user.status) user.status = {};
+						if (await auth.isApprover(user.email)) {
+							user.status.isApprover = true;
+						} else {
+							user.status.isApprover = false;
+						}					
 						if (!user.status.loginRetries) user.status.loginRetries = 0;
 						var lastLoginAt = user.status.lastLoginAt || currentDate;
 						user.status.lastLoginAt = currentDate;
@@ -324,6 +339,7 @@ router.route('/user/login')
 							logger4js.trace('User before Filter %s User Agents %s', expiredAt, JSON.stringify(user.userAgents));
 							user.userAgents = user.userAgents.filter(userAgents => ( userAgents.lastUsedAt >= expiredAt ));
 						}
+
 						logger4js.trace('User before Save User Agents %s', JSON.stringify(user.userAgents));
 						user.save(function(err, user) {
 							if (err) {

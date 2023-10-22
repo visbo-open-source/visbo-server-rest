@@ -37,9 +37,16 @@ It will download all the dependencies.<br><br>
 
 <b>5. Install redis server</b>
 
-		the ReST Server needs the redis server for caching specific entries like log settings or systemVC id. Install it and start it before ReST Server is started
+The ReST Server needs the redis server for caching specific entries like log settings or systemVC id. Install it and start it before ReST Server is started.
 
-		
+Example using Docker
+https://www.docker.com/ :
+
+	npm run docker:network
+	npm run docker:redis
+	npm run docker:rest-up
+
+
 <b>6. Now run the command</b>
 
 	npm start

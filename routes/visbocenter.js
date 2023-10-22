@@ -26,6 +26,7 @@ var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VCSetting = mongoose.model('VCSetting');
 var VCCapacity = mongoose.model('VCCapacity');
+var TimeTracker = mongoose.model('TimeTracker');
 var PredictKM = mongoose.model('PredictKM');
 var VisboAudit = mongoose.model('VisboAudit');
 
@@ -68,6 +69,11 @@ router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
 router.use('/:vcid/organisation', verifyVc.getVCOrgs);
 // get details for capa per role
 router.use('/:vcid/capa', verifyVc.getVCOrgs);
+// get details for TimeTracking calculation
+router.use('/:vcid/timetracking', verifyVp.getAllGroups);
+router.use('/:vcid/timetracking', verifyVc.getVCOrgs);
+router.use('/:vcid/timetracking', verifyVc.getVCVP);
+router.use('/:vcid/timetracking', verifyVpv.getVCVPVs);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 router.use('/', verifyVg.getVCGroups);
@@ -145,6 +151,21 @@ var unDeleteGroup = function(vcid){
 		logger4js.trace('Updated Groups for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
 	});
 };
+
+// undelete the TimeTracker Records after undelete VC
+var unDeleteTimeTracker = function(vcid){	
+	var updateQuery = {vcid: vcid, 'vc.deletedAt': {$exists: true}};
+	var updateOption = {upsert: false};
+	var updateUpdate = {$unset: {'vc.deletedAt': new Date()}};
+
+	logger4js.debug('Update TimeTracker Records for VC %s ', vcid);
+	TimeTracker.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+		if (err){
+			errorHandler(err, undefined, `DB: Problem updating TimeTracker Records for VC ${vcid} set undelete`, undefined);
+		}
+		logger4js.trace('Updated TimeTracker Records for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
+	});
+}
 
 // populate _VCConfig Setting from System to all VCs
 var populateVCConfig = function(vcSetting, type) {
@@ -611,6 +632,7 @@ router.route('/:vcid')
 					logger4js.debug('VC PUT %s: Undelete VC and VPs', oneVC._id);
 					unDeleteVP(oneVC._id, oneVC.name);
 					unDeleteGroup(oneVC._id);
+					unDeleteTimeTracker(oneVC._id);
 				}
 				return res.status(200).send({
 					state: 'success',
@@ -693,10 +715,21 @@ router.route('/:vcid')
 							return;
 						}
 						logger4js.debug('VC Delete found %d Groups and updated %d Groups', result.n, result.nModified);
-						return res.status(200).send({
-							state: 'success',
-							message: 'Deleted VISBO Center'
-						});
+						// new URK
+						updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};		
+						var updateUpdate = {$set: {'vc.deletedAt': deleteDate}};
+						var updateOption = {upsert: false, multi: 'true'};
+						TimeTracker.updateMany(updateQuery, updateUpdate, updateOption, function (err, result) {
+							if (err){
+								errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update TimeTracker Records`, `Error deleting VISBO Center ${req.oneVC.name}`);
+								return;
+							}
+							return res.status(200).send({
+								state: 'success',
+								message: 'Deleted VISBO Center'
+							});
+						}); 
+						// new URK
 					});
 				});
 			});
@@ -767,6 +800,14 @@ router.route('/:vcid')
 					logger4js.info('VC Destroy: %s VC Capacities Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
 
+				// Delete all TimeRecords of this vcid
+				TimeTracker.deleteMany(queryvcid, function (err, result) {
+					if (err){
+						logger4js.error('DB: Destroy VC %s, Problem deleting TimeTracker Records %s', req.oneVC._id, err.message);
+					}
+					logger4js.info('VC Destroy: TimeTracker Records of VC  %s Deleted %d', req.oneVC._id, result?.deletedCount);
+				});
+
 				// Delete all Groups
 				VisboGroup.deleteMany(queryvcid, function (err, result) {
 					if (err){
@@ -784,6 +825,7 @@ router.route('/:vcid')
 					}
 					logger4js.info('VC Destroy: %s VC Audit Deleted %d', req.oneVC._id, result?.deletedCount);
 				});
+
 				// Delete the VC  itself
 				var queryvc = {_id: req.oneVC._id};
 				VisboCenter.deleteOne(queryvc, function (err, result) {
@@ -1908,6 +1950,175 @@ router.route('/:vcid/group/:groupid/user/:userid')
 			});
 		});
 	});
+
+router.route('/:vcid/timetracking')
+	/**
+		* @api {post} /vc/:vcid/timetracking Create TimeTracking
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Permission
+		* @apiName PostVISBOCenterTimeTracking
+		* @apiHeader {String} access-key User authentication token.
+		* @apiParam {String} vcid The requested VISBO Center ID.
+		* @apiDescription Post creates new ProjectVersions for the projects of the VISBO Center. 
+		*
+		* @apiPermission Authenticated and VC.View and VC.Modify and VP.Modify  Permission for the VISBO Center.
+		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+		* @apiError {number} 400 
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to Create the VISBO ProjectVersions
+		* @apiError {number} 409 VISBO Project Versions Conflict
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/timetracker
+		*  {
+		*     'name':'User Name',
+		*	  'from':'2019-01-19T11:04:12.094Z'
+		*	  'to':'2019-012-19T11:04:12.094Z'
+		*     'permission': {vc: 307 }
+		*  }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Project Versions',
+		*   'vpv': [{
+	 	*     '_id':'vpv5c754feaa',
+		*     'timestamp': '2019-03-19T11:04:12.094Z',
+		*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+		*     ...
+	 	*   }]
+		* }
+		*/
+
+	// Process in a VISBO Center TimetrackerRecords
+	.post(function(req, res) {
+		// User is authenticated already
+		var userId = req.decoded._id;
+		var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
+		var groupType;
+		var checkSystemPerm = false;
+
+		req.body.name = req.body.name ? req.body.name.trim() : '';		
+		
+		if (req.body.name) req.body.name = req.body.name.trim();
+
+		req.auditDescription = 'VISBO Center TimeTracking';
+		req.auditInfo = req.body.name;
+	
+
+		logger4js.info('Process a VISBO Center TimeTracking executed by user %s ', req.body.name, userId);
+		logger4js.trace('Post a new VISBO Center Group Req Body: %O Name %s Perm %O', req.body, req.body.name, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
+
+		// if ((!checkSystemPerm && !(req.listVCPerm.getPerm(req.oneVC._id).vc & constPermVC.Modify))
+		// || (checkSystemPerm && !(req.listVCPerm.getPerm(0).system & constPermSystem.ManagePerm))) {
+		// 	return res.status(403).send({
+		// 		state: 'failure',
+		// 		message: 'No Permission to process VISBO Center Tracking',
+		// 		perm: req.listVCPerm.getPerm(req.oneVC._id)
+		// 	});
+		// }
+		var toDate = new Date(req.body.to).toISOString();
+		var fromDate = new Date(req.body.from).toISOString();
+		var vtrStatus = req.body.status;
+		var queryvtr = {};
+			//queryvtr.deletedAt = {$exists: false};
+			queryvtr.vcid = req.oneVC._id;
+			queryvtr.date = {$gt: fromDate, $lt: toDate };
+			queryvtr.status = vtrStatus;
+			// queryvtr.userId = userId;
+			var queryvtr = TimeTracker.find(queryvtr);
+			queryvtr.sort({"vpid":1, "roleId":1, "date":1});
+			queryvtr.lean();
+			queryvtr.exec(function (err, listVTR) {
+				if (err) {
+					errorHandler(err, res, 'DB: GET VTR during processing TimeTracker', 'Error processing Project Versions ');
+					return;
+				}
+				if (listVTR && listVTR.length >= 0) {
+					req.listVTR = listVTR;
+					const orga = req.visboOrganisation[0].value;
+					var xyz = visboBusiness.calcTimeRecords(listVTR, orga, userId, fromDate, toDate);
+					
+					return res.status(200).send({
+						state: 'success',
+						message: 'Successfully processed timetracking of VISBO Center',
+						vtrs: [req.listVTR]
+					});
+				}
+				
+			});
+		
+		});
+		
+		//var queryVCGroup = TimeTracker.getTimeTrackerRecords({'vcid': req.oneVC._id, 'vpid': '','userId': userId, 'status': 'Yes'});
+		// queryVCGroup.select('name');
+		// queryVCGroup.lean();
+		// queryVCGroup.exec(function (err, oneVCGroup) {
+		// 	if (err) {
+		// 		errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Group ${req.body.name} `, `Error updating Group for VISBO Center ${req.oneVC.name} `);
+		// 		return;
+		// 	}
+		// 	if (oneVCGroup) {
+		// 		return res.status(409).send({
+		// 			state: 'failure',
+		// 			message: 'VISBO Center Group already exists',
+		// 			perm: req.listVCPerm.getPerm(req.oneVC.system ? 0: req.oneVC._id)
+		// 		});
+		// 	}
+		// 	logger4js.debug('Post Group %s to VC %s now', req.body.name, req.oneVC._id);
+
+		// 	// query vpids to fill in if group is global
+		// 	var query = {};
+		// 	query.vcid = req.oneVC._id;
+		// 	query.deletedAt = {$exists: false};
+		// 	var queryVP = VisboProject.find(query);
+		// 	queryVP.select('_id'); // return only _id
+		// 	queryVP.lean();
+		// 	queryVP.exec(function (err, listVP) {
+		// 		if (err) {
+		// 			errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Get Projects `, `Error creating Group for VISBO Center ${req.oneVC.name} `);
+		// 			return;
+		// 		}
+		// 		logger4js.debug('VC Create Group: Found %d Projects', listVP.length);
+
+		// 		var vcGroup = new VisboGroup();
+		// 		// fill in the required fields
+		// 		vcGroup.name = req.body.name;
+		// 		vcGroup.vcid = req.params.vcid;
+		// 		vcGroup.global = vgGlobal;
+		// 		vcGroup.permission = newPerm;
+		// 		vcGroup.groupType = groupType;
+		// 		vcGroup.internal = false;
+		// 		if (vgGlobal) {
+		// 			// set global group setting, handle vpids
+		// 			logger4js.debug('Set Global Flag %s', vgGlobal);
+		// 			vcGroup.vpids = [];
+		// 			listVP.forEach(function(item) { vcGroup.vpids.push(item._id); });
+		// 			logger4js.debug('Updated Projects/n', vcGroup.vpids);
+		// 		} else {
+		// 				vcGroup.permission.vp = undefined;
+		// 		}
+		// 		vcGroup.save(function(err, oneVcGroup) {
+		// 			if (err) {
+		// 				errorHandler(err, res, `DB: POST VC ${req.oneVC._id} Save Group ${req.body.name} `, `Error creating Group for VISBO Center ${req.oneVC.name} `);
+		// 				return;
+		// 			}
+		// 			req.oneGroup = oneVcGroup;
+		// 			var resultGroup = {};
+		// 			resultGroup._id = oneVcGroup._id;
+		// 			resultGroup.name = oneVcGroup.name;
+		// 			resultGroup.vcid = oneVcGroup.vcid;
+		// 			resultGroup.global = oneVcGroup.global;
+		// 			resultGroup.permission = oneVcGroup.permission;
+		// 			resultGroup.groupType = oneVcGroup.groupType;
+		// 			resultGroup.users = oneVcGroup.users;
+		// 			return res.status(200).send({
+		// 				state: 'success',
+		// 				message: 'Inserted VISBO Center Group',
+		// 				groups: [ resultGroup ]
+		// 			});
+		// 		});
+		// 	});
+		// });
 
 router.route('/:vcid/message')
 	/**

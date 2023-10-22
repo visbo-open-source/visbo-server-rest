@@ -343,7 +343,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`email not accepted: ${role.email || ''}`);}
 		} else {
 					// ???? TODO UR	 - change true into false
-			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
+			if (!validate.validateEmail(role.email, false)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
 		}		
 		if (role.type == undefined) {
 			role.type = 1;

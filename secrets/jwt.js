@@ -1,14 +1,17 @@
+
+require('dotenv').config();
+
 module.exports = {
 	user: {
-		'secret': 'now you see visual board',
+		'secret': process.env.USER_SECRET,
 		'expiresIn': 3600
 	},
 	admin: {
-		'secret': 'a good day to use visual board',
+		'secret': process.env.ADMIN_SECRET,
 		'expiresIn': 3600
 	},
 	register: {
-		'secret': 'now you start with visual board',
+		'secret': process.env.REGISTER_SECRET,
 		'expiresIn': 900
 	},
 	internalEncryption:
