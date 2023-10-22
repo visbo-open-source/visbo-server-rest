@@ -218,6 +218,43 @@ function getVCSetting(req, res, next) {
 		return next();
 	}
 }
+function getVCSettingCustomization(req, res, next) {
+	var checkSetting = false;
+	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
+		checkSetting = true;
+	} else if (req.method == 'POST') {
+		checkSetting = true;
+	} else if (req.method == 'PUT') {
+		checkSetting = true;
+	}
+	var vcid;
+	if (req.oneVP) {
+		vcid = req.oneVP.vcid;
+	} else if (req.oneVC)  {
+		vcid = req.oneVC._id;
+	} else if (req.query.vcid) {
+		vcid = req.query.vcid;
+	}
+	if (checkSetting && vcid) {
+		logger4js.trace('GET VC Settings Customization for VC %s and URL', vcid, req.url);
+		var query = {};
+		query.vcid = vcid;
+		query.name = 'customization';
+		query.type = 'customization';
+		var queryVCSetting = VCSetting.find(query);
+		queryVCSetting.exec(function (err, listVCSetting) {
+			if (err) {
+				errorHandler(err, undefined, 'DB: Get VC Setting Select ', undefined);
+			}
+			logger4js.debug('Setting for VC %s Length %d', vcid, listVCSetting ? listVCSetting.length : undefined);
+			req.listVCSetting = listVCSetting;
+			return next();
+		});
+	} else {
+		return next();
+	}
+}
+
 
 function getVCVP(req, res, next) {
 	var query = {};
@@ -434,5 +471,6 @@ module.exports = {
 	getVCOrganisation: getVCOrganisation,
 	checkSettingId: checkSettingId,
 	getVCSetting: getVCSetting,
+	getVCSettingCustomization: getVCSettingCustomization,
 	isVCEnabled: isVCEnabled
 };

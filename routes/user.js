@@ -623,6 +623,7 @@ router.route('/timetracker/:id')
 			});
 
 			if (userSettings.length > 0) {
+				// look for the entries for managerView - Approver
 				const managerView = [];
 				for (let setting of userSettings) {
 					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
@@ -631,17 +632,12 @@ router.route('/timetracker/:id')
 					if (subRoles.length > 0) {
 						managerView.push(subRoles);
 					}
-				}
-
-				
+				}		
+				// look for the entries for normal user view - Employee		
 				var userView = await getTimeEntry(req.params.id);
 				const userViewWithAccess = [];		
 				userView.forEach(userVtr => {
-					// const vcTimeEntries = getTimeTrackerRecords(userVtr.vcid.toString(), userVtr.vpid.toString(), req.params.id, 'Yes');
-					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					// if (vcIndex > -1) {
 						userViewWithAccess.push(userVtr)
-					//}
 				} );				
 				if (userViewWithAccess ) {
 					return res.status(200).send({
@@ -652,14 +648,10 @@ router.route('/timetracker/:id')
 					});
 				}
 			} else {
-				var timeEntries = await getTimeEntry(req.params.id, "Yes");	
-				// var testEntries = await getTimeTrackerRecords(timeEntries[0].vcid, timeEntries[0].vpid, timeEntries[0].userId, 'Yes');						
+				var timeEntries = await getTimeEntry(req.params.id, "Yes");						
 				const timeEntriesWithAccess = [];		
 				timeEntries.forEach(userVtr => {
-					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					// if (vcIndex > -1)  {
 						timeEntriesWithAccess.push(userVtr)
-					//}
 				} );				
 				if (timeEntriesWithAccess) {
 					return res.status(200).send({
