@@ -3568,7 +3568,7 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 		const specialTimerecs = htimerecs.filter(item => item.roleId == uid);
 		// the actualData will be entered into the rootphase of a VPV
 		var rootPhase = vpv.AllPhases[0];
-		var index = rootPhase.AllRoles.findIndex(role => role.RollenTyp == uid)
+		var index = rootPhase.AllRoles.findIndex(role => (role.RollenTyp == uid))
 		if (index < 0 ) {
 			var roleUID = {};
 			roleUID.RollenTyp = uid;
@@ -3577,37 +3577,45 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				roleUID.Bedarf[i] = 0;
 			}
 			roleUID.teamID = -1;
-		}
-		const actDataIndex = getColumnOfDate(specialTimerecs[0].date);
-		const hours = specialTimerecs[0].time;
-		console.log(specialTimerecs);
-		
-	})
-	// if (startIndex <= actFromIndex <= actToIndex <= endIndex) {
-	// 	vpv?.AllPhases.forEach( phase => {
-	// 		// decide if the phase belongs to the time for actualData
-	// 		const begin1 = phase.relStart + startIndex - 1 <= actFromIndex;
-	// 		const begin2 = actFromIndex <= phase.relEnde + startIndex - 1;
-	// 		const ende1 = phase.relStart + startIndex - 1 <= actToIndex;
-	// 		const ende2 = actToIndex <= phase.relEnde + startIndex - 1;
-	// 		const phaseBelongsToTime = (phase.relStart + startIndex - 1 <= actFromIndex) &&  (actFromIndex <= phase.relEnde + startIndex - 1) 
-	// 								&& (phase.relStart + startIndex - 1 <= actToIndex) &&  (actToIndex <= phase.relEnde + startIndex - 1)
-	// 		phase?.AllRoles.forEach( role => {
-				
-	// 			if (rolesToSetZero[role.RollenTyp] ) {
-	// 				// delete the forecast
-	// 				for (var i = actFromIndex; i <= actToIndex; i++) {	
-	// 					if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-	// 						role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
-	// 					} else {
-	// 						logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
-	// 					}
-	// 				}
-	// 			}
-	// 		})
-	// 	})
-	// }
-	return vpv
+			specialTimerecs.forEach( trec => {
+				const hours = +trec.time.toString();
+				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
+				const trecDateIndex = getColumnOfDate(trec.date);
+				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
+					roleUID.Bedarf[actDataIndex] += hours;
+				} else {					
+					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   ', trec.name, trec.roleId, trec.date.toISOString());	
+					console.log(trec);				
+				}
+			})
+			rootPhase.AllRoles.push(roleUID);
+
+		} else {
+			var roleUID = rootPhase.AllRoles[index];
+			// perhaps it exists another role/team-combination, then take the one with teamID = -1
+			if (roleUID.teamID != -1) {
+				// is there another role-entry with teamId = -1 then take this (indexNew)
+				var indexNew = rootPhase.AllRoles.findIndex(role => ((role.RollenTyp == uid) && (role.teamID == -1)));
+				if (indexNew != -1) {
+					roleUID = rootPhase.AllRoles[indexNew];
+				}
+			}
+			specialTimerecs.forEach( trec => {
+				const hours = +trec.time.toString();
+				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
+				const trecDateIndex = getColumnOfDate(trec.date);
+				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
+					roleUID.Bedarf[actDataIndex] += hours;
+				} else {					
+					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
+					console.log(trec);				
+				}
+			})
+		}		
+	})	
+	// new Timestamp date for new VPV
+	vpv.timestamp = new Date();
+	return vpv;
 }
 
 function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, userId, fromDate, toDate) {
@@ -3658,11 +3666,10 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 	vpvList.forEach( vpv => {
 		// Call of deleteNeedsOfVPV
 		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
-		newvpvList.push(vpvnew);
 		// put the new hours work into the vpv's
-
 		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);
 		
+		newvpvList.push(vpvnew1);
 		
 	})
 	
