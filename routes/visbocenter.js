@@ -8,10 +8,12 @@ var crypt = require('./../components/encrypt');
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
+var lockVP = require('./../components/lock.js')
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
 var verifyVp = require('./../components/verifyVp');
 var verifyVpv = require('./../components/verifyVpv');
+var helperVpv = require('./../components/helperVpv');
 var timeTracker = require('./../components/timeTracker');
 var visboBusiness = require('./../components/visboBusiness');
 var systemVC = require('./../components/systemVC');
@@ -218,6 +220,51 @@ var populateVCConfig = function(vcSetting, type) {
 		});
 	}
 };
+
+
+function recalcKM(req, res, message) {
+	if (!req.oneVPV) {
+		errorHandler(undefined, res, 'reaclcKM: No VPV found', 'Error creating Project Versions ');
+		return;
+	}
+	if (req.oneVPV.variantName != 'pfv' && req.visboPFV) {
+		var obj = visboBusiness.calcKeyMetrics(req.oneVPV, req.visboPFV, req.visboOrganisation);
+		if (!obj || Object.keys(obj).length < 1) {
+			// no valid key Metrics delivered
+			if (req.body.keyMetrics && req.oneVPV.variantName != 'pfv' && helperVpv.checkValidKeyMetrics(req.body.keyMetrics)) {
+				req.oneVPV.keyMetrics = req.body.keyMetrics;
+			}
+		} else {
+			req.oneVPV.keyMetrics = obj;
+			if (req.visboPFV) {
+				req.oneVPV.keyMetrics.baselineDate = req.visboPFV.timestamp;
+				req.oneVPV.keyMetrics.baselineVPVID = req.visboPFV._id;
+			}
+		}
+	} else if (req.oneVPV.variantName != 'pfv') {
+		// restore a vpv and no visboPFV exists, delete keyMetrics as there is no related baseline
+		req.oneVPV.keyMetrics = undefined;
+	}
+	logger4js.debug('Create ProjectVersion in Project %s with Name %s and timestamp %s', req.oneVPV.vpid, req.oneVPV.name, req.oneVPV.timestamp);
+
+	// check if newVPV is a valid VPV
+	if (!req.query.noValidate) {
+		if (!visboBusiness.ensureValidVPV(req.oneVPV)) {
+			logger4js.info('POST Project Version - inconsistent VPV - %s', JSON.stringify(req.oneVPV));
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Project Version is an inconsistent VPV'
+			});
+		}
+	}	
+
+	var newVPV = new VisboProjectVersion(req.oneVPV);
+	newVPV._id = undefined;
+	newVPV.updatedAt = newVPV.timestamp;
+	newVPV.createdAt = newVPV.timestamp;		
+	return newVPV;
+}
+
 
 /////////////////
 // VISBO Center API
@@ -1995,35 +2042,34 @@ router.route('/:vcid/timetracking')
 	.post(function(req, res) {
 		// User is authenticated already
 		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+		var newVPVList = [];
+
+		req.auditDescription = 'VISBO Center TimeTracking';
+		req.auditInfo = req.body.name;
+	
 		var isSysAdmin = req.query && req.query.sysAdmin ? true : false;
 		var groupType;
 		var checkSystemPerm = false;
 		
+		var permToImportTimeRecords = false;
 		var permVC = req.listVCPerm.getPerm(req.params.vcid).vc;
 		var requiredPermVC = constPermVC.Modify + constPermVC.View;
-		var permVP = req.listVPPerm.getPerm(req.params.vcid).vp;		
+		var permVP = req.listVCPerm.getPerm(req.params.vcid).vp;		
 		var requiredPermVP = constPermVP.Modify + constPermVP.View;
+		permToImportTimeRecords = ((permVC & requiredPermVC)) && ((permVP & requiredPermVP));
 
 		if ((!checkSystemPerm && 
-			!((permVC & requiredPermVC)) &&			
-			!((permVP & requiredPermVP)))) {
+			!permToImportTimeRecords)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Permission to Import the TimeRecords',
 					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 				});
-		}
+		}	
 
-		req.body.name = req.body.name ? req.body.name.trim() : '';		
-		
-		if (req.body.name) req.body.name = req.body.name.trim();
-
-		req.auditDescription = 'VISBO Center TimeTracking';
-		req.auditInfo = req.body.name;
-	
-
-		logger4js.info('Process a VISBO Center TimeTracking executed by user %s ', req.body.name, userId);
-		logger4js.trace('Post a new VISBO Center Group Req Body: %O Name %s Perm %O', req.body, req.body.name, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
+		logger4js.info('Process a VISBO Center TimeTracking executed by user %s ', useremail, userId);
+		logger4js.trace('Post a new VISBO Center Group Req Body: %O Name %s Perm %O', req.body, useremail, req.listVCPerm.getPerm(isSysAdmin ? 0 : req.params.vcid));
 
 
 		var toDate = new Date();
@@ -2053,25 +2099,183 @@ router.route('/:vcid/timetracking')
 				vpidIndexedTimeRecords.forEach(ele => {					
 					const vpvIndex = listeVPVs.findIndex(item => item.vpid.toString() == ele._id.toString());
 					if (vpvIndex > -1) usedVPVList.push(listeVPVs[vpvIndex])
-					})
-				}
+					});
 					
 				const orga = req.visboOrganisation[0].value;
 				const customize = req.listVCSetting[0].value;
 				var rolesActDataRelevant = customize.isActualDataRelevant.split(';');
 				rolesActDataRelevant.pop();
 				
-				var xyz = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);
-			})
-		
+				newVPVList = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);
+
+				var vpvList = [];
+
+				//// Try to save the whole list of vpvs
+				for (var i = 0; i < newVPVList.length; i++) {
+
+					var newVPV = newVPVList[i];
+					var newVP = {};
+					var queryVp = {};
+					queryVp._id = newVPV.vpid;
+					queryVp.deletedAt = {$exists: false};				// Not deleted
+					VisboProject.findOne(queryVp, function (err, oneVP) {
+						if (err) {
+							errorHandler(err, res, 'DB: POST VPV Find VP', 'Error creating Project Versions ');
+							return;
+						}
+						if (!oneVP) {
+							return res.status(403).send({
+								state: 'failure',
+								message: 'Project not found or no Permission'
+							});
+						}
+						req.oneVP = oneVP;
+						newVP = oneVP;
+						var variantName = newVPV.variantName;
+						if (variantName != '') {
+							// check that the Variant exists
+							variantIndex = req.oneVP.variant.findIndex(variant => variant.variantName == variantName);
+							if (variantIndex < 0) {
+								logger4js.warn('VPV Post Variant does not exist %s %s', vpid, variantName);
+								return res.status(409).send({
+									state: 'failure',
+									message: 'Project variant does not exist',
+									vp: [req.oneVP]
+								});
+							} else if (!(perm.vp & constPermVP.Modify)) {
+								// check if the user owns the variant
+								var variant = req.oneVP.variant[variantIndex];
+								if (useremail != variant.email) {
+									return res.status(409).send({
+										state: 'failure',
+										message: 'Project variant does not belong to user',
+										vp: [req.oneVP]
+									});
+								}
+							}
+						}
+						// check if the version is locked
+						if (lockVP.lockStatus(oneVP, useremail, variantName).locked) {
+							logger4js.warn('VPV Post VP locked %s %s', vpid, variantName);
+							return res.status(423).send({
+								state: 'failure',
+								message: 'Project locked',
+								vp: [req.oneVP]
+							});
+						}
+						// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
+						if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
+							logger4js.warn('VPV Post VP status %s %s %s', newVPV.vpid, req.oneVP.name, req.oneVP.vpStatus);
+							return res.status(412).send({
+								state: 'failure',
+								message: 'Project status does not allow any new version',
+								vp: [req.oneVP]
+							});
+						}						
+
+					logger4js.debug('User has permission to create a new Version in %s Variant :%s:', req.oneVP.name, newVPV.variantName);
+				
+
+
+					// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
+					var queryvpv = {};
+					queryvpv.deletedAt = {$exists: false};
+					queryvpv.vpid = newVPV.vpid;
+					queryvpv.variantName = newVPV.variantName || '';
+					var queryVPV = VisboProjectVersion.findOne(queryvpv);
+					queryVPV.sort('-timestamp');
+					queryVPV.select('_id vpid name timestamp variantName updatedAt createdAt');
+					queryVPV.lean();
+					queryVPV.exec(function (err, lastVPV) {
+						if (err) {
+							errorHandler(err, res, 'DB: POST VPV Find VPV', 'Error creating Project Versions ');
+							return;
+						}
+						if (newVPV.updatedAt && Date.parse(newVPV.updatedAt)) {
+							// check that the last VPV has the same date
+							var updatedAt = new Date(newVPV.updatedAt);
+							if (lastVPV) {
+								logger4js.debug('last VPV: updatedAt Body %s last Version %s', updatedAt.getTime(), lastVPV.updatedAt.getTime());
+								if (lastVPV.updatedAt.getTime() > updatedAt.getTime()) {
+									return res.status(409).send({
+										state: 'failure',
+										message: 'Conflict with update Dates',
+										vpv: [lastVPV]
+									});
+								}
+							}
+						}
+					});
+
+					// keep unchangable attributes
+					newVPV.name = newVP.name;
+					newVPV.vpid = newVP._id;
+					newVPV.variantName = variantName;
+					newVPV.updatedAt = undefined;
+					// if (req.visboPFV) {
+					// 	newVPV.Erloes = req.visboPFV.Erloes;
+					// }
+					var customField;
+					if (req.oneVP.customFieldString) {
+						customField = req.oneVP.customFieldString.find(item => item.name == '_businessUnit');
+						if (customField) { newVPV.businessUnit = customField.value; }
+					}
+					if (req.oneVP.customFieldDouble) {
+						customField = req.oneVP.customFieldDouble.find(item => item.name == '_risk');
+						if (customField) { newVPV.Risiko = customField.value; }
+						customField = req.oneVP.customFieldDouble.find(item => item.name == '_strategicFit');
+						if (customField) { newVPV.StrategicFit = customField.value; }
+					}
+					// if (req.oneVP && req.oneVP.customFieldDate) {
+					// 	customField = req.oneVP.customFieldDate.find(item => item.name == '_PMCommit');
+					// 	if (customField) { newVPV.pmCommit = customField.value; }
+					// }
+					newVPV.status = undefined;
+					if (req.oneVP.vpStatus) {
+						newVPV.vpStatus = req.oneVP.vpStatus;
+					}
+				}); // end of VisboProject.findOne
+
+				req.oneVPV = newVPV;
+				const listePFVs = req.listVPVPFV;
+				var newPFVIndex = listePFVs.findIndex(item =>  item.vpid.toString() == newVPV.vpid.toString());
+				req.visboPFV = listePFVs[newPFVIndex];
+				newVPV = recalcKM(req, res, 'Successfully calculated Keymetric and Save for Visbo Project Version');	
 			
-		return res.status(200).send({
-			state: 'success',
-			message: 'Successfully processed timetracking of VISBO Center',
-			vtrs: [req.listVTR]
-		});	
+				vpvList.push(newVPV);
+			};
+					
+			
+			// saving all vpv in the vpvList
+			var total = vpvList.length, result = [];
+
+			function saveAll(){				
+				var doc = vpvList.pop();
+				var vpvToSave = new VisboProjectVersion(doc);
+				vpvToSave.save(function(err, saved){
+						if (err) {
+							errorHandler(err, res, 'DB: POST VPV[]', 'Error creating all Project Versions ');
+							return;
+						}
+						result.push(saved);
+						if (--total) {
+							saveAll();
+						} else {
+							logger4js.info('in SaveAll for store all vpvs of the vpvList');
+											
+							return res.status(200).send({
+								state: 'success',
+								message: 'Successfully processed timetracking of VISBO Center',
+								vtrs: result
+							});	
+						}
+				})
+			}
+			saveAll();			
+			}
+		});								
+	});	
 		
-	});		
 	
 
 router.route('/:vcid/message')

@@ -3673,7 +3673,7 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 		
 	})
 	
-	return true;
+	return newvpvList;
 }
 
 module.exports = {
