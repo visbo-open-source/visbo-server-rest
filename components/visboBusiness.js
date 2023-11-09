@@ -1761,20 +1761,21 @@ function findCurrentRole(timeZones, roleID, teamID) {
 	return role;
 }
 
-// find all subroles of a list of roles
+// find all subroles of a list of roles including the roles of the list
 function filterAllSubRoles(list, orga) {
     const subRolesList = [];
     let listSubRoles = [];
     let subRolesFound = [];
-    let listOrga = helperOrga.generateIndexedOrgaRoles(orga);;
+    let listOrga = helperOrga.generateIndexedOrgaRoles(orga);
     
     list.forEach(uid => {
-		const item = listOrga[uid];
+		const item = listOrga[uid];		
         if (item.isSummaryRole === true ) {
             const hSubRoles = item.subRoleIDs;
             hSubRoles.forEach( hsr => listSubRoles.push(listOrga[hsr.key]));
             checkallSubroles(listSubRoles, listOrga, subRolesFound);
         }
+		subRolesFound.push(item);
     })
 
     function checkallSubroles(subRoleslist, listOrga, srFound) {        
@@ -1795,7 +1796,8 @@ function filterAllSubRoles(list, orga) {
         if (srlist.length > 0) {             
             checkallSubroles(srlist, listOrga, srFound);
         } 
-    }     
+    } 
+
     return subRolesFound;
 }
 
@@ -3554,7 +3556,7 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	var actToIndex = getColumnOfDate(toDate);
 
 	// find all timerecords for this vpid
-	var htimerecs = indexedTimeRecords[vpv.vpid];
+	var htimerecs = indexedTimeRecords[vpv.vpid] || [];
 	// look for the different Roles in the list of timerecords for vpid
 	var diffRoles = [];
 	htimerecs.forEach( rec => {
@@ -3583,9 +3585,9 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				const trecDateIndex = getColumnOfDate(trec.date);
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
 					roleUID.Bedarf[actDataIndex] += hours;
-				} else {					
-					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   ', trec.name, trec.roleId, trec.date.toISOString());	
-					console.log(trec);				
+				} else {				
+					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
+					console.log(trec);						
 				}
 			})
 			rootPhase.AllRoles.push(roleUID);
@@ -3615,6 +3617,7 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	})	
 	// new Timestamp date for new VPV
 	vpv.timestamp = new Date();
+	vpv.actualDataUntil = new Date(toDate);
 	return vpv;
 }
 
@@ -3657,6 +3660,7 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 	// calc all relevant roles to set them to zero	
 	var rolesToSetZero = [];	
 	rolesToSetZero = filterAllSubRoles(rolesActDataRelevant, orga);
+	
 	// indexed array
 	var rolesToSetZeroIndexed = [];
 	rolesToSetZero.forEach( item => {
@@ -3667,9 +3671,15 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 		// Call of deleteNeedsOfVPV
 		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
 		// put the new hours work into the vpv's
-		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);
-		
-		newvpvList.push(vpvnew1);
+		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);		
+		newvpvList.push(vpvnew1);	
+
+		// if (vpv.actualDataUntil && (vpv.actualDataUntil.getTime() >= fromDate.getTime()) && vpv.actualDataUntil.getTime() <= toDate.getTime()) {
+			
+					
+		// } else {
+		// 	logger4js.warn('the project %s : %s has an actualDataUntil later than the defined timespam %s', vpv.vpid, vpv.name, vpv.actualDataUntil.toLocaleString())
+		// }
 		
 	})
 	

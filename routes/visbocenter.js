@@ -48,6 +48,7 @@ var sanitizeHtml = require('sanitize-html');
 var logging = require('../components/logging');
 var logModule = 'VC';
 var log4js = require('log4js');
+const { constVPStatus } = require('../models/visboproject.js');
 var logger4js = log4js.getLogger(logModule);
 
 var restrictedSettings = ['SysValue', 'SysConfig', 'Task', '_VCConfig'];
@@ -2077,6 +2078,12 @@ router.route('/:vcid/timetracking')
 		if (req.body.from && Date.parse(req.body.from)) fromDate = new Date(req.body.from);
 		if (req.body.to && Date.parse(req.body.to)) toDate = new Date(req.body.to);		
 		var vtrStatus = req.body.status;  // should be 'Yes'
+
+		const listeVPVs = req.listVPV;
+
+		var orderedVPVList = [];			// includes all VPVs of this VC, which have the status 'ordered'	
+		orderedVPVList = listeVPVs.filter(item => (item.vpStatus == constVPStatus[2])); 
+		
 		var queryvtr = {};
 		//queryvtr.deletedAt = {$exists: false};
 		queryvtr.vcid = req.oneVC._id;
@@ -2093,21 +2100,35 @@ router.route('/:vcid/timetracking')
 			}
 			if (listVTR && listVTR.length >= 0) {
 				req.listVTR = listVTR;
-				var usedVPVList = [];
-				const vpidIndexedTimeRecords = timeTracker.generateIndexedTimeRecords(listVTR, true);
-				const listeVPVs = req.listVPV;
+				var usedVPVList = [];				// includes all VPVs ordered or mentioned in the TimeRecords
+				const vpidIndexedTimeRecords = timeTracker.generateIndexedTimeRecords(listVTR, true);				
 				vpidIndexedTimeRecords.forEach(ele => {					
-					const vpvIndex = listeVPVs.findIndex(item => item.vpid.toString() == ele._id.toString());
-					if (vpvIndex > -1) usedVPVList.push(listeVPVs[vpvIndex])
-					});
-					
+					const vpvIndex = listeVPVs.findIndex(item => (item.vpid.toString() == ele._id.toString()) );
+					if (vpvIndex > -1) usedVPVList.push(listeVPVs[vpvIndex]);
+				});
+
+				// merge in the vpvs of orderedVPVList into usedVPVList
+				orderedVPVList.forEach(vpv => {
+					if (!usedVPVList.includes(vpv)) usedVPVList.push(vpv);
+				})
+
 				const orga = req.visboOrganisation[0].value;
 				const customize = req.listVCSetting[0].value;
-				var rolesActDataRelevant = customize.isActualDataRelevant.split(';');
-				rolesActDataRelevant.pop();
-				
-				newVPVList = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);
+				var rolesActDataRelevant = [];
+				if (customize && customize.isActualDataRelevant) {
+					rolesActDataRelevant = customize.isActualDataRelevant?.split(';');
+					rolesActDataRelevant.pop();	
+				}
+				if (!orga && !rolesActDataRelevant && !usedVPVList)	{
+					return res.status(400).send({
+						state: 'failure',
+						message: 'Perhaps no Orga or no VPVs or no isActualDataRelevant'
+					});
+				}	else {
+					newVPVList = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);			
+				}
 
+				
 				var vpvList = [];
 
 				//// Try to save the whole list of vpvs
@@ -2212,6 +2233,7 @@ router.route('/:vcid/timetracking')
 					newVPV.vpid = newVP._id;
 					newVPV.variantName = variantName;
 					newVPV.updatedAt = undefined;
+					newVPV.actualDataUntil = new Date();
 					// if (req.visboPFV) {
 					// 	newVPV.Erloes = req.visboPFV.Erloes;
 					// }
@@ -2257,6 +2279,16 @@ router.route('/:vcid/timetracking')
 							errorHandler(err, res, 'DB: POST VPV[]', 'Error creating all Project Versions ');
 							return;
 						}
+						req.oneVPV = saved;
+						// update the version count of the base version or the variant
+						helperVpv.updateVPVCount(saved.vpid, saved.variantName, 1);
+			
+						// cleanup cost keyMetrics in case of missing audit permission
+						var perm = req.listVPPerm.getPerm(saved.vpid);
+						if ((perm.vp & constPermVP.ViewAudit) == 0 && saved.keyMetrics) {
+							helperVpv.cleanupKM(saved.keyMetrics);
+						}
+
 						result.push(saved);
 						if (--total) {
 							saveAll();
@@ -2266,12 +2298,22 @@ router.route('/:vcid/timetracking')
 							return res.status(200).send({
 								state: 'success',
 								message: 'Successfully processed timetracking of VISBO Center',
-								vtrs: result
+								vpvTRS: result
 							});	
 						}
 				})
 			}
-			saveAll();			
+
+			if (total > 0) {
+				saveAll();	
+			} else {
+				return res.status(412).send({
+					state: 'failure',
+					message: 'TimeTracking of VISBO Center cannot be done - missing definition in customization _isActualDataRelevant',	
+					vpvTRS: result				
+				});	
+			}
+
 			}
 		});								
 	});	
