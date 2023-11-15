@@ -1761,7 +1761,7 @@ function findCurrentRole(timeZones, roleID, teamID) {
 	return role;
 }
 
-// find all subroles of a list of roles including the roles of the list
+// find all intern subroles of a list of roles including the roles of the list
 function filterAllSubRoles(list, orga) {
     const subRolesList = [];
     let listSubRoles = [];
@@ -1788,6 +1788,12 @@ function filterAllSubRoles(list, orga) {
                     subRolesFound.push(role)
                 }
             } else {
+				// intern summary roles belongs to the subroles
+				if (!role.isExternRole) {					
+					if (!subRolesFound.includes(role)) {
+						subRolesFound.push(role)
+					}
+				}
                 const hSub = role.subRoleIDs;
                 hSub?.forEach(hsr => srlist.push(listOrga[hsr.key]));                
             }                    
@@ -1797,7 +1803,6 @@ function filterAllSubRoles(list, orga) {
             checkallSubroles(srlist, listOrga, srFound);
         } 
     } 
-
     return subRolesFound;
 }
 
@@ -3523,24 +3528,26 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 		vpv?.AllPhases.forEach( phase => {
 			// decide if the phase belongs to the time for actualData
 			const begin1 = phase.relStart + startIndex - 1 <= actFromIndex;
-			const begin2 = actFromIndex <= phase.relEnde + startIndex - 1;
-			const ende1 = phase.relStart + startIndex - 1 <= actToIndex;
+			const ende1 = actFromIndex <= phase.relEnde + startIndex - 1;
+			const begin2 = phase.relStart + startIndex - 1 <= actToIndex;
 			const ende2 = actToIndex <= phase.relEnde + startIndex - 1;
 			const phaseBelongsToTime = (phase.relStart + startIndex - 1 <= actFromIndex) &&  (actFromIndex <= phase.relEnde + startIndex - 1) 
 									&& (phase.relStart + startIndex - 1 <= actToIndex) &&  (actToIndex <= phase.relEnde + startIndex - 1)
-			phase?.AllRoles.forEach( role => {
+			if (phaseBelongsToTime){
+				phase?.AllRoles.forEach( role => {
 				
-				if (rolesToSetZero[role.RollenTyp] ) {
-					// delete the forecast
-					for (var i = actFromIndex; i <= actToIndex; i++) {	
-						if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-							role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
-						} else {
-							logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
+					if (rolesToSetZero[role.RollenTyp] ) {
+						// delete the forecast
+						for (var i = actFromIndex; i <= actToIndex; i++) {	
+							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
+								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+							} else {
+								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
+							}
 						}
 					}
-				}
-			})
+				})
+			}			
 		})
 	}
 	return vpv

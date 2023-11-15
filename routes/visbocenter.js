@@ -2075,8 +2075,19 @@ router.route('/:vcid/timetracking')
 
 		var toDate = new Date();
 		var fromDate = new Date();
-		if (req.body.from && Date.parse(req.body.from)) fromDate = new Date(req.body.from);
-		if (req.body.to && Date.parse(req.body.to)) toDate = new Date(req.body.to);		
+		
+		if (req.body.from && Date.parse(req.body.from)) fromDate = new Date(req.body.from);		
+		if (req.body.to && Date.parse(req.body.to)) toDate = new Date(req.body.to);	
+
+		// set the fromDate to the first day of the month
+		fromDate.setDate(1);
+		// set toDate to the last day of the month
+		const d = new Date (toDate);    
+		const month = d.getMonth();
+		const year = d.getFullYear();
+		d.setFullYear(year, month+1, 0);    
+		toDate = new Date(d);
+
 		var vtrStatus = req.body.status;  // should be 'Yes'
 
 		const listeVPVs = req.listVPV;
@@ -2085,11 +2096,15 @@ router.route('/:vcid/timetracking')
 		orderedVPVList = listeVPVs.filter(item => (item.vpStatus == constVPStatus[2])); 
 		
 		var queryvtr = {};
-		//queryvtr.deletedAt = {$exists: false};
+		queryvtr.deletedAt = {$exists:false};
+		queryvtr['vc.deletedAt'] = {$exists: false}; // Do not deliver any timerecord from a deleted VC
 		queryvtr.vcid = req.oneVC._id;
 		queryvtr.date = {$gte: fromDate, $lte: toDate };
-		queryvtr.status = vtrStatus;
+
+		// perhaps don't select the 'YES' entries, but check all if there do not exist any status='NO'
+		// queryvtr.status = vtrStatus;
 		// queryvtr.userId = userId;
+
 		var queryvtr = TimeTracker.find(queryvtr);
 		queryvtr.sort({"vpid":1, "roleId":1, "date":1});
 		queryvtr.lean();
@@ -2100,6 +2115,15 @@ router.route('/:vcid/timetracking')
 			}
 			if (listVTR && listVTR.length >= 0) {
 				req.listVTR = listVTR;
+				// check if there exists an entry with status 'No'
+				const existNoIndex = listVTR.findIndex( item => item.status == 'No');
+				if (existNoIndex > -1) {
+					return res.status(412).send({
+						state: 'failure',
+						message: 'Precondition failed: There exists some TimeRecords in the chosen timespam, which are not approved'
+					});
+				}
+				
 				var usedVPVList = [];				// includes all VPVs ordered or mentioned in the TimeRecords
 				const vpidIndexedTimeRecords = timeTracker.generateIndexedTimeRecords(listVTR, true);				
 				vpidIndexedTimeRecords.forEach(ele => {					
@@ -2119,19 +2143,23 @@ router.route('/:vcid/timetracking')
 					rolesActDataRelevant = customize.isActualDataRelevant?.split(';');
 					rolesActDataRelevant.pop();	
 				}
-				if (!orga && !rolesActDataRelevant && !usedVPVList)	{
+				if ( (rolesActDataRelevant.length == 0) ) {
 					return res.status(400).send({
 						state: 'failure',
-						message: 'Perhaps no Orga or no VPVs or no isActualDataRelevant'
+						message: 'No isActualDataRelevant set in the customization'
 					});
-				}	else {
-					newVPVList = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);			
 				}
+				if (!orga || !usedVPVList)	{
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No Orga or no VPVs given'
+					});
+				}
+					
+				newVPVList = visboBusiness.calcTimeRecords(listVTR, orga, rolesActDataRelevant, usedVPVList, userId, fromDate, toDate);			
 
-				
 				var vpvList = [];
-
-				//// Try to save the whole list of vpvs
+				// save the whole list of vpvs
 				for (var i = 0; i < newVPVList.length; i++) {
 
 					var newVPV = newVPVList[i];
@@ -2260,10 +2288,12 @@ router.route('/:vcid/timetracking')
 
 				req.oneVPV = newVPV;
 				const listePFVs = req.listVPVPFV;
-				var newPFVIndex = listePFVs.findIndex(item =>  item.vpid.toString() == newVPV.vpid.toString());
-				req.visboPFV = listePFVs[newPFVIndex];
-				newVPV = recalcKM(req, res, 'Successfully calculated Keymetric and Save for Visbo Project Version');	
-			
+				if (listePFVs && newVPV && newVPV.vpid) {
+					var newPFVIndex = listePFVs.findIndex(item =>  item.vpid.toString() == newVPV.vpid.toString());
+					if (newPFVIndex > -1) req.visboPFV = listePFVs[newPFVIndex];
+					newVPV = recalcKM(req, res, 'Successfully calculated Keymetric and Save for Visbo Project Version');
+				}
+				
 				vpvList.push(newVPV);
 			};
 					
