@@ -1,3 +1,5 @@
+var mongoose = require('mongoose');
+
 var logModule = 'OTHER';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
@@ -6,6 +8,8 @@ var visboRedis = require('./../components/visboRedis');
 var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 var errorHandler = require('./../components/errorhandler').handler;
+
+var VCSettings = mongoose.model('VCSetting');
 
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
@@ -115,6 +119,18 @@ function verifyUser(req, res, next) {
   }
 }
 
+// check if User is an Approver within all VC-organisations, he has access
+var isApprover = async function (email) {
+	var result = undefined;
+	const queryVCSetting =  VCSettings.find({"type": "organisation", 'value.allRoles': {$elemMatch: { 'email': email, 'isSummaryRole': { $exists: true }, 'isSummaryRole': true}}});	
+	const settingsWithUser = await queryVCSetting.exec();
+	result = (settingsWithUser?.length > 0);
+	logger4js.debug('user with email %s is an approver?:  ', email, result);
+	//console.log("result of .isApprover function", result);
+	return result;
+	};
+
+
 // Verify User Authentication
 function verifyOTT(req, res, next) {
 
@@ -127,7 +143,7 @@ function verifyOTT(req, res, next) {
       if (err) {
 				logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
 				if (decoded) req.decoded = decoded;
-        return res.status(400).send({
+        		return res.status(400).send({
 					state: 'failure',
 					message: 'One Time Token is no longer valid'
         });
@@ -190,5 +206,6 @@ function verifyOTT(req, res, next) {
 module.exports = {
 	verifyUser: verifyUser,
 	verifyOTT: verifyOTT,
-	isAllowedPassword: isAllowedPassword
+	isAllowedPassword: isAllowedPassword,
+	isApprover: isApprover
 };

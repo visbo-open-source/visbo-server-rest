@@ -11,3 +11,4 @@ postman/VCClone/*.json
 postman/environment/specials
 test-rest-*-log.txt
 data/
+var/log/visbo/*/

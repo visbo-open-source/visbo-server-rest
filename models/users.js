@@ -31,6 +31,7 @@ var userSchema = new mongoose.Schema({
 		lastLoginAt: {type: Date, required: false},
 		lastLoginFailedAt: {type: Date},
 		loginRetries: {type: Number, required: false},
+		isApprover: {type: Boolean, required: false},
 		lastPWResetAt: {type: Date, required: false},
 		expiresAt: {type: Date, required: false}
 	},

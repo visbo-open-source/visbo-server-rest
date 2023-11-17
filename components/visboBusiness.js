@@ -5,6 +5,7 @@ var logModule = 'VPV';
 var log4js = require('log4js');
 var helperVpv = require('./../components/helperVpv');
 var helperOrga = require('./../components/helperOrga');
+var timeTracker = require('./../components/timeTracker');
 // const { toNamespacedPath } = require('path');
 const validate = require('./validate');
 
@@ -3467,6 +3468,39 @@ function resetStatusVPV(oldVPV) {
 	return oldVPV;
 }
 
+function calcTimeRecords(timerecordList, orga, userId, fromDate, toDate) {
+
+	// check, if all timerecords have an uid defined in orga as a person
+	const indexedOrgaRoles = helperOrga.generateIndexedOrgaRoles(orga);
+	var missingRolesId = [];
+	var missingRolesName = [];
+	timerecordList.forEach(item => {
+		if (!indexedOrgaRoles[item.roleId]) {			
+			missingRolesId[item.roleId] = item.name;
+			missingRolesName[item.name] = item.roleId;
+		}
+	}) 
+	
+	// check, if all persons of the orga have an entry in the timerecordList
+	const indexedTimeRecords = timeTracker.generateIndexedTimeRecords(timerecordList);
+	const allRoles = orga.allRoles;
+	for (var i = 0; i < allRoles.length; i++) {
+		const role = allRoles[i];
+		if (!timeTracker.isOrgaRoleinternPerson(role)) {
+			// role no Person
+			continue;	
+		}	
+		if ((timerecordList.findIndex(ele1=> ele1.roleId == role.uid) < 0 ) && (missingInVtr.findIndex(ele2 => ele2 == role.uid))) {
+			missingInVtr.push(role.uid)
+		}		
+	};
+
+
+	// get all relevant vp and vpv out of the timerecordList
+	// sort an aggregate the timerecords of the timerecordList for the rootPhase of all relevant vpv
+	return true;
+}
+
 module.exports = {
 	calcKeyMetrics: calcKeyMetrics,
 	calcCosts: calcCosts,
@@ -3474,6 +3508,7 @@ module.exports = {
 	calcDeadlines: calcDeadlines,
 	calcCapacities: calcCapacities,
 	calcCapacitiesPerProject: calcCapacitiesPerProject,
+	calcTimeRecords: calcTimeRecords,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertVPV: convertVPV,
 	ensureValidVPV: ensureValidVPV,
