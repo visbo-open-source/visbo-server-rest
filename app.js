@@ -31,6 +31,7 @@ require('./models/visboprojectversion');
 require('./models/visboportfolio');
 require('./models/vcsetting');
 require('./models/vccapacities');
+require('./models/timeTracker');
 
 var systemVC = require('./components/systemVC');
 var visboAudit = require('./components/visboAudit');
@@ -42,7 +43,8 @@ var dbOptions = {
   // autoReconnect: true,
   // reconnectInterval: 3000,
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  useFindAndModify: false,
 };
 
 // CORS Config, whitelist is an array
@@ -282,6 +284,12 @@ function launchServer() {
 
 // setup environment variables
 environment.config();
+// console.log('NODE_ENV %s', process.env.NODE_ENV);
+// console.log('INTERNAL_ENCRYPTION %s', process.env.INTERNAL_ENCRYPTION);
+// console.log('REGISTER_SECRET %s', process.env.REGISTER_SECRET);
+// console.log('ADMIN_SECRET %s', process.env.ADMIN_SECRET);
+// console.log('USER_SECRET %s', process.env.USER_SECRET);
+
 
 // start express app
 var app = express();
@@ -303,7 +311,7 @@ app.engine('.html', require('ejs').renderFile);
 // define the log entry for processing pages
 app.use(logger(function (tokens, req, res) {
   // ignore calls for OPTIONS
-  if (['GET', 'POST', 'PUT', 'DELETE'].indexOf(tokens.method(req, res)) >= 0 ) {
+  if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].indexOf(tokens.method(req, res)) >= 0 ) {
     visboAudit.visboAudit(tokens, req, res);
     var webLog = [
       tokens.method(req, res).padEnd(6, ' '),

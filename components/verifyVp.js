@@ -373,7 +373,6 @@ function getVPOrgs(req, res, next) {
 }
 
 
-
 module.exports = {
 	getAllGroups: getAllGroups,
 	getVPGroupsOfVC: getVPGroupsOfVC,
@@ -381,5 +380,5 @@ module.exports = {
 	checkVpfid: checkVpfid,
 	squeezePortfolio: squeezePortfolio,
 	getVPTemplate: getVPTemplate,
-	getVPOrgs: getVPOrgs
+	getVPOrgs: getVPOrgs,
 };

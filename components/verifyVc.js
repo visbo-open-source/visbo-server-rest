@@ -328,7 +328,7 @@ function getVCOrgs(req, res, next) {
 
 	let skip = true;
 	let withCapa = false;
-	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa')) >= 0) {
+	if (urlComponent.findIndex(comp => (comp == 'capacity' || comp == 'capa' )) >= 0) {
 		if ( req.oneVC ) {
 			req.oneVCID = req.oneVC._id;
 		} else if (req.oneVP) {
@@ -337,7 +337,8 @@ function getVCOrgs(req, res, next) {
 		skip = false;
 		withCapa = true;
 	}
-	if (urlComponent.findIndex(comp => comp == 'organisation') >= 0) {
+	
+	if (urlComponent.findIndex(comp => comp == 'organisation' || comp == 'timetracking') >= 0) {
 		skip = false;
 		withCapa = (req.method == 'GET' && req.originalUrl.indexOf('withCapa=') >= 0);
 	}
