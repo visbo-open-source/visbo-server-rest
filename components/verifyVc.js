@@ -254,8 +254,6 @@ function getVCSettingCustomization(req, res, next) {
 		return next();
 	}
 }
-
-
 function getVCVP(req, res, next) {
 	var query = {};
 	if (!req.oneVC) {
@@ -276,6 +274,31 @@ function getVCVP(req, res, next) {
 		req.listVCVP = listVCVP;
 
 		logger4js.debug('Found %d VISBO Center Projects', listVCVP.length);
+		return next();
+	});
+}
+
+
+function getVCAllVP(req, res, next) {
+	var query = {};
+	if (!req.oneVC) {
+		return next();
+	}
+	query = {};
+	query.vcid = req.oneVC._id;
+	query.vpType = 0; // only projects no templates or portfolios
+	query.deletedAt =  {$exists: false};
+	var queryVP = VisboProject.find(query);
+	//queryVP.select('_id, vpStatus');
+	queryVP.lean();
+	queryVP.exec(function (err, listVCAllVP) {
+		if (err) {
+			errorHandler(err, res, 'DB: Get all of VP of specific VC', 'Error getting VISBO Projects');
+			return;
+		}
+		req.listVCAllVP = listVCAllVP;
+
+		logger4js.debug('Found %d VISBO Center Projects', listVCAllVP.length);
 		return next();
 	});
 }
@@ -465,6 +488,7 @@ module.exports = {
 	getAllGroups: getAllGroups,
 	getVC: getVC,
 	getVCVP: getVCVP,
+	getVCAllVP: getVCAllVP,
 	getSystemGroups: getSystemGroups,
 	checkVCOrgs: checkVCOrgs,
 	getVCOrgs: getVCOrgs,

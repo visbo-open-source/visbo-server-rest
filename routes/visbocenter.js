@@ -79,6 +79,7 @@ router.use('/:vcid/timetracking', verifyVc.getVCOrgs);
 router.use('/:vcid/timetracking', verifyVc.getVCSettingCustomization);
 router.use('/:vcid/timetracking', verifyVc.getVCVP);
 router.use('/:vcid/timetracking', verifyVpv.getVCVPVs);
+router.use('/:vcid/timetracking', verifyVc.getVCAllVP);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
 router.use('/', verifyVg.getVCGroups);
@@ -2017,6 +2018,7 @@ router.route('/:vcid/timetracking')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create the VISBO ProjectVersions
 		* @apiError {number} 409 VISBO Project Versions Conflict
+		* @apiError {number} 412 VISBO TrimeTracking Precondition failed or Project status does not allow any new version or Ccannot be done - missing definition in customization _isActualDataRelevant
 		* @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vc/:vcid/timetracker
 		*  {
@@ -2085,15 +2087,49 @@ router.route('/:vcid/timetracking')
 		const d = new Date (toDate);    
 		const month = d.getMonth();
 		const year = d.getFullYear();
-		d.setFullYear(year, month+1, 0);    
+		d.setFullYear(year, month+1, 0); 
+		d.setHours(23);
+		d.setMinutes(59);
+		d.setSeconds(59);   
 		toDate = new Date(d);
 
 		var vtrStatus = req.body.status;  // should be 'Yes'
 
 		const listeVPVs = req.listVPV;
+		const listVP = req.listVCAllVP;
+		
+			// var query = {};
+			// query._id = item.id;
+			// query.deletedAt = {$exists: false};				// Not deleted
+			// query['vc.deletedAt'] = {$exists: false};
+			// query.vptype = 0;
+			// var queryVP = VisboProject.find(query);
+			// queryVP.select('-restrict');
+			// // queryVP.select('-restrict -lock -variant');
+			// queryVP.lean();
+			// queryVP.exec(function (err, listVP) {
+			// if (err) {
+			// 	errorHandler(err, res, `DB: GET VP find ${query}`, 'Error getting VISBO Centers');
+			// 	return;
+			// }
+			// return listVP
+			// });
+		
 
-		var orderedVPVList = [];			// includes all VPVs of this VC, which have the status 'ordered'	
-		orderedVPVList = listeVPVs.filter(item => (item.vpStatus == constVPStatus[2])); 
+		var orderedVPList = [];			// includes all VPs of this VC, which have the status 'ordered'	
+		orderedVPList = listVP.filter(item => (item.vpStatus == constVPStatus[2])); 
+
+		var orderedVPListIndexed=[];
+		orderedVPList.forEach( item => {
+			orderedVPListIndexed[item._id] = item
+		});
+
+		var orderedVPVList = [];
+		listeVPVs.forEach(item => {
+			if (orderedVPListIndexed[item.vpid]) {
+				orderedVPVList.push(item)
+			}
+		})
 		
 		var queryvtr = {};
 		queryvtr.deletedAt = {$exists:false};
@@ -2120,7 +2156,7 @@ router.route('/:vcid/timetracking')
 				if (existNoIndex > -1) {
 					return res.status(412).send({
 						state: 'failure',
-						message: 'Precondition failed: There exists some TimeRecords in the chosen timespam, which are not approved'
+						message: 'VISBO TimeTracking: Precondition failed -  Not all TimeRecords are approved! '
 					});
 				}
 				
@@ -2339,7 +2375,7 @@ router.route('/:vcid/timetracking')
 			} else {
 				return res.status(412).send({
 					state: 'failure',
-					message: 'TimeTracking of VISBO Center cannot be done - missing definition in customization _isActualDataRelevant',	
+					message: 'VISBO TimeTracking: cannot be done - missing definition in customization _isActualDataRelevant',	
 					vpvTRS: result				
 				});	
 			}

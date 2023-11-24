@@ -578,7 +578,7 @@ router.route('/timetracker/:id')
 						// only take the newest Orga
 						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom) < new Date(oneSett.value.validFrom))) {
 							userSettings.splice(doubleIndex, 1, oneSett);										
-							console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
+							// console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
 						}
 					}				
 				// }

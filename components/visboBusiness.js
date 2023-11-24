@@ -3554,7 +3554,7 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 }
 function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	if (!vpv || !indexedTimeRecords) {
-		return false;
+		return undefined;
 	}	
 	var startIndex = getColumnOfDate(vpv.startDate);
 	var endIndex = getColumnOfDate(vpv.endDate);
@@ -3591,10 +3591,10 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
 				const trecDateIndex = getColumnOfDate(trec.date);
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
-					roleUID.Bedarf[actDataIndex] += hours;
+					roleUID.Bedarf[actDataIndex] += (hours/8);
 				} else {				
 					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
-					console.log(trec);						
+					// console.log(trec);						
 				}
 			})
 			rootPhase.AllRoles.push(roleUID);
@@ -3614,10 +3614,10 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
 				const trecDateIndex = getColumnOfDate(trec.date);
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
-					roleUID.Bedarf[actDataIndex] += hours;
+					roleUID.Bedarf[actDataIndex] += (hours/8);
 				} else {					
 					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
-					console.log(trec);				
+					// console.log(trec);				
 				}
 			})
 		}		
@@ -3656,13 +3656,13 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 			missingInVtr.push(role.uid)
 		}		
 	};
-	vpvList.forEach(item => {
-		if (item.actualDataUntil) {
-			console.log( 'vpid: %s has actualDataUntil: %s', item.vpid, item.actualDataUntil.toISOString() )
-		} else {			
-			console.log( 'vpid: %s %s has NO actualDataUntil', item.vpid, item.name)
-		}
-	})
+	// vpvList.forEach(item => {
+	// 	if (item.actualDataUntil) {
+	// 		console.log( 'vpid: %s has actualDataUntil: %s', item.vpid, item.actualDataUntil.toISOString() )
+	// 	} else {			
+	// 		console.log( 'vpid: %s %s has NO actualDataUntil', item.vpid, item.name)
+	// 	}
+	// })
 
 	// calc all relevant roles to set them to zero	
 	var rolesToSetZero = [];	
@@ -3678,18 +3678,15 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 		// Call of deleteNeedsOfVPV
 		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
 		// put the new hours work into the vpv's
-		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);		
-		newvpvList.push(vpvnew1);	
-
-		// if (vpv.actualDataUntil && (vpv.actualDataUntil.getTime() >= fromDate.getTime()) && vpv.actualDataUntil.getTime() <= toDate.getTime()) {
-			
-					
-		// } else {
-		// 	logger4js.warn('the project %s : %s has an actualDataUntil later than the defined timespam %s', vpv.vpid, vpv.name, vpv.actualDataUntil.toLocaleString())
-		// }
-		
-	})
-	
+		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);	
+		if (!vpvnew1) {
+			// only the vpv with the deleted forecast	
+			newvpvList.push(vpvnew);		
+		} else {
+			// vpv with the actualData imported
+			newvpvList.push(vpvnew1);	
+		}		
+	})	
 	return newvpvList;
 }
 

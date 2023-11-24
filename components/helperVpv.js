@@ -23,7 +23,7 @@ var updateVPVCount = function(vpid, variantName, increment){
 		updateQuery['variant.variantName'] = variantName;
 		updateUpdate = {$inc : {'variant.$.vpvCount' : increment} };
 	}
-	console.log('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
+	// console.log('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
 	logger4js.debug('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
 		
 	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
