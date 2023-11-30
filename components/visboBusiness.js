@@ -3549,7 +3549,7 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 				})
 			}			
 		})
-	}
+	}	
 	return vpv
 }
 function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
@@ -3621,10 +3621,7 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				}
 			})
 		}		
-	})	
-	// new Timestamp date for new VPV
-	vpv.timestamp = new Date();
-	vpv.actualDataUntil = new Date(toDate);
+	})		
 	return vpv;
 }
 
