@@ -561,44 +561,6 @@ router.route('/timetracker/:id')
 		req.auditDescription = 'Time tracker Read';
 		req.auditTTLMode = 1;
 		var userVCs = [];
-
-		// get all VisboCenter the user UserId has access to
-			// var userId = req.decoded._id;
-			// var isSysAdmin = req.query.sysadmin ? true : false;
-	
-			// req.auditDescription = 'VISBO Center Read';
-			// req.auditSysAdmin = isSysAdmin;
-			// req.auditTTLMode = 1;
-	
-			// logger4js.info('Get VISBO Center for User %s SysAdmin %s', userId, req.query.sysadmin);
-	
-			// var query = {};
-				
-			// // check for deleted only for sysAdmins
-			// if (isSysAdmin && req.query.deleted) {
-			// 	query.deletedAt = {$exists: true};				//  deleted
-			// } else {
-			// 	query.deletedAt = {$exists: false};				// Not deleted
-			// }
-			// query.system = req.query.systemvc ? {$eq: true} : {$ne: true};						// do not show System VC
-			// logger4js.trace('Check for VC query %O', query);
-	
-			// var queryVC = VisboCenter.find(query);
-			// queryVC.select('-users');
-			// queryVC.exec(function (err, listVC) {
-			// 	if (err) {
-			// 		errorHandler(err, res, 'DB: GET VCs', 'Error getting VISBO Centers');
-			// 		return;
-			// 	}
-			// 	logger4js.debug('Found VCs %d', listVC.length);
-			// 	req.auditInfo = listVC.length;
-			// 	userVCs = listVC;					
-			// 	userVCs.forEach( item => {		
-			// 		console.log("VC the user %s has access: %s", req.decoded.email, item.name);
-			// 	});
-
-			// });
-
 		
 		try {			
 			logger4js.info('Get time tracker by user with id %s', req.decoded._id);
@@ -616,13 +578,14 @@ router.route('/timetracker/:id')
 						// only take the newest Orga
 						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom) < new Date(oneSett.value.validFrom))) {
 							userSettings.splice(doubleIndex, 1, oneSett);										
-							console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
+							// console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
 						}
 					}				
 				// }
 			});
 
 			if (userSettings.length > 0) {
+				// look for the entries for managerView - Approver
 				const managerView = [];
 				for (let setting of userSettings) {
 					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
@@ -631,17 +594,12 @@ router.route('/timetracker/:id')
 					if (subRoles.length > 0) {
 						managerView.push(subRoles);
 					}
-				}
-
-				
+				}		
+				// look for the entries for normal user view - Employee		
 				var userView = await getTimeEntry(req.params.id);
 				const userViewWithAccess = [];		
 				userView.forEach(userVtr => {
-					// const vcTimeEntries = getTimeTrackerRecords(userVtr.vcid.toString(), userVtr.vpid.toString(), req.params.id, 'Yes');
-					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					// if (vcIndex > -1) {
 						userViewWithAccess.push(userVtr)
-					//}
 				} );				
 				if (userViewWithAccess ) {
 					return res.status(200).send({
@@ -652,14 +610,10 @@ router.route('/timetracker/:id')
 					});
 				}
 			} else {
-				var timeEntries = await getTimeEntry(req.params.id, "Yes");	
-				// var testEntries = await getTimeTrackerRecords(timeEntries[0].vcid, timeEntries[0].vpid, timeEntries[0].userId, 'Yes');						
+				var timeEntries = await getTimeEntry(req.params.id, "Yes");						
 				const timeEntriesWithAccess = [];		
 				timeEntries.forEach(userVtr => {
-					// const vcIndex = userVCs.findIndex(item => (userVtr.vcid.toString() == item._id.toString()));
-					// if (vcIndex > -1)  {
 						timeEntriesWithAccess.push(userVtr)
-					//}
 				} );				
 				if (timeEntriesWithAccess) {
 					return res.status(200).send({
@@ -718,7 +672,7 @@ router.route('/timetracker/:id')
 				message: 'Time entry not found'
 			});
 		} catch (error) {
-			log4js.error('Error in delete time entry: %O', error);
+			logger4js.error('Error in delete time entry: %O', error);
 			return res.status(500).send({
 				state: 'error',
 				message: error

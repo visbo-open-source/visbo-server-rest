@@ -5,8 +5,6 @@ var errorHandler = require('./../components/errorhandler').handler;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
-// var VisboPortfolio = mongoose.model('VisboPortfolio');
-// var VCSetting = mongoose.model('VCSetting');
 
 var logModule = 'VPV';
 var log4js = require('log4js');
@@ -25,12 +23,14 @@ var updateVPVCount = function(vpid, variantName, increment){
 		updateQuery['variant.variantName'] = variantName;
 		updateUpdate = {$inc : {'variant.$.vpvCount' : increment} };
 	}
+	// console.log('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
 	logger4js.debug('Update VP %s with vpvCount inc %d update: %O with %O', vpid, increment, updateQuery, updateUpdate);
+		
 	VisboProject.updateOne(updateQuery, updateUpdate, updateOption, function (err, result) {
 		if (err){
 			logger4js.error('Problem updating VP %s vpvCount: %s', vpid, err.message);
-		}
-		logger4js.trace('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
+		}		
+		logger4js.info('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
 	});
 };
 

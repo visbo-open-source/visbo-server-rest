@@ -8,6 +8,7 @@ var helperOrga = require('./../components/helperOrga');
 var timeTracker = require('./../components/timeTracker');
 // const { toNamespacedPath } = require('path');
 const validate = require('./validate');
+const { Int32 } = require('bson');
 
 const rootPhaseName = '0§.§';
 var logger4js = log4js.getLogger(logModule);
@@ -1760,6 +1761,51 @@ function findCurrentRole(timeZones, roleID, teamID) {
 	return role;
 }
 
+// find all intern subroles of a list of roles including the roles of the list
+function filterAllSubRoles(list, orga) {
+    const subRolesList = [];
+    let listSubRoles = [];
+    let subRolesFound = [];
+    let listOrga = helperOrga.generateIndexedOrgaRoles(orga);
+    
+    list.forEach(uid => {
+		const item = listOrga[uid];		
+        if (item.isSummaryRole === true ) {
+            const hSubRoles = item.subRoleIDs;
+            hSubRoles.forEach( hsr => listSubRoles.push(listOrga[hsr.key]));
+            checkallSubroles(listSubRoles, listOrga, subRolesFound);
+        }
+		subRolesFound.push(item);
+    })
+
+    function checkallSubroles(subRoleslist, listOrga, srFound) {        
+        let srlist = [];
+        subRoleslist?.forEach( sr => {
+            let role = listOrga[sr.uid];
+            if (timeTracker.isOrgaRoleinternPerson(role))
+            {
+                if (!subRolesFound.includes(role)) {
+                    subRolesFound.push(role)
+                }
+            } else {
+				// intern summary roles belongs to the subroles
+				if (!role.isExternRole) {					
+					if (!subRolesFound.includes(role)) {
+						subRolesFound.push(role)
+					}
+				}
+                const hSub = role.subRoleIDs;
+                hSub?.forEach(hsr => srlist.push(listOrga[hsr.key]));                
+            }                    
+        })
+        srFound = srFound.concat(subRolesFound);  
+        if (srlist.length > 0) {             
+            checkallSubroles(srlist, listOrga, srFound);
+        } 
+    } 
+    return subRolesFound;
+}
+
 /* Calculate the related/concerning Roles that belong to this role, means the role itself and all Children
  * With TSO this can be different for every organisation, so the concerning Roles were calculated per Orga
  * and stored in the timeZone Structure for easy access
@@ -3468,12 +3514,124 @@ function resetStatusVPV(oldVPV) {
 	return oldVPV;
 }
 
-function calcTimeRecords(timerecordList, orga, userId, fromDate, toDate) {
+function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
+	if (!vpv || rolesToSetZero.length <= 0) {
+		return false;
+	}
+	
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var duration = endIndex - startIndex + 1;
+	var actFromIndex = getColumnOfDate(fromDate);
+	var actToIndex = getColumnOfDate(toDate);
+	if (startIndex <= actFromIndex <= actToIndex <= endIndex) {
+		vpv?.AllPhases.forEach( phase => {
+			// decide if the phase belongs to the time for actualData
+			const begin1 = phase.relStart + startIndex - 1 <= actFromIndex;
+			const ende1 = actFromIndex <= phase.relEnde + startIndex - 1;
+			const begin2 = phase.relStart + startIndex - 1 <= actToIndex;
+			const ende2 = actToIndex <= phase.relEnde + startIndex - 1;
+			const phaseBelongsToTime = (phase.relStart + startIndex - 1 <= actFromIndex) &&  (actFromIndex <= phase.relEnde + startIndex - 1) 
+									&& (phase.relStart + startIndex - 1 <= actToIndex) &&  (actToIndex <= phase.relEnde + startIndex - 1)
+			if (phaseBelongsToTime){
+				phase?.AllRoles.forEach( role => {
+				
+					if (rolesToSetZero[role.RollenTyp] ) {
+						// delete the forecast
+						for (var i = actFromIndex; i <= actToIndex; i++) {	
+							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
+								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+							} else {
+								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
+							}
+						}
+					}
+				})
+			}			
+		})
+	}	
+	return vpv
+}
+function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
+	if (!vpv || !indexedTimeRecords) {
+		return undefined;
+	}	
+	var startIndex = getColumnOfDate(vpv.startDate);
+	var endIndex = getColumnOfDate(vpv.endDate);
+	var duration = endIndex - startIndex + 1;
+	var actFromIndex = getColumnOfDate(fromDate);
+	var actToIndex = getColumnOfDate(toDate);
+
+	// find all timerecords for this vpid
+	var htimerecs = indexedTimeRecords[vpv.vpid] || [];
+	// look for the different Roles in the list of timerecords for vpid
+	var diffRoles = [];
+	htimerecs.forEach( rec => {
+		if (!diffRoles.includes(rec.roleId)) {
+			diffRoles.push(rec.roleId)
+		}
+	})
+	// find the timerecords for vpid and uid
+	diffRoles.forEach(uid => {
+		// find all timeRecords with roleId = uid
+		const specialTimerecs = htimerecs.filter(item => item.roleId == uid);
+		// the actualData will be entered into the rootphase of a VPV
+		var rootPhase = vpv.AllPhases[0];
+		var index = rootPhase.AllRoles.findIndex(role => (role.RollenTyp == uid))
+		if (index < 0 ) {
+			var roleUID = {};
+			roleUID.RollenTyp = uid;
+			roleUID.Bedarf = [];				
+			for (i = 0; i < duration; i++) {
+				roleUID.Bedarf[i] = 0;
+			}
+			roleUID.teamID = -1;
+			specialTimerecs.forEach( trec => {
+				const hours = +trec.time.toString();
+				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
+				const trecDateIndex = getColumnOfDate(trec.date);
+				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
+					roleUID.Bedarf[actDataIndex] += (hours/8);
+				} else {				
+					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
+					// console.log(trec);						
+				}
+			})
+			rootPhase.AllRoles.push(roleUID);
+
+		} else {
+			var roleUID = rootPhase.AllRoles[index];
+			// perhaps it exists another role/team-combination, then take the one with teamID = -1
+			if (roleUID.teamID != -1) {
+				// is there another role-entry with teamId = -1 then take this (indexNew)
+				var indexNew = rootPhase.AllRoles.findIndex(role => ((role.RollenTyp == uid) && (role.teamID == -1)));
+				if (indexNew != -1) {
+					roleUID = rootPhase.AllRoles[indexNew];
+				}
+			}
+			specialTimerecs.forEach( trec => {
+				const hours = +trec.time.toString();
+				const actDataIndex = getColumnOfDate(trec.date) - startIndex;
+				const trecDateIndex = getColumnOfDate(trec.date);
+				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
+					roleUID.Bedarf[actDataIndex] += (hours/8);
+				} else {					
+					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
+					// console.log(trec);				
+				}
+			})
+		}		
+	})		
+	return vpv;
+}
+
+function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, userId, fromDate, toDate) {
 
 	// check, if all timerecords have an uid defined in orga as a person
 	const indexedOrgaRoles = helperOrga.generateIndexedOrgaRoles(orga);
 	var missingRolesId = [];
 	var missingRolesName = [];
+
 	timerecordList.forEach(item => {
 		if (!indexedOrgaRoles[item.roleId]) {			
 			missingRolesId[item.roleId] = item.name;
@@ -3482,7 +3640,8 @@ function calcTimeRecords(timerecordList, orga, userId, fromDate, toDate) {
 	}) 
 	
 	// check, if all persons of the orga have an entry in the timerecordList
-	const indexedTimeRecords = timeTracker.generateIndexedTimeRecords(timerecordList);
+	const indexedTimeRecords = timeTracker.generateIndexedTimeRecords(timerecordList, false);	
+	var missingInVtr = [];
 	const allRoles = orga.allRoles;
 	for (var i = 0; i < allRoles.length; i++) {
 		const role = allRoles[i];
@@ -3490,15 +3649,42 @@ function calcTimeRecords(timerecordList, orga, userId, fromDate, toDate) {
 			// role no Person
 			continue;	
 		}	
-		if ((timerecordList.findIndex(ele1=> ele1.roleId == role.uid) < 0 ) && (missingInVtr.findIndex(ele2 => ele2 == role.uid))) {
+		if ((timerecordList.findIndex(ele1=> ele1.roleId == role.uid) < 0 ) && (missingInVtr.findIndex(ele2 => ele2 == role.uid) < 0)) {
 			missingInVtr.push(role.uid)
 		}		
 	};
+	// vpvList.forEach(item => {
+	// 	if (item.actualDataUntil) {
+	// 		console.log( 'vpid: %s has actualDataUntil: %s', item.vpid, item.actualDataUntil.toISOString() )
+	// 	} else {			
+	// 		console.log( 'vpid: %s %s has NO actualDataUntil', item.vpid, item.name)
+	// 	}
+	// })
 
-
-	// get all relevant vp and vpv out of the timerecordList
-	// sort an aggregate the timerecords of the timerecordList for the rootPhase of all relevant vpv
-	return true;
+	// calc all relevant roles to set them to zero	
+	var rolesToSetZero = [];	
+	rolesToSetZero = filterAllSubRoles(rolesActDataRelevant, orga);
+	
+	// indexed array
+	var rolesToSetZeroIndexed = [];
+	rolesToSetZero.forEach( item => {
+		rolesToSetZeroIndexed[item.uid] = item;
+	});
+	var newvpvList = [];
+	vpvList.forEach( vpv => {
+		// Call of deleteNeedsOfVPV
+		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
+		// put the new hours work into the vpv's
+		const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);	
+		if (!vpvnew1) {
+			// only the vpv with the deleted forecast	
+			newvpvList.push(vpvnew);		
+		} else {
+			// vpv with the actualData imported
+			newvpvList.push(vpvnew1);	
+		}		
+	})	
+	return newvpvList;
 }
 
 module.exports = {
