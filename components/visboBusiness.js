@@ -321,6 +321,37 @@ function calcCosts(vpv, pfv, organisation) {
 	return allCostValuesIndexed;
 }
 
+
+function getSummeInvoices(vpv, index) {
+	var sumOfInvoices = 0;
+	var startDate, endDate;
+	var len;
+	var allInvoices;
+
+	if ( !vpv ) {
+		logger4js.warn('CalcInvoices no valid vpv');
+		return sumOfInvoices;
+	}	
+	startDate = vpv.startDate;
+	endDate =  vpv.endDate;
+
+	if (vpv) {
+		var currentDate = getDateStartOfMonth(vpv.startDate);
+		logger4js.trace('Calculate Project Costs vpv startDate %s ISO %s currentDate %s', vpv.startDate, vpv.startDate.toISOString(), currentDate.toISOString());
+		
+		allInvoices = getAllInvoices(vpv);
+		len = allInvoices.length;		
+		len = Math.min(len, index);
+		for (var j = 0; j < len; j++) {
+			sumOfInvoices += allInvoices[j] || 0;
+			} 
+		}
+
+	//logger4js.debug('Calculate Project Invoices until month-No %s ', index);
+	return sumOfInvoices;
+}
+
+
 function getNamePart(str, part) {
 		var result = undefined;
 		if (!str || part < 0) {
@@ -1038,7 +1069,11 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	}
 
 	keyMetrics.RACBaseLast = pfv.Erloes;
-	keyMetrics.RACCurrent = vpv.Erloes;
+	var sumOfInvoicesBase = getSummeInvoices(pfv, indexActual);
+	keyMetrics.RACBaseLastActual = sumOfInvoicesBase && Math.round(sumOfInvoicesBase*1000)/1000; //round to euros
+	keyMetrics.RACCurrent = vpv.Erloes;	
+	var sumOfInvoicesCurrent = getSummeInvoices(vpv, indexActual);
+	keyMetrics.RACCurrentActual = sumOfInvoicesCurrent && Math.round(sumOfInvoicesCurrent*1000)/1000; //round to euros
 
 	var endCalc = new Date();
 	logger4js.debug('Calculate KeyMetrics duration %s ms ', endCalc.getTime() - startCalc.getTime());
