@@ -3576,39 +3576,16 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 
 	if ((startIndex <= actFromIndex) && (actToIndex <= endIndex)  ) {
 
-		if (actualDataIndex == 0) {
-			// no actualDataUntil set => set all months of this project from startIndex til actToIndex to null
+		if ((actualDataIndex > 0) && (actualDataIndex >= actFromIndex) && (actualDataIndex <= actToIndex)){
+			
+			// set the months from this project from actualDataIndex til actToIndex to null
 			vpv?.AllPhases.forEach( phase => {
-				phase?.AllRoles.forEach( role => {			
-				if (rolesToSetZero[role.RollenTyp] ) {
-					// delete the forecast
-					for (var i = startIndex; i <= actToIndex; i++) {	
-						if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-							role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
-						} else {
-							logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
-						}
-					}
-				}
-			})
-			})
-		}
-		if (actualDataIndex > 0) {
-			// set the months from this project from actualDataIndex+1 til actToIndex to null
-			vpv?.AllPhases.forEach( phase => {
-				// decide if the phase belongs to the time for actualData
-				// const begin1 = phase.relStart + startIndex - 1 <= actFromIndex;
-				// const ende1 = actFromIndex <= phase.relEnde + startIndex - 1;
-				// const begin2 = phase.relStart + startIndex - 1 <= actToIndex;
-				// const ende2 = actToIndex <= phase.relEnde + startIndex - 1;
-				// const phaseBelongsToTime = (phase.relStart + startIndex - 1 <= actFromIndex) &&  (actFromIndex <= phase.relEnde + startIndex - 1) 
-				// 						&& (phase.relStart + startIndex - 1 <= actToIndex) &&  (actToIndex <= phase.relEnde + startIndex - 1)
-				// if (phaseBelongsToTime){
+				
 					phase?.AllRoles.forEach( role => {
 					
 						if (rolesToSetZero[role.RollenTyp] ) {
 							// delete the forecast
-							for (var i = actualDataIndex + 1 ; i <= actToIndex; i++) {	
+							for (var i = actFromIndex ; i <= actToIndex; i++) {	
 								if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
 									role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
 								} else {
@@ -3616,8 +3593,41 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 								}
 							}
 						}
-					})
-				// }			
+					})	
+			})
+		} 
+
+		if (actualDataIndex <= 0) {
+			// no actualDataUntil set => set all months of this project from startIndex til actToIndex to null
+			vpv?.AllPhases.forEach( phase => {
+				phase?.AllRoles.forEach( role => {			
+					if (rolesToSetZero[role.RollenTyp] ) {
+						// delete the forecast
+						for (var i = startIndex; i <= actToIndex; i++) {	
+							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
+								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+							} else {
+								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
+							}
+						}
+					}
+				})
+			})
+		}  else {
+			// set the months from this project from actualDataIndex+1 til actToIndex to null
+			vpv?.AllPhases.forEach( phase => {			
+				phase?.AllRoles.forEach( role => {				
+					if (rolesToSetZero[role.RollenTyp] ) {
+						// delete the forecast
+						for (var i = actualDataIndex + 1 ; i <= actToIndex; i++) {	
+							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
+								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+							} else {
+								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
+							}
+						}
+					}
+				})		
 			})
 		}
 	
@@ -3625,39 +3635,11 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 	} else {
 		// protokoll for not processed vpv
 		// make entries into the MongoDB TimeRecord
-	}
-	
-	// if (startIndex <= actFromIndex <= actToIndex <= endIndex)  {
-	// 	vpv?.AllPhases.forEach( phase => {
-	// 		// decide if the phase belongs to the time for actualData
-	// 		const begin1 = phase.relStart + startIndex - 1 <= actFromIndex;
-	// 		const ende1 = actFromIndex <= phase.relEnde + startIndex - 1;
-	// 		const begin2 = phase.relStart + startIndex - 1 <= actToIndex;
-	// 		const ende2 = actToIndex <= phase.relEnde + startIndex - 1;
-	// 		const phaseBelongsToTime = (phase.relStart + startIndex - 1 <= actFromIndex) &&  (actFromIndex <= phase.relEnde + startIndex - 1) 
-	// 								&& (phase.relStart + startIndex - 1 <= actToIndex) &&  (actToIndex <= phase.relEnde + startIndex - 1)
-	// 		if (phaseBelongsToTime){
-	// 			phase?.AllRoles.forEach( role => {
-				
-	// 				if (rolesToSetZero[role.RollenTyp] ) {
-	// 					// delete the forecast
-	// 					for (var i = actFromIndex; i <= actToIndex; i++) {	
-	// 						if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-	// 							role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
-	// 						} else {
-	// 							logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
-	// 						}
-	// 					}
-	// 				}
-	// 			})
-	// 		}			
-	// 	})
-	// }	
-	// if ((startIndex <= actFromIndex <= actToIndex <= endIndex) && !actualDataUntil) {
-
-	// }
+	}	
 	return vpv
 }
+
+
 function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	if (!vpv || !indexedTimeRecords) {
 		return undefined;
@@ -3790,6 +3772,13 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 		if (!vpvnew) {
 			// there were some erros while deleting the planned ressourceNeeds or the timespam was defined with errors
 			logger4js.debug('Error while deleting the planned ressource needs or the defined timespam was wrong %s : %s', fromDate, toDate);
+
+			// } else {
+			// 	newvpvList.push(vpvnew);
+			// }
+
+			// for test
+
 		} else {
 			// put the new hours work into the vpv's
 			const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);	
