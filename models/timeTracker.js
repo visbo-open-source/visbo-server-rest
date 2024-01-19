@@ -16,7 +16,19 @@ var timeTracker = new mongoose.Schema({
     notes: { type: Schema.Types.String, required: false },
     approvalDate: { type: Schema.Types.Date, required: false },
     approvalId: { type: Schema.Types.ObjectId, required: false },
+    failed: { type: Schema.Types.String, required: false },
 }, { timestamps: true });
+
+
+var constVTRFailed = Object.freeze([
+	'wrong project status', 'month before start', 'month after end'
+]);
+
 
 // declare a model
 mongoose.model('TimeTracker', timeTracker);
+
+
+module.exports = {
+	constVTRFailed: constVTRFailed
+};

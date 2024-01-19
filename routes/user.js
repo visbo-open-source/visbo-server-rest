@@ -618,7 +618,7 @@ router.route('/timetracker/:id')
 				if (timeEntriesWithAccess) {
 					return res.status(200).send({
 						state: 'success',
-						message: 'Time tracker data retrived for user',
+						message: 'Time tracker data retrieved for user',
 						timeEntries: timeEntriesWithAccess
 					});
 				}
