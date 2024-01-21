@@ -244,7 +244,6 @@ function setErloesWithSumOfInvoice(vpv) {
 	}
 }
 
-
 module.exports = {
 	updateVPVCount: updateVPVCount,
 	createInitialVersions: createInitialVersions,

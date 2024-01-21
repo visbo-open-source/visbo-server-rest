@@ -8,7 +8,7 @@ var crypt = require('./../components/encrypt');
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
 var errorHandler = require('./../components/errorhandler').handler;
-var lockVP = require('./../components/lock.js')
+var lockVP = require('./../components/lock')
 var verifyVc = require('./../components/verifyVc');
 var verifyVg = require('./../components/verifyVg');
 var verifyVp = require('./../components/verifyVp');
@@ -2097,7 +2097,7 @@ router.route('/:vcid/timetracking')
 
 		const listeVPVs = req.listVPV;
 		const listVP = req.listVCAllVP;
-		
+		var usedVPListIndexed = [];
 		
 		var orderedVPList = [];			// includes all VPs of this VC, which have the status 'ordered'	
 		orderedVPList = listVP.filter(item => (item.vpStatus == constVPStatus[2])); 
@@ -2155,6 +2155,16 @@ router.route('/:vcid/timetracking')
 					if (!usedVPVList.includes(vpv)) usedVPVList.push(vpv);
 				})
 
+				// make an indexed usedVPVlist				
+				usedVPVList.forEach(vpv => {
+					var index = listVP.findIndex( item => item._id.toString() == vpv.vpid.toString());
+					if (index >= 0) {
+						const ID = vpv.vpid.toString();
+						usedVPListIndexed[ID] = listVP[index];
+					}
+				})
+
+
 				const orga = req.visboOrganisation[0].value;
 				const customize = req.listVCSetting[0].value;
 				var rolesActDataRelevant = [];
@@ -2183,7 +2193,14 @@ router.route('/:vcid/timetracking')
 
 
 					var newVPV = newVPVList[i];
-					var newVP = orderedVPListIndexed[newVPV.vpid];
+					//var newVP = orderedVPListIndexed[newVPV.vpid];
+					const ID = newVPV.vpid.toString();
+					var newVP = usedVPListIndexed[ID];
+					
+					if (!newVP) {
+						// newVP is not ordered, it has no timerecords and the status is init or proposed - no save should be done
+						continue;					
+					}
 
 					req.oneVP = newVP;
 					var variantName = newVPV.variantName;
