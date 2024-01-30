@@ -2235,18 +2235,19 @@ router.route('/:vcid/timetracking')
 							vp: [req.oneVP]
 						});
 					}
+					
+					// TODO: UR
 					// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
-					if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
-						logger4js.warn('VPV Post VP status %s %s %s', newVPV.vpid, req.oneVP.name, req.oneVP.vpStatus);
-						return res.status(412).send({
-							state: 'failure',
-							message: 'Project status does not allow any new version',
-							vp: [req.oneVP]
-						});
-					}						
+					// if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
+					// 	logger4js.warn('VPV Post VP status %s %s %s', newVPV.vpid, req.oneVP.name, req.oneVP.vpStatus);
+					// 	return res.status(412).send({
+					// 		state: 'failure',
+					// 		message: 'Project status does not allow any new version',
+					// 		vp: [req.oneVP]
+					// 	});
+					// }						
 
 					logger4js.debug('User has permission to create a new Version in %s Variant :%s:', req.oneVP.name, newVPV.variantName);
-
 								
 					// get the latest VPV to check if it has changed in case the client delivers an updatedAt Date
 					var queryvpv = {};

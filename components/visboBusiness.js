@@ -3683,21 +3683,20 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				const trecDateIndex = getColumnOfDate(trec.date);
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
 					roleUID.Bedarf[actDataIndex] += (hours/8);
+					if (trec.failed){
+						trec.failed = undefined;
+						const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
+					}
 				} else {				
 					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
-						
-					if ((vpv.vpStatus != constVPStatus[0]) || (vpv.vpStatus != constVPStatus[1]) || (vpv.vpStatus != constVPStatus[2])) {
-						trec.failed = constVTRFailed[0];
-					}
+					
 					if (trecDateIndex < startIndex) {
 						trec.failed = constVTRFailed[1];
 					}
 					if (trecDateIndex > endIndex) {
 						trec.failed =  constVTRFailed[2];
-					}	
-					console.log("old timeRec: ", trec);			
-					const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
-					console.log("new timeRec: ", newTrec);										
+					}								
+					const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);				
 				}
 			})
 			rootPhase.AllRoles.push(roleUID);
@@ -3718,21 +3717,20 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				const trecDateIndex = getColumnOfDate(trec.date);
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
 					roleUID.Bedarf[actDataIndex] += (hours/8);
+					if (trec.failed){
+						trec.failed = undefined;
+						const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
+					}
 				} else {					
 					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
 					
-					if ((vpv.vpStatus != constVPStatus[0]) || (vpv.vpStatus != constVPStatus[1]) || (vpv.vpStatus != constVPStatus[2])) {
-						trec.failed = constVTRFailed[0];
-					}
 					if (trecDateIndex < startIndex) {
 						trec.failed = constVTRFailed[1];
 					}
 					if (trecDateIndex > endIndex) {
 						trec.failed =  constVTRFailed[2];
-					}	
-					console.log("old timeRec: ", trec);			
+					}			
 					const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
-					console.log("new timeRec: ", newTrec);				
 				}
 			})
 		}		
@@ -3768,14 +3766,7 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 			missingInVtr.push(role.uid)
 		}		
 	};
-	// vpvList.forEach(item => {
-	// 	if (item.actualDataUntil) {
-	// 		console.log( 'vpid: %s has actualDataUntil: %s', item.vpid, item.actualDataUntil.toISOString() )
-	// 	} else {			
-	// 		console.log( 'vpid: %s %s has NO actualDataUntil', item.vpid, item.name)
-	// 	}
-	// })
-
+	
 	// calc all relevant roles to set them to zero	
 	var rolesToSetZero = [];	
 	rolesToSetZero = filterAllSubRoles(rolesActDataRelevant, orga);
@@ -3791,17 +3782,12 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 		// don't call deleteNeedsOfVPV and importNeedsOfVPV if not any timeRecord for vpid exists
 		if (!indexedTimeRecords[vpv.vpid])  {
 			continue;
-		}
-		// don't call deleteNeedsOfVPV and importNeedsOfVPV if vpStatus is paused, finished or stopped
-		if (vpv.vpStatus == constVPStatus[3] || vpv.vpStatus == constVPStatus[4] ||vpv.vpStatus == constVPStatus[5]) {
-			continue;
-		}
+		}		
 		// Call of deleteNeedsOfVPV
 		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
 		if (!vpvnew) {
 			// there were some erros while deleting the planned ressourceNeeds or the timespam was defined with errors
 			logger4js.debug('Error while deleting the planned ressource needs or the defined timespam was wrong %s : %s', fromDate, toDate);
-
 		} else {
 			// put the new hours work into the vpv's
 			const vpvnew1 = importNeedsOfVPV(vpvnew, fromDate, toDate, indexedTimeRecords);	
