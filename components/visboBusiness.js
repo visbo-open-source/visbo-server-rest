@@ -3588,7 +3588,7 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 							// delete the forecast
 							for (var i = actFromIndex ; i <= actToIndex; i++) {	
 								if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-									role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+									role.Bedarf[i - startIndex  - phase.relStart] = 0;
 								} else {
 									logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
 								}
@@ -3606,7 +3606,7 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 						// delete the forecast
 						for (var i = startIndex; i <= actToIndex; i++) {	
 							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+								role.Bedarf[i - (startIndex  + phase.relStart - 1)] = 0;
 							} else {
 								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
 							}
@@ -3779,10 +3779,10 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 	var newvpvList = [];	
 	for (let i = 0; i < vpvList.length; i++) {
 		var vpv = vpvList[i];
-		// don't call deleteNeedsOfVPV and importNeedsOfVPV if not any timeRecord for vpid exists
-		if (!indexedTimeRecords[vpv.vpid])  {
-			continue;
-		}		
+		// // don't call deleteNeedsOfVPV and importNeedsOfVPV if not any timeRecord for vpid exists
+		// if (!indexedTimeRecords[vpv.vpid])  {
+		// 	continue;
+		// }		
 		// Call of deleteNeedsOfVPV
 		const vpvnew = deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZeroIndexed);
 		if (!vpvnew) {
