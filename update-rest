@@ -91,7 +91,7 @@ fi
 
 echo "06: Manage NODE Process with PM2"
 pm2 list
-pm2 restart VisboReST
+pm2 restart VisboReST --update-env
 if [ $? -ne 0 ]
 then
   echo "FATAL: PM2 Restart failed to Restart Visbo-Server-Rest."

@@ -811,7 +811,7 @@ router.route('/user/pwforgotten')
 								});
 							}
 							var message = {
-									// from: 'visbo@seyfried.bayern',
+									// from: 'service@visbo.de',
 									to: user.email,
 									subject: res.__('Mail.Subject.PWReset'),
 									// text: 'Password reset Token: '.concat(token, ' '),
