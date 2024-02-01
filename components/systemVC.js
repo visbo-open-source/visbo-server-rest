@@ -25,8 +25,8 @@ var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = undefined;
-var predictConfigured = undefined;
-var fsModell = undefined;
+// var predictConfigured = undefined;
+// var fsModell = undefined;
 
 // Verify/Create VISBO Center with an initial user
 var createSystemVC = function (body, launchServer) {
@@ -127,19 +127,19 @@ var initSystemSettings = function(launchServer) {
 				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
 				redisClient.set('vcSystem', vcSystem._id.toString());
 			}
-			if (vcSystemSetting[i].name == 'EnablePredict') {
-				if (predictConfigured == undefined) {
-					// Check if the Predict Module is installed and the Model data is available
-					var fsModule = '../predictkm';
-					fsModell = (process.env.DATAPATH || path.join(__dirname, '../data')).concat('/predictkm');
-					if(fs.existsSync(fsModule) && fs.existsSync(fsModell)) {
-						logger4js.warn('Predict Configured', fsModule, fsModell);
-						predictConfigured = 1;
-					} else {
-						logger4js.warn('Predict not Configured', fsModule, fsModell);
-					}
-				}
-			}
+			// if (vcSystemSetting[i].name == 'EnablePredict') {
+			// 	if (predictConfigured == undefined) {
+			// 		// Check if the Predict Module is installed and the Model data is available
+			// 		var fsModule = '../predictkm';
+			// 		fsModell = (process.env.DATAPATH || path.join(__dirname, '../data')).concat('/predictkm');
+			// 		if(fs.existsSync(fsModule) && fs.existsSync(fsModell)) {
+			// 			logger4js.warn('Predict Configured', fsModule, fsModell);
+			// 			predictConfigured = 1;
+			// 		} else {
+			// 			logger4js.warn('Predict not Configured', fsModule, fsModell);
+			// 		}
+			// 	}
+			// }
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt;
 			}
@@ -295,13 +295,13 @@ var getReSTUrl = function () {
 	return result;
 };
 
-var checkPredictConfigured = function () {
-	return predictConfigured;
-};
+// var checkPredictConfigured = function () {
+// 	return predictConfigured;
+// };
 
-var getPredictModel = function () {
-	return predictConfigured ? fsModell : undefined;
-};
+// var getPredictModel = function () {
+// 	return predictConfigured ? fsModell : undefined;
+// };
 
 module.exports = {
 	createSystemVC: createSystemVC,
@@ -312,7 +312,7 @@ module.exports = {
 	refreshSystemSetting: refreshSystemSetting,
 	reloadSystemSetting: reloadSystemSetting,
 	checkSystemEnabled: checkSystemEnabled,
-	getSystemSettingList: getSystemSettingList,
-	checkPredictConfigured: checkPredictConfigured,
-	getPredictModel: getPredictModel
+	getSystemSettingList: getSystemSettingList
+	// checkPredictConfigured: checkPredictConfigured,
+	// getPredictModel: getPredictModel
 };
