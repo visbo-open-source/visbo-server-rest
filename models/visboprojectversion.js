@@ -77,6 +77,8 @@ var clsPhase = new Schema({
 var clsKeyMetrics = new Schema({
 	RACBaseLast: { type: Number },
 	RACCurrent: { type: Number },
+	RACBaseLastActual: { type: Number },
+	RACCurrentActual: { type: Number },
 	costCurrentActual: { type: Number },
 	costCurrentTotal: { type: Number },
 	costCurrentTotalPredict: { type: Number },

@@ -15,17 +15,19 @@ async function createTimeEntry(userId, transaction) {
 async function updateMany(transaction) {
     const list = transaction.approvalList;
     const array = [];
-    for (var i = 0; i < list.length; i++) {
-        var canUpdate = validateStatus(list[i].id);
-        if (canUpdate) {
-            await TimeTracker.updateOne({ _id: list[i].id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
-            var updatedEntry = await TimeTracker.findById(list[i].id);
-            array.push(updatedEntry);
-        } else {
-            logger4js.error('Error in updating time entry with id %s', list[i].id);
-            continue;
-        }
-    }
+    if (list) {
+        for (var i = 0; i < list.length; i++) {
+            var canUpdate = validateStatus(list[i].id);
+            if (canUpdate) {
+                await TimeTracker.updateOne({ _id: list[i].id }, { approvalDate: transaction.approvalDate, approvalId: transaction.approvalId, status: transaction.status });
+                var updatedEntry = await TimeTracker.findById(list[i].id);
+                array.push(updatedEntry);
+            } else {
+                logger4js.error('Error in updating time entry with id %s', list[i].id);
+                continue;
+            }
+        } 
+    }   
     return array;
 }
 
@@ -56,25 +58,22 @@ async function validateStatus(id) {
 }
 
 async function getTimeEntry(userId, status) {
+    var query = {};
+	query.userId = userId;
+	query.deletedAt =  {$exists: false};
+	// prevent that the user gets access to TimeRecords in a later deleted VC. 
+	query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
     if (status) {
-        var timeEntry = TimeTracker.find({ userId: userId , status: status});
-    } else {
-        var timeEntry = TimeTracker.find({ userId: userId });
-    }    
+        query.status = status
+    }
+	logger4js.trace('Get TimeRecords Query %O', query);
+	var timeEntry = TimeTracker.find(query);    
     return timeEntry ? timeEntry : [];
 }
 
 function getTimeTrackerRecords(vcid, vpid, userId, status) {
 	var query = {};
     var listVTR = [];
-	// if (!vcid) {
-	// 	return next();
-	// }   
-	// query = {};
-
-    // if (status) {
-    //     query.status = 'Yes';
-    // }
    
     TimeTracker.aggregate([{ $sort: { vcid: 1, vpid: 1, name: -1, roleId: 1, date: -1 } }])
         .exec((error, result) => {
@@ -86,32 +85,7 @@ function getTimeTrackerRecords(vcid, vpid, userId, status) {
                 listVTR = result.filter(item => ((item.vcid.toString() == vcid) && (item.vpid.toString() == vpid) && (item.userId.toString() == userId)));
                 console.log("Anzahl Einträge gefiltert: %d ", listVTR.length);
             };
-        });
-
-	// query.vcid = vcid;
-    // query.vpid = vpid;    
-    // query.userId = userId;   
-	// query.deletedAt =  {$exists: false};
-	// var queryVP = TimeTracker.find(query);
-	// queryVP.select('_id userId vpid vcid roleId date time notes name');
-	// queryVP.lean();
-	// queryVP.exec(function (err, listVTR) {
-	// 	if (err) {
-	// 		errorHandler(err, res, 'DB: Get VP of specific VC', 'Error getting VISBO Projects');
-	// 		return;
-	// 	}
-	// 	logger4js.debug('Found %d VISBO Center Projects', listVTR.length);
-    //     listVTR.forEach( item => {           
-    //         console.log( "userId = %s", item.userId);
-    //         console.log( "vcid = %s", item.vcid);
-    //         console.log( "vpid = %s", item.vpid);
-    //         console.log( "roleId = %s", item.roleId);
-    //         console.log( "name = %s", item.name);
-    //         console.log( "time = %d", item.time);
-    //         console.log( "date = %s", item.date.toString());
-    //         console.log( "notes = %s", item.notes);
-    //     }) 
-    // });
+        });	
 }
 
 async function findEntry(id) {
@@ -222,7 +196,13 @@ async function parseRoles(lists) {
     for (let item of lists.subRoles) {
         // only entries with status NO
         //const timeTracker = await TimeTracker.find({ roleId: item.uid, status: 'No', vcid: lists.vcid });
-        const timeTracker = await TimeTracker.find({ roleId: item.uid, vcid: lists.vcid });
+        var query = {};
+        query.roleId = item.uid;
+        query.vcid = lists.vcid;
+        query.deletedAt =  {$exists: false};
+        query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC      
+        const timeTracker = await TimeTracker.find(query);
+        // const timeTracker = await TimeTracker.find({ roleId: item.uid, vcid: lists.vcid });
         if (timeTracker) {
             arrayList.push(timeTracker);
         }

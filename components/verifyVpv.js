@@ -329,6 +329,7 @@ function getVPV(req, res, next, vpvid) {
 	});
 }
 
+
 // Get the organisations for calculation
 function getVPVOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
