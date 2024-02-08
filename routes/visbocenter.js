@@ -2005,7 +2005,7 @@ router.route('/:vcid/group/:groupid/user/:userid')
 router.route('/:vcid/timetracking')
 	/**
 		* @api {post} /vc/:vcid/timetracking TimeTracking - Import the TimeRecords
-		* @apiVersion 1.0.0
+		* @apiVersion 6.0.0
 		* @apiGroup VISBO Center
 		* @apiName PostVISBOCenterTimeTracking
 		* @apiHeader {String} access-key User authentication token.
