@@ -2004,7 +2004,7 @@ router.route('/:vcid/group/:groupid/user/:userid')
 
 router.route('/:vcid/timetracking')
 	/**
-		* @api {post} /vc/:vcid/timetracking TimeTracking - Import the TimeRecords
+		* @api {post} /vc/:vcid/timetracking VISBO Center TimeTracking - Import 
 		* @apiVersion 6.0.0
 		* @apiGroup VISBO Center
 		* @apiName PostVISBOCenterTimeTracking
@@ -2018,7 +2018,7 @@ router.route('/:vcid/timetracking')
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create the VISBO ProjectVersions with the changed RessourceNeeds
 		* @apiError {number} 409 VISBO Project Versions Conflict
-		* @apiError {number} 412 VISBO TrimeTracking Precondition failed or Project status does not allow any new version or cannot be done - missing definition in customization _isActualDataRelevant
+		* @apiError {number} 412 VISBO TimeTracking: Precondition failed or Project status does not allow any new version or TimeTracking cannot be done because of missing definition in customization _isActualDataRelevant
 		* @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vc/:vcid/timetracker
 		*  {
