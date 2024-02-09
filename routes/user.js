@@ -435,7 +435,7 @@ router.route('/ott')
 router.route('/timetracker')
 	/**
 			* @api {post} /user/timetracker Create a time entry
-			* @apiVersion 1.0.0
+			* @apiVersion 6.0.0
 			* @apiHeader {String} access-key User authentication token.
 			* @apiGroup Authentication
 			* @apiName Create time tracker data
@@ -478,7 +478,7 @@ router.route('/timetracker')
 	})
 	/**
 		* @api {patch} /user/timetracker Update specific time entry
-		* @apiVersion 1.0.0
+		* @apiVersion 6.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Update time tracker data
@@ -523,7 +523,7 @@ router.route('/timetracker')
 router.route('/timetracker/:id')
 	/**
 		* @api {get} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Get time tracker data by employee id
-		* @apiVersion 1.0.0
+		* @apiVersion 6.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Get time tracker data

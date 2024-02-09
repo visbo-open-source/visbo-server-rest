@@ -1,10 +1,10 @@
 {
   "name": "VISBO ReST Server",
-  "version": "5.1.0",
+  "version": "6.1.0",
   "description": "REST API documentation for VISBO ReST Server",
   "title": "API Documentation - VISBO ReST Server",
   "footer": {
-    "title": "2023 © VISBO GmbH"
+    "title": "2024 © VISBO GmbH"
   },
   "order": [
     "Authentication",
