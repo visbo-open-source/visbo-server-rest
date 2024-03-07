@@ -364,7 +364,7 @@ function getPortfolioVPs(req, res, next) {
 
 	if (baseUrl == '/vpv' && req.method == 'GET' && req.query.vpfid) {
 		vpfid = req.query.vpfid;
-	} else if (req.method == 'GET' && urlComponent.length == 6 && urlComponent[1] == 'vp' && urlComponent[5] == 'capacity') {
+	} else if (req.method == 'GET' && urlComponent.length == 6 && urlComponent[1] == 'vp' && (urlComponent[5] == 'capacity' || urlComponent[5] == 'costtypes')) {
 		vpfid = urlComponent[4];
 	}
 	if (!vpfid) {
@@ -601,7 +601,7 @@ function getVPFVPVs(req, res, next) {
 	var nowDate = new Date();
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
-		logger4js.info('Get VC Capacity mal formed query parameter %O ', req.query);
+		logger4js.info('Get VC Capacity/Costtypes mal formed query parameter %O ', req.query);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
@@ -671,12 +671,12 @@ function getVPFVPVs(req, res, next) {
 
 		queryvpvids._id = {$in: vpvidsList};
 		var queryVPV = VisboProjectVersion.find(queryvpvids);
-		req.auditTTLMode = 1;	// Capacity Calculation of VISBO Project Versions
+		req.auditTTLMode = 1;	// Capacity/CostInformation Calculation of VISBO Project Versions
 
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
-				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				errorHandler(err, res, 'DB: GET VC Capacity/CostInformation Calc Find Full', 'Error getting VISBO Project Versions ');
 				return;
 			}
 			req.auditInfo = listVPV.length;
@@ -687,7 +687,7 @@ function getVPFVPVs(req, res, next) {
 	});
 }
 
-// Get pfv-vpvs of the Portfolio Version related to refDate for capacity calculation
+// Get pfv-vpvs of the Portfolio Version related to refDate for capacity/costInformation calculation
 function getVPFPFVs(req, res, next) {
 	var userId = req.decoded._id;
 

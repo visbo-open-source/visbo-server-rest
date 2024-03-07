@@ -3805,6 +3805,347 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 	return newvpvList;
 }
 
+function calcCosttypes(vpvs, pfvs, costID, startDate, endDate, organisation, costInfo, hierarchy, onlyPT) {
+	if (!(vpvs?.length > 0) || !(organisation?.length > 0)) {
+		logger4js.warn('Calculate Cost Information missing vpvs %d or organisation %d', vpvs?.length, organisation?.length);
+		return [];
+	}
+
+	if (validate.compareDate(startDate, endDate) > 0 ){
+		logger4js.warn('Calculate Cost Information startDate %s before endDate %s ', startDate, endDate);
+		return [];
+	}
+
+	logger4js.debug('Calculate Cost Information %s', costID);
+	var startTimer = new Date();
+
+	if (!startDate) {
+		startDate = getDateStartOfMonth();
+		startDate.setMonth(startDate.getMonth() - 4);
+	}
+	var startIndex = getColumnOfDate(startDate);
+
+	if (!endDate) {
+		endDate = getDateStartOfMonth();
+		endDate.setMonth(endDate.getMonth() + 9);
+	}
+	var endIndex = getColumnOfDate(endDate);
+
+	
+	var timezones = [];	
+	var tsItem = {};
+	tsItem.organisation = [];
+	tsItem.organisation.push(organisation[0]);
+	tsItem.startDate = startDate;
+	tsItem.endDate = endDate;
+	tsItem.startIndex = startIndex;
+	tsItem.endIndex = endIndex;
+	tsItem.duration = endIndex - startIndex + 1;
+	timezones.push(tsItem)
+	
+	// prepare roles & costs for direct access
+	var orga = timezones[0].organisation[0];	
+	orga.indexedRoles = [];
+	orga.value?.allRoles?.forEach(role => {
+		orga.indexedRoles[role.uid] = role;
+	});
+	orga.indexedCosts = [];
+	orga.value?.allCosts?.forEach(cost => {
+		orga.indexedCosts[cost.uid] = cost;
+	});
+
+	// var timeZones = splitInTimeZones(organisation, startDate, endDate);
+	// if (!timeZones) {
+	// 	return [];
+	// }
+	// var role, teamID;
+	// if (!roleID) {
+	// 	role = timeZones.mergedOrganisation.find(role => role.pid == undefined);
+	// 	roleID = role?.uid;
+	// }
+	cost = timezones[0].organisation[0].indexedCosts[costID];
+	if (!cost) {
+		logger4js.warn('Calculate Concerning Costtype not found, cost: %d found: %s', costID, cost != undefined);
+		return [];
+	}
+	// if (!role.isSummaryRole && parentID > 0) {
+	// 	// find the parent team for a person in this orga
+	// 	var teamRole = findCurrentRole(timeZones, parentID);
+	// 	if (teamRole?.type == 2) {
+	// 		// if parent is a team set the teamID
+	// 		teamID = teamRole.uid;
+	// 	}
+	// }
+	// mergeCapacity(capacity, timeZones, startDate);
+
+	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
+	// var newvpvs = [];
+	// for ( var i = 0; vpvs && i < vpvs.length; i++) {
+	// 	var vpv = vpvs[i];
+	// 	var vpvStartIndex = getColumnOfDate(vpv.startDate);
+	// 	var vpvEndIndex = getColumnOfDate(vpv.endDate);
+	// 	if (vpvEndIndex < startIndex) continue;
+	// 	if (vpvStartIndex > endIndex) continue;
+	// 	newvpvs.push(vpv);
+	// }
+	var newvpvs = vpvs;
+	var costInfoVPV = calcCosttypesVPVs(newvpvs, costID, timezones, hierarchy);
+	var costInfoPFV = [];
+	var item;
+
+	if (pfvs?.length > 0) {
+		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+		// var newpfvs = [];
+		// for ( i = 0; pfvs && i < pfvs.length; i++) {
+		// 	vpv = pfvs[i];
+		// 	vpvStartIndex = getColumnOfDate(vpv.startDate);
+		// 	vpvEndIndex = getColumnOfDate(vpv.endDate);
+		// 	if (vpvEndIndex < startIndex) continue;
+		// 	if (vpvStartIndex > endIndex) continue;
+		// 	newpfvs.push(vpv);
+		// }
+		// calc the corresponding of the PFVs
+		var newpfvs = pfvs;
+		costInfoPFV = calcCosttypesVPVs(newpfvs, costID, timezones,hierarchy);
+		// insert or update cost values
+		for (item in costInfoPFV) {
+			if (!costInfoVPV[item]) {
+				// insert new Value
+				costInfoVPV[item] = {};
+				costInfoVPV[item].currentDate = costInfoPFV[item].currentDate;
+				costInfoVPV[item].costID = costInfoPFV[item].costID;
+				costInfoVPV[item].costName = costInfoPFV[item].costName;
+				costInfoVPV[item].currentCost = 0;
+				costInfoVPV[item].baselineCost = 0;
+			}
+			costInfoVPV[item].baselineCost = (costInfoPFV[item].baselineCost || 0);
+		}
+	}
+
+	var capa = [];
+	for (item in costInfoVPV) {		
+		capa.push({
+			'month': costInfoVPV[item].currentDate,
+			'costID' : costInfoVPV[item].costID.toString(),
+			'costName' : costInfoVPV[item].costName,
+			'currentCost': costInfoVPV[item].currentCost || 0,
+			'baseLineCost': costInfoVPV[item].baselineCost || 0
+		});		
+	}
+
+	var endTimer = new Date();
+	logger4js.trace('Calculate Cost Information duration: ', endTimer.getTime() - startTimer.getTime());
+
+	return capa;
+}
+
+function calcCosttypesVPVs(vpvs, costID, timeZones, hierarchy) {
+
+	var allCalcCostValues = [];
+	var allCalcCostValuesIndexed = [];
+	var costIDs = [];
+
+	// startCalc is defined for time-measuring
+	var startCalc = new Date();
+	logger4js.trace('Calculate Cost Information of Cost %s startDate %s currentDate %s', costID, timeZones[0].startDate.toISOString());
+
+	if (!(vpvs?.length > 0) ) {
+		return 	allCalcCostValuesIndexed;
+	}
+	
+	var cost = timeZones[0].organisation[0].indexedCosts[costID];
+	if (!cost) {
+		return allCalcCostValuesIndexed;
+	}
+	costIDs.push({uid: costID, costName: cost.name}); // Main cost
+
+	// if (hierarchy && role.isSummaryRole) {
+		cost.subCostIDs?.forEach(item => {
+			var subcost = timeZones[0].organisation[0].indexedCosts[item.key];
+			if (!subcost) {
+				return;
+			}
+			costIDs.push({uid: subcost.uid, costName: subcost.name}); // Sub role
+		});
+	// }
+	logger4js.debug('calculate for the cost & subcost', JSON.stringify(costIDs));
+
+	costIDs.forEach(costItem => {
+		// calculate the concerning roles for every role from the roleIDs list. Getting roles, which are connected with roleID in the given organisation
+		calcConcerningCosttypes(timeZones, costItem.uid);
+
+		logger4js.debug('calculate cost information for Cost type %s', costItem.uid);
+		var monthlyCosts = getCosttypesFromTimeZone(vpvs, costItem.uid, timeZones);
+		monthlyCosts?.forEach((item, index) => {
+			var currentDate = new Date(timeZones[0].startDate);
+			currentDate.setMonth(currentDate.getMonth() + index);
+			const currentIndex = currentDate.toISOString().concat('_', costItem.uid);
+			allCalcCostValues[currentIndex] = {
+				'currentDate': currentDate.toISOString(),
+				'costID': costItem.uid,
+				'costName': costItem.costName,
+				'currentCost': monthlyCosts[index].currentCost  || 0,
+				'baselineCost': monthlyCosts[index].baselineCost  || 0
+			};
+		});
+	});
+	var endCalc = new Date();
+	logger4js.debug('Calculate Cost Information VPVs duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	return allCalcCostValues;
+}
+
+/* Calculate the related/concerning Roles that belong to this role, means the role itself and all Children
+ * With TSO this can be different for every organisation, so the concerning Roles were calculated per Orga
+ * and stored in the timeZone Structure for easy access
+ * in addition the root role that is used for the calculation is also stored to allow distinction between teams and normal orga units
+ */
+function calcConcerningCosttypes(timeZones, costID ) {
+	var allConcerningCosts = [];
+	// var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
+
+	function findConcerningCosttypes(orga, costs, value, parentCost) {
+		//value is the Id of one subrole
+		var hcostID = value.key;
+		var crElem = allConcerningCosts[hcostID];
+		if (!crElem) {
+			crElem = {};
+			crElem.cost = costs[hcostID];			
+		}
+		orga.concerningCosts.push(crElem);		
+		allConcerningCosts[hcostID] = crElem;
+
+		var newParent = crElem.cost;
+		if (newParent?.subCostIDs?.length > 0){
+			var shcosts = newParent.subCostIDs;
+			for (var sc = 0; shcosts && sr < shcosts.length; sr++) {
+				findConcerningCosttypes(orga, costs, shcosts[sr], newParent);
+			}
+		}
+	}
+
+	// find the cost in the latest organisation
+	cost = timeZones[0].organisation[0].indexedCosts[costID];
+
+	// find all  costtypes corresponding to this one costID all over the organisation - result in concerningRoles
+	// var allConcerningCosts = [];
+	var orga = timeZones[0].organisation[0];
+	var allCosts = orga.indexedCosts;
+	orga.concerningCosts = [];
+	var cost = allCosts[costID];
+	if (cost) {
+		var crElem = {};
+		crElem.cost = cost;	
+		orga.concerningCosts.push(crElem);
+		allConcerningCosts[cost.uid] = crElem;
+		cost.subCostIDs?.forEach(subcost => {
+			findConcerningCosttypes(orga, allCosts, subcost, cost);
+		});
+	};
+	timeZones[0].allConcerningCosts = allConcerningCosts;
+}
+
+function getCosttypesFromTimeZone(vpvs, costID, timeZones) {
+	
+	var cost = timeZones[0].organisation[0].indexedCosts[costID];	
+	if (!cost) {
+		// given costID isn't defined in this organisation
+		return undefined;
+	}
+
+	logger4js.debug('getting cost information for the related costID given organisation %s',  costID);
+	
+	var costValues = [];
+	for (var i = 0 ; i < timeZones[0].duration; i++){
+		var costElem = {};		
+		costElem.currentCost = 0;
+		costElem.baselineCost = 0;
+		costValues[i] = costElem;
+	}
+
+	vpvs.forEach(vpv => {
+		logger4js.trace('Calculate Cost Information of CostID %s of Project Version %s', costID, vpv._id);
+		var oneVPVcostValues = getCostInformation(cost, vpv, timeZones);
+		oneVPVcostValues?.forEach((cost, index) => {
+			costValues[index].currentCost += cost.currentCost || 0;
+			costValues[index].baselineCost += cost.baselineCost || 0;
+		});
+	});
+	return costValues;
+}
+function getCostInformation(cost,  vpv, timeZones) {
+	var costValues = [];
+	if (!cost) return costValues;
+	logger4js.trace('Calculate all Cost Information of VPV %s for CostID %d ', vpv._id, cost.uid);
+
+	for (var i = 0; i < timeZones[0].duration; i++) {
+		var costElem = {};		
+		costElem.currentCost = 0;
+		costElem.baselineCost = 0;
+		costValues[i] = costElem;
+	}
+
+	if (!vpv.AllPhases) {
+		return costValues;
+	}
+	logger4js.trace('Combine Cost Information Values for Project Version %s',  vpv._id);
+	//var calcTeam = timeZones.role.type == 2 || teamID > 0;
+	addCosttypeValues(vpv, timeZones, costValues);
+	return costValues;
+}
+
+function addCosttypeValues(vpv, timeZones, costValues) {
+	var maxTimeZoneIndex;
+	if (vpv.variantName == 'pfv') {
+		maxTimeZoneIndex = getTimeZoneIndex(timeZones, vpv.timestamp);
+	}
+	var vpvStartIndex = getColumnOfDate(vpv.startDate);
+	//var actualDataIndex = getColumnOfDate(vpv.actualDataUntil) + 1;
+
+	logger4js.trace('Calculate Cost Information of whole project %s', vpv.AllPhases?.length);
+	vpv.AllPhases?.forEach(phase => {
+		var phaseStart = vpvStartIndex + phase.relStart - 1;
+		phase.AllCosts?.forEach(costPhase => {
+			if (costPhase.Bedarf) {
+				var dimension = costPhase.Bedarf.length;
+				var maxStart = Math.max(phaseStart, timeZones[0].startIndex);
+				var minEnd = Math.min(phaseStart + dimension, timeZones[0].endIndex + 1);
+				for (var l = maxStart; l < minEnd ; l++) {
+					var cCost = isConcerningCosttype(costPhase.KostenTyp, l, timeZones);
+					if (!cCost) {
+						continue;
+					}
+					if (l == maxStart) {
+						logger4js.debug('Calculate Phases costID %s Bedarf %s', cCost?.cost?.uid,  costPhase.KostenTyp);
+					}
+					
+					// result in T€ 
+					var bedarf = costPhase.Bedarf[l - phaseStart];
+					// if (l < actualDataIndex) {
+					// 	costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
+					// 	costValues[l - timeZones.startIndex].actCost_PT += bedarf;
+					// } else if (otherActivity) {
+					// 	costValues[l - timeZones.startIndex].otherActivityCost += bedarf * dailyRate / 1000;
+					// 	costValues[l - timeZones.startIndex].otherActivityCost_PT += bedarf;
+					// } else {
+					
+					if (vpv.variantName == 'pfv') {
+						costValues[l - timeZones[0].startIndex].baselineCost += bedarf;	
+					} else {
+						costValues[l - timeZones[0].startIndex].currentCost += bedarf;
+					}
+				}
+			}
+		});
+	});
+}
+
+function isConcerningCosttype(costID, month, timeZones) {
+	// var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
+	var cCost = timeZones[0].organisation[0]?.concerningCosts.find(item => item.cost?.uid == costID);
+	return cCost;
+}
+
+
 module.exports = {
 	calcKeyMetrics: calcKeyMetrics,
 	calcCosts: calcCosts,
@@ -3812,6 +4153,7 @@ module.exports = {
 	calcDeadlines: calcDeadlines,
 	calcCapacities: calcCapacities,
 	calcCapacitiesPerProject: calcCapacitiesPerProject,
+	calcCosttypes: calcCosttypes,
 	calcTimeRecords: calcTimeRecords,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertVPV: convertVPV,

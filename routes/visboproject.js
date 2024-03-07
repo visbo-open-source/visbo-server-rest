@@ -435,6 +435,10 @@ router.use('/:vpid/portfolio/:vpfid/capacity', verifyVc.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFVPVs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getVPFPFVs);
+router.use('/:vpid/portfolio/:vpfid/costtypes', verifyVc.getVCOrgs);
+router.use('/:vpid/portfolio/:vpfid/costtypes', verifyVpv.getPortfolioVPs);
+router.use('/:vpid/portfolio/:vpfid/costtypes', verifyVpv.getVPFVPVs);
+router.use('/:vpid/portfolio/:vpfid/costtypes', verifyVpv.getVPFPFVs);
 
 /////////////////
 // VISBO Project API
@@ -3714,6 +3718,157 @@ router.route('/:vpid/portfolio/:vpfid')
 				} ]
 			});
 		});
+
+		router.route('/:vpid/portfolio/:vpfid/costtypes')
+
+		/**
+			* @api {get} /vp/:vpid/portfolio/:vpfid/costtypes Get Cost Information of VISBO Portfolio
+			* @apiVersion 1.0.0
+			* @apiGroup VISBO Project Portfolio
+			* @apiName GetVISBOPortfolioCosttypes
+			* @apiHeader {String} access-key User authentication token.
+			* @apiParam {String} vpid The requested VISBO(Portfolio) ID.
+			* @apiParam {String} vpfid The requested VISBO Portfolio List ID.
+			* @apiDescription Gets the cost information for the specified VISBO Portfolio List.
+			* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, costID and hierarchy
+			* A costID must be specified. If hierarchy is true, the cost information for the first level of subcosts are delivered in addition to the main role.
+			*
+			* @apiQuery {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
+			* Date Format is in the form: 2018-10-30T10:00:00Z
+			* @apiQuery {Date} startDate Deliver only cost information beginning with month of startDate, default is today
+			* @apiQuery {Date} endDate Deliver only cost information  ending with month of endDate, default is today + 6 months
+			* @apiQuery {String} costID Deliver the cost information for the specified organisation, default is complete organisation
+			* @apiQuery {Boolean} hierarchy Deliver the cost information including all dircect childs of costID
+			* @apiQuery {Boolean} pfv Deliver the cost information compared to PFV 
+			* @apiQuery {Boolean} perProject Deliver the cost information per project and cumulative
+			*
+			* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
+			* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
+			* If the user has VP.ViewAudit Permission for the Portfolio and all Projects with View Permission, he gets in addition to the PD Values also the money values.
+			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+			* @apiError {number} 403 No Permission to generate Cost Information for the VISBO Center
+			* @apiError {number} 409 No Organisation configured in the VISBO Center
+			* @apiExample Example usage:
+			*   url: https://my.visbo.net/api/vp/:vpid/portfolio/:vpfid/costtypes?costID=1
+			* @apiSuccessExample {json} Success-Response:
+			* HTTP/1.1 200 OK
+			* {
+			*   'state':'success',
+			*   'message':'Returned VISBO Portfolio Costtypes',
+			*   'vp':[{
+			*     '_id':'vp5c754feaa',
+			*     'name':'VISBO Portfolio Name',
+			*     'costtypes': [{
+							'month': 2020-05-01T00:00:00.000Z,
+							....
+						}]
+			*   }]
+			* }
+			*/
+	
+		// get VPF Cost Information
+			.get(function(req, res) {
+				var userId = req.decoded._id;
+				var useremail = req.decoded.email;
+	
+				req.auditDescription = 'Portfolio Cost Information Read';
+	
+				if (!(req.listVPPerm.getPerm(req.params.vpid).vp & (constPermVP.Modify + constPermVP.ViewAudit))) {
+					return res.status(403).send({
+						state: 'failure',
+						message: 'No Permission to calculate Portfolio Cost Information'
+					});
+				}
+	
+				// validate the parameters
+				var costID = validate.validateNumber(req.query.costID, false);
+				if (costID == undefined ) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No costID given to Calculate Cost Information'
+					});
+				}
+				var perProject = req.query.perProject == true;
+				var hierarchy = req.query.hierarchy == true;
+				//var parentID = validate.validateNumber(req.query.parentID);
+				var startDate, endDate;
+				if (req.query.startDate) {
+					startDate = validate.validateDate(req.query.startDate, false, true);
+				}
+				if (req.query.endDate) {
+					endDate = validate.validateDate(req.query.endDate, false, true);
+				}
+	
+				var onlyPT = false;
+				var vpCalc = 0;
+				var vpCount = 0;
+				if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.ViewAudit)) {
+					return res.status(400).send({
+						state: 'failure',
+						message: 'No permission given to Calculate Cost Information'
+					});
+				}
+				// Validate Permission for all projects to get Cost Information at all 
+				if (req.oneVPF && req.oneVPF.allItems) {
+					// collect vpids with View Permission that have to be Checked
+					vpCount = req.oneVPF.allItems.length;
+					var vpList = [];
+					req.oneVPF.allItems.forEach(item => {
+						var perm = req.listVPPerm.getPerm(item.vpid).vp;
+						if (perm & constPermVP.View
+						&& (perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+							vpList.push(item.vpid);
+						}
+					});
+					vpCalc = vpList.length;
+					logger4js.debug('VPF  %s, AllItems %d ViewItems %d', req.oneVPF.name, req.oneVPF.allItems.length, vpCalc);
+	
+					let canCalcCostinfo = true;
+					vpList.forEach(item =>
+						canCalcCostinfo = canCalcCostinfo && (req.listVPPerm.getPerm(item).vp & (constPermVP.Modify + constPermVP.ViewAudit)) > 0
+					);
+					logger4js.debug('VPF  %s, canCalcCostinfo %s', req.oneVPF.name, canCalcCostinfo);
+					if (!canCalcCostinfo) {
+						return res.status(403).send({
+							state: 'failure',
+							message: 'No Permission to calculate Portfolio Cost Information for all Projects'
+						});
+					}
+	
+					let canSeeCost = true;
+					vpList.forEach(item => canSeeCost = canSeeCost && (req.listVPPerm.getPerm(item).vp & constPermVP.ViewAudit) > 0);
+					logger4js.debug('VPF  %s, canSeeCost %s', req.oneVPF.name, canSeeCost);
+					if (!onlyPT && !canSeeCost) {
+						onlyPT = true;
+					}
+				}
+	
+				logger4js.info('Get VISBO Portfolio Cost Information for userid %s email %s and vc %s costID %s Hierarchy %s', userId, useremail, req.params.vcid, costID, hierarchy);
+				var costInfo = undefined;
+				if (perProject) {
+					// = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
+				} else {
+					costInfo = visboBusiness.calcCosttypes(req.listVPV, req.listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
+				}
+	
+				req.auditInfo = '';
+				return res.status(200).send({
+					state: 'success',
+					message: 'Returned VISBO Portfolio Cost Information',
+					// count: listVCSetting.length,
+					vp: [ {
+						_id: req.oneVP._id,
+						name: req.oneVP.name,
+						description: req.oneVP.description,
+						costID: costID,
+						vpAll: vpCount,
+						vpCalc: vpCalc,
+						createdAt: req.oneVP.createdAt,
+						updatedAt: req.oneVP.updatedAt,
+						costtypes: costInfo
+					} ]
+				});
+			});
 
 
 	router.route('/:vpid/restrict')
