@@ -1912,6 +1912,73 @@ function calcConcerningRoles(timeZones, roleID, teamID) {
 	});
 	timeZones.allConcerningRoles = allConcerningRoles;
 }
+//************* */
+function mergeCosttypes(costtypes, timeZones, startDate) {
+	if ( !timeZones || !timeZones.mergedOrganisation || !timeZones.mergedUID ) {
+		return undefined;
+	}
+	var startCalc = new Date();
+
+	logger4js.debug('Merge Costtypes and generate costinfo array for all orga units persons for 240 months, len', timeZones.mergedUID.length);
+	var combinedCostInfo = helperOrga.combineCostInfo(costInfo);
+
+	var indexedcostInfo = [], mergedcostInfo = [];
+	combinedcostInfo.forEach(item => {
+		indexedcostInfo[item.costID] = item;
+	});
+
+	timeZones.mergedUID.forEach(roleID => {
+		var cost = timeZones.mergedOrganisation[costID];
+		if (!cost) {
+			logger4js.warn('Merge Capacities role not found', costID);
+			return;
+		}
+		if (cost.isSummaryRole) {
+			logger4js.trace('Merge Capacities skip summaryRole', costID);
+			return;
+		}
+		var costtypesPerMonth = [];
+		var startIndex = 0;
+		var endIndex;
+		// set capaPerMonth to 0 for all months before entry date
+		if (cost.entryDate) {
+			logger4js.debug('Merge Cost Info cost with entry date', costID, cost.entryDate.toISOString());
+			endIndex = getColumnOfDate(cost.entryDate) - timeZones.startIndex;
+			for (; startIndex < endIndex && startIndex < timeZones.duration; startIndex++) {
+				costtypesPerMonth.push(0);
+			}
+		}
+		// set capaPerMonth before exit date to either defaulCapacity or if defined to the user capacity for the months
+		endIndex = timeZones.duration;
+		if (cost.exitDate) {
+			logger4js.debug('Merge Cost Info cost with exit date', costID, cost.exitDate.toISOString());
+			endIndex = getColumnOfDate(cost.exitDate) - timeZones.startIndex; 
+			endIndex = Math.min(endIndex, timeZones.duration);
+		}
+
+		logger4js.debug('Merge Cost Info with timeZones', costID, timeZones.length);
+		// set either the default or a specific capa values for each orga unit related to the timeZones duration
+		for (var index = startIndex; index < endIndex; index++) {
+			var capa = getDailyCapaTZ(cost.uid, indexedcostInfo, timeZones, index);
+			costtypesPerMonth.push(capa);
+		}
+		for (; endIndex < timeZones.duration; endIndex++) {
+			costtypesPerMonth.push(0);
+		}
+		// business logic uses array 1 - 240 instead of 0 - 239
+		costtypesPerMonth.unshift(0);
+		mergedcostInfo[costID] = {
+			startDate: startDate,
+			costtypesPerMonth: costtypesPerMonth
+		};
+		logger4js.debug('Merge Cost Info cost done', roleID, costtypesPerMonth.length);
+	});
+	timeZones.mergedcostInfo = mergedcostInfo;
+	var endCalc = new Date();
+	logger4js.debug('Merge Cost Info duration %s ms ', endCalc.getTime() - startCalc.getTime());
+	return;
+}
+// **************
 
 function mergeCapacity(capacity, timeZones, startDate) {
 	if ( !timeZones || !timeZones.mergedOrganisation || !timeZones.mergedUID ) {
@@ -3868,42 +3935,13 @@ function calcCosttypes(vpvs, pfvs, costID, startDate, endDate, organisation, cos
 		logger4js.warn('Calculate Concerning Costtype not found, cost: %d found: %s', costID, cost != undefined);
 		return [];
 	}
-	// if (!role.isSummaryRole && parentID > 0) {
-	// 	// find the parent team for a person in this orga
-	// 	var teamRole = findCurrentRole(timeZones, parentID);
-	// 	if (teamRole?.type == 2) {
-	// 		// if parent is a team set the teamID
-	// 		teamID = teamRole.uid;
-	// 	}
-	// }
-	// mergeCapacity(capacity, timeZones, startDate);
-
-	// reduce the amount of vpvs to the relevant ones in the time between startDate and endDate
-	// var newvpvs = [];
-	// for ( var i = 0; vpvs && i < vpvs.length; i++) {
-	// 	var vpv = vpvs[i];
-	// 	var vpvStartIndex = getColumnOfDate(vpv.startDate);
-	// 	var vpvEndIndex = getColumnOfDate(vpv.endDate);
-	// 	if (vpvEndIndex < startIndex) continue;
-	// 	if (vpvStartIndex > endIndex) continue;
-	// 	newvpvs.push(vpv);
-	// }
+	
 	var newvpvs = vpvs;
 	var costInfoVPV = calcCosttypesVPVs(newvpvs, costID, timezones, hierarchy);
 	var costInfoPFV = [];
 	var item;
 
-	if (pfvs?.length > 0) {
-		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
-		// var newpfvs = [];
-		// for ( i = 0; pfvs && i < pfvs.length; i++) {
-		// 	vpv = pfvs[i];
-		// 	vpvStartIndex = getColumnOfDate(vpv.startDate);
-		// 	vpvEndIndex = getColumnOfDate(vpv.endDate);
-		// 	if (vpvEndIndex < startIndex) continue;
-		// 	if (vpvStartIndex > endIndex) continue;
-		// 	newpfvs.push(vpv);
-		// }
+	if (pfvs?.length > 0) {		
 		// calc the corresponding of the PFVs
 		var newpfvs = pfvs;
 		costInfoPFV = calcCosttypesVPVs(newpfvs, costID, timezones,hierarchy);
@@ -3929,13 +3967,171 @@ function calcCosttypes(vpvs, pfvs, costID, startDate, endDate, organisation, cos
 			'costID' : costInfoVPV[item].costID.toString(),
 			'costName' : costInfoVPV[item].costName,
 			'currentCost': costInfoVPV[item].currentCost || 0,
-			'baseLineCost': costInfoVPV[item].baselineCost || 0
+			'baselineCost': costInfoVPV[item].baselineCost || 0
 		});		
 	}
 
 	var endTimer = new Date();
 	logger4js.trace('Calculate Cost Information duration: ', endTimer.getTime() - startTimer.getTime());
 
+	return capa;
+}
+
+
+function calcCosttypesPerProject(vpvs, pfvs, costID, startDate, endDate, organisation, costInfo, onlyPT) {
+	if (!vpvs || vpvs.length == 0 || !(organisation?.length > 0)) {
+		logger4js.warn('Calculate Cost Information missing vpvs or organisation ');
+		return [];
+	}
+
+	if (!startDate) {
+		startDate = getDateStartOfMonth();
+		startDate.setMonth(startDate.getMonth() - 4);
+	}
+	var startIndex = getColumnOfDate(startDate);
+
+	if (!endDate) {
+		endDate = getDateStartOfMonth();
+		endDate.setMonth(endDate.getMonth() + 9);
+	}
+	var endIndex = getColumnOfDate(endDate);
+
+	// divide the complete time from startdate to enddate in parts of time, where in each part there is only one organisation valid
+	logger4js.trace('divide the complete time from calcC_startdate to calcC_enddate in parts of time, where in each part there is only one organisation valid');
+	
+	
+	var timezones = [];	
+	var tsItem = {};
+	tsItem.organisation = [];
+	tsItem.organisation.push(organisation[0]);
+	tsItem.startDate = startDate;
+	tsItem.endDate = endDate;
+	tsItem.startIndex = startIndex;
+	tsItem.endIndex = endIndex;
+	tsItem.duration = endIndex - startIndex + 1;
+	timezones.push(tsItem)
+	
+	// prepare roles & costs for direct access
+	var orga = timezones[0].organisation[0];	
+	orga.indexedRoles = [];
+	orga.value?.allRoles?.forEach(role => {
+		orga.indexedRoles[role.uid] = role;
+	});
+	orga.indexedCosts = [];
+	orga.value?.allCosts?.forEach(cost => {
+		orga.indexedCosts[cost.uid] = cost;
+	});
+
+	cost = timezones[0].organisation[0].indexedCosts[costID];
+	if (!cost) {
+		logger4js.warn('Calculate Concerning Costtype not found, cost: %d found: %s', costID, cost != undefined);
+		return [];
+	}
+
+	// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+	var newvpvs = [];
+	for (i = 0; vpvs && i < vpvs.length; i++) {
+		var vpv = vpvs[i];
+		var vpvStartIndex = getColumnOfDate(vpv.startDate);
+		var vpvEndIndex = getColumnOfDate(vpv.endDate);
+		if (vpvEndIndex < startIndex) continue;
+		if (vpvStartIndex > endIndex) continue;
+		newvpvs.push(vpv);
+	}
+
+	// calc the cost Info for every project/vpv individual
+	var capaVPV = [];
+	newvpvs.forEach(vpv => {
+		var costTempVPV = calcCosttypesVPVs([vpv], costID,  timezones, false);
+		for (var index in costTempVPV) {
+			var element = costTempVPV[index];
+			var id = element.currentDate + vpv.vpid.toString();
+			element.vpid = vpv.vpid;
+			element.name = vpv.name;
+			element.variantName = vpv.variantName;
+			element.baseLineCost = 0;
+			capaVPV[id] = element;
+		}
+	});
+
+	var capaPFV = [];
+	var item;
+
+	if (pfvs) {
+		// reduce the amount of pfvs to the relevant ones in the time between startDate and endDate
+		var newpfvs = [];
+		for ( var i = 0; pfvs && i < pfvs.length; i++) {
+			vpv = pfvs[i];
+			vpvStartIndex = getColumnOfDate(vpv.startDate);
+			vpvEndIndex = getColumnOfDate(vpv.endDate);
+			if (vpvEndIndex < startIndex) continue;
+			if (vpvStartIndex > endIndex) continue;
+			newpfvs.push(vpv);
+		}
+
+		// calc the cost Info of the pfvs
+		newpfvs.forEach(vpv => {
+			var capaTempVPV = calcCosttypesVPVs([vpv], costID, timezones, false);
+			for (var index in capaTempVPV) {
+				var element = capaTempVPV[index];
+				var id = element.currentDate + vpv.vpid.toString();
+				element.vpid = vpv.vpid;
+				element.name = vpv.name;
+				element.variantName = '';
+				capaPFV[id] = element;
+			}
+		});
+
+		// combine vpv & pfv values, insert or update capa values
+		for (item in capaPFV) {
+			if (!capaVPV[item]) {
+				// insert new Value
+				logger4js.trace('Insert Capa Value', item, JSON.stringify(capaPFV[item]));
+				capaVPV[item] = {};
+				capaVPV[item].vpid = capaPFV[item].vpid;
+				capaVPV[item].name = capaPFV[item].name;
+				capaVPV[item].currentDate = capaPFV[item].currentDate;
+				capaVPV[item].costID = capaPFV[item].costID;
+				capaVPV[item].costName = capaPFV[item].costName;
+			}
+			capaVPV[item].baselineCost = (capaPFV[item].baselineCost || 0);
+			
+		}
+	}
+
+	// generate the cumulative number per months across all projects
+	for (item in capaVPV) {
+		const currentDate = capaVPV[item].currentDate;
+		if (capaVPV[item].vpid) {
+			if (!capaVPV[currentDate]) {
+				capaVPV[currentDate] = {};
+				capaVPV[currentDate].currentDate = capaVPV[item].currentDate;
+				capaVPV[currentDate].costID = capaVPV[item].costID;
+				capaVPV[currentDate].costName = capaVPV[item].costName;
+				capaVPV[currentDate].name = 'All';
+				capaVPV[currentDate].currentCost = 0;
+				capaVPV[currentDate].baselineCost = 0;
+			}
+			capaVPV[currentDate].currentCost += capaVPV[item].currentCost;
+			capaVPV[currentDate].baselineCost = (capaVPV[currentDate].baselineCost || 0) + capaVPV[item].baselineCost;
+		}
+	}
+
+	// generate an array from an index list with holes
+	var capa = [];
+	for (item in capaVPV) {		
+			capa.push({
+				'month': capaVPV[item].currentDate,
+				'costID' : capaVPV[item].costID,
+				'costName' : capaVPV[item].costName,
+				'vpid' : capaVPV[item].vpid,
+				'name' : capaVPV[item].name,
+				'variantName' : capaVPV[item].variantName,
+				'currentCost' : capaVPV[item].currentCost,
+				'baselineCost': capaVPV[item].baselineCost || 0
+			});
+		}	
+	capa.sort(function(a, b) { return (new Date(a.month)).getTime() - (new Date(b.month)).getTime(); });
 	return capa;
 }
 
@@ -3959,7 +4155,7 @@ function calcCosttypesVPVs(vpvs, costID, timeZones, hierarchy) {
 	}
 	costIDs.push({uid: costID, costName: cost.name}); // Main cost
 
-	// if (hierarchy && role.isSummaryRole) {
+	if (hierarchy) {
 		cost.subCostIDs?.forEach(item => {
 			var subcost = timeZones[0].organisation[0].indexedCosts[item.key];
 			if (!subcost) {
@@ -3967,7 +4163,7 @@ function calcCosttypesVPVs(vpvs, costID, timeZones, hierarchy) {
 			}
 			costIDs.push({uid: subcost.uid, costName: subcost.name}); // Sub role
 		});
-	// }
+	}
 	logger4js.debug('calculate for the cost & subcost', JSON.stringify(costIDs));
 
 	costIDs.forEach(costItem => {
@@ -4154,6 +4350,7 @@ module.exports = {
 	calcCapacities: calcCapacities,
 	calcCapacitiesPerProject: calcCapacitiesPerProject,
 	calcCosttypes: calcCosttypes,
+	calcCosttypesPerProject: calcCosttypesPerProject,
 	calcTimeRecords: calcTimeRecords,
 	cleanupRestrictedVersion: cleanupRestrictedVersion,
 	convertVPV: convertVPV,

@@ -3846,9 +3846,9 @@ router.route('/:vpid/portfolio/:vpfid')
 				logger4js.info('Get VISBO Portfolio Cost Information for userid %s email %s and vc %s costID %s Hierarchy %s', userId, useremail, req.params.vcid, costID, hierarchy);
 				var costInfo = undefined;
 				if (perProject) {
-					// = visboBusiness.calcCapacitiesPerProject(req.listVPV, req.listVPVPFV, roleID, parentID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, onlyPT);
+					costInfo = visboBusiness.calcCosttypesPerProject(req.listVPV, req.listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCostInfo, hierarchy, onlyPT);
 				} else {
-					costInfo = visboBusiness.calcCosttypes(req.listVPV, req.listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCapacity, hierarchy, onlyPT);
+					costInfo = visboBusiness.calcCosttypes(req.listVPV, req.listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCostInfo, hierarchy, onlyPT);
 				}
 	
 				req.auditInfo = '';
