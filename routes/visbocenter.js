@@ -70,6 +70,11 @@ router.use('/:vcid/capacity', verifyVp.getAllGroups);
 router.use('/:vcid/capacity', verifyVc.getVCOrgs);
 router.use('/:vcid/capacity', verifyVc.getVCVP);
 router.use('/:vcid/capacity', verifyVpv.getVCVPVs);
+// get details for cost info calculation
+router.use('/:vcid/costtypes', verifyVp.getAllGroups);
+router.use('/:vcid/costtypes', verifyVc.getVCOrgs);
+router.use('/:vcid/costtypes', verifyVc.getVCVP);
+router.use('/:vcid/costtypes', verifyVpv.getVCVPVs);
 router.use('/:vcid/organisation', verifyVc.getVCOrgs);
 // get details for capa per role
 router.use('/:vcid/capa', verifyVc.getVCOrgs);
@@ -4320,5 +4325,161 @@ router.route('/:vcid/capa/:capaid')
 // 			});
 // 		});
 // 	});
+router.route('/:vcid/costtypes')
+
+	/**
+		* @api {get} /vc/:vcid/costtypes Get Cost Information of Visbo Center
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName VISBOCenterCosttypesGet
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Gets the Cost Information for the specified VISBO Center.
+		* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, costID and hierarchy
+		* A costID must be specified. If hierarchy is true, the cost information for the first level of subcosttypes are delivered in addition to the main cost.
+		*
+		* @apiParam {String} vcid The requested VISBO Center ID.
+		* @apiQuery {Date} refDate the latest VPV with a timestamp before the reference date is used for calculation, if ommited the current Date is used.
+		* Date Format is in the form: 2018-10-30T10:00:00Z
+		* @apiQuery {Date} startDate Deliver only cost info values beginning with month of startDate, default is today
+		* @apiQuery {Date} endDate Deliver only cost info values ending with month of endDate, default is today + 6 months
+		* @apiQuery {String} costID Deliver the cost info planning for the specified organisation-uid, default is complete organisation
+		* @apiQuery {Boolean} hierarchy Deliver the cost info planning including all dircect childs of costID
+		* @apiQuery {Boolean} pfv Deliver the cost info planning compared to PFV 
+		* @apiQuery {Boolean} perProject Deliver the cost info per project and cumulative
+		*
+		* @apiPermission Authenticated and VC.View and VC.Modify or VC.ViewAudit for the VISBO Center.
+		* In addition the Project List of the VC is filtered to all the Projects in the VISBO Center where the user has VP.View Permission and VP.ViewAudit or VP.Modify permission.
+		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+		* @apiError {number} 403 No Permission to generate Cost Information Figures for the VISBO Center
+		* @apiError {number} 409 No Organisation configured in the VISBO Center
+		* @apiExample Example usage:
+		*   url: https://my.visbo.net/api/vc/:vcid/costtypes?costID=1
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*   'state':'success',
+		*   'message':'Returned VISBO Center Cost Information',
+		*   'vc':[{
+		*     '_id':'vc5c754feaa',
+		*     'name':'VISBO Center Name',
+		*     'costInfo': [{
+		*       'month': 2020-05-01T00:00:00.000Z,
+		*       ....
+		*     }]
+		*   }]
+		* }
+		*/
+
+	// get VC Costtypes
+	.get(function(req, res) {
+		var userId = req.decoded._id;
+		var useremail = req.decoded.email;
+
+		var perm = req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id);
+
+		req.auditDescription = 'VISBO Center Cost Information Read';
+
+		if ((perm.vc & (constPermVC.ViewAudit + constPermVC.Modify)) == 0) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No Permission to calculate Cost Information',
+				perm: perm
+			});
+		}
+
+		logger4js.info('Get VISBO Center Cost Information for userid %s email %s and vc %s CostID %s Hierarchy %s', userId, useremail, req.params.vcid, req.query.costID, req.query.hierarchy);
+		if (!req.visboOrganisation) {
+			return res.status(409).send({
+				state: 'failure',
+				message: 'No VISBO Center Organisation',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			});
+		}
+
+		// validate the parameters
+		var costID = validate.validateNumber(req.query.costID, false);
+		if (costID == undefined ) {
+			return res.status(400).send({
+				state: 'failure',
+				message: 'No costID given to Calculate Capacities',
+				perm: perm
+			});
+		}
+		var perProject = req.query.perProject == true;
+		var hierarchy = req.query.hierarchy == true;
+		var parentID = validate.validateNumber(req.query.parentID);
+		var startDate, endDate;
+		if (req.query.startDate) {
+			startDate = validate.validateDate(req.query.startDate, false, true);
+		}
+		if (req.query.endDate) {
+			endDate = validate.validateDate(req.query.endDate, false, true);
+		}
+		var onlyPT = false;
+		if (req.listVCPerm.getPerm(req.params.vcid).vc & constPermVC.ViewAudit) {
+			onlyPT = false;
+		}
+		var listVPV = [];
+		req.listVPV && req.listVPV.forEach(vpv => {
+				var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+				// if (perm & constPermVP.ViewAudit == 0) {
+				// 	onlyPT = true;
+				// }
+				if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+					listVPV.push(vpv);
+				}
+			});
+		var listVPVPFV = [];
+		req.listVPVPFV && req.listVPVPFV.forEach(vpv => {
+				var perm = req.listVPPerm.getPerm(vpv.vpid).vp;
+				// if (perm & constPermVP.ViewAudit == 0) {
+				// 	onlyPT = true;
+				// }
+				if ((perm & (constPermVP.ViewAudit + constPermVP.Modify)) > 0) {
+					listVPVPFV.push(vpv);
+				}
+			});
+
+		var costInfo = undefined;
+		if (perProject) {
+			costInfo = visboBusiness.calcCosttypesPerProject(listVPV, listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCostInfo, onlyPT);
+		} else {
+			costInfo = visboBusiness.calcCosttypes(listVPV, listVPVPFV, costID, startDate, endDate, req.visboOrganisation, req.visboVCCostInfo, hierarchy, onlyPT);
+		}
+
+		var filteredCostInfo = [];
+		startDate = validate.validateDate(req.query.startDate, false, true);
+		if (!startDate) {
+			startDate = new Date(-8640000000000000);
+		}
+		endDate = validate.validateDate(req.query.endDate, false, true);
+		if (!endDate) {
+			endDate = new Date(8640000000000000);
+		}
+
+		costInfo.forEach(item => {
+				var current = new Date(item.month);
+				if (current.getTime() >= startDate.getTime() && current.getTime() <= endDate.getTime()) {
+					filteredCostInfo.push(item);
+				}
+		});
+
+		req.auditInfo = '';
+		return res.status(200).send({
+			state: 'success',
+			message: 'Returned VISBO Center Capacity',
+			// count: capacity.length,
+			vc: [ {
+				_id: req.oneVC._id,
+				name: req.oneVC.name,
+				description: req.oneVC.description,
+				costID: costID,
+				vpCount: req.oneVC.vpCount,
+				createdAt: req.oneVC.createdAt,
+				updatedAt: req.oneVC.updatedAt,
+				costtypes: filteredCostInfo
+			} ]
+		});
+	});
 
 module.exports = router;

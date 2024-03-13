@@ -28,7 +28,7 @@ function getAllGroups(req, res, next) {
 		vpid = urlComponent[2];
 	}
 	if (req.oneVC) {
-		// in case of vc/:vcid/capacity we need the VP Groups of the VC
+		// in case of vc/:vcid/capacity or  vc/:vcid/costtypes we need the VP Groups of the VC
 		vcid = req.oneVC._id;
 	} else if (req.method == 'GET' && req.query.vcid) {
 		// in case of vp get we get the vcid from the query parameter if available
