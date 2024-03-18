@@ -2648,7 +2648,11 @@ function aggregateRoles(phase, orgalist){
 		var roleSett = orgalist[role.RollenTyp];
 
 		if (!roleSett) {
-			logger4js.warning('aggregateRoles Role not foud %s', role.RollenTyp);
+			if (role.RollenTyp){
+				logger4js.warn('aggregateRoles Role not found %s', role.RollenTyp);
+			} else {
+				logger4js.warn('aggregateRoles Role not found');
+			}			
 			continue;
 		}
 		if (roleSett.isSummaryRole) {
