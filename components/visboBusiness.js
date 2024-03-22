@@ -285,6 +285,8 @@ function calcCosts(vpv, pfv, organisation) {
 		for (var j = 0; j < len; j++) {
 			allCostValues[currentDate.toISOString()] = {
 				'currentCost': (personnelCost[j] || 0) + (allOtherCost[j] || 0),
+				'personnelCost': personnelCost[j] || 0,
+				'allOtherCost': allOtherCost[j] || 0,
 				'currentInvoice': allInvoices[j] || 0
 			};
 			currentDate.setMonth(currentDate.getMonth() + 1);
@@ -314,6 +316,8 @@ function calcCosts(vpv, pfv, organisation) {
 			'currentDate': element,
 			'baseLineCost': allCostValues[element].baseLineCost || 0,
 			'currentCost': allCostValues[element].currentCost || 0,
+			'personnelCost': allCostValues[element].personnelCost || 0,
+			'allOtherCost': allCostValues[element].allOtherCost || 0,
 			'baseLineInvoice': allCostValues[element].baseLineInvoice || 0,
 			'currentInvoice': allCostValues[element].currentInvoice || 0,
 		});

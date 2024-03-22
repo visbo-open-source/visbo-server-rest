@@ -169,7 +169,7 @@ function getVCGroups(req, res, next) {
 	var urlComponent = baseUrl.split('/');
 	var startCalc = new Date();
 
-	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity') < 0) {
+	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity'|| comp == 'costtypes') < 0) {
 		return next();
 	}
 	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
@@ -319,7 +319,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate getVPV with VP %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity'|| urlComponent[2] == 'costtypes') ) {
 				var withCapa = urlComponent[2] == 'capacity';
 				verifyVc.getVCOrganisation(oneVP.vcid, withCapa, req, res, next);
 			} else {
