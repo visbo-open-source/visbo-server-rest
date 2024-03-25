@@ -45,7 +45,7 @@ router.use('/', verifyVpv.getPortfolioVPs);
 // register the base line middleware to get the VC Settings if necessary
 router.use('/', verifyVc.getVCSetting);
 
-// register the get VPF middleware for calls for a specific VPV, like /cost, /capacity, /copy, /deliveries, /deadlines
+// register the get VPF middleware for calls for a specific VPV, like /cost, /costtypes, /capacity, /copy, /deliveries, /deadlines
 router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
 
@@ -1562,6 +1562,120 @@ router.route('/:vpvid/capacity')
 			perm: perm
 		});
 	});
+	
+router.route('/:vpvid/costtypes')
+
+/**
+	 * @api {get} /vpv/:vpvid/costtypes Get Costtypes for VISBO Project
+	* @apiVersion 1.0.0
+	 * @apiGroup VISBO Project Version
+	 * @apiName GetVISBOProjectCosttypes
+	 * @apiHeader {String} access-key User authentication token.
+	* @apiDescription Get returns the costtypes for a specific Project Version of the Project
+	* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
+	* A roleID must be specified. If hierarchy is true, the costtypes for the first level of subroles are delivered in addition to the main role.
+	*
+	* @apiParam {String} vpvid The requested VISBO Project Version ID.
+	* @apiQuery {Date} startDate Deliver only costtypes values beginning with month of startDate, default is today
+	* @apiQuery {Date} endDate Deliver only costtypes values ending with month of endDate, default is today + 6 months
+	* @apiQuery {String} costID Deliver the costtypes planning for the specified organisation, default is complete organisation
+	* @apiQuery {Boolean} hierarchy Deliver the costtypes planning including all direct childs of roleID
+	*
+	* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
+	* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
+	* @apiError {number} 400 Bad Values in paramter in URL
+	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
+	* @apiError {number} 403 No Permission to View Project Version, or View Visbo Center to get the organisation.
+	* @apiError {number} 409 No Organisation configured in the VISBO Center
+	*
+	 * @apiExample Example usage:
+	 *   url: https://my.visbo.net/api/vpv/vpv5aada025/costtypes?costID=1
+	 * @apiSuccessExample {json} Response:
+	 * HTTP/1.1 200 OK
+	 * {
+	 *   'state':'success',
+	 *   'message':'Returned Project Versions',
+	 *   'vpv': [{
+	 *     '_id':'vpv5c754feaa',
+	*     'timestamp': '2019-03-19T11:04:12.094Z',
+	*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
+	*     ...
+	 *   }]
+	 * }
+	*/
+// Get costtypes calculation for a specific Project Version
+.get(function(req, res) {
+	var userId = req.decoded._id;
+	var useremail = req.decoded.email;
+	var sysAdmin = req.query.sysadmin ? true : false;
+	var perm = req.listVPPerm.getPerm(sysAdmin ? 0 : req.oneVPV.vpid);
+	if (req.listVCPerm && req.oneVP) {
+		var permVC = req.listVCPerm.getPerm(sysAdmin ? 0 : req.oneVP.vcid);
+		perm.vc = perm.vc | permVC.vc;
+	}
+
+	req.auditDescription = 'Project Version Costtypes Read';
+	req.auditSysAdmin = sysAdmin;
+	req.auditTTLMode = 1;
+
+	if ((perm.vc & constPermVC.View) == 0 || !req.visboOrganisation) {
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Organisation or no Permission to get Organisation from VISBO Center',
+			perm: perm
+		});
+	}
+
+	if ((perm.vp & (constPermVP.ViewAudit + constPermVP.Modify)) == 0 ) {
+		return res.status(403).send({
+			state: 'failure',
+			message: 'No Permission to get Costtypes of Project',
+			perm: perm
+		});
+	}
+
+	// validate the parameters
+	var hierarchy = req.query.hierarchy == true;
+	var costID = validate.validateNumber(req.query.costID, false);
+	if (costID == undefined ) {
+		return res.status(400).send({
+			state: 'failure',
+			message: 'No roleID given to Calculate Costtypes',
+			perm: perm
+		});
+	}
+	//var parentID = validate.validateNumber(req.query.parentID);
+	var startDate, endDate;
+	if (req.query.startDate) {
+		startDate = validate.validateDate(req.query.startDate, false, true);
+	}
+	if (req.query.endDate) {
+		endDate = validate.validateDate(req.query.endDate, false, true);
+	}
+
+	var onlyPT = true;
+	if (perm.vp & constPermVP.ViewAudit ) {
+		onlyPT = false;
+	}
+	logger4js.info('Get Project Version capacity for userid %s email %s and vpv %s role %s', userId, useremail, req.oneVPV._id, costID);
+
+	var costinfo = visboBusiness.calcCosttypes([req.oneVPV], req.visboPFV ? [req.visboPFV] : undefined, costID, startDate, endDate, req.visboOrganisation, req.visboVCCosttypes, hierarchy, onlyPT);
+	return res.status(200).send({
+		state: 'success',
+		message: 'Returned Project Version',
+		count: costinfo.length,
+		vpv: [ {
+			_id: req.oneVPV._id,
+			timestamp: req.oneVPV.timestamp,
+			actualDataUntil: req.oneVPV.actualDataUntil,
+			vpid: req.oneVPV.vpid,
+			name: req.oneVPV.name,
+			costID: costID,
+			costtypes: costinfo
+		} ],
+		perm: perm
+	});
+});
 
 router.route('/:vpvid/keyMetrics')
 
