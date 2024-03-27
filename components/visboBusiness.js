@@ -2748,8 +2748,15 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 		arStartDate = arEndDate;
 		arEndDate = tmpDate;
 	}
-
-	let anzDaysPMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	let anzDaysPMonth = [];
+	let startyear = arStartDate.getFullYear();
+	let endyear = arEndDate.getFullYear();
+	
+	anzDaysPMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	// if the start- and enddate are in one year with a leap year
+	if (((startyear % 4 == 0) && (arStartDate.getMonth() <= 1)) || ((endyear % 4 == 0) && (arEndDate.getmonth() > 1))) {
+		anzDaysPMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	}
 
 	// now do the calculation: determine the number of months covered , then distribute values such that fraction of start-Month and end-Month is taken into account
 	// i.e 30.5 - 3.7 : may and july may only contain a fraction of the sum, not hjust evenly distributed
@@ -2788,6 +2795,12 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 				arResult.push(arSum * fractionX);
 			}
 			arResult.push(arSum * fractionN);
+	};
+    // it in some really rare situations, when the division is not the exactly same sum, the give it the last month
+	const newSum = arResult.reduce(sumOF);
+	const diffSum = arSum - newSum;
+	if (diffSum != 0) {
+		arResult[arResult.length-1] = arResult[arResult.length-1] + diffSum; 
 	}
 	return arResult;
 }
@@ -2796,7 +2809,7 @@ function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDa
 	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
 	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged
 	// only values starting with separatorIndex are changed according scaleFactor
-	// if similarCharacteristics then the distributionof values over the various months is maintained
+	// if similarCharacteristics then the distribution of values over the various months is maintained
 
 	let ar1 = undefined;
 	let ar2 = oldArray;
@@ -2918,7 +2931,8 @@ function ensureValidVPV(myVPV) {
 			// may stem form Excel Client, because for a Date there is no undefined, it will always be Date.MinDate
 			myVPV.actualDataUntil = undefined;
 		} else {
-			enforceHealing = false;
+			enforceHealing = true;	
+			//enforceHealing = false;
 		}
 	}
 
@@ -4221,8 +4235,8 @@ function calcConcerningCosttypes(timeZones, costID ) {
 		var newParent = crElem.cost;
 		if (newParent?.subCostIDs?.length > 0){
 			var shcosts = newParent.subCostIDs;
-			for (var sc = 0; shcosts && sr < shcosts.length; sr++) {
-				findConcerningCosttypes(orga, costs, shcosts[sr], newParent);
+			for (var sc = 0; shcosts && sc < shcosts.length; sc++) {
+				findConcerningCosttypes(orga, costs, shcosts[sc], newParent);
 			}
 		}
 	}
