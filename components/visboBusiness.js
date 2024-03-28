@@ -2754,7 +2754,7 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	
 	anzDaysPMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 	// if the start- and enddate are in one year with a leap year
-	if (((startyear % 4 == 0) && (arStartDate.getMonth() <= 1)) || ((endyear % 4 == 0) && (arEndDate.getmonth() > 1))) {
+	if (((startyear % 4 == 0) && (arStartDate.getMonth() <= 1)) || ((endyear % 4 == 0) && (arEndDate.getMonth() > 1))) {
 		anzDaysPMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 	}
 
@@ -2931,8 +2931,8 @@ function ensureValidVPV(myVPV) {
 			// may stem form Excel Client, because for a Date there is no undefined, it will always be Date.MinDate
 			myVPV.actualDataUntil = undefined;
 		} else {
-			enforceHealing = true;	
-			//enforceHealing = false;
+			//enforceHealing = true;	
+			enforceHealing = false;
 		}
 	}
 
