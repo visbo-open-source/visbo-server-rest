@@ -1410,12 +1410,12 @@ router.route('/:vpid/audit')
  	* @apiHeader {String} access-key User authentication token.
 	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project
-	* @apiQuery (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
-	* @apiQuery (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
-	* @apiQuery (Parameter) {text} [text] Request Audit Trail containing text in Detail.
-	* @apiQuery (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
-	* @apiQuery (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
-	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
@@ -3744,7 +3744,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			*
 			* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
 			* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
-			* If the user has VP.ViewAudit Permission for the Portfolio and all Projects with View Permission, he gets in addition to the PD Values also the money values.
+			* The user only gets the money values.
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 			* @apiError {number} 403 No Permission to generate Cost Information for the VISBO Center
 			* @apiError {number} 409 No Organisation configured in the VISBO Center
@@ -3756,16 +3756,25 @@ router.route('/:vpid/portfolio/:vpfid')
 			*   'state':'success',
 			*   'message':'Returned VISBO Portfolio Costtypes',
 			*   'vp':[{
-			*     '_id':'vp5c754feaa',
-			*     'name':'VISBO Portfolio Name',
-			*     'costtypes': [{
-							'month': 2020-05-01T00:00:00.000Z,
-							....
-						}]
+			*		'_id':'vp5c754feaa',
+			*		'name':'VISBO Portfolio Name',
+			*		'description': 'here you find the description of the portfolio',
+			*		'costID': '3',
+			*		'vpAll: '5',
+			*		'vpCalc: '5',
+			*		'costtypes:  [{
+			*			'month': 2020-05-01T00:00:00.000Z,
+			* 			'costID' : '3',
+			*			'costName' : 'Travel',
+			*			'currentCost': '123,4',
+			*			'baselineCost': '150,0'
+			*        },  
+			*		  ...
+			*      }]
 			*   }]
 			* }
 			*/
-	
+
 		// get VPF Cost Information
 			.get(function(req, res) {
 				var userId = req.decoded._id;
