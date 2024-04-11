@@ -1,4 +1,4 @@
-var mongoose = require('mongoose');
+/* var mongoose = require('mongoose');
 require('../models/visboprojectversion');
 require('../models/vcsetting');
 require('../models/predictkm');
@@ -221,4 +221,4 @@ function kmTraining(task, finishedTask, vcSystemId) {
 module.exports = {
 	kmCollect: kmCollect,
 	kmTraining: kmTraining
-};
+}; */

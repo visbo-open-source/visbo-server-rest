@@ -384,7 +384,7 @@ function checkVCOrgs(req, res, next) {
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
-	// fetch organisation in case of capacity calculation
+	// fetch organisation in case of capacity  or cost info calculation
 
 	let skip = true;
 	let withCapa = false;
@@ -398,7 +398,7 @@ function getVCOrgs(req, res, next) {
 		withCapa = true;
 	}
 	
-	if (urlComponent.findIndex(comp => comp == 'organisation' || comp == 'timetracking') >= 0) {
+	if (urlComponent.findIndex(comp => comp == 'organisation' || comp == 'timetracking' || comp == 'costtypes') >= 0) {
 		skip = false;
 		withCapa = (req.method == 'GET' && req.originalUrl.indexOf('withCapa=') >= 0);
 	}

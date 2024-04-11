@@ -503,7 +503,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 
 			if (role.isSummaryRole) {
 				newCost.isSummaryRole = role.isSummaryRole;
-				newCost.subRoleIDs = [];
+				newCost.subCostIDs = [];
 			}
 			if (uniqueCostNames[newCost.name]) {
 				errorstring = `${index+2}: Orga Cost Name not unique, uid: ${newCost.uid}, name: ${newCost.name}`;
@@ -580,8 +580,8 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				var parentCost = uniqueCostNames[cost.parent];
 				if (parentCost) {
 					// map the item to the parent
-					if (!parentCost.subRoleIDs) parentCost.subRoleIDs = []; // MS TODO
-					parentCost.subRoleIDs.push({key: cost.uid, value: 1});
+					if (!parentCost.subCostIDs) parentCost.subCostIDs = []; // MS TODO
+					parentCost.subCostIDs.push({key: cost.uid, value: 1});
 					parentCost.isSummaryRole = true;
 					cost.pid = parentCost.uid;
 				} else {
