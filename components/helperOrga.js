@@ -342,8 +342,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		let errorDetails = [];
 		if (role.isSummaryRole || role.isExternRole || role.type == 3 || role.type == 2){		// ???? TODO UR	
 			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`email not accepted: ${role.email || ''}`);}
-		} else {
-					// ???? TODO UR	 - change true into false
+		} else {				
 			if (!validate.validateEmail(role.email, false)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
 		}		
 		if (role.type == undefined) {
@@ -408,7 +407,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				newRole.teamParent = getParent(role.path, role.name);
 			}
 			if (role.isSummaryRole) newRole.isSummaryRole = true;
-			if (role.aliases) {
+			if (role.aliases && (role.type == 1)) {
 				const roleAliases = role.aliases;
 				roleAliases.forEach(alias => {
 					if ( !uniqueAliasesNames[alias]) {
