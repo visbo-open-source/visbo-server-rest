@@ -58,7 +58,7 @@ lsb_release -a
 
   git clone https://stashReader@bitbucket.org/visboAtlassian/visbo-ui-build.git --branch development --single-branch
 
-  git clone https://stashReader@bitbucket.org/visboAtlassian/predictkm.git --branch development --single-branch
+#  git clone https://stashReader@bitbucket.org/visboAtlassian/predictkm.git --branch development --single-branch
 
 # install modules for the two components
   chown -R ubuntu:ubuntu $HOME/.npm

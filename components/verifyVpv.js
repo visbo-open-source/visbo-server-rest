@@ -169,7 +169,7 @@ function getVCGroups(req, res, next) {
 	var urlComponent = baseUrl.split('/');
 	var startCalc = new Date();
 
-	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity') < 0) {
+	if (req.method !== 'GET' || urlComponent.findIndex(comp => comp == 'cost' || comp == 'capacity'|| comp == 'costtypes') < 0) {
 		return next();
 	}
 	logger4js.debug('Generate VC Groups for user %s for url %s', req.decoded.email, req.url);
@@ -319,7 +319,7 @@ function getVPV(req, res, next, vpvid) {
 			logger4js.debug('Found Project %s Access', oneVPV.vpid);
 			var endCalc = new Date();
 			logger4js.debug('Calculate getVPV with VP %s ms ', endCalc.getTime() - startCalc.getTime());
-			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity') ) {
+			if (urlComponent.length == 3 && (urlComponent[2] == 'keyMetrics' || urlComponent[2] == 'cost' || urlComponent[2] == 'copy' || urlComponent[2] == 'capacity'|| urlComponent[2] == 'costtypes') ) {
 				var withCapa = urlComponent[2] == 'capacity';
 				verifyVc.getVCOrganisation(oneVP.vcid, withCapa, req, res, next);
 			} else {
@@ -364,7 +364,7 @@ function getPortfolioVPs(req, res, next) {
 
 	if (baseUrl == '/vpv' && req.method == 'GET' && req.query.vpfid) {
 		vpfid = req.query.vpfid;
-	} else if (req.method == 'GET' && urlComponent.length == 6 && urlComponent[1] == 'vp' && urlComponent[5] == 'capacity') {
+	} else if (req.method == 'GET' && urlComponent.length == 6 && urlComponent[1] == 'vp' && (urlComponent[5] == 'capacity' || urlComponent[5] == 'costtypes')) {
 		vpfid = urlComponent[4];
 	}
 	if (!vpfid) {
@@ -601,7 +601,7 @@ function getVPFVPVs(req, res, next) {
 	var nowDate = new Date();
 
 	if ((req.query.refDate && !validate.validateDate(req.query.refDate))) {
-		logger4js.info('Get VC Capacity mal formed query parameter %O ', req.query);
+		logger4js.info('Get VC Capacity/Costtypes mal formed query parameter %O ', req.query);
 		return res.status(400).send({
 			state: 'failure',
 			message: 'Bad Content in Query Parameters'
@@ -671,12 +671,12 @@ function getVPFVPVs(req, res, next) {
 
 		queryvpvids._id = {$in: vpvidsList};
 		var queryVPV = VisboProjectVersion.find(queryvpvids);
-		req.auditTTLMode = 1;	// Capacity Calculation of VISBO Project Versions
+		req.auditTTLMode = 1;	// Capacity/CostInformation Calculation of VISBO Project Versions
 
 		queryVPV.lean();
 		queryVPV.exec(function (err, listVPV) {
 			if (err) {
-				errorHandler(err, res, 'DB: GET VC Capacity Calc Find Full', 'Error getting VISBO Project Versions ');
+				errorHandler(err, res, 'DB: GET VC Capacity/CostInformation Calc Find Full', 'Error getting VISBO Project Versions ');
 				return;
 			}
 			req.auditInfo = listVPV.length;
@@ -687,7 +687,7 @@ function getVPFVPVs(req, res, next) {
 	});
 }
 
-// Get pfv-vpvs of the Portfolio Version related to refDate for capacity calculation
+// Get pfv-vpvs of the Portfolio Version related to refDate for capacity/costInformation calculation
 function getVPFPFVs(req, res, next) {
 	var userId = req.decoded._id;
 

@@ -39,13 +39,16 @@ var visboAudit = require('./components/visboAudit');
 // Require mongoose
 var mongoose = require('mongoose');
 var dbOptions = {
+  // keepAlive option is since Mongoose V6.0.0 no longer necessary, it will be set per default to 30000ms
   keepAlive: 200,
-  // autoReconnect: true,
-  // reconnectInterval: 3000,
+  //autoReconnect: true,
+  //reconnectInterval: 3000,
+  serverSelectionTimeoutMS: 50000,
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  useFindAndModify: false,
+  // useFindAndModify: false
 };
+mongoose.set('strictQuery', false);
 
 // CORS Config, whitelist is an array
 // var whitelist = [
