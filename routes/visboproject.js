@@ -2830,19 +2830,56 @@ router.route('/:vpid/variant/:vid')
 			});
 		}
 		if (req.oneVP.variant[variantIndex].vpvCount > 0 || req.oneVP.variant[variantIndex].vpfCount > 0) {
-			return res.status(409).send({
-				state: 'failure',
-				message: 'Project Variant still has Versions',
-				vp: [req.oneVP]
-			});
+			// update the relevant Variant versions with deletedAT
+			if (req.oneVP.vpType == 1) {
+				// Portfolio				
+				const vpid = req.oneVP._id;
+				const variant = req.oneVP.variant[variantIndex];
+				// mark the vpf with deletedAt			
+				var deleteDate = new Date();			
+				var updateOption = {upsert: false};				
+				var updateUpdate = {$set: {'deletedAt': deleteDate}};
+				var updateQuery = {};
+				updateQuery.vpid = req.oneVP._id;
+				updateQuery.variantName = variant.variantName;				
+				VisboPortfolio.updateMany(updateQuery,  updateUpdate, updateOption, function (err, result) {
+					if (err){
+						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
+					}
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+				});
+
+			} else if (req.oneVP.vpType == 0) { 
+				// Project
+				const vpid = req.oneVP._id;
+				const variant = req.oneVP.variant[variantIndex];
+				// mark the vpv with deletedAt	
+				var deleteDate = new Date();			
+				var updateOption = {upsert: false};				
+				var updateUpdate = {$set: {'deletedAt': deleteDate}};
+				var updateQuery = {};
+				updateQuery.vpid = req.oneVP._id;
+				updateQuery.variantName = variant.variantName;				
+				VisboProjectVersion.updateMany(updateQuery,  updateUpdate, updateOption, function (err, result) {
+					if (err){
+						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
+					}
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+				});
+			} else {				
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Project Variant cannot be deleted',
+					vp: [req.oneVP]
+				});
+			}
+			
 		}
 		req.oneVP.variant.splice(variantIndex, 1);
 		if (lockResult.lockindex >= 0) {
 			req.oneVP.lock.splice(lockResult.lockindex, 1);
 		}
 		logger4js.trace('DELETE Project Variant List after %O', req.oneVP.variant);
-
-		// MS TODO Destroy the Deleted Variant Versions of the Project
 
 		req.oneVP.save(function(err) {
 			if (err) {
