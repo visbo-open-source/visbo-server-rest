@@ -331,6 +331,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	newOrga.allCosts = [];
 	var uniqueRoleNames = [];
 	var uniqueCostNames = [];
+	var uniqueAliasesNames = [];
 	var maxRoleID = getMaxID(oldOrga, 1);
 	var maxCostID = getMaxID(oldOrga, 3);
 	orgaList.forEach((role, index) => {
@@ -341,8 +342,7 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 		let errorDetails = [];
 		if (role.isSummaryRole || role.isExternRole || role.type == 3 || role.type == 2){		// ???? TODO UR	
 			if (!validate.validateEmail(role.email, true)) {errorDetails.push(`email not accepted: ${role.email || ''}`);}
-		} else {
-					// ???? TODO UR	 - change true into false
+		} else {				
 			if (!validate.validateEmail(role.email, false)) {errorDetails.push(`Person has to have valid email: ${role.email || ''}`);}
 		}		
 		if (role.type == undefined) {
@@ -407,7 +407,18 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 				newRole.teamParent = getParent(role.path, role.name);
 			}
 			if (role.isSummaryRole) newRole.isSummaryRole = true;
-			if (role.aliases) {
+			if (role.aliases && (role.type == 1)) {
+				const roleAliases = role.aliases;
+				roleAliases.forEach(alias => {
+					if ( !uniqueAliasesNames[alias]) {
+						uniqueAliasesNames[alias] = alias;
+					} else {
+						errorstring = `${index+2} Orga Role Aliases not unique in orga, name: ${alias}`;
+						listError?.push(errorstring);
+						logger4js.info('InitOrgaList: ', errorstring);
+						isOrgaValid = false;
+					}
+				})					
 				newRole.aliases = role.aliases;
 			}
 			newRole.dailyRate = role.dailyRate || 0;
@@ -507,6 +518,22 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 			}
 			if (uniqueCostNames[newCost.name]) {
 				errorstring = `${index+2}: Orga Cost Name not unique, uid: ${newCost.uid}, name: ${newCost.name}`;
+				listError?.push(errorstring);
+				logger4js.info('InitOrgaList: ', errorstring);
+				isOrgaValid = false;
+				return;
+			}
+			// name of cost may not exist as a role
+			if (uniqueRoleNames[newCost.name]) {
+				errorstring = `${index+2}: Orga Cost Name also exists in the list of Orga Role Names, uid: ${newCost.uid}, name: ${newCost.name}`;
+				listError?.push(errorstring);
+				logger4js.info('InitOrgaList: ', errorstring);
+				isOrgaValid = false;
+				return;
+			}
+			// name of cost may not exist as an alias of a role
+			if (uniqueAliasesNames[newCost.name]) {
+				errorstring = `${index+2}: Orga Cost Name also exists in the list of Orga Role Aliases, uid: ${newCost.uid}, name: ${newCost.name}`;
 				listError?.push(errorstring);
 				logger4js.info('InitOrgaList: ', errorstring);
 				isOrgaValid = false;

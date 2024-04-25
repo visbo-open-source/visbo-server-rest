@@ -434,22 +434,53 @@ router.route('/ott')
 
 router.route('/timetracker')
 	/**
-			* @api {post} /user/timetracker Create a time entry
-			* @apiVersion 6.0.0
-			* @apiHeader {String} access-key User authentication token.
-			* @apiGroup Authentication
-			* @apiName Create time tracker data
-			* @apiError {number} 401 user not authenticated
-			* @apiError {number} 500 Internal Server Error
-			* @apiExample Example usage:
-			*  url: https://my.visbo.net/api/user/timetracker
-			* @apiSuccessExample {json} Success-Response:
-			* HTTP/1.1 201 Created
-			* {
-			*  'state':'success',
-			*  'message':'Time tracker data successfully saved',
-			* }
-			*/
+		* @api {post} /user/timetracker Create a time entry
+		* @apiVersion 6.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Create time tracker data
+		* @apiDescription Post creates an user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
+		* @apiPermission Authenticated and the email-address has to be in one of all orgas
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker
+		* {				
+		*	'userId': '5a1f1b0b1c9d440000e1b1b1',
+		*	'vpid': '643ff73ec4a4a77b80260ee8',				
+		*	'vcid': '643feaa7c4a4a77b8026020d',
+		*	'roleId': '24',
+		*	'date': '2024-01-02T22:59:59.000Z',
+		*	'time': 5.5,
+		*	'name': 'Annabell Test',
+		*	'status': 'No',
+		*	'notes': 'Analyse - Task check it'
+		* }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 201 Created
+		* {
+		*	'state': 'success',
+		*	'message': 'Time tracker data successfully saved',
+		*	'timeEntry': {
+		*		'_id': 'timerec1c9d440000e1b1b1',
+		*		'userId': '5a1f1b0b1c9d440000e1b1b1',
+		*		'vpid': '643ff73ec4a4a77b80260ee8',
+		*		'vcid': '643feaa7c4a4a77b8026020d',
+		*		'roleId': 24,
+		*		'date': '2024-01-02T22:59:59.000Z',
+		*		'time': {
+		*			'$numberDecimal': '5.5'
+		*		},
+		*		'name': "Annabell Test',
+		*		'status': 'No',
+		*		'notes': 'Analyse - Task check it',
+		*		'approvalDate': null,
+		*		'approvalId': null,
+		*		'createdAt': '2024-04-09T14:28:19.827Z',
+		*		'updatedAt': '2024-04-09T14:28:19.827Z'
+		* 		}
+		* }
+		*/
 	.post(async function (req, res) {
 		req.auditDescription = 'Time tracker Create';
 		req.auditTTLMode = 1;
@@ -475,17 +506,35 @@ router.route('/timetracker')
 				message: error
 			});
 		}
-	})
+	});
+
+router.route('/timetracker/:id')
 	/**
-		* @api {patch} /user/timetracker Update specific time entry
-		* @apiVersion 6.0.0
+		* @api {patch} /user/timetracker/timerecId Update specific time entry
+		* @apiVersion 7.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Update time tracker data
+		* @apiDescription Patch updates an existing user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
+		* @apiPermission Authenticated and the email-address has to be in one of all orgas
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 500 Internal Server Error
 		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker
+		*  url: https://my.visbo.net/api/user/timetracker/timerec12458234		
+		*  body:
+		* {	
+		*	'userId': '5a1f1b0b1c9d440000e1b1b1',
+		*	'vpid': '643ff73ec4a4a77b80260ee8',				
+		*	'vcid': '643feaa7c4a4a77b8026020d',
+		*	'roleId': '12',
+		*	'date': '2017-11-30T00:00:00.000Z',
+		*	'time': 5.5,
+		*	'name': 'John Doe',
+		*	'status': 'No/Yes',
+		*	'notes': 'lorum ipsum',
+		*	'approvalDate': '2017-11-30T00:00:00.000Z',
+		*	'approvalId': '5a1f1b0b1c9d440000e3245',
+		* }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -527,6 +576,8 @@ router.route('/timetracker/:id')
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Get time tracker data
+		* @apiDescription Get the timeentries of the current authenticated user
+		* @apiPermission the user has to be authenticated and a member of any orga in the system
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 303 Not Found
 		* @apiError {number} 500 Internal Server Error
@@ -537,7 +588,7 @@ router.route('/timetracker/:id')
 		* {
 		*  'state':'success',
 		*  'message':'Time tracker data retrived successfully',
-		*  'timeTracker': [
+		*  'timeEntries': [
 			{
 				'_id': '5a1f1b0b1c9d440000e1b1b1',
 				'userId': '5a1f1b0b1c9d440000e1b1b1',
@@ -680,15 +731,31 @@ router.route('/timetracker/:id')
 		}
 	})
 	/**
-		* @api {patch} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Update specific time entry
+		* @api {patch} /user/timetracker/timerec00e1b1b1 Update specific time entry
 		* @apiVersion 1.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Update time tracker data
+		* @apiDescription Patch updates a specific time entry of an authenticated user with the userId
+		* @apiPermission user with userId has to be authenticated
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 500 Internal Server Error
 		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
+		*  url: https://my.visbo.net/api/user/timetracker/timerec00e1b1b1	
+		* {	
+		*   '_id': 'timerec00e1b1b1'
+		*	'userId': '5a1f1b0b1c9d440000e1b1b1',
+		*	'vpid': '643ff73ec4a4a77b80260ee8',				
+		*	'vcid': '643feaa7c4a4a77b8026020d',
+		*	'roleId': '12',
+		*	'date': '2017-11-30T00:00:00.000Z',
+		*	'time': 5.5,
+		*	'name': 'John Doe',
+		*	'status': 'No/Yes',
+		*	'notes': 'lorum ipsum',
+		*	'approvalDate': '2017-11-30T00:00:00.000Z',
+		*	'approvalId': '5a1f1b0b1c9d440000e3245',
+		* }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {

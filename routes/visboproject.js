@@ -1410,12 +1410,12 @@ router.route('/:vpid/audit')
  	* @apiHeader {String} access-key User authentication token.
 	* @apiParam {String} vpid The requested VISBO Project ID.
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit Permission for the Project
-	* @apiQuery (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
-	* @apiQuery (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
-	* @apiQuery (Parameter) {text} [text] Request Audit Trail containing text in Detail.
-	* @apiQuery (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
-	* @apiQuery (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
-	* @apiQuery (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
+	* @apiParam (Parameter) {Date} [from] Request Audit Trail starting with from date. Default 01.01.1970.
+	* @apiParam (Parameter) {Date} [to] Request Audit Trail ending with to date. Default Today.
+	* @apiParam (Parameter) {text} [text] Request Audit Trail containing text in Detail.
+	* @apiParam (Parameter) {text} [action] Request Audit Trail only for specific ReST Command (GET, POST, PUT DELETE).
+	* @apiParam (Parameter) {number} [maxcount] Request Audit Trail maximum entries.
+	* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Audit
  	* @apiExample Example usage:
@@ -2830,19 +2830,56 @@ router.route('/:vpid/variant/:vid')
 			});
 		}
 		if (req.oneVP.variant[variantIndex].vpvCount > 0 || req.oneVP.variant[variantIndex].vpfCount > 0) {
-			return res.status(409).send({
-				state: 'failure',
-				message: 'Project Variant still has Versions',
-				vp: [req.oneVP]
-			});
+			// update the relevant Variant versions with deletedAT
+			if (req.oneVP.vpType == 1) {
+				// Portfolio				
+				const vpid = req.oneVP._id;
+				const variant = req.oneVP.variant[variantIndex];
+				// mark the vpf with deletedAt			
+				var deleteDate = new Date();			
+				var updateOption = {upsert: false};				
+				var updateUpdate = {$set: {'deletedAt': deleteDate}};
+				var updateQuery = {};
+				updateQuery.vpid = req.oneVP._id;
+				updateQuery.variantName = variant.variantName;				
+				VisboPortfolio.updateMany(updateQuery,  updateUpdate, updateOption, function (err, result) {
+					if (err){
+						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
+					}
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+				});
+
+			} else if (req.oneVP.vpType == 0) { 
+				// Project
+				const vpid = req.oneVP._id;
+				const variant = req.oneVP.variant[variantIndex];
+				// mark the vpv with deletedAt	
+				var deleteDate = new Date();			
+				var updateOption = {upsert: false};				
+				var updateUpdate = {$set: {'deletedAt': deleteDate}};
+				var updateQuery = {};
+				updateQuery.vpid = req.oneVP._id;
+				updateQuery.variantName = variant.variantName;				
+				VisboProjectVersion.updateMany(updateQuery,  updateUpdate, updateOption, function (err, result) {
+					if (err){
+						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
+					}
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+				});
+			} else {				
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Project Variant cannot be deleted',
+					vp: [req.oneVP]
+				});
+			}
+			
 		}
 		req.oneVP.variant.splice(variantIndex, 1);
 		if (lockResult.lockindex >= 0) {
 			req.oneVP.lock.splice(lockResult.lockindex, 1);
 		}
 		logger4js.trace('DELETE Project Variant List after %O', req.oneVP.variant);
-
-		// MS TODO Destroy the Deleted Variant Versions of the Project
 
 		req.oneVP.save(function(err) {
 			if (err) {
@@ -3744,7 +3781,7 @@ router.route('/:vpid/portfolio/:vpfid')
 			*
 			* @apiPermission Authenticated and VP.View and either VP.ViewAudit or VP.Modify for the VISBO Portfolio.
 			* In addition the Project List is filtered to all the Projects where the user has View Permission. This filtered list is checked to have either VP.ViewAudit or VP.Modify Permission for each project, if not the request fails with permission denied.
-			* If the user has VP.ViewAudit Permission for the Portfolio and all Projects with View Permission, he gets in addition to the PD Values also the money values.
+			* The user only gets the money values.
 			* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 			* @apiError {number} 403 No Permission to generate Cost Information for the VISBO Center
 			* @apiError {number} 409 No Organisation configured in the VISBO Center
@@ -3756,16 +3793,25 @@ router.route('/:vpid/portfolio/:vpfid')
 			*   'state':'success',
 			*   'message':'Returned VISBO Portfolio Costtypes',
 			*   'vp':[{
-			*     '_id':'vp5c754feaa',
-			*     'name':'VISBO Portfolio Name',
-			*     'costtypes': [{
-							'month': 2020-05-01T00:00:00.000Z,
-							....
-						}]
+			*		'_id':'vp5c754feaa',
+			*		'name':'VISBO Portfolio Name',
+			*		'description': 'here you find the description of the portfolio',
+			*		'costID': '3',
+			*		'vpAll: '5',
+			*		'vpCalc: '5',
+			*		'costtypes:  [{
+			*			'month': 2020-05-01T00:00:00.000Z,
+			* 			'costID' : '3',
+			*			'costName' : 'Travel',
+			*			'currentCost': '123,4',
+			*			'baselineCost': '150,0'
+			*        },  
+			*		  ...
+			*      }]
 			*   }]
 			* }
 			*/
-	
+
 		// get VPF Cost Information
 			.get(function(req, res) {
 				var userId = req.decoded._id;
