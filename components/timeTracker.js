@@ -57,10 +57,17 @@ async function validateStatus(id) {
     }
 }
 
-async function getTimeEntry(userId, status) {
+async function getTimeEntry(userId, status, startDate, endDate) {
     var query = {};
 	query.userId = userId;
-	query.deletedAt =  {$exists: false};
+    // ur:2024.05.08 new
+    if (startDate && endDate){        
+    query.date = { $gte: startDate , $lte: endDate};
+    } 
+    query.deletedAt =  {$exists: false};
+    
+    // ur:2024.05.08 new 
+
 	// prevent that the user gets access to TimeRecords in a later deleted VC. 
 	query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
     if (status) {
@@ -175,35 +182,43 @@ async function filterSubRoles(list, email, vcid) {
             checkallSubroles(srlist, listOrga, srFound);
         } 
     }
-
-    subRolesList.push({ vcid: vcid.toString(), subRoles: subRolesFound });    
+    if (subRolesFound.length > 0) {
+        subRolesList.push({ vcid: vcid.toString(), subRoles: subRolesFound });    
+    }
     return subRolesList;
 }
 
 
 
-async function findSubRolesTimeTracker(roles) {
+async function findSubRolesTimeTracker(roles, startDate, endDate) {
     const subRoleEntries = [];
     for (let role of roles) {
-        const roleEntry = await parseRoles(role);
-        subRoleEntries.push(roleEntry);
+        const roleEntry = await parseRoles(role, startDate, endDate);
+        if (roleEntry.length > 0) {
+            subRoleEntries.push(roleEntry);
+        }
     }
     return subRoleEntries.flat();
 }
 
-async function parseRoles(lists) {
+async function parseRoles(lists, startDate, endDate) {
     const arrayList = [];
     for (let item of lists.subRoles) {
         // only entries with status NO
         //const timeTracker = await TimeTracker.find({ roleId: item.uid, status: 'No', vcid: lists.vcid });
         var query = {};
-        query.roleId = item.uid;
+        // ur:2024.05.08 new
+        if (startDate && endDate){          
+            query.date = { $gte: new Date(startDate.toISOString()) , $lte: new Date(endDate.toISOString())};       
+        }
+        // ur:2024.05.08 new 
         query.vcid = lists.vcid;
+        query.roleId = item.uid;      
         query.deletedAt =  {$exists: false};
         query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC      
         const timeTracker = await TimeTracker.find(query);
         // const timeTracker = await TimeTracker.find({ roleId: item.uid, vcid: lists.vcid });
-        if (timeTracker) {
+        if (timeTracker.length > 0) {
             arrayList.push(timeTracker);
         }
     }

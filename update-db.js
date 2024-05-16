@@ -1411,6 +1411,33 @@ if (currentVersion < dateBlock) {
 //   currentVersion = dateBlock
 // }
 
+
+var currentVersion = oldVersion;
+
+dateBlock = "2018-12-01T00:00:00";
+if (continueFlag && currentVersion < dateBlock) {
+  // DB Collection and Index 
+  print ("Upgrade DB: set Indices for TimeTracker")
+  var collectionName = 'timetrackers';
+  var collection = db.getCollectionInfos({name: collectionName});
+  if (!collection || collection.length == 0) {
+    // print ("Need to Create Visbo timetrackers Collection ", collectionName)
+    db.createCollection( collectionName );
+     db.timetrackers.createIndex( { userId: 1}, { name: "User", unique: false} );
+    db.timetrackers.createIndex( { date: 1 }, { name: "Date", unique: false } );
+    db.timetrackers.createIndex( { userId: 1, date: 1, }, { name: "User_Date", unique: false } );
+    print ("Visbo timetrackers Collection and Indices Created")
+  } else {
+    // print ("Only need to create timetrackers Indices")  
+    db.timetrackers.createIndex( { userId: 1}, { name: "User", unique: false} );
+    db.timetrackers.createIndex( { date: 1 }, { name: "Date", unique: false } );
+    db.timetrackers.createIndex( { userId: 1, date: 1, }, { name: "User_Date", unique: false } );
+}
+   // Set the currentVersion in Script and in DB
+   db.vcsettings.updateOne({vcid: systemvc._id, name: 'DBVersion'}, {$set: {value: {version: dateBlock}, updatedAt: new Date()}}, {upsert: false})
+   currentVersion = dateBlock
+}
+
 // Add an System Update Audit Entry
 print("update to version: ", VERSION_REST)
 var auditUpgrade = {};

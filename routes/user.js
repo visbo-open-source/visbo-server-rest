@@ -508,66 +508,6 @@ router.route('/timetracker')
 		}
 	});
 
-router.route('/timetracker/:id')
-	/**
-		* @api {patch} /user/timetracker/timerecId Update specific time entry
-		* @apiVersion 7.0.0
-		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Authentication
-		* @apiName Update time tracker data
-		* @apiDescription Patch updates an existing user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
-		* @apiPermission Authenticated and the email-address has to be in one of all orgas
-		* @apiError {number} 401 user not authenticated
-		* @apiError {number} 500 Internal Server Error
-		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker/timerec12458234		
-		*  body:
-		* {	
-		*	'userId': '5a1f1b0b1c9d440000e1b1b1',
-		*	'vpid': '643ff73ec4a4a77b80260ee8',				
-		*	'vcid': '643feaa7c4a4a77b8026020d',
-		*	'roleId': '12',
-		*	'date': '2017-11-30T00:00:00.000Z',
-		*	'time': 5.5,
-		*	'name': 'John Doe',
-		*	'status': 'No/Yes',
-		*	'notes': 'lorum ipsum',
-		*	'approvalDate': '2017-11-30T00:00:00.000Z',
-		*	'approvalId': '5a1f1b0b1c9d440000e3245',
-		* }
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*  'state':'success',
-		*  'message':'Time tracker data successfully updated',
-		* }
-		*/
-	.patch(async function (req, res) {
-		req.auditDescription = 'Time tracker Update many';
-		req.auditTTLMode = 1;
-		try {
-			logger4js.info('Update time entry %s', req.decoded._id);
-			const newValues = await updateMany(req.body);
-			if (newValues) {
-				return res.status(200).send({
-					'state': 'success',
-					'message': 'Time tracker data successfully updated',
-					'timeEntry': newValues
-				});
-			}
-			logger4js.error('Error in updating time entry with id %s', req.params.id);
-			return res.status(500).send({
-				state: 'error',
-				message: 'Error in updating time entry'
-			});
-		} catch (error) {
-			logger4js.error('Error in update time entry: %O', error);
-			return res.status(500).send({
-				state: 'error',
-				message: error
-			});
-		}
-	});
 
 router.route('/timetracker/:id')
 	/**
@@ -635,33 +575,61 @@ router.route('/timetracker/:id')
 				// }
 			});
 
-			if (userSettings.length > 0) {
-				// look for the entries for managerView - Approver
-				const managerView = [];
-				for (let setting of userSettings) {
-					var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
 
-					var subRoles = await findSubRolesTimeTracker(filteredList);
-					if (subRoles.length > 0) {
-						managerView.push(subRoles);
-					}
-				}		
-				// look for the entries for normal user view - Employee		
-				var userView = await getTimeEntry(req.params.id);
-				const userViewWithAccess = [];		
-				userView.forEach(userVtr => {
-						userViewWithAccess.push(userVtr)
-				} );				
-				if (userViewWithAccess ) {
+			// ur:2024.5.8 new with startDate and endDate
+			var startDate, endDate;
+			if (req.query.startDate) {
+				startDate = validate.validateDate(req.query.startDate, false, true);
+			}
+			if (req.query.endDate) {
+				endDate = validate.validateDate(req.query.endDate, false, true);
+			}
+			var asApprover = req.query.asApprover? true : false;
+			
+			if (userSettings.length > 0) {
+
+				if (req.decoded.status.isApprover && asApprover) {
+					// look for the entries for managerView - Approver
+					const managerView = [];
+					for (let setting of userSettings) {
+						var filteredList = await filterSubRoles(setting.value.allRoles, req.decoded.email, setting.vcid);
+						if (filteredList.length > 0) {
+							var subRoles = await findSubRolesTimeTracker(filteredList, startDate, endDate);
+							if (subRoles?.length > 0) {
+								managerView.push(subRoles);
+							}			
+						}			
+					}	
 					return res.status(200).send({
-						state: 'success',
-						message: 'Time tracker data retrieved for manager',
-						managerView: managerView ? managerView.flat() : [],
-						timeEntries: userViewWithAccess
-					});
+							state: 'success',
+							message: 'Time tracker data retrieved for manager',
+							managerView: managerView ? managerView.flat() : [],
+							timeEntries: []
+						});
+
+				} else {
+					// look for the entries for normal user view - Employee
+
+					// ur:2024.5.8 new with startDate and endDate
+					var userView = await getTimeEntry(req.params.id,"", startDate, endDate);
+					const userViewWithAccess = [];		
+					userView.forEach(userVtr => {
+							userViewWithAccess.push(userVtr)
+					} );				
+					if (userViewWithAccess ) {
+						return res.status(200).send({
+							state: 'success',
+							message: 'Time tracker data retrieved for manager',
+							managerView: [],
+							timeEntries: userViewWithAccess
+						});
+					}					
 				}
+
 			} else {
-				var timeEntries = await getTimeEntry(req.params.id, "Yes");						
+				
+				// ur:2024.5.8 new with startDate and endDate
+				var timeEntries = await getTimeEntry(req.params.id, "Yes", startDate, endDate);						
 				const timeEntriesWithAccess = [];		
 				timeEntries.forEach(userVtr => {
 						timeEntriesWithAccess.push(userVtr)
@@ -730,8 +698,9 @@ router.route('/timetracker/:id')
 			});
 		}
 	})
+	router.route('/timetracker/:id')
 	/**
-		* @api {patch} /user/timetracker/timerec00e1b1b1 Update specific time entry
+		* @api {patch} /user/timetracker Update a specific time entry with the given id
 		* @apiVersion 1.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
@@ -794,6 +763,62 @@ router.route('/timetracker/:id')
 				});
 			}
 			logger4js.error('Error in updating time entry with id %s', req.params.id);
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in updating time entry'
+			});
+		} catch (error) {
+			logger4js.error('Error in update time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
+		}
+	});
+	router.route('/timetracker')
+	/**
+		* @api {patch} /user/timetracker/timerecId Update some specific time entries
+		* @apiVersion 7.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Update time tracker data
+		* @apiDescription Patch updates an existing user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
+		* @apiPermission Authenticated and the email-address has to be in one of all orgas
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker		
+		*  body:
+		* {	
+		*   'status': 'Yes',
+		*	'approvalDate': '2017-11-30T00:00:00.000Z',
+		*	'approvalId': '5a1f1b0b1c9d440000e3245',
+		*   'approvalList': [
+		*				'id': 'timeRecIdc9d440000e3245',
+		*				'vpid': 'vpid1b0b1c9d440000e3245'
+		*               ]
+		* }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data successfully updated',
+		* }
+		*/
+	.patch(async function (req, res) {
+		req.auditDescription = 'Time tracker Update many';
+		req.auditTTLMode = 1;
+		try {
+			logger4js.info('Update time entry %s', req.decoded._id);
+			const newValues = await updateMany(req.body);
+			if (newValues) {
+				return res.status(200).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully updated',
+					'timeEntry': newValues
+				});
+			}
+			logger4js.error('Error in updating time entry with id %s', req.decoded._id);
 			return res.status(500).send({
 				state: 'error',
 				message: 'Error in updating time entry'
