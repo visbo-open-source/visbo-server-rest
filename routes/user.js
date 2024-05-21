@@ -508,21 +508,83 @@ router.route('/timetracker')
 		}
 	});
 
-
-router.route('/timetracker/:id')
+router.route('/timetracker')
 	/**
-		* @api {get} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Get time tracker data by employee id
+		* @api {patch} /user/timetracker Update some specific time entries
+		* @apiVersion 7.0.0
+		* @apiHeader {String} access-key User authentication token.
+		* @apiGroup Authentication
+		* @apiName Update time tracker data
+		* @apiDescription Patch updates an existing user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
+		* @apiPermission Authenticated and the email-address has to be in one of all orgas
+		* @apiError {number} 401 user not authenticated
+		* @apiError {number} 500 Internal Server Error
+		* @apiExample Example usage:
+		*  url: https://my.visbo.net/api/user/timetracker		
+		*  body:
+		* {	
+		*   'status': 'Yes',
+		*	'approvalDate': '2017-11-30T00:00:00.000Z',
+		*	'approvalId': '5a1f1b0b1c9d440000e3245',
+		*   'approvalList': [
+		*				'id': 'timeRecIdc9d440000e3245',
+		*				'vpid': 'vpid1b0b1c9d440000e3245'
+		*               ]
+		* }
+		* @apiSuccessExample {json} Success-Response:
+		* HTTP/1.1 200 OK
+		* {
+		*  'state':'success',
+		*  'message':'Time tracker data successfully updated',
+		* }
+		*/
+	.patch(async function (req, res) {
+		req.auditDescription = 'Time tracker Update many';
+		req.auditTTLMode = 1;
+		try {
+			logger4js.info('Update time entry %s', req.decoded._id);
+			const newValues = await updateMany(req.body);
+			if (newValues) {
+				return res.status(200).send({
+					'state': 'success',
+					'message': 'Time tracker data successfully updated',
+					'timeEntry': newValues
+				});
+			}
+			logger4js.error('Error in updating time entry with id %s', req.decoded._id);
+			return res.status(500).send({
+				state: 'error',
+				message: 'Error in updating time entry'
+			});
+		} catch (error) {
+			logger4js.error('Error in update time entry: %O', error);
+			return res.status(500).send({
+				state: 'error',
+				message: error
+			});
+		}
+	});
+
+
+router.route('/timetracker/:userId')
+	/**
+		* @api {get} /user/timetracker/:userId Get time tracker data by employee id
 		* @apiVersion 6.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Get time tracker data
 		* @apiDescription Get the timeentries of the current authenticated user
-		* @apiPermission the user has to be authenticated and a member of any orga in the system
+		* @apiPermission the user has to be authenticated and a member of any orga in the system		
+		* @apiParam {String} userId The requested userID.
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 303 Not Found
 		* @apiError {number} 500 Internal Server Error
 		* @apiExample Example usage:
 		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
+		* {
+		*  'startDate': '2023-11-30T00:00:00.000Z',
+		*  'endDate': '2023-05-23T00:00:00.000Z'
+		* }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -535,7 +597,7 @@ router.route('/timetracker/:id')
 				'vpid': '643ff73ec4a4a77b80260ee8',				
 				'vcid': '643feaa7c4a4a77b8026020d',
 				'roleId': '12',
-				'date': '2017-11-30T00:00:00.000Z',
+				'date': '2023-11-30T00:00:00.000Z',
 				'time': 5.5,
 				'name': 'John Doe',
 				'status': 'No/Yes',
@@ -611,7 +673,7 @@ router.route('/timetracker/:id')
 					// look for the entries for normal user view - Employee
 
 					// ur:2024.5.8 new with startDate and endDate
-					var userView = await getTimeEntry(req.params.id,"", startDate, endDate);
+					var userView = await getTimeEntry(req.params.userId,"", startDate, endDate);
 					const userViewWithAccess = [];		
 					userView.forEach(userVtr => {
 							userViewWithAccess.push(userVtr)
@@ -629,7 +691,7 @@ router.route('/timetracker/:id')
 			} else {
 				
 				// ur:2024.5.8 new with startDate and endDate
-				var timeEntries = await getTimeEntry(req.params.id, "Yes", startDate, endDate);						
+				var timeEntries = await getTimeEntry(req.params.userId, "Yes", startDate, endDate);						
 				const timeEntriesWithAccess = [];		
 				timeEntries.forEach(userVtr => {
 						timeEntriesWithAccess.push(userVtr)
@@ -655,12 +717,14 @@ router.route('/timetracker/:id')
 			});
 		}
 	})
+	router.route('/timetracker/:id')
 	/**
-		* @api {delete} /user/timetracker/5a1f1b0b1c9d440000e1b1b1 Delete specific time entry
+		* @api {delete} /user/timetracker/:id Delete specific time entry
 		* @apiVersion 1.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Delete time tracker data
+		* @apiParam {string} id of the specific time entry
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 500 Internal Server Error
 		* @apiExample Example usage:
@@ -698,15 +762,16 @@ router.route('/timetracker/:id')
 			});
 		}
 	})
-	router.route('/timetracker/:id')
+
 	/**
-		* @api {patch} /user/timetracker Update a specific time entry with the given id
+		* @api {patch} /user/timetracker/:id Update a specific time entry with the given id
 		* @apiVersion 1.0.0
 		* @apiHeader {String} access-key User authentication token.
 		* @apiGroup Authentication
 		* @apiName Update time tracker data
 		* @apiDescription Patch updates a specific time entry of an authenticated user with the userId
 		* @apiPermission user with userId has to be authenticated
+		* @apiParam {string} id specific time entry id
 		* @apiError {number} 401 user not authenticated
 		* @apiError {number} 500 Internal Server Error
 		* @apiExample Example usage:
@@ -775,61 +840,6 @@ router.route('/timetracker/:id')
 			});
 		}
 	});
-	router.route('/timetracker')
-	/**
-		* @api {patch} /user/timetracker/timerecId Update some specific time entries
-		* @apiVersion 7.0.0
-		* @apiHeader {String} access-key User authentication token.
-		* @apiGroup Authentication
-		* @apiName Update time tracker data
-		* @apiDescription Patch updates an existing user timerecord of the authenticated user. The authenticated User has to be a member of any orga of the whole system
-		* @apiPermission Authenticated and the email-address has to be in one of all orgas
-		* @apiError {number} 401 user not authenticated
-		* @apiError {number} 500 Internal Server Error
-		* @apiExample Example usage:
-		*  url: https://my.visbo.net/api/user/timetracker		
-		*  body:
-		* {	
-		*   'status': 'Yes',
-		*	'approvalDate': '2017-11-30T00:00:00.000Z',
-		*	'approvalId': '5a1f1b0b1c9d440000e3245',
-		*   'approvalList': [
-		*				'id': 'timeRecIdc9d440000e3245',
-		*				'vpid': 'vpid1b0b1c9d440000e3245'
-		*               ]
-		* }
-		* @apiSuccessExample {json} Success-Response:
-		* HTTP/1.1 200 OK
-		* {
-		*  'state':'success',
-		*  'message':'Time tracker data successfully updated',
-		* }
-		*/
-	.patch(async function (req, res) {
-		req.auditDescription = 'Time tracker Update many';
-		req.auditTTLMode = 1;
-		try {
-			logger4js.info('Update time entry %s', req.decoded._id);
-			const newValues = await updateMany(req.body);
-			if (newValues) {
-				return res.status(200).send({
-					'state': 'success',
-					'message': 'Time tracker data successfully updated',
-					'timeEntry': newValues
-				});
-			}
-			logger4js.error('Error in updating time entry with id %s', req.decoded._id);
-			return res.status(500).send({
-				state: 'error',
-				message: 'Error in updating time entry'
-			});
-		} catch (error) {
-			logger4js.error('Error in update time entry: %O', error);
-			return res.status(500).send({
-				state: 'error',
-				message: error
-			});
-		}
-	});
+
 
 module.exports = router;
