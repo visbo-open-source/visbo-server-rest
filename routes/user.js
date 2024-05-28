@@ -583,7 +583,8 @@ router.route('/timetracker/:userId')
 		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
 		* {
 		*  'startDate': '2023-11-30T00:00:00.000Z',
-		*  'endDate': '2023-05-23T00:00:00.000Z'
+		*  'endDate': '2023-05-23T00:00:00.000Z',
+		*  'asApprover': true/false
 		* }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -681,7 +682,7 @@ router.route('/timetracker/:userId')
 					if (userViewWithAccess ) {
 						return res.status(200).send({
 							state: 'success',
-							message: 'Time tracker data retrieved for manager',
+							message: 'Time tracker data retrieved for employee',
 							managerView: [],
 							timeEntries: userViewWithAccess
 						});

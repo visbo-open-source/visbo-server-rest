@@ -78,6 +78,7 @@ async function getTimeEntry(userId, status, startDate, endDate) {
     return timeEntry ? timeEntry : [];
 }
 
+
 function getTimeTrackerRecords(vcid, vpid, userId, status) {
 	var query = {};
     var listVTR = [];
@@ -209,7 +210,7 @@ async function parseRoles(lists, startDate, endDate) {
         var query = {};
         // ur:2024.05.08 new
         if (startDate && endDate){          
-            query.date = { $gte: new Date(startDate.toISOString()) , $lte: new Date(endDate.toISOString())};       
+            query.date = { $gte: startDate , $lte: endDate};       
         }
         // ur:2024.05.08 new 
         query.vcid = lists.vcid;
