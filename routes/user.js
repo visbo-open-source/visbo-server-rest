@@ -646,6 +646,7 @@ router.route('/timetracker/:userId')
 			}
 			if (req.query.endDate) {
 				endDate = validate.validateDate(req.query.endDate, false, true);
+				endDate.setDate(endDate.getDate() + 1);
 			}
 			var asApprover = req.query.asApprover? true : false;
 			
