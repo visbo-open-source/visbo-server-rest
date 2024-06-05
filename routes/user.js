@@ -485,8 +485,38 @@ router.route('/timetracker')
 		req.auditDescription = 'Time tracker Create';
 		req.auditTTLMode = 1;
 		try {
-			logger4js.info('Post Time entry %s', req.decoded._id);
-			const newEntry = await createTimeEntry(req.decoded._id, req.body);
+			var newEntry;
+			logger4js.info('Post Time entry %s', req.decoded._id);			
+
+			// special treatment for  NativeClient
+			if (req.body.trDate) {
+				var trbody = {};
+				trbody.date = req.body.trDate;			
+				trbody.userId = req.decoded._id;
+				trbody.vcid = req.body.vcid;
+				trbody.vpid = req.body.vpid;
+				trbody.name = req.body.name;
+				trbody.notes = req.body.notes;
+				trbody.failed = req.body.failed;
+				trbody.roleId = req.body.roleId;
+				trbody.time = req.body.time;
+				const vcdeleted = new Date(req.body.vcdeletedAt);
+				if (vcdeleted.getFullYear() != 1) {
+					trbody.vc.deleted = req.body.vcdeletedAt
+				}
+				trbody.status = req.body.status;
+				if (req.body.status == "No") {
+					trbody.approvalDate = null
+					trbody.approvalId = null
+				} else {
+					trbody.approvalDate = req.body.approvalDate;
+					trbody.approvalId = req.body.approvalId;
+				}
+				newEntry = await createTimeEntry(req.decoded._id, trbody);
+				
+			} else {			
+				newEntry = await createTimeEntry(req.decoded._id, req.body);			
+			}	
 			if (newEntry) {
 				return res.status(201).send({
 					'state': 'success',
@@ -583,7 +613,8 @@ router.route('/timetracker/:userId')
 		*  url: https://my.visbo.net/api/user/timetracker/5a1f1b0b1c9d440000e1b1b1
 		* {
 		*  'startDate': '2023-11-30T00:00:00.000Z',
-		*  'endDate': '2023-05-23T00:00:00.000Z'
+		*  'endDate': '2023-05-23T00:00:00.000Z',
+		*  'asApprover': true/false
 		* }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -645,6 +676,7 @@ router.route('/timetracker/:userId')
 			}
 			if (req.query.endDate) {
 				endDate = validate.validateDate(req.query.endDate, false, true);
+				endDate.setDate(endDate.getDate() + 1);
 			}
 			var asApprover = req.query.asApprover? true : false;
 			
@@ -681,7 +713,7 @@ router.route('/timetracker/:userId')
 					if (userViewWithAccess ) {
 						return res.status(200).send({
 							state: 'success',
-							message: 'Time tracker data retrieved for manager',
+							message: 'Time tracker data retrieved for employee',
 							managerView: [],
 							timeEntries: userViewWithAccess
 						});

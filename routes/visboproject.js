@@ -28,6 +28,7 @@ var Restrict = mongoose.model('Restrict');
 var VisboProjectVersion = mongoose.model('VisboProjectVersion');
 var VisboPortfolio = mongoose.model('VisboPortfolio');
 var VisboAudit = mongoose.model('VisboAudit');
+var TimeTracker = mongoose.model('TimeTracker');
 
 var ConstPerm = require('../models/constPerm');
 var constPermVC = ConstPerm.constPermVC;
@@ -410,6 +411,7 @@ var markDeleteVersion = function(vpid){
 		logger4js.debug('Updated Versions for VP %s set deletedByParent changed %d %d', vpid, result.n, result.nModified);
 	});
 };
+
 
 //Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -1321,26 +1323,49 @@ router.route('/:vpid')
 				vp: [req.oneVP]
 			});
 		}
+	
 		var destroyVP = req.oneVP.deletedAt;
 		logger4js.debug('Delete Project %s %s after permission check deletedAt %s', req.params.vpid, req.oneVP.name, destroyVP);
 
-		if (!destroyVP) {
-			req.oneVP.deletedAt = new Date();
-			req.oneVP.save(function(err, oneVP) {
+		if (!destroyVP) {	
+			// check if a timerecord exists	for the vp to delete		
+			var queryvtr = {};
+			queryvtr.vpid = req.params.vpid;
+			var queryvtr = TimeTracker.find(queryvtr);
+			queryvtr.lean();
+			queryvtr.exec(function (err, listVTR) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE VP', 'Error deleting Project');
+					errorHandler(err, res, 'DB: GET VTR during deletion of VP', 'Error getting TimeRecords ');
 					return;
 				}
-				req.oneVP = oneVP;
-				updateVPCount(req.oneVP.vcid, -1); // async
-				markDeleteGroup(req.oneVP._id); // async
-				markDeleteVersion(req.oneVP._id); // async
-				// updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
-				return res.status(200).send({
-					state: 'success',
-					message: 'Deleted Project'
-				});
-			});
+				if (listVTR && listVTR.length > 0) {
+					req.listVTR = listVTR;					
+					return res.status(412).send({
+						state: 'failure',
+						message: 'Project has TimeTracking Records and cannot be deleted',
+						vp: []
+					});
+				} else {
+					req.oneVP.deletedAt = new Date();
+					req.oneVP.save(function(err, oneVP) {
+						if (err) {
+							errorHandler(err, res, 'DB: DELETE VP', 'Error deleting Project');
+							return;
+						}
+						req.oneVP = oneVP;
+						updateVPCount(req.oneVP.vcid, -1); // async
+						markDeleteGroup(req.oneVP._id); // async
+						markDeleteVersion(req.oneVP._id); // async
+						// updatePermRemoveVP(req.oneVP.vcid, req.oneVP._id); //async
+						return res.status(200).send({
+							state: 'success',
+							message: 'Deleted Project'
+						});
+					});
+				}
+			
+			})		
+
 		} else {
 			req.auditDescription = 'Project Destroy';
 			logger4js.warn('VP DESTROY VP %s %s ', req.oneVP._id, req.oneVP.name);
@@ -1351,7 +1376,7 @@ router.route('/:vpid')
 			queryVPV.vpid = req.oneVP._id;
 			VisboProjectVersion.deleteMany(queryVPV, function(err) {
 				if (err) {
-					errorHandler(err, undefined, 'DB: DELETE(Destory) VP VPVs', undefined);
+					errorHandler(err, undefined, 'DB: DELETE(Destroy) VP VPVs', undefined);
 				}
 				logger4js.debug('VP Destroy: Destroyed VP Versions');
 			});
@@ -1359,7 +1384,7 @@ router.route('/:vpid')
 			var queryvpf = {vpid: req.oneVP._id};
 			VisboPortfolio.deleteMany(queryvpf, function (err) {
 				if (err){
-					errorHandler(err, undefined, 'DB: DELETE(Destory) VP Portfolios', undefined);
+					errorHandler(err, undefined, 'DB: DELETE(Destroy) VP Portfolios', undefined);
 				}
 				logger4js.trace('VP Destroy: %s VP Portfolios Deleted', req.oneVP._id);
 			});
@@ -1368,7 +1393,7 @@ router.route('/:vpid')
 			var queryvpgroup = {vcid: req.oneVP.vcid, vpids: req.oneVP._id, groupType: 'VP'};
 			VisboGroup.deleteMany(queryvpgroup, function (err) {
 				if (err){
-					errorHandler(err, undefined, 'DB: DELETE(Destory) VP Groups', undefined);
+					errorHandler(err, undefined, 'DB: DELETE(Destroy) VP Groups', undefined);
 				}
 				logger4js.trace('VP Destroy: %s VP Groups Deleted', req.oneVP._id);
 			});
@@ -1376,7 +1401,7 @@ router.route('/:vpid')
 			var queryaudit = {'vp.vpid': req.oneVP._id};
 			VisboAudit.deleteMany(queryaudit, function (err) {
 				if (err){
-					errorHandler(err, undefined, 'DB: DELETE(Destory) VP Audit', undefined);
+					errorHandler(err, undefined, 'DB: DELETE(Destroy) VP Audit', undefined);
 				}
 				logger4js.trace('VP Destroy: %s VP Audit Deleted', req.oneVP._id);
 			});
@@ -1386,7 +1411,7 @@ router.route('/:vpid')
 			queryVP._id = req.oneVP._id;
 			VisboProject.deleteOne(queryVP, function(err) {
 				if (err) {
-					errorHandler(err, res, 'DB: DELETE(Destory) VP', 'Error deleting Project');
+					errorHandler(err, res, 'DB: DELETE(Destroy) VP', 'Error deleting Project');
 					return;
 				}
 				// no need to update vpCount in VC
