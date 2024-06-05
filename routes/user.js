@@ -485,8 +485,38 @@ router.route('/timetracker')
 		req.auditDescription = 'Time tracker Create';
 		req.auditTTLMode = 1;
 		try {
-			logger4js.info('Post Time entry %s', req.decoded._id);
-			const newEntry = await createTimeEntry(req.decoded._id, req.body);
+			var newEntry;
+			logger4js.info('Post Time entry %s', req.decoded._id);			
+
+			// special treatment for  NativeClient
+			if (req.body.trDate) {
+				var trbody = {};
+				trbody.date = req.body.trDate;			
+				trbody.userId = req.decoded._id;
+				trbody.vcid = req.body.vcid;
+				trbody.vpid = req.body.vpid;
+				trbody.name = req.body.name;
+				trbody.notes = req.body.notes;
+				trbody.failed = req.body.failed;
+				trbody.roleId = req.body.roleId;
+				trbody.time = req.body.time;
+				const vcdeleted = new Date(req.body.vcdeletedAt);
+				if (vcdeleted.getFullYear() != 1) {
+					trbody.vc.deleted = req.body.vcdeletedAt
+				}
+				trbody.status = req.body.status;
+				if (req.body.status == "No") {
+					trbody.approvalDate = null
+					trbody.approvalId = null
+				} else {
+					trbody.approvalDate = req.body.approvalDate;
+					trbody.approvalId = req.body.approvalId;
+				}
+				newEntry = await createTimeEntry(req.decoded._id, trbody);
+				
+			} else {			
+				newEntry = await createTimeEntry(req.decoded._id, req.body);			
+			}	
 			if (newEntry) {
 				return res.status(201).send({
 					'state': 'success',
