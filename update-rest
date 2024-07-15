@@ -64,6 +64,7 @@ then
 fi
 
 echo "04: Update API Documentation"
+sudo npm install -g apidoc
 apidoc -i routes -o public/apidoc
 rm -rf /var/www/apidoc/*
 cp -r public/apidoc/* /var/www/apidoc

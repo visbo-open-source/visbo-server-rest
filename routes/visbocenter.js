@@ -2009,28 +2009,29 @@ router.route('/:vcid/group/:groupid/user/:userid')
 
 router.route('/:vcid/timetracking')
 	/**
-		* @api {post} /vc/:vcid/timetracking VISBO Center TimeTracking - Import 
+		* @api {post} /vc/:vcid/timetracking VISBO Center TimeTracking - Import of the timerecords 
 		* @apiVersion 6.0.0
 		* @apiGroup VISBO Center
 		* @apiName PostVISBOCenterTimeTracking
 		* @apiHeader {String} access-key User authentication token.
 		* @apiParam {String} vcid The requested VISBO Center ID.
-		* @apiDescription Post imports the approved TimeRecords of the Users
+		* @apiDescription Post imports the approved TimeRecords of the Users of the VISBO Center with vcid
 		*
 		* @apiPermission Authenticated and VC.View and VC.Modify and VP.Modify  Permission for the VISBO Center.
 		* @apiParam (Parameter AppAdmin) {Boolean} [sysadmin=false] Request System Permission
-		* @apiError {number} 400 
+		* @apiError {number} 400 No Orga or no VPVs given / No isActualDataRelevant set in the customization
 		* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 		* @apiError {number} 403 No Permission to Create the VISBO ProjectVersions with the changed RessourceNeeds
-		* @apiError {number} 409 VISBO Project Versions Conflict
+		* @apiError {number} 409 VISBO Project variant does not exist / Project variant does not exist
 		* @apiError {number} 412 VISBO TimeTracking: Precondition failed or Project status does not allow any new version or TimeTracking cannot be done because of missing definition in customization _isActualDataRelevant
+		* @apiError {number} 423 VISBO Project locked
 		* @apiExample Example usage:
 		*   url: https://my.visbo.net/api/vc/:vcid/timetracker
 		*  {
-		*     'name':'User Name',
-		*	  'from':'2019-01-19T11:04:12.094Z'
-		*	  'to':'2019-012-19T11:04:12.094Z'
-		*     'permission': {vc: 307 }
+		*		'name':'User Name',
+		*		'from':'2019-01-19T11:04:12.094Z'
+		*		'to':  '2019-012-19T11:04:12.094Z'
+		* 		'permission': {vc: 307 }
 		*  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
@@ -2240,17 +2241,6 @@ router.route('/:vcid/timetracking')
 							vp: [req.oneVP]
 						});
 					}
-					
-					// TODO: UR
-					// check if the VP has the vpStatus  'paused' or 'finished' or 'stopped'
-					// if (req.oneVP.vpStatus == 'paused' || req.oneVP.vpStatus == 'finished' || req.oneVP.vpStatus == 'stopped') {
-					// 	logger4js.warn('VPV Post VP status %s %s %s', newVPV.vpid, req.oneVP.name, req.oneVP.vpStatus);
-					// 	return res.status(412).send({
-					// 		state: 'failure',
-					// 		message: 'Project status does not allow any new version',
-					// 		vp: [req.oneVP]
-					// 	});
-					// }						
 
 					logger4js.debug('User has permission to create a new Version in %s Variant :%s:', req.oneVP.name, newVPV.variantName);
 								
@@ -2386,9 +2376,7 @@ router.route('/:vcid/timetracking')
 
 			}
 		});								
-	});	
-		
-	
+	});		
 
 router.route('/:vcid/message')
 	/**
@@ -2407,9 +2395,9 @@ router.route('/:vcid/message')
 		* @apiExample Example usage:
 		*  url: https://my.visbo.net/api/vc/:vcid/message
 		*  {
-	  *    'email':'existing.user@visbo.de',
+	  	*    'email':'existing.user@visbo.de',
 		*    'message': 'Message'
-	  *  }
+	  	*  }
 		* @apiSuccessExample {json} Success-Response:
 		* HTTP/1.1 200 OK
 		* {
@@ -4362,10 +4350,18 @@ router.route('/:vcid/costtypes')
 		*   'vc':[{
 		*     '_id':'vc5c754feaa',
 		*     'name':'VISBO Center Name',
-		*     'costInfo': [{
-		*       'month': 2020-05-01T00:00:00.000Z,
-		*       ....
-		*     }]
+		*	  'description': 'Description of the VISBO Center',
+		*	  'costID': '5',
+		*     'vpCount': '12',
+		*     'costtypes': [{
+		*	        'month': 2020-05-01T00:00:00.000Z,
+		*			'costID': '5',
+		*			'costName': 'Interne Kosten',
+		*			'currentCost': 13.347552327851558,
+		*			'baselineCost': 0
+		*			},
+		*       		....
+		*     		}]
 		*   }]
 		* }
 		*/

@@ -1250,6 +1250,7 @@ router.route('/:vpvid/copy')
 
 		var vpid = req.oneVPV.vpid;
 		var variantName = req.oneVPV.variantName;
+		var isCommited = req.oneVPV.isCommited;
 		if (req.body.variantName || req.body.variantName == '') {
 			variantName = req.body.variantName;
 		}
@@ -1367,6 +1368,7 @@ router.route('/:vpvid/copy')
 			// change variantName if defined in body
 			newVPV.variantName = variantName;
 			newVPV.timestamp = timestamp;
+			newVPV.isCommited = isCommited;
 			newVPV.status = undefined;
 			if (req.oneVP && req.oneVP.vpStatus) {
 				newVPV.vpStatus = req.oneVP.vpStatus;
@@ -1566,42 +1568,53 @@ router.route('/:vpvid/capacity')
 router.route('/:vpvid/costtypes')
 
 /**
-	 * @api {get} /vpv/:vpvid/costtypes Get Costtypes for VISBO Project
+	 * @api {get} /vpv/:vpvid/costtypes Get Costtypes for VISBO Project Version
 	* @apiVersion 1.0.0
 	 * @apiGroup VISBO Project Version
 	 * @apiName GetVISBOProjectCosttypes
 	 * @apiHeader {String} access-key User authentication token.
 	* @apiDescription Get returns the costtypes for a specific Project Version of the Project
-	* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, roleID and hierarchy
-	* A roleID must be specified. If hierarchy is true, the costtypes for the first level of subroles are delivered in addition to the main role.
+	* With additional query paramteters the list could be configured. Available Parameters are: refDate, startDate & endDate, costID and hierarchy
+	* A costID must be specified. If hierarchy is true, the costtypes for the first level of subcosts are delivered in addition to the main costtype.
 	*
 	* @apiParam {String} vpvid The requested VISBO Project Version ID.
 	* @apiQuery {Date} startDate Deliver only costtypes values beginning with month of startDate, default is today
 	* @apiQuery {Date} endDate Deliver only costtypes values ending with month of endDate, default is today + 6 months
 	* @apiQuery {String} costID Deliver the costtypes planning for the specified organisation, default is complete organisation
-	* @apiQuery {Boolean} hierarchy Deliver the costtypes planning including all direct childs of roleID
+	* @apiQuery {Boolean} hierarchy Deliver the costtypes planning including all direct childs of costID
 	*
 	* @apiPermission Authenticated and VP.View and VP.ViewAudit or VP.Modify Permission for the Project, and VC.View Permission for the VISBO Center.
-	* If the user has VP.ViewAduit Permission, he gets in addition to the PD Values also the money values for the capa.
-	* @apiError {number} 400 Bad Values in paramter in URL
+	* The user only gets the money values.
+	* @apiError {number} 400 No costID given to Calculate Costtype
 	* @apiError {number} 401 user not authenticated, the <code>access-key</code> is no longer valid
 	* @apiError {number} 403 No Permission to View Project Version, or View Visbo Center to get the organisation.
 	* @apiError {number} 409 No Organisation configured in the VISBO Center
 	*
-	 * @apiExample Example usage:
-	 *   url: https://my.visbo.net/api/vpv/vpv5aada025/costtypes?costID=1
-	 * @apiSuccessExample {json} Response:
-	 * HTTP/1.1 200 OK
-	 * {
-	 *   'state':'success',
-	 *   'message':'Returned Project Versions',
-	 *   'vpv': [{
-	 *     '_id':'vpv5c754feaa',
+	* @apiExample Example usage:
+	*   url: https://my.visbo.net/api/vpv/vpv5aada025/costtypes?costID=1
+	* @apiSuccessExample {json} Response:
+	* HTTP/1.1 200 OK
+	* {
+	*   'state':'success',
+	*   'message':'Returned Project Versions',
+	*   'vpv': [{
+	*     '_id':'vpv5c754feaa',
 	*     'timestamp': '2019-03-19T11:04:12.094Z',
 	*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
-	*     ...
-	 *   }]
-	 * }
+	*	  'vpid': 'vp5c754feaa1',
+	*	  'name': 'Project Name',
+	*	  'variantName': 'Name of the variant of this project',
+	*	  'costID': '5',
+	*	  'costtypes': [{
+    *            'month': "2023-12-31T23:00:00.000Z",
+    *            'costID': "5",
+    *            'costName': "Interne Kosten",
+    *            'currentCost': 13.497127991610895,
+    *            'baselineCost': 0
+    *            },
+	*		}]
+	*   }]
+	* }
 	*/
 // Get costtypes calculation for a specific Project Version
 .get(function(req, res) {
@@ -1640,7 +1653,7 @@ router.route('/:vpvid/costtypes')
 	if (costID == undefined ) {
 		return res.status(400).send({
 			state: 'failure',
-			message: 'No roleID given to Calculate Costtypes',
+			message: 'No costID given to Calculate Costtypes',
 			perm: perm
 		});
 	}
@@ -1670,6 +1683,7 @@ router.route('/:vpvid/costtypes')
 			actualDataUntil: req.oneVPV.actualDataUntil,
 			vpid: req.oneVPV.vpid,
 			name: req.oneVPV.name,
+			variantName: req.oneVPV.variantName,
 			costID: costID,
 			costtypes: costinfo
 		} ],
@@ -1764,7 +1778,7 @@ router.route('/:vpvid/cost')
 	*
  	* @apiExample Example usage:
  	*   url: https://my.visbo.net/api/vpv/vpv5aada025/cost
- 	* @apiSuccessExample {json} Delivery-Response:
+ 	* @apiSuccessExample {json} Cost-Response:
  	* HTTP/1.1 200 OK
  	* {
  	*   'state':'success',
@@ -1773,12 +1787,19 @@ router.route('/:vpvid/cost')
  	*     '_id':'vpv5c754feaa',
 	*     'timestamp': '2019-03-19T11:04:12.094Z',
 	*     'actualDataUntil': '2019-01-31T00:00:00.000Z',
-	* 		'cost': [{
-	* 		   'currentDate':  '2018-03-01T00:00:00.000Z',
-	* 		   'baseLineCost': 125,
-	* 		   'currentCost': 115
-	*     }]
- 	*   }]
+	* 		 'cost': [
+    *           {
+    *            'currentDate': '2023-06-30T22:00:00.000Z',
+    *            'baseLineCost': 26.949342,
+    *            'currentCost': 26.949342,
+    *            'personnelCost': 26.949342,
+    *            'allOtherCost': 0,
+    *            'baseLineInvoice': 0,
+    *            'currentInvoice': 0
+    *    	    },
+	*           ...
+ 	*       }],
+	*    }]
  	* }
 	*/
 // Get Cost for a specific Project Version
