@@ -136,6 +136,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 		]
 	},
 	timestamp: { type: Date, required: false},
+	isCommited: { type: Boolean, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
 	businessUnit: { type: String, required: false, maxlength: 256},

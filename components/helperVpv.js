@@ -102,6 +102,7 @@ function initVPV(vpv) {
 	newVPV.Dauer = vpv.Dauer;
 	newVPV.AllPhases = vpv.AllPhases;
 	newVPV.hierarchy = vpv.hierarchy;
+	newVPV.isCommited = vpv.isCommited || undefined;
 	newVPV.complexity = vpv.complexity;
 	newVPV.description = vpv.description;
 	newVPV.businessUnit = vpv.businessUnit;

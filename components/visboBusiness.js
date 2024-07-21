@@ -62,7 +62,7 @@ function getDateEndOfMonth(dd) {
 }
 
 function isOrgaRolePerson(role) {
-	return ( role && !role.isSummaryRole && role.subRoleIDs?.length <= 0 );
+    return ( role && !role.isSummaryRole && role.subRoleIDs?.length <= 0 );
 }
 
 // calculate dailyCapa of orga unit/team in a timezoned orga
