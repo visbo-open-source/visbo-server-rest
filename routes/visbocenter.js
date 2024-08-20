@@ -2320,8 +2320,8 @@ router.route('/:vcid/timetracking')
 							newVPV.actualDataUntil = normalised;
 						} else {
 							newVPV.actualDataUntil = endDateOfTimerecs;
-						}			
-					}	
+						}
+					}
 
 					if ( !newVPV.actualDataUntil) {		
 						if (newVPV.endDate.getTime() <= endDateOfTimerecs.getTime()) {
