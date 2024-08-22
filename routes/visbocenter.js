@@ -2313,11 +2313,24 @@ router.route('/:vcid/timetracking')
 					// console.log("actualDataUntil : ", newVPV.actualDataUntil.getTime());
 					// console.log("endDateOfTimerecs : ", endDateOfTimerecs.getTime());
 
-					if ((newVPV.actualDataUntil && (newVPV.actualDataUntil.getTime() < endDateOfTimerecs.getTime()))) {
-						newVPV.actualDataUntil = endDateOfTimerecs;
-					}	
-					if ( !newVPV.actualDataUntil) {
-						newVPV.actualDataUntil = endDateOfTimerecs;
+					if ((newVPV.actualDataUntil && (newVPV.actualDataUntil.getTime() < endDateOfTimerecs.getTime()))) {						
+						if (newVPV.endDate.getTime() <= endDateOfTimerecs.getTime()) {
+							var normalised = new Date(newVPV.endDate);    
+    						normalised.setDate(normalised.getDate() - 1);
+							newVPV.actualDataUntil = normalised;
+						} else {
+							newVPV.actualDataUntil = endDateOfTimerecs;
+						}
+					}
+
+					if ( !newVPV.actualDataUntil) {		
+						if (newVPV.endDate.getTime() <= endDateOfTimerecs.getTime()) {
+							var normalised = new Date(newVPV.endDate);    
+    						normalised.setDate(normalised.getDate() - 1);
+							newVPV.actualDataUntil = normalised;
+						} else {
+							newVPV.actualDataUntil = endDateOfTimerecs;
+						}
 					}	
 									
 					vpvList.push(newVPV);
