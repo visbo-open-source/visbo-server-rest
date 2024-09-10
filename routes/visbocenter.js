@@ -2318,8 +2318,10 @@ router.route('/:vcid/timetracking')
 							var normalised = new Date(newVPV.endDate);    
     						normalised.setDate(normalised.getDate() - 1);
 							newVPV.actualDataUntil = normalised;
-						} else {
-							newVPV.actualDataUntil = endDateOfTimerecs;
+						} else {							
+							var normalised = new Date(endDateOfTimerecs);    
+    						normalised.setDate(normalised.getDate() - 1);
+							newVPV.actualDataUntil = normalised;
 						}
 					}
 
@@ -2329,7 +2331,9 @@ router.route('/:vcid/timetracking')
     						normalised.setDate(normalised.getDate() - 1);
 							newVPV.actualDataUntil = normalised;
 						} else {
-							newVPV.actualDataUntil = endDateOfTimerecs;
+							var normalised = new Date(endDateOfTimerecs);    
+    						normalised.setDate(normalised.getDate() - 1);
+							newVPV.actualDataUntil = normalised;
 						}
 					}	
 									
