@@ -161,18 +161,24 @@ function saveRecalcKM(req, res, message) {
 					return res.status(200).send({
 						state: 'success',
 						message: message,
-						vpv: [ oneVPV ]
+						vpv: [ req.oneVPV ]
 					});
 				});
 			});
 		}
 	} else {
 		logger4js.info('No Versions for Prediction');
-		req.oneVPV.save(function(err, oneVPV) {
+		var newOneVPV = new VisboProjectVersion();
+		newOneVPV = helperVpv.initVPV(req.oneVPV);
+		// newOneVPV._id = "";
+		// newOneVPV.id = "";
+
+		newOneVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
 				return;
-			}
+				}
+			
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
 			helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
@@ -186,8 +192,8 @@ function saveRecalcKM(req, res, message) {
 			return res.status(200).send({
 				state: 'success',
 				message: message,
-				vpv: [ oneVPV ]
-			});
+				vpv: [ req.oneVPV ]
+			});	
 		});
 	}
 		
