@@ -3676,8 +3676,8 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 						if (rolesToSetZero[role.RollenTyp] ) {
 							// delete the forecast
 							for (var i = actFromIndex ; i <= actToIndex; i++) {	
-								if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-									role.Bedarf[i - startIndex  - phase.relStart] = 0;
+								if (((i - startIndex + 1 - phase.relStart) >= 0) && ((i - startIndex + 1 - phase.relStart) <= (role.Bedarf.length -1)))	{
+									role.Bedarf[i - startIndex  - phase.relStart + 1] = 0;
 								} else {
 									logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
 								}
@@ -3694,8 +3694,8 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 					if (rolesToSetZero[role.RollenTyp] ) {
 						// delete the forecast
 						for (var i = startIndex; i <= actToIndex; i++) {	
-							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-								role.Bedarf[i - (startIndex  + phase.relStart - 1)] = 0;
+							if (((i - startIndex + 1 - phase.relStart) >= 0) && ((i - startIndex + 1 - phase.relStart) <= (role.Bedarf.length -1)))	{
+								role.Bedarf[i - startIndex  - phase.relStart + 1] = 0;
 							} else {
 								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
 							}
@@ -3710,8 +3710,8 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 					if (rolesToSetZero[role.RollenTyp] ) {
 						// delete the forecast
 						for (var i = actualDataIndex + 1 ; i <= actToIndex; i++) {	
-							if ((i - startIndex + 1 - phase.relStart) >= 0 && (i - startIndex + 1 - phase.relStart) <= role.Bedarf.length -1)	{
-								role.Bedarf[i - startIndex + 1 - phase.relStart] = 0;
+							if (((i - startIndex + 1 - phase.relStart) >= 0) && ((i - startIndex + 1 - phase.relStart) <= (role.Bedarf.length -1)))	{
+								role.Bedarf[i - startIndex - 1 - phase.relStart] = 0;
 							} else {
 								logger4js.info('Delete the forecast values with error: phase %s : roleUID %s  ', phase.name, role.RollenTyp);
 							}
