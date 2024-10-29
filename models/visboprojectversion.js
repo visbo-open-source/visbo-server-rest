@@ -29,6 +29,11 @@ var clsKostenart = new Schema({
 	Bedarf: [{ type: Number }]
 });
 
+var clsConnection = new Schema({
+	tool: { type: String },
+	toolID: { type: String }
+})
+
 var clsResult = new Schema({
 	bewertungen:[{key: {type: String, required: true}, bewertung: {type: clsBewertung, required: true}}],
 	name: { type: String },
@@ -139,7 +144,8 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	isCommited: { type: Boolean, required: false},
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
-	businessUnit: { type: String, required: false, maxlength: 256},
+	businessUnit: { type: String, required: false, maxlength: 256},	
+	connectedTo: { type: clsConnection },
 	keyMetrics: { type: clsKeyMetrics }
 });
 // Set Creation and modification date automatically
