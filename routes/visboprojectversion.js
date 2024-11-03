@@ -145,7 +145,7 @@ function saveRecalcKM(req, res, message) {
 				req.oneVPV.keyMetrics.costCurrentTotalPredict = predictVPV[0].costCurrentTotal && Math.round(predictVPV[0].costCurrentTotal*1000)/1000; //round to euros
 				req.oneVPV.save(function(err, oneVPV) {
 					if (err) {
-						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
+						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 1');
 						return;
 					}
 					req.oneVPV = oneVPV;
@@ -161,18 +161,24 @@ function saveRecalcKM(req, res, message) {
 					return res.status(200).send({
 						state: 'success',
 						message: message,
-						vpv: [ oneVPV ]
+						vpv: [ req.oneVPV ]
 					});
 				});
 			});
 		}
 	} else {
 		logger4js.info('No Versions for Prediction');
-		req.oneVPV.save(function(err, oneVPV) {
+		var newOneVPV = new VisboProjectVersion();
+		newOneVPV = helperVpv.initVPV(req.oneVPV);
+		// newOneVPV._id = "";
+		// newOneVPV.id = "";
+
+		newOneVPV.save(function(err, oneVPV) {
 			if (err) {
-				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
+				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 2');
 				return;
-			}
+				}
+			
 			req.oneVPV = oneVPV;
 			// update the version count of the base version or the variant
 			helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
@@ -186,9 +192,32 @@ function saveRecalcKM(req, res, message) {
 			return res.status(200).send({
 				state: 'success',
 				message: message,
-				vpv: [ oneVPV ]
-			});
+				vpv: [ req.oneVPV ]
+			});	
 		});
+
+			
+		// req.oneVPV.save(function(err, oneVPV) {
+		// 	if (err) {
+		// 		errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions: here');
+		// 		return;
+		// 	}
+		// 	req.oneVPV = oneVPV;
+		// 	// update the version count of the base version or the variant
+		// 	helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+
+		// 	// cleanup cost keyMetrics in case of missing audit permission
+		// 	var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
+		// 	if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
+		// 		helperVpv.cleanupKM(req.oneVPV.keyMetrics);
+		// 	}
+
+		// 	return res.status(200).send({
+		// 		state: 'success',
+		// 		message: message,
+		// 		vpv: [ oneVPV ]
+		// 	});
+		// });
 	}
 		
 	// req.oneVPV.save(function(err, oneVPV) {
