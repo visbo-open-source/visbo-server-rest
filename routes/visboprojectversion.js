@@ -191,7 +191,7 @@ function saveRecalcKM(req, res, message) {
 				vpv: [ req.oneVPV ]
 			});	
 		});
-
+	}
 }
 
 
