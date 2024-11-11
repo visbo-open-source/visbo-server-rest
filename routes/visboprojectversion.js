@@ -168,12 +168,8 @@ function saveRecalcKM(req, res, message) {
 		}
 	} else {
 		logger4js.info('No Versions for Prediction');
-		var newOneVPV = new VisboProjectVersion();
-		newOneVPV = helperVpv.initVPV(req.oneVPV);
-		// newOneVPV._id = "";
-		// newOneVPV.id = "";
 
-		newOneVPV.save(function(err, oneVPV) {
+		req.oneVPV.save(function(err, oneVPV) {
 			if (err) {
 				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 2');
 				return;
@@ -196,51 +192,6 @@ function saveRecalcKM(req, res, message) {
 			});	
 		});
 
-			
-		// req.oneVPV.save(function(err, oneVPV) {
-		// 	if (err) {
-		// 		errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions: here');
-		// 		return;
-		// 	}
-		// 	req.oneVPV = oneVPV;
-		// 	// update the version count of the base version or the variant
-		// 	helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-
-		// 	// cleanup cost keyMetrics in case of missing audit permission
-		// 	var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
-		// 	if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
-		// 		helperVpv.cleanupKM(req.oneVPV.keyMetrics);
-		// 	}
-
-		// 	return res.status(200).send({
-		// 		state: 'success',
-		// 		message: message,
-		// 		vpv: [ oneVPV ]
-		// 	});
-		// });
-	}
-		
-	// req.oneVPV.save(function(err, oneVPV) {
-	// 	if (err) {
-	// 		errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions ');
-	// 		return;
-	// 	}
-	// 	req.oneVPV = oneVPV;
-	// 	// update the version count of the base version or the variant
-	// 	helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-
-	// 	// cleanup cost keyMetrics in case of missing audit permission
-	// 	var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
-	// 	if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
-	// 		helperVpv.cleanupKM(req.oneVPV.keyMetrics);
-	// 	}
-
-	// 	return res.status(200).send({
-	// 		state: 'success',
-	// 		message: message,
-	// 		vpv: [ oneVPV ]
-	// 	});
-	// });
 }
 
 
