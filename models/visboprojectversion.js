@@ -140,7 +140,7 @@ var visboProjectVersionSchema = new mongoose.Schema({
 	complexity: { type: Number, required: false},
 	description: { type: String, required: false, maxlength: 4096},
 	businessUnit: { type: String, required: false, maxlength: 256},
-	keyMetrics: { type: clsKeyMetrics }
+	keyMetrics: { type: clsKeyMetrics, required: false}
 });
 // Set Creation and modification date automatically
 visboProjectVersionSchema.set('timestamps', true);
