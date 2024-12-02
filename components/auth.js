@@ -136,63 +136,63 @@ function verifyOTT(req, res, next) {
 
 	var ott = req.body.ott;
 	// decode token
-  if (ott) {
+    if (ott) {
 		logger4js.debug('OTT Authentication with token:', ott);
-    // verifies secret and checks exp
-    jwt.verify(ott, jwtSecret.user.secret, function(err, decoded) {
-      if (err) {
-				logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
-				if (decoded) req.decoded = decoded;
-        		return res.status(400).send({
+    	// verifies secret and checks exp
+    	jwt.verify(ott, jwtSecret.user.secret, function(err, decoded) {
+		if (err) {
+			logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
+			if (decoded) req.decoded = decoded;
+			return res.status(400).send({
+				state: 'failure',
+				message: 'One Time Token is no longer valid'
+			});
+		} else {
+			// if everything is good, check IP and User Agent to prevent session steeling
+			var sessionValid = true;
+			if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
+				logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
+				sessionValid = false;
+			}
+			if (!sessionValid) {
+				return res.status(400).send({
 					state: 'failure',
 					message: 'One Time Token is no longer valid'
-        });
-      } else {
-        // if everything is good, check IP and User Agent to prevent session steeling
-				var sessionValid = true;
-				if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
-					logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
-					sessionValid = false;
+				});
+			}
+			var redisClient = visboRedis.VisboRedisInit();
+			var ottID = ott.split('.')[2];
+			redisClient.get('ott.'+ottID, function(err, reply) {
+				// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
+				if (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'OTT Authentication Validation'
+					});
 				}
-				if (!sessionValid) {
+				if (!reply || reply != decoded._id) {
+					logger4js.warn('OTT Token already terminated');
 					return res.status(400).send({
 						state: 'failure',
 						message: 'One Time Token is no longer valid'
 					});
 				}
-				var redisClient = visboRedis.VisboRedisInit();
-				var ottID = ott.split('.')[2];
-				redisClient.get('ott.'+ottID, function(err, reply) {
-					// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
+				// if everything is good, save to request for use in other routes
+				req.decoded = decoded;
+				redisClient.del('ott.'+ottID, function(err, response) {
 					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'OTT Authentication Validation'
-						});
+						errorHandler(err, undefined, 'REDIS: Del OTT Error ', undefined);
+						return;
 					}
-					if (!reply || reply != decoded._id) {
-						logger4js.warn('OTT Token already terminated');
-						return res.status(400).send({
-							state: 'failure',
-							message: 'One Time Token is no longer valid'
-						});
+					if (response) {
+						logger4js.debug('REDIS: OTT Deleted Successfully');
+					} else  {
+						logger4js.info('REDIS: OTT Item not found or no longer present');
 					}
-					// if everything is good, save to request for use in other routes
-					req.decoded = decoded;
-					redisClient.del('ott.'+ottID, function(err, response) {
-						if (err) {
-							errorHandler(err, undefined, 'REDIS: Del OTT Error ', undefined);
-							return;
-						}
-						if (response) {
-							logger4js.debug('REDIS: OTT Deleted Successfully');
-						} else  {
-							logger4js.info('REDIS: OTT Item not found or no longer present');
-						}
-						return next();
-					});
+					return next();
 				});
-      }
+			});
+		}
     });
   } else {
 		logger4js.info('OTT Authentication without token.');

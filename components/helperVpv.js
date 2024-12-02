@@ -106,6 +106,7 @@ function initVPV(vpv) {
 	newVPV.complexity = vpv.complexity;
 	newVPV.description = vpv.description;
 	newVPV.businessUnit = vpv.businessUnit;
+	newVPV.connectedTo = vpv.connectedTo;
 
 	return newVPV;
 }
