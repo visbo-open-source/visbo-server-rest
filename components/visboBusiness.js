@@ -2275,25 +2275,25 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		};
 	}
 
-	var reducedPFV = oldPFV || newPFV;
-	if (level > 0) {
-		// generate the new PFV from the oldVPV reduced to a specific level
-		reducedPFV = reduceVPV(oldVPV, level);
-	}
-	reducedPFV.variantName = 'pfv';
-	if (!ensureValidVPV(reducedPFV)) {
-		logger4js.warn('generated a newPFV is inconsistent');
-		// return undefined;
-	}
+	// var reducedPFV = oldPFV || newPFV;
+	// if (level > 0) {
+	// 	// generate the new PFV from the oldVPV reduced to a specific level
+	// 	reducedPFV = reduceVPV(oldVPV, level);
+	// }
+	// reducedPFV.variantName = 'pfv';
+	// if (!ensureValidVPV(reducedPFV)) {
+	// 	logger4js.warn('generated a newPFV is inconsistent');
+	// 	// return undefined;
+	// }
 
-	if ( oldVPV && reducedPFV  ) {
-		// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
-		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the reducedVPV');
+	// if ( oldVPV && reducedPFV  ) {
+	// 	// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
+	// 	logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the reducedVPV');
 
-		newPFV = checkAndChangeDeliverables(oldVPV, reducedPFV, newPFV);
-		newPFV = checkAndChangeDeadlines(oldVPV, reducedPFV, newPFV);
-		newPFV = createIndices(newPFV);
-	}
+	// 	newPFV = checkAndChangeDeliverables(oldVPV, reducedPFV, newPFV);
+	// 	newPFV = checkAndChangeDeadlines(oldVPV, reducedPFV, newPFV);
+	// 	newPFV = createIndices(newPFV);
+	// }
 
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', JSON.stringify(newPFV).substr(0,300));
 	return newPFV;
