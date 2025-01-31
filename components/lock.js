@@ -71,8 +71,8 @@ function cleanupAllVPLock(task, finishedTask) {
 			finishedTask(task, false);
 			return;
 		}
-		task.value.taskSpecific = {lastSuccess: actDate, result: result.nModified, resultDescription: `Updated ${result.nModified} expired Lock Entries`};
-		logger4js.info('Task: cleanuplock Result %d', result.nModified);
+		task.value.taskSpecific = {lastSuccess: actDate, result: result.modifiedCount, resultDescription: `Updated ${result.modifiedCount} expired Lock Entries`};
+		logger4js.info('Task: cleanuplock Result %d', result.modifiedCount);
 		finishedTask(task, false);
 	});
 }
