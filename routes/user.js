@@ -158,7 +158,7 @@ router.route('/profile')
 		*    '_id':'UID294c5417f0e49',
 		*    'updatedAt':'2018-03-20T10:31:27.216Z',
 		*    'createdAt':'2018-02-28T09:38:04.774Z',
-		*    'email':'markus.seyfried@visbo.de',
+		*    'email':'thomas.koytek@visbo.de',
 		*    'profile': {
 		*      'firstname': 'First',
 		*      'lastname': 'Last',
