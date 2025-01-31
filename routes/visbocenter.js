@@ -128,7 +128,7 @@ var updateVCName = function(vcid, name){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid}`, undefined);
 		}
-		logger4js.trace('Updated VP for VC %s Populate Name changed %d %d', vcid, result.n, result.nModified);
+		logger4js.trace('Updated VP for VC %s Populate Name changed %d %d', vcid, result.n, result.modifiedCount);
 	});
 };
 
@@ -144,7 +144,7 @@ var unDeleteVP = function(vcid, name){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating VPs for VC ${vcid} set undelete`, undefined);
 		}
-		logger4js.trace('Updated VP for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
+		logger4js.trace('Updated VP for VC %s set undelete changed %d %d', vcid, result.n, result.modifiedCount);
 	});
 };
 
@@ -159,7 +159,7 @@ var unDeleteGroup = function(vcid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating Groups for VC ${vcid} set undelete`, undefined);
 		}
-		logger4js.trace('Updated Groups for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
+		logger4js.trace('Updated Groups for VC %s set undelete changed %d %d', vcid, result.n, result.modifiedCount);
 	});
 };
 
@@ -174,7 +174,7 @@ var unDeleteTimeTracker = function(vcid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating TimeTracker Records for VC ${vcid} set undelete`, undefined);
 		}
-		logger4js.trace('Updated TimeTracker Records for VC %s set undelete changed %d %d', vcid, result.n, result.nModified);
+		logger4js.trace('Updated TimeTracker Records for VC %s set undelete changed %d %d', vcid, result.n, result.modifiedCount);
 	});
 }
 
@@ -201,7 +201,7 @@ var populateVCConfig = function(vcSetting, type) {
 			if (err){
 				logger4js.warn('DB: Problem populating VC setting System', err);
 			} else {
-				logger4js.debug('Populate VC Setting %s changed %d %d', vcSetting.name, result.n, result.nModified);
+				logger4js.debug('Populate VC Setting %s changed %d %d', vcSetting.name, result.n, result.modifiedCount);
 			}
 		});
 	} else if (type == 'sysVC') {
@@ -222,7 +222,7 @@ var populateVCConfig = function(vcSetting, type) {
 			if (err){
 				logger4js.warn('DB: Problem populating VC setting SysVC', err);
 			} else {
-				logger4js.warn('Populate VC Setting %s SysVC changed %d %d', vcSetting.name, result.n, result.nModified);
+				logger4js.warn('Populate VC Setting %s SysVC changed %d %d', vcSetting.name, result.n, result.modifiedCount);
 			}
 		});
 	}
@@ -761,7 +761,7 @@ router.route('/:vcid')
 						errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Projects`, `Error deleting VISBO Center ${req.oneVC.name}`);
 						return;
 					}
-					logger4js.debug('VC Delete found %d VPs and updated %d VPs', result.n, result.nModified);
+					logger4js.debug('VC Delete found %d VPs and updated %d VPs', result.n, result.modifiedCount);
 					updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};
 					updateUpdate = {$set: {'deletedByParent': 'VC'}};
 					var updateOption = {upsert: false, multi: 'true'};
@@ -770,7 +770,7 @@ router.route('/:vcid')
 							errorHandler(err, res, `DB: DELETE VC ${req.oneVC._id} update Groups`, `Error deleting VISBO Center ${req.oneVC.name}`);
 							return;
 						}
-						logger4js.debug('VC Delete found %d Groups and updated %d Groups', result.n, result.nModified);
+						logger4js.debug('VC Delete found %d Groups and updated %d Groups', result.n, result.modifiedCount);
 						// new URK
 						updateQuery = {vcid: req.oneVC._id, deletedByParent: {$exists: false}};		
 						var updateUpdate = {$set: {'vc.deletedAt': deleteDate}};
@@ -3664,7 +3664,7 @@ router.route('/:vcid/setting/:settingid')
 						errorHandler(err, undefined, 'DB: VC Setting Update Task', undefined);
 					}
 					logger4js.debug('VC Seting Task (%s/%s) Saved %O', req.oneVCSetting.name, req.oneVCSetting._id, result);
-					if (result.nModified == 1) {
+					if (result.modifiedCount == 1) {
 						return res.status(200).send({
 							state: 'success',
 							message: 'Updated VISBO Center Setting',
@@ -3675,7 +3675,7 @@ router.route('/:vcid/setting/:settingid')
 						logger4js.info('VC Seting Task (%s/%s) locked already by another Server', req.oneVCSetting.name, req.oneVCSetting._id);
 						return res.status(409).send({
 							state: 'failure',
-							message: 'VISBO Center Setting already updated inbetween',
+							message: 'VISBO Center Setting locked by another Server',
 							vcsetting: [ req.oneVCSetting ],
 							perm: req.listVCPerm.getPerm(req.query.sysadmin? 0 : req.oneVC._id)
 						});
