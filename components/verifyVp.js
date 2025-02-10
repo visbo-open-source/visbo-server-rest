@@ -296,7 +296,9 @@ function getVPTemplate(req, res, next) {
 	query._id = vpTemplateID;
 	query.vcid = req.body.vcid;
 	query.deletedAt =  {$exists: false};	// not deleted
-	query.vpType = 2; // is a VP Template
+	// Test Ute // 
+	// query.vpType = 2; // is a VP Template	
+
 	// prevent that the user gets access to VPs in a later deleted VC. Do not deliver groups from deleted VCs/VPs
 	query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
 
@@ -311,6 +313,13 @@ function getVPTemplate(req, res, next) {
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No valid Project Template or no Permission'
+			});
+		}
+		// vpType is Portfolio. this cannot be a template for a project
+		if (oneVP.vpType == 1) {
+			return res.status(403).send({
+				state: 'failure',
+				message: 'No valid Project Template or Project or no Permission'
 			});
 		}
 		req.oneVPTemplate = oneVP;

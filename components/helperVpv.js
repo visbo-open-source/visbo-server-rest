@@ -30,7 +30,7 @@ var updateVPVCount = function(vpid, variantName, increment){
 		if (err){
 			logger4js.error('Problem updating VP %s vpvCount: %s', vpid, err.message);
 		}		
-		logger4js.info('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
+		logger4js.info('Updated VP %s vpvCount inc %d changed %d %d', vpid, increment, result.n, result.modifiedCount);
 	});
 };
 
@@ -186,7 +186,7 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 			errorHandler(err, res, 'DB: Create VP Template VPV(pfv) Save', 'Error creating Project Version ');
 			return;
 		}
-		// req.visboPFV = oneVPV;
+		req.visboPFV = oneVPV;
 		// update the version count of the base version or the variant
 		updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 		if (oneVPV.variantName == 'pfv') {
@@ -204,7 +204,8 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
 					return;
 				}
-				// req.visboPFV = oneVPV;
+				//?????
+				req.visboPFV = oneVPV;
 				updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 				return res.status(200).send({
 					state: 'success',

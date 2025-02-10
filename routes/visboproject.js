@@ -223,7 +223,7 @@ var updateVPCount = function(vcid, increment){
 		if (err) {
 			errorHandler(err, undefined, `DB: Problem updating VC ${vcid} set vpCount`, undefined);
 		}
-		logger4js.trace('Updated VC %s vpCount inc %d changed %d %d', vcid, increment, result.n, result.nModified);
+		logger4js.trace('Updated VC %s vpCount inc %d changed %d %d', vcid, increment, result.n, result.modifiedCount);
 	});
 };
 
@@ -245,7 +245,7 @@ var updateVPFCount = function(vpid, variantName, increment){
 		if (err){
 			logger4js.error('Problem updating VP %s vpfCount: %s', vpid, err.message);
 		}
-		logger4js.trace('Updated VP %s vpfCount inc %d changed %d %d', vpid, increment, result.n, result.nModified);
+		logger4js.trace('Updated VP %s vpfCount inc %d changed %d %d', vpid, increment, result.n, result.modifiedCount);
 	});
 };
 
@@ -274,7 +274,7 @@ var updateVCName = function(vp){
 				if (err){
 					errorHandler(err, undefined, `DB: Problem updating VC name in VP ${vp._id}`, undefined);
 				}
-				logger4js.trace('Updated VP %s for VC Name changed %d %d', vp._id, result.n, result.nModified);
+				logger4js.trace('Updated VP %s for VC Name changed %d %d', vp._id, result.n, result.modifiedCount);
 			});
 		}
 	});
@@ -291,7 +291,7 @@ var updateVPName = function(vpid, name, type){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating Names in Versions of VP ${vpid}`, undefined);
 		}
-		logger4js.trace('Updated VP %s New Name %s changed %d %d', vpid, name, result.n, result.nModified);
+		logger4js.trace('Updated VP %s New Name %s changed %d %d', vpid, name, result.n, result.modifiedCount);
 	});
 
 	// update Portfolio Links to new name
@@ -303,7 +303,7 @@ var updateVPName = function(vpid, name, type){
 			errorHandler(err, result, `DB: Problem updating Portfolio References of VP ${vpid}`, 'Error updating Project');
 			return;
 		}
-		logger4js.trace('Updated VP %s New Name %s in Portfolio Lists changed %d %d', vpid, name, result.n, result.nModified);
+		logger4js.trace('Updated VP %s New Name %s in Portfolio Lists changed %d %d', vpid, name, result.n, result.modifiedCount);
 		if (type == constVPTypes.portfolio) {
 			var updateQuery = {};
 			updateQuery.vpid = vpid;
@@ -317,7 +317,7 @@ var updateVPName = function(vpid, name, type){
 					errorHandler(err, result, `DB: Problem updating Portfolio Name for  VP ${vpid}`, 'Error updating Project');
 					return;
 				}
-				logger4js.debug('Update Portfolio %s Name found %d updated %d', vpid, result.n, result.nModified);
+				logger4js.debug('Update Portfolio %s Name found %d updated %d', vpid, result.n, result.modifiedCount);
 			});
 		}
 	});
@@ -333,7 +333,7 @@ var updatePermAddVP = function(vcid, vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating global Groups add VP for VC ${vcid}`, undefined);
 		}
-		logger4js.debug('Updated VC %s Groups with VP %s changed %d %d', vcid, vpid, result.n, result.nModified);
+		logger4js.debug('Updated VC %s Groups with VP %s changed %d %d', vcid, vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -348,7 +348,7 @@ var updatePermRemoveVP = function(vcid, vpid){
 		if (err) {
 			errorHandler(err, undefined, `DB: Problem updating global Groups remove VP for VC ${vcid}`, undefined);
 		}
-		logger4js.debug('Updated VC %s Groups removed VP %s changed %d %d', vcid, vpid, result.n, result.nModified);
+		logger4js.debug('Updated VC %s Groups removed VP %s changed %d %d', vcid, vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -363,7 +363,7 @@ var unDeleteGroup = function(vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating global Groups undelete Group for VP ${vpid}`, undefined);
 		}
-		logger4js.trace('Updated Groups for VP %s set undelete changed %d %d', vpid, result.n, result.nModified);
+		logger4js.trace('Updated Groups for VP %s set undelete changed %d %d', vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -378,7 +378,7 @@ var markDeleteGroup = function(vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating global Groups delete Group for VP ${vpid}`, undefined);
 		}
-		logger4js.trace('Updated Groups for VP %s set undelete changed %d %d', vpid, result.n, result.nModified);
+		logger4js.trace('Updated Groups for VP %s set undelete changed %d %d', vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -393,7 +393,7 @@ var unDeleteVersion = function(vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating unDelete Versions for VP ${vpid}`, undefined);
 		}
-		logger4js.trace('Updated Versions for VP %s unset deletedByParent changed %d %d', vpid, result.n, result.nModified);
+		logger4js.trace('Updated Versions for VP %s unset deletedByParent changed %d %d', vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -408,7 +408,7 @@ var markDeleteVersion = function(vpid){
 		if (err){
 			errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
 		}
-		logger4js.debug('Updated Versions for VP %s set deletedByParent changed %d %d', vpid, result.n, result.nModified);
+		logger4js.debug('Updated Versions for VP %s set deletedByParent changed %d %d', vpid, result.n, result.modifiedCount);
 	});
 };
 
@@ -2871,7 +2871,7 @@ router.route('/:vpid/variant/:vid')
 					if (err){
 						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
 					}
-					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.modifiedCount);
 				});
 
 			} else if (req.oneVP.vpType == 0) { 
@@ -2889,7 +2889,7 @@ router.route('/:vpid/variant/:vid')
 					if (err){
 						errorHandler(err, undefined, `DB: Problem updating mark Versions as deleted for VP ${vpid}`, undefined);
 					}
-					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.nModified);
+					logger4js.debug('Updated Versions for VP %s set deletedAt, changed %d %d', vpid, result.n, result.modifiedCount);
 				});
 			} else {				
 				return res.status(409).send({

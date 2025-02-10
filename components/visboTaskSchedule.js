@@ -46,7 +46,7 @@ function finishedTask(task, ignoreAudit) {
       if (err) {
         errorHandler(err, undefined, 'DB: Update Task Unlock', undefined);
       }
-      logger4js.debug('Finished Task Task(%s/%s) unlocked %s', task.name, task._id, result.nModified);
+      logger4js.debug('Finished Task Task(%s/%s) unlocked %s', task.name, task._id, result.modifiedCount);
   });
   if (!ignoreAudit) createTaskAudit(task, duration);
 }
@@ -164,8 +164,8 @@ function checkNextRun() {
             if (err) {
               errorHandler(err, undefined, 'DB: Update Task', undefined);
             }
-            logger4js.trace('CheckNextRun Task (%s/%s) Saved Items %s', task.name, task._id, result.nModified);
-            if (result.nModified == 1) {
+            logger4js.trace('CheckNextRun Task (%s/%s) Saved Items %s', task.name, task._id, result.modifiedCount);
+            if (result.modifiedCount == 1) {
               // call specific operation for task
               switch(task.name) {
                 case 'Audit Cleanup':
