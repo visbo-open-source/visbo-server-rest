@@ -651,10 +651,7 @@ router.route('/timetracker/:userId')
 			var userSettings = [];
 			var settings = await getSettings(req.decoded.email);
 			// reduce the list of Settings to only those the user has access to and the newest Orga of a VisboCenter
-			settings.forEach(oneSett => {
-				// const vcIndex = userVCs.findIndex(item => item._id.toString() == oneSett.vcid.toString());
-				// if ((vcIndex >= 0) ) {					
-				// 	console.log("VisboCenter: Name: %s  VCID: %s", userVCs[vcIndex].name, oneSett.vcid.toString());
+			settings.forEach(oneSett => {				
 					const doubleIndex = userSettings.findIndex(item => (item.vcid.toString() == oneSett.vcid.toString()));
 					if (( doubleIndex < 0)) {
 						userSettings.push(oneSett);

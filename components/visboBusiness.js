@@ -18,6 +18,9 @@ var logger4js = log4js.getLogger(logModule);
 const minStartDate = new Date('2015-01-01');
 var refMonth = undefined;
 
+// The getColumnOfDate function calculates and returns the column index (month offset) for a given date (value) 
+// relative to a reference month (refMonth). 
+// This is useful for mapping dates to a sequential index representing months since the reference month.
 function getColumnOfDate(value) {
 	if (!value) {
 		// no valid argument
@@ -31,13 +34,16 @@ function getColumnOfDate(value) {
 	return valueMonth - refMonth;
 }
 
+// The addDays function returns a new date obtained by adding (or subtracting) a specified number of days (numDays) 
+// to a given date (dd).
 function addDays(dd, numDays) {
 	var inputDate = new Date(dd);
 	inputDate.setDate(inputDate.getDate() + numDays);
 	return inputDate;
  }
 
-// returns the beginning of current month
+// The getDateStartOfMonth function returns a new Date object representing the first day of the month for a given date (dd). 
+// The time component of the returned date is set to 00:00:00.000 (midnight).
 function getDateStartOfMonth(dd) {
 	var inputDate = dd ? new Date(dd) : new Date();
 	inputDate.setDate(1);
@@ -45,14 +51,16 @@ function getDateStartOfMonth(dd) {
 	return inputDate;
 }
 
-// returns the date of the end of the previous month
+// The getDateEndOfPreviousMonth function returns a Date object representing the last day of the month before the given date (dd). 
+// If no date is provided, it returns the last day of the previous month from the current date.
 function getDateEndOfPreviousMonth(dd) {
 	var inputDate = dd ? new Date(dd) : new Date();
   inputDate.setDate(0);
   return inputDate;
 }
 
-// returns the end of the current month
+// The getDateEndOfMonth function returns a Date object representing the last day of the month for a given date (dd). 
+// The time is set to 23:59:59.000 (one second before midnight).
 function getDateEndOfMonth(dd) {
 	var inputDate = dd ? new Date(dd) : new Date();
 	inputDate.setMonth(inputDate.getMonth() + 1);
@@ -61,11 +69,16 @@ function getDateEndOfMonth(dd) {
   return inputDate;
 }
 
+// The isOrgaRolePerson function checks if a given role object represents an individual person rather than a summary or group role. 
+// It returns true if the role is considered a "person role," otherwise it returns false.
 function isOrgaRolePerson(role) {
     return ( role && !role.isSummaryRole && role.subRoleIDs?.length <= 0 );
 }
 
-// calculate dailyCapa of orga unit/team in a timezoned orga
+// calculate dailyCapa of orga unit/team uid in a timezoned orga
+// The getDailyCapaTZ function calculates and returns the daily capacity for a specific role (uid) in a given time zone. 
+// The parameter maxTZ (number): The maximum time zone index for baseline calculations. Used to limit the organization to a valid range.
+// The function accounts default monthly capacity (defCapaMonth), or if defined role-specific capacity (capaPerMonth).
 function getDailyCapaTZ(uid, capacity, timeZones, index, maxTZ) {
 	var dailyCapa;
 	index = Math.max(index, 0);
@@ -91,7 +104,8 @@ function getDailyCapaTZ(uid, capacity, timeZones, index, maxTZ) {
 	return dailyCapa;
 }
 
-// calculate dailyRate of orga unit/team in a timezoned orga
+// The getDailyRateTZ function calculates and returns the daily rate for a specific role (uid) in a given time zone. 
+// if teamID is specified, then the function returns the daily rate of the role (uid) as a team member.
 function getDailyRateTZ(uid, teamID, timeZones, index, maxTZ) {
 	var dailyRate;
 	index = Math.max(index, 0);
@@ -115,7 +129,9 @@ function getDailyRateTZ(uid, teamID, timeZones, index, maxTZ) {
 	return dailyRate || 0;
 }
 
-// identify the role of orga unit in a timezoned orga for a specific month
+// The getRoleTZ function retrieves the role information for a specific time zone and verifies,
+// if the role is relevant ("concerning role") in the given time zone. 
+// If the role is found and valid for that time zone, it returns the corresponding role object; otherwise, it returns undefined.
 function getRoleTZ(role, timeZones, index, maxTZ) {
 	index = Math.max(index, 0);
 	index = Math.min(index, timeZones.indexMonth.length - 1);
@@ -138,7 +154,8 @@ function getRoleTZ(role, timeZones, index, maxTZ) {
 	return roleTZ;
 }
 
-// calculate personnel cost for the requested project per month
+// The getAllPersonnelCost function calculates and returns the monthly personnel costs for all roles in all phases of a project (vpv). 
+// It uses time zone-specific daily rates for each role and accumulates the personnel costs over the project's duration and returned as a monthly breakdown.
 function getAllPersonnelCost(vpv, timeZones, maxTZ) {
 	var costValues = [];
 
@@ -174,7 +191,8 @@ function getAllPersonnelCost(vpv, timeZones, maxTZ) {
 	return costValues;
 }
 
-// calculate all other Costs for the requested project per month
+// The getAllOtherCost function calculates and returns the total "other costs" for a project (vpv) across all phases. 
+// These costs are accumulated over the project's duration and returned as a monthly breakdown.
 function getAllOtherCost(vpv, timeZones) {
 	var othercostValues = [];
 
@@ -209,7 +227,9 @@ function getAllOtherCost(vpv, timeZones) {
 	return othercostValues;
 }
 
-// calculate all Invoices for the requested project per month
+// calculate all Invoices for the requested project vpv per month
+// The getAllInvoices function calculates and returns the total invoices for a project (vpv) as a monthly breakdown. 
+// It aggregates invoices from both, project phases and individual results within those phases.
 function getAllInvoices(vpv) {
 	var invoiceValues = [];
 
@@ -247,6 +267,10 @@ function getAllInvoices(vpv) {
 	return invoiceValues;
 }
 
+
+// The calcCosts function calculates and returns an indexed breakdown of project costs ((personell Cost, allOtherCosts, current costs) 
+// and invoices for a project version (vpv) and its baseline (pfv). 
+// returns a structure of all these costs in monthly units
 function calcCosts(vpv, pfv, organisation) {
 	var allCostValues = [];
 	var allCostValuesIndexed = [];
@@ -327,7 +351,7 @@ function calcCosts(vpv, pfv, organisation) {
 	return allCostValuesIndexed;
 }
 
-
+// The getSummeInvoices function calculates and returns the sum of all invoices up to a specified month index for a given project version (vpv).
 function getSummeInvoices(vpv, index) {
 	var sumOfInvoices = 0;
 	var startDate, endDate;
@@ -353,11 +377,12 @@ function getSummeInvoices(vpv, index) {
 			} 
 		}
 
-	//logger4js.debug('Calculate Project Invoices until month-No %s ', index);
 	return sumOfInvoices;
 }
 
-
+// The getNamePart function extracts and returns the name of a specific part of a string that is split by the delimiter §. 
+// If the requested part does not exist it returns undefined and  
+// a special handling is required for the root phase (indicated by the last part being "0"), it returns .the string '.'
 function getNamePart(str, part) {
 		var result = undefined;
 		if (!str || part < 0) {
@@ -366,7 +391,7 @@ function getNamePart(str, part) {
 		var compName = str.split('§');
 		if (compName.length > part) {
 			result = compName[part];
-		} else { // gilt für die rootphase - hier ist der Name '.'
+		} else { // special treatment for the rootphase - the name of the rootphase is '.'
 			if (compName[compName.length - 1] == '0') {
 				result = '.';
 			}
@@ -374,6 +399,8 @@ function getNamePart(str, part) {
 		return result;
 }
 
+// The checkRestricted function checks if a given delivery item falls under a restricted path defined in restrict. 
+// The function compares the paths of both objects and returns true if they match, based on the restriction settings.
 function checkRestricted(restrict, delivery) {
 	var pathRestricted, pathActual;
 	pathRestricted = restrict.elementPath.join('/');
@@ -386,6 +413,10 @@ function checkRestricted(restrict, delivery) {
 
 	return pathRestricted == pathActual;
 }
+
+// The calcDeadlines function calculates and returns a detailed list of indexed deadline values for a project version (vpv) and its baseline (pfv).
+// It combines deadlines from both versions, applies optional filtering with restriction, 
+// and calculates the difference in days (changeDays) between planned (pfv) and actual (vpv) deadlines.
 
 function calcDeadlines(vpv, pfv, getAll, restriction) {
 	var allDeadlineValuesIndexed = [];
@@ -435,6 +466,12 @@ function calcDeadlines(vpv, pfv, getAll, restriction) {
 	return allDeadlineValuesIndexed;
 }
 
+
+
+// The calcDeliverables function calculates and returns a list of indexed deliverable values for a project version (vpv) and its baseline (pfv). 
+// It merges deliverables from both versions, applies optional filtering based on restriction,
+// and calculates the difference in days (changeDays) between planned (pfv) and actual (vpv) completion dates.
+
 function calcDeliverables(vpv, pfv, getAll, restriction) {
 	var allDeliveryValuesIndexed = [];
 	var startCalc = new Date();
@@ -469,9 +506,6 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 				'endDateVPV': listDeliveries[element].endDateVPV || undefined,
 				'changeDays': isNaN(changeDays) ? undefined : changeDays,
 				'percentDone': listDeliveries[element].percentDone || 0
-				// 'trafficlight': listDeliveries[element].trafficlight || 0,
-				// 'trafficlightDesc': listDeliveries[element].trafficlightDesc,
-				// 'responsible': listDeliveries[element].responsible
 			};
 			j++;
 		}
@@ -482,14 +516,15 @@ function calcDeliverables(vpv, pfv, getAll, restriction) {
 	return allDeliveryValuesIndexed;
 }
 
-function getSummeKosten(vpv, index, timeZones, maxTZ) {
-	// calculate the total cost until month of index
-	var costSum = 0;
 
+// The getSummeKosten function calculates and returns the total cost (costSum) of a project version (vpv) 
+// up to a specified month index. 
+// It aggregates personnel costs and other costs using helper functions.
+function getSummeKosten(vpv, index, timeZones, maxTZ) {
+	var costSum = 0;
 	if (!vpv || !(timeZones?.organisation?.length > 0) || !(index >= 0)) {
 		return undefined;
 	}
-
 	var personnelCost = getAllPersonnelCost(vpv, timeZones, maxTZ);
 	var allOtherCost = getAllOtherCost(vpv, timeZones);
 
@@ -497,12 +532,16 @@ function getSummeKosten(vpv, index, timeZones, maxTZ) {
 	len = Math.min(len, index);
 
 	for (var i = 0 ; i < len; i++) {
-		costSum += (personnelCost[i] || 0) + (allOtherCost[i] || 0);
-	}
+		costSum += (personnelCost[i] || 0) + (allOtherCost[i] || 0);	}
 	return costSum;
 }
 
-// Deliverables for the Project combine INfo from baseline and vpv
+// The VisboDeliverable class provides a structure for managing and tracking deliverables in a project. 
+// It stores deliverables in an internal collection (allDeliverables), 
+// with methods to add, update, and retrieve them. 
+// Each deliverable is identified by a unique id and can include various properties such as nameID, phase, description, fullPath, endDate, 
+// and status indicators like percentDone and trafficlight.
+
 function VisboDeliverable() {
   this.length = 0;
   this.allDeliverables = {};
@@ -553,6 +592,10 @@ function VisboDeliverable() {
 }
 
 // Deadlines for the Project combine Info from baseline and vpv
+// The VisboDeadlines class is a structure for managing deadlines in a project. 
+// It stores deadlines in an internal collection (allDeadlines), with methods to add, update, and retrieve them. 
+// Each deadline is identified by a unique id and can contain various properties such as 
+// nameID, type, startDate, endDate, and status indicators like percentDone and trafficlight.
 function VisboDeadlines() {
   this.length = 0;
   this.allDeadlines = {};
@@ -607,7 +650,8 @@ function VisboDeadlines() {
 	};
 }
 
-// check if elemId is milestone
+// The elemIdIsMilestone function checks if a given element ID (elemId) represents a milestone. 
+// It identifies milestones by verifying if the element ID starts with the prefix "1§".
 function elemIdIsMilestone(elemId) {
 	var isElemId = false;
 
@@ -619,6 +663,9 @@ function elemIdIsMilestone(elemId) {
 	return isElemId;
 }
 
+// The getPhaseByID function retrieves a specific phase from a project version (vpv) based on a given element ID (elemId) 
+// using the hierarchy structure (hrchy). 
+// It returns the phase object if it exists otherwise undefined
 function getPhaseByID(hrchy, vpv, elemId){
 	var phase = undefined;
 	var rootKey = '0';
@@ -637,6 +684,10 @@ function getPhaseByID(hrchy, vpv, elemId){
 	return phase;
 }
 
+
+// The getMilestoneByID function retrieves a specific milestone from a project version (vpv) based on a given element ID (elemId) 
+// using the hierarchy structure (hrchy). 
+// It returns the milestone object if it exists.
 function getMilestoneByID(hrchy,vpv, elemId){
 	var ms = undefined;
 
@@ -656,6 +707,8 @@ function getMilestoneByID(hrchy,vpv, elemId){
 	return ms;
 }
 
+// The getMsDate function retrieves the date of a specific milestone from a project version (vpv) using its element ID (elemId) and the hierarchy structure (hrchy). 
+// The milestone date is calculated by adding its offset to the the phase's start offset and then to the project start date.
 function getMsDate(hrchy, vpv, elemId){
 	var msDate = undefined;
 
@@ -676,7 +729,8 @@ function getMsDate(hrchy, vpv, elemId){
 	return msDate;
 }
 
-// get endDate of Phase to use also for other elemenst like i.e. Deliveries
+// The getPhEndDate function calculates and returns the end date of a given phase in a project version (vpv). 
+// The phase end date is determined based on the project start date, phase start offset, and phase duration.
 function getPhEndDate(vpv, phase){
 	var phEndDate = undefined;
 
@@ -693,7 +747,8 @@ function getPhEndDate(vpv, phase){
 	return phEndDate;
 }
 
-// get endDate of Phase to use also for other elemenst like i.e. Deliveries
+// The getPhStartDate function calculates and returns the start date of a given phase in a project version (vpv). 
+// The start date is determined by adding the phase's startOffsetinDays to the project's start date (vpv.startDate).
 function getPhStartDate(vpv, phase){
 	var phStartDate = new Date();
 
@@ -705,7 +760,8 @@ function getPhStartDate(vpv, phase){
 	return phStartDate;
 }
 
-// Calculate all Deliverables for the requested Project/BaseProject
+// The getAllDeliverables function retrieves all deliverables from a project version (vpv) and organizes them into a VisboDeliverable object. 
+// It combines deliverables from both project phases and milestones, updating or adding new deliverables as needed.
 function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 
 	logger4js.trace('Calculate all Deliverables of %s  ', vpv && vpv._id);
@@ -765,6 +821,8 @@ function getAllDeliverables(vpv, hrchy, allDeliverables, insertAll) {
 	return allDeliverables;
 }
 
+// The getDeliverableCompletionMetric function calculates key metrics for the completion status of deliverables. It distinguishes between baseline deliverables (PFV) and current deliverables (VPV),
+// measuring the total and actual completion of deliverables based on a reference date (refDate).
 function getDeliverableCompletionMetric(allDeliverables, refDate){
 	var result = {
 			deliverableCompletionBaseLastActual: 0,
@@ -793,7 +851,9 @@ function getDeliverableCompletionMetric(allDeliverables, refDate){
 	return result;
 }
 
-// Calculate all Deadlines for the requested Project/BaseProject
+// The getDeadlines function retrieves all deadlines (phases and milestones) from a project version (vpv). 
+// It populates a VisboDeadlines object with information about each deadline, distinguishing between phases and milestones. 
+// Deadlines can be added or updated based on whether the function is called for a baseline (pfv) or a current project version (vpv).
 function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 
 	if (!vpv || !vpv.hierarchy || !vpv.hierarchy.allNodes || !vpv.AllPhases || !hrchy) {
@@ -866,6 +926,9 @@ function getDeadlines(vpv, hrchy, allDeadlines, insertAll) {
 	return allDeadlines;
 }
 
+// The getTimeCompletionMetric function calculates metrics for tracking the completion status of deadlines over time. 
+// It compares deadlines from the baseline (PFV) and current version (VPV) and returns key metrics indicating how many deadlines were planned or 
+// completed before a given reference date (refDate).
 function getTimeCompletionMetric(allDeadlines, refDate){
 	var result = {
 		timeCompletionBaseLastActual: 0,
@@ -894,6 +957,8 @@ function getTimeCompletionMetric(allDeadlines, refDate){
 	return result;
 }
 
+// The getTimeCompletionMetric function calculates metrics for time-based completion by comparing actual deadlines with planned deadlines. 
+// It returns an object containing aggregated metrics for both baseline (planned) and current (actual) completions relative to a specified reference date.
 function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 	var result = {
 		timeDelayFinished: 0,
@@ -953,7 +1018,9 @@ function getTimeDelayOfDeadlinesMetric(allDeadlines, refDate){
 	return result;
 }
 
-// determines the difference in days of two dates
+// The diffDays function calculates the number of days between two dates. 
+// It returns the difference as an integer, rounded to the nearest whole number. 
+// If either date is invalid, the function returns undefined.
 function diffDays(date1, date2) {
 
 	var differenceInDays = undefined;
@@ -970,6 +1037,8 @@ function diffDays(date1, date2) {
 	return differenceInDays;
 }
 
+// The getBreadCrumb function generates a breadcrumb path for a given element (elemID) based on its hierarchy (hrchy).
+// It returns an array of element names representing the breadcrumb path, starting from the root and ending at the specified element.
 function getBreadCrumb(elemID, hrchy) {
 	var breadCrumb = [];
 	var rootKey = '0';
@@ -988,6 +1057,8 @@ function getBreadCrumb(elemID, hrchy) {
 	return breadCrumb;
 }
 
+// The convertHierarchy function converts the hierarchy structure of the givven vpv from an array-based format into an indexed object for faster lookup. 
+// It takes a vpv object as input and returns an indexed version of its nodes, using each node's hryNodeKey as the key.
 function convertHierarchy(vpv) {
 	var indexedHrchy = [];
 	if (!vpv || !vpv.hierarchy || !vpv.hierarchy.allNodes ) {
@@ -1000,6 +1071,10 @@ function convertHierarchy(vpv) {
 	return indexedHrchy;
 }
 
+
+// The calcKeyMetrics function calculates and returns key performance metrics for a given project (its baseline (PFV) and project version (VPV))
+// based on timelines, costs, and deliverables. 
+// It processes multiple metrics such as costs, completion rates, and delays to build a comprehensive summary of project performance.
 function calcKeyMetrics(vpv, pfv, organisation) {
 	var keyMetrics = {};
 	var startCalc = new Date();
@@ -1087,6 +1162,9 @@ function calcKeyMetrics(vpv, pfv, organisation) {
 	return keyMetrics;
 }
 
+// The calcCapacities function calculates and aggregates capacity and cost metrics for a specific role over multiple project versions (vpvs and pfvs) 
+// within a specified time range. 
+// The function distinguishes between baseline capacities (pfvs) and current capacities (vpvs) and merges them into a comprehensive capacity dataset.
 function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organisation, capacity, hierarchy, onlyPT) {
 	if (!(vpvs?.length > 0) || !(organisation?.length > 0)) {
 		logger4js.warn('Calculate Capacities missing vpvs %d or organisation %d', vpvs?.length, organisation?.length);
@@ -1227,6 +1305,10 @@ function calcCapacities(vpvs, pfvs, roleID, parentID, startDate, endDate, organi
 
 	return capa;
 }
+
+// The calcCapacitiesPerProject function calculates resource capacities and costs for each project version (VPV) and its corresponding baseline (PFV) 
+// for a specific role within a given date range. 
+// It returns a detailed breakdown of these values per month for each project and aggregates cumulative values across all projects.
 
 function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDate, organisation, capacity, onlyPT) {
 	if (!vpvs || vpvs.length == 0 || !(organisation?.length > 0)) {
@@ -1433,6 +1515,9 @@ function calcCapacitiesPerProject(vpvs, pfvs, roleID, parentID, startDate, endDa
 	return capa;
 }
 
+// The calcCapacityVPVs function calculates resource capacity and cost for a given role (and its sub-roles) over multiple project versions (vpvs) 
+// within a specified time zone (timeZones). 
+// The calculation can include direct roles, related teams, and sub-roles.
 function calcCapacityVPVs(vpvs, roleID, teamID, timeZones, hierarchy) {
 
 	var allCalcCapaValues = [];
@@ -1494,6 +1579,9 @@ function calcCapacityVPVs(vpvs, roleID, teamID, timeZones, hierarchy) {
 	return allCalcCapaValues;
 }
 
+// The splitInTimeZones function divides an organization's data into time zones (monthly periods) between a specified start and end date. 
+// It returns an object that maps the organization data to each month in this range, 
+// ensuring that the correct organization configuration is applied for each time zone.
 function splitInTimeZones(organisation, startDate, endDate) {
 	if (!(organisation?.length > 0) || !startDate || !endDate) {
 		logger4js.warn('SplitInTimeZones not allowed parameters', organisation?.length, startDate, endDate);
@@ -1581,7 +1669,9 @@ function splitInTimeZones(organisation, startDate, endDate) {
 	return split;
 }
 
-// returns the index for the relevant organisation for the timestamp
+
+// The getTimeZoneIndex function determines which time zone within a list of organizational time zones a given timestamp falls into. 
+// This is useful for identifying the correct time zone for capacity or cost calculations based on the timestamp.
 function getTimeZoneIndex(timeZones, timestamp) {
 	var result = 0;
 	if (!(timeZones?.organisation?.length > 0)) {
@@ -1602,6 +1692,9 @@ function getTimeZoneIndex(timeZones, timestamp) {
 	return result;
 }
 
+// The getCapacityFromTimeZone function calculates the internal and external capacity along with actual and planned costs 
+// for a specific role within a set of project versions (vpvs) over the specified time zones. 
+// It aggregates the capacity and cost values for each time period and returns the data in a structured format.
 function getCapacityFromTimeZone(vpvs, roleID, teamID, timeZones) {
 	// var allTeams = timeZones.mergedOrganisation.filter(item => item.type == 2 && item.isSummaryRole);
 	var role = findCurrentRole(timeZones, roleID, teamID);
@@ -1644,6 +1737,9 @@ function getCapacityFromTimeZone(vpvs, roleID, teamID, timeZones) {
 	return costValues;
 }
 
+
+// The addCostValues function calculates and updates cost values for a given project version (vpv) over a specified time zone. 
+// It categorizes costs into actual, planned, and other activity costs based on the time frame and role relevance.
 function addCostValues(vpv, calcTeam, timeZones, costValues) {
 	var maxTimeZoneIndex;
 	if (vpv.variantName == 'pfv') {
@@ -1700,12 +1796,17 @@ function addCostValues(vpv, calcTeam, timeZones, costValues) {
 	});
 }
 
+// The isConcerningRole function checks whether a given role (roleID) is a concerning role in a specific month within a set of organizational time zones. 
+// It helps identify if a role is relevant in the context of resource planning and cost allocation.
 function isConcerningRole(roleID, month, timeZones) {
 	var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
 	var cRole = timeZones.organisation[orgaIndex]?.concerningRoles.find(item => item.role?.uid == roleID);
 	return cRole;
 }
 
+// The getRessourcenBedarfe function calculates and aggregates resource demands (person-time and cost) for a 
+// specific role within a given project version (vpv) over multiple time zones. 
+// First it initializes cost values and combines them across all phases in the project.
 function getRessourcenBedarfe(role, teamID, vpv, timeZones) {
 	var costValues = [];
 	if (!role) return costValues;
@@ -1730,7 +1831,8 @@ function getRessourcenBedarfe(role, teamID, vpv, timeZones) {
 	addCostValues(vpv, calcTeam, timeZones, costValues);
 	return costValues;
 }
-
+// The getCapaValues function calculates internal and external capacity for each month in a given time zone (timeZones). 
+// It aggregates person-time (_PT) and cost values for all roles within the relevant time zones and returns the calculated capacity data.
 function getCapaValues(timeZones) {
 	var capaValues = [];
 
@@ -1770,7 +1872,9 @@ function getCapaValues(timeZones) {
 	return capaValues;
 }
 
-// find the latest role definition in the orgas that have roleID & teamID if specified
+// The findCurrentRole function searches through organizational time zones to find a specified role (roleID). 
+// If a teamID is provided, it verifies whether the role is part of the specified team. 
+// This function is used to determine the current active role based on organizational structure and time-based segmentation.
 function findCurrentRole(timeZones, roleID, teamID) {
 	var role;
 	var actDate = new Date();
@@ -1802,7 +1906,9 @@ function findCurrentRole(timeZones, roleID, teamID) {
 	return role;
 }
 
-// find all intern subroles of a list of roles including the roles of the list
+// The filterAllSubRoles function recursively collects and returns all sub-roles for a given list of role IDs (list) 
+// from an organizational structure (orga). 
+// It differentiates between internal roles, external roles, and summary roles, ensuring that all relevant sub-roles are included.
 function filterAllSubRoles(list, orga) {
     const subRolesList = [];
     let listSubRoles = [];
@@ -1983,7 +2089,9 @@ function mergeCosttypes(costtypes, timeZones, startDate) {
 	return;
 }
 // **************
-
+// The mergeCapacity function aggregates and merges capacity information for all organizational roles over a defined time period. 
+// It generates a monthly capacity array for each role, 
+// taking into consideration entry and exit dates, and default or specific capacities.
 function mergeCapacity(capacity, timeZones, startDate) {
 	if ( !timeZones || !timeZones.mergedOrganisation || !timeZones.mergedUID ) {
 		return undefined;
@@ -2050,6 +2158,8 @@ function mergeCapacity(capacity, timeZones, startDate) {
 	return;
 }
 
+// The cleanupRestrictedVersion function modifies a given project version (vpv) by removing or setting various properties to undefined. 
+// This function is typically used to sanitize or restrict access to certain fields of a project version before sharing or saving it.
 function cleanupRestrictedVersion(vpv) {
 	if (!vpv) return;
 	vpv.customDblFields = undefined;
@@ -2071,7 +2181,7 @@ function cleanupRestrictedVersion(vpv) {
 	vpv.vpStatus = undefined;
 }
 
-function reduceVPV(originalVPV, level) {
+/* function reduceVPV(originalVPV, level) {
 	var reducedVPV = originalVPV;
 	if (level > 0) {
 		// reduce the level of the new PFV to max levels
@@ -2125,23 +2235,21 @@ function reduceVPV(originalVPV, level) {
 	}
 	reducedVPV = createIndices(reducedVPV);
 	return reducedVPV;
-}
+} */
+
+
+// The convertVPV function creates a new Project Version (VFV) from an existing Project Version (VPV). 
+// If an orga is delivered all individual roles will be replaced by the parent orga unit
+// If an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
+// It aggregates roles, costs while regarding the property isSummaryRole and isAggregationRole within the function aggregateRoles. 
+// The function works only with the newest organization.
 
 function convertVPV(oldVPV, oldPFV, orga, level) {
-	// this function converts an oldVPV to a newVPV and returns it to the caller
-	// if an orga is delivered all individual roles will be replaced by the parent orga unit
-	// if an oldPFV is delivered, the newVPV is squeezed to the Phases/Deadlines&Deliveries from the oldPFV
-	// if a level is specified, the new pfv is reduced to the top hierarchy max levels deep
+	
 
 	logger4js.debug('ConvertVPV:  ', oldVPV._id, oldPFV != undefined, orga != undefined, level);
 
 	var newPFV = new VisboProjectVersion();
-
-	// check the existence of the orga
-	// if ( !orga || orga.length < 1 ) {
-	// 	logger4js.debug('creation of new PFV is going wrong because of no valid orga');
-	// 	return undefined;
-	// }
 
 	var newestOrga, orgaList;
 	if (orga?.length > 0) {	// convert the newest organisation
@@ -2152,7 +2260,6 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		} else {
 			logger4js.warn('Convert Orga failed', listError);
 		}
-		// var orgalist = buildOrgaList(newestOrga);
 		logger4js.debug('generate new PFV %s out of VPV %s ', oldPFV?.name, oldVPV?.name + oldVPV?.variantName);
 	}
 
@@ -2275,31 +2382,31 @@ function convertVPV(oldVPV, oldPFV, orga, level) {
 		};
 	}
 
-	// var reducedPFV = oldPFV || newPFV;
-	// if (level > 0) {
-	// 	// generate the new PFV from the oldVPV reduced to a specific level
-	// 	reducedPFV = reduceVPV(oldVPV, level);
-	// }
-	// reducedPFV.variantName = 'pfv';
-	// if (!ensureValidVPV(reducedPFV)) {
-	// 	logger4js.warn('generated a newPFV is inconsistent');
-	// 	// return undefined;
-	// }
+	/* var reducedPFV = oldPFV || newPFV;
+	if (level > 0) {
+		// generate the new PFV from the oldVPV reduced to a specific level
+		reducedPFV = reduceVPV(oldVPV, level);
+	}
+	reducedPFV.variantName = 'pfv';
+	if (!ensureValidVPV(reducedPFV)) {
+		logger4js.warn('generated a newPFV is inconsistent');
+		// return undefined;
+	}
 
-	// if ( oldVPV && reducedPFV  ) {
-	// 	// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
-	// 	logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the reducedVPV');
+	if ( oldVPV && reducedPFV  ) {
+		// oldVPV is to be squeezed to the deadlines and deliveries of the reducedPFV
+		logger4js.debug('generate a newPFV based on the given VPV; deadlines and deliveries reduced to the same as in the reducedVPV');
 
-	// 	newPFV = checkAndChangeDeliverables(oldVPV, reducedPFV, newPFV);
-	// 	newPFV = checkAndChangeDeadlines(oldVPV, reducedPFV, newPFV);
-	// 	newPFV = createIndices(newPFV);
-	// }
+		newPFV = checkAndChangeDeliverables(oldVPV, reducedPFV, newPFV);
+		newPFV = checkAndChangeDeadlines(oldVPV, reducedPFV, newPFV);
+		newPFV = createIndices(newPFV);
+	} */
 
 	logger4js.debug('creation of a new PFV based on a special VPV:  ', JSON.stringify(newPFV).substr(0,300));
 	return newPFV;
 }
 
-function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
+/* function checkAndChangeDeliverables(oldVPV, oldPFV, newPFV) {
 
 	logger4js.debug('adapt all deliverables of the newPFV to the oldPFV');
 
@@ -2439,9 +2546,9 @@ function createIndices(newPFV) {
 	}
 	newPFV.hierarchy.allNodes = allNodes;
 	return newPFV;
-}
+} */
 
-function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
+/* function deleteMSFromVPV(hrchy_vpv, newPFV, elem) {
 	logger4js.trace('Delete one Milestone from Phase of VPV');
 	var elemID = elem ? elem.nameID : undefined;
 	// var relevElem = getMilestoneByID(hrchy_vpv, newPFV, elemID);
@@ -2638,17 +2745,19 @@ function moveTheCosts (newPFV, phase, parent) {
 		}
 	}
 	return newPFV;
-}
+} */
 
-function aggregateRoles(phase, orgalist){
+	// The aggregateRoles function processes and aggregates roles for a given project phase based on an organizational list (orgalist). 
+	// It replaces individual roles with their parent roles (if applicable) and combines resource requirements (Bedarf) for roles with the same RollenTyp and teamID.
+	// The result is a list of aggregated roles with consolidated Bedarf values.
+	function aggregateRoles(phase, orgalist){
 	var newAllRoles = [];
 	if (orgalist.length <= 0) {
 		return phase.AllRoles;
 	}
 	for ( var ir = 0; phase && phase.AllRoles && ir < phase.AllRoles.length; ir++){
 		var oneRole = {};
-		var role = phase.AllRoles[ir];
-		// Step one: replace the role with its parent with uid = pid, if role is a person
+		var role = phase.AllRoles[ir];		
 		var roleSett = orgalist[role.RollenTyp];
 
 		if (!roleSett) {
@@ -2660,7 +2769,7 @@ function aggregateRoles(phase, orgalist){
 			continue;
 		}
 		if (roleSett.isSummaryRole) {
-			if (!roleSett.aggregationID || roleSett.aggregationID == role.RollenTyp) {
+			if (!roleSett.aggregationID || (roleSett.aggregationID == role.RollenTyp)) {
 				// roleSett is a summary role but does not have an aggregation Role or is an aggregation role itself
 				oneRole.RollenTyp = role.RollenTyp;
 				oneRole.teamID = role.teamID;
@@ -2693,7 +2802,9 @@ function aggregateRoles(phase, orgalist){
 		}
 		newAllRoles.push(oneRole);
 	}
-
+	// The groupBy function groups elements of an array (xs) based on two properties (key1 and key2). 
+	// It returns an object where each key is a combination of key1 and key2 values, 
+	// and the corresponding value is an array of elements that share those values.
 	var groupBy = function (xs, key1, key2) {
 		return xs.reduce(function (rv, x) {
 			(rv[x[key1] + ',' + x[key2]] = rv[x[key1] + ',' + x[key2]] || []).push(x);
@@ -2735,6 +2846,9 @@ function aggregateRoles(phase, orgalist){
 }
 
 // function calculates the distribution of values in a array
+// The calcPhArValues function distributes a given sum (arSum) proportionally across months between two dates (arStartDate and arEndDate). 
+// It ensures that the sum is split accurately according to the number of days in each month, 
+// taking into account leap years and date order corrections.
 function calcPhArValues(arStartDate, arEndDate, arSum) {
 	// check if valid invocation
 	if (typeof arStartDate !== 'object' || typeof arEndDate !== 'object' || typeof arSum !== 'number' ) {
@@ -2805,12 +2919,12 @@ function calcPhArValues(arStartDate, arEndDate, arSum) {
 	return arResult;
 }
 
+// The calcNewBedarfe function calculates a new array of values (resultArray) representing the distribution of resource requirements (Bedarfe) 
+// over a new phase period (newPhStartDate to newPhEndDate). 
+// if separatorIndex is given, function does keep all values before the separatorIndex unchanged
+// only values starting with separatorIndex are changed according scaleFactor
 function calcNewBedarfe(oldPhStartDate, oldPhEndDate, newPhStartDate, newPhEndDate, oldArray, scaleFactor, separatorIndex) {
-	// function does calculate a new Array, length is defined by columns(newStartDate), columns(newEndDate)
-	// if separatorIndex is given, function does keep all values before the separatorIndex unchanged
-	// only values starting with separatorIndex are changed according scaleFactor
-	// if similarCharacteristics then the distribution of values over the various months is maintained
-
+	
 	let ar1 = undefined;
 	let ar2 = oldArray;
 	let resultArray = [];
@@ -3300,10 +3414,16 @@ function ensureValidVPV(myVPV) {
 
 }
 
+// The sumOF function takes two arguments, accumulator and currentValue, and returns their sum. 
+// It is typically used as a callback for array reduction operations to calculate the sum of all elements in an array.
 function sumOF(accumulator, currentValue) {
 	return accumulator + currentValue;
 }
 
+// The scaleVPV function modifies an existing oldVPV (Valid Project Version) using the structure of a newVPV 
+// and a specified scaling factor for the total project duration and costs. 
+// It ensures consistency by scaling only future phases and adjusting resource and cost values proportionally, 
+// while preserving actual data until a specified date (scaleFromDate).
 function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	// this function converts an oldVPV to a modified oldVPV and returns it to the caller
 	// the function scales the oldVPV (valid vpv) that contains old start & endDate and Bedarfe
@@ -3316,9 +3436,7 @@ function scaleVPV(oldVPV, newVPV, scaleFactor) {
 	if (!oldVPV || !newVPV || scaleFactor < 0) {
 		return undefined;
 	}
-	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', newVPV._id, 'scaleFactor', scaleFactor);
-
-	
+	logger4js.debug('scaleVPV:  ', oldVPV._id, 'newVPV', newVPV._id, 'scaleFactor', scaleFactor);	
 
 	// here the date shall be provided from where on the scaling should take place. Can be provided by parameter
 	// scaleFromDate should always be the first of a month. From this month on , including this month all items are being scaled, i.e changed
@@ -3640,6 +3758,11 @@ function resetStatusVPV(oldVPV) {
 	return oldVPV;
 }
 
+// This function modifies the vpv (presumably representing project data) by setting certain forecast values (Bedarf) for specified roles to zero 
+// within a given date range. 
+// The operation is based on phases and roles, ensuring that only values within the specified date range and project timeline are affected.
+//
+// The main purpose of this function is to clear forecast data for selected roles in the vpv object, based on specified conditions.
 function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 	if (!vpv || rolesToSetZero.length <= 0) {
 		return false;
@@ -3730,7 +3853,9 @@ function deleteNeedsOfVPV(vpv, fromDate, toDate, rolesToSetZero) {
 	return vpv
 }
 
-
+// The importNeedsOfVPV function imports time records into a vpv object, which represents a project with multiple roles and phases. 
+// It aggregates and updates the required forecast values (Bedarf) for each role in the project based on the provided time records (indexedTimeRecords).
+// The function adds missing roles to the vpv object and updates the corresponding Bedarf array by converting hours into days (assuming an 8-hour workday).
 function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	if (!vpv || !indexedTimeRecords) {
 		return undefined;
@@ -3828,6 +3953,14 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 	return vpv;
 }
 
+// The calcTimeRecords function processes a list of time records (timerecordList) for a given organization (orga). 
+// It checks for missing roles, calculates roles that need their forecast (Bedarf) set to zero, 
+// and updates a list of project objects (vpvList) by first deleting forecast needs (deleteNeedsOfVPV) and then importing actual time data (importNeedsOfVPV).
+//
+// The primary goal is to ensure consistency between actual time data and forecast data in vpv objects by removing outdated forecasts and 
+// importing current time records.
+// 
+// It returns newvpvList: An array of updated vpv objects with the time records processed and imported.
 function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, userId, fromDate, toDate) {
 
 	// check, if all timerecords have an uid defined in orga as a person
@@ -3895,6 +4028,19 @@ function calcTimeRecords(timerecordList, orga, rolesActDataRelevant, vpvList, us
 	return newvpvList;
 }
 
+// The calcCosttypes function calculates cost-related information for a set of VPVs (project plans) and PFVs (according project baseline)
+// over a given date range. 
+// It retrieves cost details from an organization object, applies hierarchical processing, and consolidates the costs into an array of structured cost data.
+
+// This function helps track planned and actual costs by associating them with cost types and timeframes.
+// it returns:
+// capa: An array of objects containing structured cost data, including:
+// 		month: The associated time period.
+// 		costID: The ID of the cost type.
+// 		costName: The name of the cost type.
+// 		currentCost: The calculated current cost.
+// 		baselineCost: The baseline cost.
+// If the function encounters errors (such as missing vpvs, organisation, or invalid date ranges), it logs warnings and returns an empty array.
 function calcCosttypes(vpvs, pfvs, costID, startDate, endDate, organisation, costInfo, hierarchy, onlyPT) {
 	if (!(vpvs?.length > 0) || !(organisation?.length > 0)) {
 		logger4js.warn('Calculate Cost Information missing vpvs %d or organisation %d', vpvs?.length, organisation?.length);
@@ -4158,6 +4304,12 @@ function calcCosttypesPerProject(vpvs, pfvs, costID, startDate, endDate, organis
 	return capa;
 }
 
+/* The calcCosttypesPerProject function calculates cost information for each VPV (project plans) and PFV (project baseline) at the project level within a specified date 
+range. The function:
+	- Filters relevant VPVs and PFVs within the time range.
+	- Calculates cost values for each project individually.
+	- Aggregates cost data across all projects.
+The function allows tracking of planned vs. actual costs over time. */
 function calcCosttypesVPVs(vpvs, costID, timeZones, hierarchy) {
 
 	var allCalcCostValues = [];
@@ -4263,6 +4415,20 @@ function calcConcerningCosttypes(timeZones, costID ) {
 	timeZones[0].allConcerningCosts = allConcerningCosts;
 }
 
+/* The getCosttypesFromTimeZone function calculates cost-related information for a given costID across multiple VPVs (project plans) within the defined timeZones.
+It:
+	- Retrieves the cost type from the organization's indexed cost list.
+	- Initializes an array to store cost values over the specified time duration.
+	- Iterates through each VPV, calculating cost values for each time period.
+	- Aggregates cost values by summing up the currentCost and baselineCost across all VPVs.
+
+This function provides the cost breakdown of a specific costID over time. */
+/* It returns
+	costValues (Array): A list of objects containing:
+		- currentCost: The total actual cost for the given cost type per time period.
+		- baselineCost: The total planned (baseline) cost per time period.
+		- undefined: If the costID is not found in the organization's indexed costs.
+ */
 function getCosttypesFromTimeZone(vpvs, costID, timeZones) {
 	
 	var cost = timeZones[0].organisation[0].indexedCosts[costID];	
@@ -4291,6 +4457,21 @@ function getCosttypesFromTimeZone(vpvs, costID, timeZones) {
 	});
 	return costValues;
 }
+
+
+/* The getCostInformation function calculates cost values (currentCost and baselineCost) for a given VPV (project-related object) within a specified time zone period.
+It:
+	Initializes cost storage for each time period.
+	Checks for missing VPV data (e.g., missing project phases).
+	Aggregates cost values by calling addCosttypeValues().
+This function provides a time-based cost breakdown for a given cost type within a project (vpv). */
+
+/* It returns
+	costValues (Array): A list of objects containing:
+		currentCost: The total actual cost for the given cost type per time period.
+		baselineCost: The total planned (baseline) cost per time period.
+If the function encounters missing input data (e.g., missing cost or vpv.AllPhases), it returns an empty array. */
+
 function getCostInformation(cost,  vpv, timeZones) {
 	var costValues = [];
 	if (!cost) return costValues;
@@ -4311,6 +4492,21 @@ function getCostInformation(cost,  vpv, timeZones) {
 	addCosttypeValues(vpv, timeZones, costValues);
 	return costValues;
 }
+
+/* The addCosttypeValues function calculates and assigns cost values (currentCost and baselineCost) for each time period based on a VPV's (project version) phases 
+and associated cost data.
+It:
+	Determines the start index for the VPV.
+	Iterates through each phase and its associated costs.
+	Filters relevant costs using isConcerningCosttype().
+	Aggregates costs into costValues for each time period.
+This function plays a critical role in associating costs with time periods and distinguishing between planned (baseline) and actual (current) costs. */
+
+/* It returns
+	None (modifies costValues in place)
+	Updates currentCost and baselineCost in costValues.
+ */
+
 
 function addCosttypeValues(vpv, timeZones, costValues) {
 	var maxTimeZoneIndex;
@@ -4338,14 +4534,7 @@ function addCosttypeValues(vpv, timeZones, costValues) {
 					}
 					
 					// result in T€ 
-					var bedarf = costPhase.Bedarf[l - phaseStart];
-					// if (l < actualDataIndex) {
-					// 	costValues[l - timeZones.startIndex].actCost += bedarf * dailyRate / 1000;
-					// 	costValues[l - timeZones.startIndex].actCost_PT += bedarf;
-					// } else if (otherActivity) {
-					// 	costValues[l - timeZones.startIndex].otherActivityCost += bedarf * dailyRate / 1000;
-					// 	costValues[l - timeZones.startIndex].otherActivityCost_PT += bedarf;
-					// } else {
+					var bedarf = costPhase.Bedarf[l - phaseStart];					
 					
 					if (vpv.variantName == 'pfv') {
 						costValues[l - timeZones[0].startIndex].baselineCost += bedarf;	
@@ -4357,6 +4546,11 @@ function addCosttypeValues(vpv, timeZones, costValues) {
 		});
 	});
 }
+
+/* The isConcerningCosttype function checks whether a given cost type (costID) is relevant for a specific month within the time zones of an organization. 
+It searches for the cost type in the concerningCosts array of the first (newset) organization listed in the timeZones.
+
+This function helps filter out irrelevant costs during cost calculations. */
 
 function isConcerningCosttype(costID, month, timeZones) {
 	// var orgaIndex = timeZones.indexMonth[month - timeZones.startIndex];
