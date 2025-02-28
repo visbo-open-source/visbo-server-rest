@@ -29,6 +29,9 @@ var redisClient = undefined;
 // var fsModell = undefined;
 
 // Verify/Create VISBO Center with an initial user
+/* The createSystemVC function is responsible for initializing the System VISBO Center (VC) if it does not already exist. 
+It creates a default system VC, a default user, and a SysAdmin group with administrative permissions.
+ */
 var createSystemVC = function (body, launchServer) {
 	logger4js.debug('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
@@ -99,6 +102,14 @@ var getSystemVC = function () {
 	return vcSystem;
 };
 
+
+/* The initSystemSettings function initializes system-wide settings for the Visbo System VC by fetching configurations from the database. 
+It decrypts stored credentials (e.g., SMTP passwords), initializes Redis if necessary, and updates system settings in cache.
+ */
+/* Returns
+	Nothing (void) 						– The function modifies system-wide configurations in place and updates Redis.
+	If vcSystem is not initialized, 	- the function logs a warning and exits.
+ */
 var initSystemSettings = function(launchServer) {
 	// Get the Default Log Level from DB
 	logger4js.info('Check System VC during init setting');
@@ -153,6 +164,14 @@ var initSystemSettings = function(launchServer) {
 	});
 };
 
+/* The refreshSystemSetting function checks whether system settings need to be refreshed by comparing the last updated timestamp stored in Redis (vcSystemConfigUpdatedAt).
+If the settings are outdated, it re-initializes system settings using initSystemSettings().
+This function will be called from a VISBO system task.
+ */
+/* Returns
+		Nothing (void) 						– The function updates system settings if necessary and marks the task as complete.
+		If task or task.value is missing,  	- the function immediately returns. 
+*/
 var refreshSystemSetting = function(task, finishedTask) {
 	if (!task || !task.value) finishedTask(task, false);
 	logger4js.debug('Task(%s) refreshSystemSetting Execute Value %O', task._id, task.value);
@@ -179,6 +198,16 @@ var refreshSystemSetting = function(task, finishedTask) {
 	});
 };
 
+/* The reloadSystemSetting function forces a reload of system settings by deleting the vcSystemConfigUpdatedAt key from Redis 
+and then reinitializing system settings using initSystemSettings().
+This function will be called after changes in the systemSetting. After the reloadSystemSetting is done, the system will use this setting.
+*/
+/* Returns
+		Nothing (void) 										– The function deletes the Redis key and calls initSystemSettings() 
+															to reload system settings from the database.
+		If an error occurs while deleting the Redis key,	- logs the error and does not reload settings.
+ */
+
 var reloadSystemSetting = function() {
 	logger4js.info('reloadSystemSetting from DB');
 	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
@@ -196,6 +225,15 @@ var reloadSystemSetting = function() {
 	});
 };
 
+/* The getSystemVCSetting function retrieves a specific system setting of the VISBO Center. 
+If the requested setting does not exist, it provides a default value, creates a new setting in the database, and stores it in the database
+ */
+/* Returns
+		the setting								- If the setting exists in vcSystemSetting
+		the setting								- creates a new setting with a default value (if applicable), 
+												- stores it in the database, and returns it.
+		logs a message and returns undefined 	- If no default value is available,  
+*/
 var getSystemVCSetting = function (name) {
 	logger4js.trace('Get System VISBO Center Setting: %s', name);
 	if (!vcSystemSetting) return undefined;
@@ -245,7 +283,18 @@ var getSystemVCSetting = function (name) {
 	logger4js.info('Get System VISBO Center Setting: %s not found', name);
 	return undefined;
 };
-
+/* The getSystemSettingList function retrieves a filtered list of system settings from vcSystemSetting based on a specific name or type. 
+It returns an array of matching system settings.
+ */
+/* Returns			
+		resultList (Array) 			– An array of matching system settings in the format:
+									[
+									{ name: "DEBUG", vcid: "vc-001", value: { VC: "info", VP: "info" }, type: "SysConfig" },
+									{ name: "SMTP", vcid: "vc-001", value: { host: "smtp.example.com" }, type: "SysConfig" }
+									]
+		empty array. 				- If no settings match the filters.
+		undefined           		- If vcSystemSetting is not initialized
+*/
 var getSystemSettingList = function (name, type) {
 	logger4js.trace('Get System VISBO Center Enable Setting: %s', name);
 	if (!vcSystemSetting) return undefined;
@@ -261,18 +310,18 @@ var getSystemSettingList = function (name, type) {
 	return resultList;
 };
 
-var checkSystemEnabled = function(name) {
-	var vcSetting = getSystemVCSetting(name);
-	if (!vcSetting || !vcSetting.value) {
-		logger4js.info('Check System VISBO Center Setting: %s not found', name);
-		return undefined;
-	} else if (vcSetting.value.systemLimit == true && vcSetting.value.systemEnabled != true) {
-		logger4js.info('Check System VISBO Center Setting: %s Limit Off', name);
-		return undefined;
-	} else {
-		return vcSetting;
-	}
-};
+// var checkSystemEnabled = function(name) {
+// 	var vcSetting = getSystemVCSetting(name);
+// 	if (!vcSetting || !vcSetting.value) {
+// 		logger4js.info('Check System VISBO Center Setting: %s not found', name);
+// 		return undefined;
+// 	} else if (vcSetting.value.systemLimit == true && vcSetting.value.systemEnabled != true) {
+// 		logger4js.info('Check System VISBO Center Setting: %s Limit Off', name);
+// 		return undefined;
+// 	} else {
+// 		return vcSetting;
+// 	}
+// };
 
 var getSystemUrl = function () {
 	var vcSetting = getSystemVCSetting('UI URL');
@@ -311,7 +360,7 @@ module.exports = {
 	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
 	reloadSystemSetting: reloadSystemSetting,
-	checkSystemEnabled: checkSystemEnabled,
+	//checkSystemEnabled: checkSystemEnabled,
 	getSystemSettingList: getSystemSettingList
 	// checkPredictConfigured: checkPredictConfigured,
 	// getPredictModel: getPredictModel
