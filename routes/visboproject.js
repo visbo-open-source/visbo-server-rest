@@ -661,7 +661,7 @@ router.route('/')
 		var vpdescription = (req.body.description || '').trim();
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
-		var kundennummer;
+		var kundennummer = (req.body.kundennummer || '').trim();
 		var isPMO = false;
 
 		if (vpType == 1) {
@@ -739,11 +739,16 @@ router.route('/')
 			}
 			req.oneVC = vc;
 			logger4js.debug('User has permission to create Project %s in  %s', vpname, req.oneVC.name);
-			// check duplicate Name
-			var query = {};
-			query.vcid = vcid;
-			query.name = vpname;
-			query.deletedAt = {$exists: false};
+					
+			// check duplicate Name or duplicate kundennummer
+			var query = { vcid: vcid, $or: [ { name: vpname }, { kundennummer: kundennummer }], deletedAt: { $exists: false }};
+			// var query = {};
+			// query.vcid = vcid;
+			// query.name = vpname;
+			// if (kundennummer) {
+			// 	query.kundennummer = kundennummer;
+			// }			
+			// query.deletedAt = {$exists: false};
 
 			VisboProject.findOne(query, function (err, vp) {
 				if (err) {
@@ -754,7 +759,7 @@ router.route('/')
 				if (vp) {
 					return res.status(409).send({
 						state: 'failure',
-						message: 'Project with same name exists'
+						message: 'Project with same name or customID exists'
 					});
 				}
 				var newVP = new VisboProject;
@@ -1232,10 +1237,22 @@ router.route('/:vpid')
 		}
 		// check duplicate Name
 		var query = {};
-		query.vcid = req.oneVP.vcid;
-		query._id = {$ne: req.oneVP._id};
-		query.name = name;
-		query.deletedAt = {$exists: false};
+		if (req.oneVP.kundennummer) {	
+			query = { vcid: req.oneVP.vcid, _id: { $ne: req.oneVP._id }, $or: [ { name: name }, { kundennummer: req.oneVP.kundennummer }], deletedAt: { $exists: false }};
+		} else {
+			query.vcid = req.oneVP.vcid;
+			query._id = {$ne: req.oneVP._id};
+			query.name = name;
+			query.deletedAt = {$exists: false};
+			//query = { vcid: req.oneVP.vcid, _id: { $ne: req.oneVP._id },   name: name , deletedAt: { $exists: false }};
+		}
+
+		// var query = {};
+		// query.vcid = req.oneVP.vcid;
+		// query._id = {$ne: req.oneVP._id};
+		// query.name = name;
+		// query.kundennummer = req.oneVP.kundennummer;
+		// query.deletedAt = {$exists: false};
 
 		VisboProject.findOne(query, function (err, vp) {
 			if (err) {
@@ -2661,6 +2678,13 @@ router.route('/:vpid/variant')
 			return res.status(400).send({
 				state: 'failure',
 				message: 'Project Variant Body contains invalid strings'
+			});
+		}
+		if (variantName.toLowerCase() == 'baseline') {
+			logger4js.info('POST Project Variant Name: %s is a reserved word', variantName);
+			return res.status(412).send({
+				state: 'failure',
+				message: 'Variant Name Baseline is reserved name'
 			});
 		}
 		if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Modify
