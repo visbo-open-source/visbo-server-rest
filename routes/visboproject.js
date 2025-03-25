@@ -1261,9 +1261,13 @@ router.route('/:vpid')
 			}
 			if (vp) {
 				logger4js.debug('Duplicate Name check returned duplicate VP %s', vp._id);
+				const messageT1 = 'Project with same name or customID exists: ';
+				const messageT2 = vp.name;
+				const messageT3 = vp.kundennummer;
+				const messageResult = messageT1.concat(" ", messageT2, " / ", messageT3)
 				return res.status(409).send({
 					state: 'failure',
-					message: 'Project with same name exists'
+					message: messageResult
 				});
 			}
 			logger4js.debug('PUT VP: save now %O populate %s unDelete %s', req.oneVP, vpPopulate, vpUndelete);
