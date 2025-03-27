@@ -741,6 +741,7 @@ router.route('/')
 			logger4js.debug('User has permission to create Project %s in  %s', vpname, req.oneVC.name);
 					
 			// check duplicate Name or duplicate kundennummer
+			
 			var query = { vcid: vcid, $or: [ { name: vpname }, { kundennummer: kundennummer }], deletedAt: { $exists: false }};
 			// var query = {};
 			// query.vcid = vcid;
@@ -1238,11 +1239,13 @@ router.route('/:vpid')
 		// check duplicate Name
 		var query = {};
 		if (req.oneVP.kundennummer) {	
-			query = { vcid: req.oneVP.vcid, _id: { $ne: req.oneVP._id }, $or: [ { name: name }, { kundennummer: req.oneVP.kundennummer }], deletedAt: { $exists: false }};
+			// to Check URK
+			query = { vcid: req.oneVP.vcid, _id: { $ne: req.oneVP._id }, $or: [ { name: { $regex: new RegExp(name, 'i')} }, { kundennummer: req.oneVP.kundennummer }], deletedAt: { $exists: false }};
 		} else {
 			query.vcid = req.oneVP.vcid;
 			query._id = {$ne: req.oneVP._id};
-			query.name = name;
+			query.name =  { $regex: new RegExp(name, 'i')};
+			// query.name = name;
 			query.deletedAt = {$exists: false};
 			//query = { vcid: req.oneVP.vcid, _id: { $ne: req.oneVP._id },   name: name , deletedAt: { $exists: false }};
 		}
