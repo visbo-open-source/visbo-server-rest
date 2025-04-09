@@ -10,7 +10,7 @@ var logModule = 'VPV';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-/* The updateVPVCount function is responsible for updating the VPV (View Page View) count of a specific project or its variant 
+/* The updateVPVCount function is responsible for updating the VPV (Visbo Project Version) count of a specific project or its variant 
 in the VisboProject database collection. 
 It supports both direct updates to the main project and updates to a specific variant within the project.
  */
