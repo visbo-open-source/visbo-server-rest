@@ -654,29 +654,35 @@ router.route('/timetracker/:userId')
 			settings.forEach(oneSett => {
 				// const vcIndex = userVCs.findIndex(item => item._id.toString() == oneSett.vcid.toString());
 				// if ((vcIndex >= 0) ) {					
-				// 	console.log("VisboCenter: Name: %s  VCID: %s", userVCs[vcIndex].name, oneSett.vcid.toString());
-					const doubleIndex = userSettings.findIndex(item => (item.vcid.toString() == oneSett.vcid.toString()));
-					if (( doubleIndex < 0)) {
-						userSettings.push(oneSett);
-					} else {
-						// only take the newest Orga
-						if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom) < new Date(oneSett.value.validFrom))) {
-							userSettings.splice(doubleIndex, 1, oneSett);										
-							// console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
-						}
-					}				
+				// console.log("VisboCenter: Name: %s  VCID: %s", userVCs[vcIndex].name, oneSett.vcid.toString());
+				const doubleIndex = userSettings.findIndex(item => (item.vcid.toString() == oneSett.vcid.toString()));
+				if (( doubleIndex < 0)) {
+					userSettings.push(oneSett);
+				} else {
+					// only take the newest Orga
+					if ((doubleIndex >= 0) && (new Date(userSettings[doubleIndex].value.validFrom) < new Date(oneSett.value.validFrom))) {
+						userSettings.splice(doubleIndex, 1, oneSett);										
+						// console.log("VisboCenter:   VCID: %s   validFrom: %s",  oneSett.vcid.toString(), oneSett.value.validFrom);
+					}
+				}				
 				// }
 			});
 
-
 			// ur:2024.5.8 new with startDate and endDate
 			var startDate, endDate;
+			if (req.body.startDate) {
+				startDate = validate.validateDate(req.body.startDate, false);
+			}
+			if (req.body.endDate) {
+				endDate = validate.validateDate(req.body.endDate, false);
+			}
+			var asApprover = req.body.asApprover? true : false;
+
 			if (req.query.startDate) {
-				startDate = validate.validateDate(req.query.startDate, false, true);
+				startDate = validate.validateDate(req.query.startDate, false);
 			}
 			if (req.query.endDate) {
-				endDate = validate.validateDate(req.query.endDate, false, true);
-				endDate.setDate(endDate.getDate() + 1);
+				endDate = validate.validateDate(req.query.endDate, false);
 			}
 			var asApprover = req.query.asApprover? true : false;
 			
