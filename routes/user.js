@@ -670,21 +670,26 @@ router.route('/timetracker/:userId')
 
 			// ur:2024.5.8 new with startDate and endDate
 			var startDate, endDate;
+			var asApprover;
 			if (req.body.startDate) {
 				startDate = validate.validateDate(req.body.startDate, false);
 			}
 			if (req.body.endDate) {
 				endDate = validate.validateDate(req.body.endDate, false);
 			}
-			var asApprover = req.body.asApprover? true : false;
-
+			if (req.body.endDate || req.body.startDate) {
+				asApprover = req.body.asApprover? true : false;
+			}
+			
 			if (req.query.startDate) {
 				startDate = validate.validateDate(req.query.startDate, false);
 			}
 			if (req.query.endDate) {
 				endDate = validate.validateDate(req.query.endDate, false);
 			}
-			var asApprover = req.query.asApprover? true : false;
+			if (req.query.endDate || req.query.startDate) {
+				asApprover = req.query.asApprover? true : false;
+			}
 			
 			if (userSettings.length > 0) {
 
