@@ -21,7 +21,7 @@ var timeTracker = new mongoose.Schema({
 
 
 var constVTRFailed = Object.freeze([
-	'wrong project status', 'month before start', 'month after end'
+	'wrong project status', 'month before start', 'month after end', 'finally imported'
 ]);
 
 

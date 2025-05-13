@@ -3774,14 +3774,14 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
 					roleUID.Bedarf[actDataIndex] += (hours/8);
 					if (trec.failed){
-						trec.failed = undefined;
+						trec.failed = [3];
 						const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
 					}
 				} else {				
 					logger4js.info('TimeRecord for Role %s : roleUID %s : date %s   not between StartDate and Enddate of %s', trec.name, trec.roleId, trec.date.toISOString(), vpv.name);	
 					
 					if (trecDateIndex < startIndex) {
-						trec.failed = constVTRFailed[1];
+						trec.failed = [1];
 					}
 					if (trecDateIndex > endIndex) {
 						trec.failed =  constVTRFailed[2];
@@ -3808,7 +3808,8 @@ function importNeedsOfVPV(vpv, fromDate, toDate, indexedTimeRecords) {
 				if ((trecDateIndex <= endIndex) && (trecDateIndex >= startIndex)) {
 					roleUID.Bedarf[actDataIndex] += (hours/8);
 					if (trec.failed){
-						trec.failed = undefined;
+						// change the trec.failed to success
+						trec.failed = constVTRFailed[3];
 						const newTrec =  timeTracker.updateTimeEntry(trec._id, trec);
 					}
 				} else {					
