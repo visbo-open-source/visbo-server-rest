@@ -2199,7 +2199,6 @@ router.route('/:vcid/timetracking')
 
 
 					var newVPV = newVPVList[i];
-					//var newVP = orderedVPListIndexed[newVPV.vpid];
 					const ID = newVPV.vpid.toString();
 					var newVP = usedVPListIndexed[ID];
 					
