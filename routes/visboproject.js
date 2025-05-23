@@ -741,8 +741,13 @@ router.route('/')
 			logger4js.debug('User has permission to create Project %s in  %s', vpname, req.oneVC.name);
 					
 			// check duplicate Name or duplicate kundennummer
+			var query = {};
+			if (kundennummer) {
+					query = { vcid: vcid, $or: [ { name: vpname }, { kundennummer: kundennummer }], deletedAt: { $exists: false }};
+			} else {
+					query = { vcid: vcid,  name: vpname , deletedAt: { $exists: false }};
+			}		
 			
-			var query = { vcid: vcid, $or: [ { name: vpname }, { kundennummer: kundennummer }], deletedAt: { $exists: false }};
 			// var query = {};
 			// query.vcid = vcid;
 			// query.name = vpname;
