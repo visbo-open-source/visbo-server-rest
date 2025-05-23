@@ -14,6 +14,15 @@ var mailUser;
 var initialised = false;
 
 // Send Mail to User
+
+/* The VisboSendMail function sends an email using Nodemailer with SMTP settings fetched from the system. 
+It initializes the SMTP transport if not already set up, verifies the connection, and sends the email. 
+If DKIM (DomainKeys Identified Mail) is configured, it attempts to load a private key for signing emails.
+ */
+/* Returns
+Nothing (void) 				– The function sends an email and logs relevant events.
+If SMTP is not configured, 	- logs a fatal error and exits.
+*/
 function VisboSendMail(message) {
 	var smtpConfig = undefined;
 	var smtpSetting = undefined;

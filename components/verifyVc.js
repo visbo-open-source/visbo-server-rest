@@ -20,6 +20,20 @@ var logger4js = log4js.getLogger(logModule);
 var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of System / VC depending on the case
+
+/* The getAllGroups function retrieves all user-related groups from the VisboGroup collection,
+   determining which VC (Visbo Center) groups a user belongs to. 
+   It supports:
+		System administrators (sysadmin) 	retrieving system-level groups.
+		Regular users 						retrieving VC-specific groups.
+		Filtering by vcid (VC ID) from query parameters, URL, or request body.
+	Once retrieved, the permissions are aggregated into req.listVCPerm, and the request proceeds to the next middleware.
+*/
+/* Returns
+		Calls next() after setting req.listVCPerm.
+		Responds with HTTP 400 (Bad Request) 				if vcid is invalid.
+		Responds with HTTP 500 (Internal Server Error) 		if database retrieval fails.
+ */
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var baseUrl = req.url.split('?')[0];
@@ -85,6 +99,18 @@ function getAllGroups(req, res, next) {
 }
 
 // Get VC with vcid including View permission check and others depending on parameters
+
+/* The getVC function retrieves a specific VISBO Center (VC) from the database, 
+   ensuring the user has the necessary permissions to access it. 
+   If the request is from a system administrator, 
+   it validates against system-level permissions.
+*/
+/* Returns
+		Calls next() if the VC is found and permissions are valid.
+		Responds with HTTP 400 (Bad Request) 				if vcid is invalid.
+		Responds with HTTP 403 (Forbidden) 					if the user lacks permission.
+		Responds with HTTP 500 (Internal Server Error) 		if a database error occurs.
+ */
 function getVC(req, res, next, vcid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 	var checkDeleted = req.query.deleted == true;
@@ -134,6 +160,20 @@ function getVC(req, res, next, vcid) {
 	});
 }
 
+/* The checkSettingId function validates and retrieves a specific VC (Visbo Center) setting from the database. 
+   It ensures that:
+		The settingID is a valid ObjectId.
+		A corresponding vcid (VC ID) exists in the request.
+		The setting belongs to the current VC (vcid).
+		If the setting is of type "organisation", it retrieves additional organisational settings.
+		If the setting is found and valid, it is stored in req.oneVCSetting, and request processing continues (next()). Otherwise, an error response is sent. 
+*/
+/* Returns
+	Calls next() if the setting is valid and found.
+	Responds with HTTP 400 (Bad Request) 			if settingID or vcid is invalid.
+	Responds with HTTP 403 (Forbidden) 				if the setting does not exist or access is not permitted.
+	Responds with HTTP 500 (Internal Server Error) 	if a database error occurs. 
+*/
 function checkSettingId(req, res, next, settingID) {
 	logger4js.debug('Check settingID %s for url %s ', settingID, req.url);
 	if (!validate.validateObjectId(settingID, false)) {
@@ -183,6 +223,17 @@ function checkSettingId(req, res, next, settingID) {
 	});
 }
 
+/* The getVCSetting function retrieves VISBO Center (VC) settings from the database based on certain request conditions. 
+   It:
+		Extracts the vcid (VC ID) from the request.
+		Determines whether settings should be fetched based on HTTP methods (GET, POST, PUT) or query parameters (keyMetrics=2).
+		Queries the database for _VCConfig type settings.
+	Stores the settings in req.listVCSetting and proceeds to the next middleware.
+*/
+/* Returns
+		Calls next() after retrieving settings or if settings are not required.
+		Logs database errors but does not send an error response (relies on errorHandler for logging). 
+*/
 function getVCSetting(req, res, next) {
 	var checkSetting = false;
 	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
@@ -218,6 +269,18 @@ function getVCSetting(req, res, next) {
 		return next();
 	}
 }
+
+/* The getVCSettingCustomization function retrieves customization settings for a specific VISBO Center (VC) based on certain conditions. 
+   It:
+		Checks if settings should be fetched, based on the request method (GET, POST, PUT) or query parameters (keyMetrics=2).
+		Extracts the vcid (VC ID) from the request.
+		Queries the database for customization settings (name: "customization", type: "customization").
+	Stores the retrieved settings in req.listVCSetting and proceeds to the next middleware.
+*/
+/* Returns
+		Calls next() after retrieving settings or if no settings need to be fetched.
+		Logs database errors but does not send an error response (relies on errorHandler for logging). 
+*/
 function getVCSettingCustomization(req, res, next) {
 	var checkSetting = false;
 	if (req.method == 'GET' && req.url.indexOf('keyMetrics=2') >= 0) {
@@ -254,6 +317,18 @@ function getVCSettingCustomization(req, res, next) {
 		return next();
 	}
 }
+
+/* The getVCVP function retrieves all projects (vpType = 0) for a given VISBO Center (VC). 
+   It:
+		Extracts vcid from req.oneVC (ensuring a VC exists).
+		Queries the database for projects (vpType = 0, excluding deleted projects).
+	Stores the retrieved projects in req.listVCVP and proceeds to the next middleware.
+*/
+/* Returns
+		Calls next() after retrieving projects or if no VC is found.
+		Stores retrieved projects in req.listVCVP.
+		Responds with 500 Internal Server Error if a database error occurs. 
+*/
 function getVCVP(req, res, next) {
 	var query = {};
 	if (!req.oneVC) {
@@ -278,7 +353,17 @@ function getVCVP(req, res, next) {
 	});
 }
 
-
+/* The getVCAllVP function retrieves all projects (vpType = 0) for a specific VISBO Center (VC) while excluding deleted projects. 
+		It:
+		Extracts vcid from req.oneVC (ensuring a valid VC exists).
+		Queries the database for projects (vpType = 0, excluding deleted projects).
+		Stores the retrieved projects in req.listVCAllVP and proceeds to the next middleware. 
+*/
+/* Returns:
+		Calls next() after retrieving projects or if no VC is found.
+		Stores retrieved projects in req.listVCAllVP.
+		Responds with 500 Internal Server Error if a database error occurs.
+*/
 function getVCAllVP(req, res, next) {
 	var query = {};
 	if (!req.oneVC) {
@@ -304,6 +389,20 @@ function getVCAllVP(req, res, next) {
 }
 
 // Generate the Groups where the user is member of System / VC depending on the case
+/* The getSystemGroups function retrieves all system groups that a user belongs to. 
+   It:
+		Extracts the user's ID (userId) from req.decoded.
+		Assigns systemVC to req.oneVC (ensuring the request is scoped to the system VISBO Center).
+		Queries the database for system groups where the user is a member.
+		If no system groups are found, denies access (403 Forbidden).
+		Stores retrieved system groups in req.listVCPerm and proceeds to the next middleware.
+*/
+/* Returns
+		Calls next() if the user has at least one system group.
+		Stores retrieved system groups in req.listVCPerm.
+		Responds with 403 Forbidden 				if the user is not in any system groups.
+		Responds with 500 Internal Server Error 	if a database error occurs.
+*/
 function getSystemGroups(req, res, next) {
 	var userId = req.decoded._id;
 	req.oneVC = systemVC.getSystemVC();
@@ -336,6 +435,15 @@ function getSystemGroups(req, res, next) {
 		return next();
 	});
 }
+
+/* The checkVCOrgs function is a middleware function for an Express.js application. 
+   It intercepts incoming HTTP requests and determines whether they pertain to an organisation (organisation). 
+   If necessary, it retrieves organisation data and its capacity information before allowing the request to proceed.
+*/
+/* 
+   res (Object): 			The HTTP response object.
+   next (Function): 		The callback function to proceed to the next middleware.
+*/
 
 function checkVCOrgs(req, res, next) {
 	logger4js.trace('Check if we need Orga');
@@ -381,6 +489,10 @@ function checkVCOrgs(req, res, next) {
 }
 
 // Get the organisations for calculation
+/* The getVCOrgs function is an Express.js middleware designed to determine whether an incoming request requires fetching organisation-related data, 
+   particularly when capacity or cost information is needed. 
+   If necessary, it retrieves the Visbo Center (VC) organisation data with or without capacity information.
+*/
 function getVCOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -420,6 +532,10 @@ function getVCOrgs(req, res, next) {
 	getVCOrganisation(vcid, withCapa, req, res, next);
 }
 
+/* The getVCOrganisation function is responsible for retrieving organisation-related settings from a database based on the provided Visbo Center ID (vcid). 
+   If required, it also retrieves capacity data for the organisation.
+   It is typically called within middleware to attach retrieved organisation data to the request object (req), making it available for subsequent request handlers. 
+*/
 function getVCOrganisation(vcid, withCapa, req, res, next) {
 	logger4js.debug('VPV getVCOrgs organization for VCID %s', vcid);
 	var startCalc = new Date();
@@ -462,7 +578,10 @@ function getVCOrganisation(vcid, withCapa, req, res, next) {
 		}
 	});
 }
-
+/* The isVCEnabled function checks whether a Visbo Center (VC) feature or setting is enabled based on the provided name and level. 
+   It searches for a matching setting in req.listVCSetting and determines the enabled status based on various logical conditions.
+   This function is useful for feature toggles, permissions, or system configurations in a VC-based application. 
+*/
 function isVCEnabled(req, name, level) {
 	var setting;
 	var result = false;

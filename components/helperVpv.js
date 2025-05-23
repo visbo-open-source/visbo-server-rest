@@ -10,7 +10,10 @@ var logModule = 'VPV';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
-// updates the VPV Count in the VP after create/delete/undelete VISBO Project
+/* The updateVPVCount function is responsible for updating the VPV (Visbo Project Version) count of a specific project or its variant 
+in the VisboProject database collection. 
+It supports both direct updates to the main project and updates to a specific variant within the project.
+ */
 var updateVPVCount = function(vpid, variantName, increment){
 	var updateQuery = {_id: vpid};
 	var updateOption = {upsert: false};
@@ -34,7 +37,17 @@ var updateVPVCount = function(vpid, variantName, increment){
 	});
 };
 
-// check if keyMetrics from Client is valid
+
+/* The checkValidKeyMetrics function determines whether a given key metrics object (km) contains at least one valid metric. 
+A metric is considered valid if both its current total and base last total values are greater than zero. 
+The function checks three different metrics:
+	Cost
+	Time Completion
+	Deliverable Completion
+It returns:
+	true	if at least one of these metrics meets the criteria
+	false	otherwise
+ */
 function checkValidKeyMetrics(km) {
 	var countKM = 0;
 	if (km) {
@@ -51,6 +64,14 @@ function checkValidKeyMetrics(km) {
 	return countKM > 0;
 }
 
+/* The initVPV function initializes a new VisboProjectVersion object based on the input vpv object. 
+It performs validation checks on essential fields before copying data to ensure data integrity. 
+If the validation fails, the function logs an error and returns undefined. 
+*/
+/* It returns
+	newVPV (Object | undefined) – A new VisboProjectVersion instance with copied attributes if validation succeeds.
+	If validation fails, the function logs an error and returns undefined. 
+*/
 function initVPV(vpv) {
 	var newVPV = new VisboProjectVersion();
 	if (!vpv
@@ -111,15 +132,21 @@ function initVPV(vpv) {
 	return newVPV;
 }
 
-// cleanup properties that the client sets as default but are not used
-// candidates are:
-//		phase.invoice: if not used the client sets it to 0
-//		phase.penalty: if not used the client sets it to 9999-12-31
-//		latestStart/earliestStart: if not used client sets it to -999
-//		minDauer/maxDauer: if not used the client sets it to 0
-//
-// the cleanup has to be verified with the client that the client could handle it if no value is set
+/* The cleanupVPV function processes a VisboProjectVersion (vpv) object and removes or resets specific properties based on predefined conditions. 
+This function helps maintain data integrity by cleaning up unnecessary or invalid values within project phases and results.
 
+candidates are:
+		phase.invoice: if not used the client sets it to 0
+		phase.penalty: if not used the client sets it to 9999-12-31
+		latestStart/earliestStart: if not used client sets it to -999
+		minDauer/maxDauer: if not used the client sets it to 0
+
+the cleanup has to be verified with the client that the client could handle it if no value is set
+ */
+/* It returns
+The function modifies the input object in place.
+If vpv is null or undefined, the function simply returns without making changes. 
+*/
 function cleanupVPV(vpv) {
 	if (!vpv) {
 		return;
@@ -142,6 +169,13 @@ function cleanupVPV(vpv) {
 	}
 }
 
+/* The cleanupKM function removes properties from a key metrics object by setting them to undefined. 
+This function is useful for clearing out certain cost-related fields before processing or storing the object.
+*/
+/* It returns
+The function modifies the input object in place.
+If keyMetrics is null or undefined, the function returns immediately without making any changes. 
+*/
 function cleanupKM(keyMetrics) {
 	if (!keyMetrics) {
 		return;
@@ -153,6 +187,13 @@ function cleanupKM(keyMetrics) {
 	keyMetrics.costCurrentTotalPredict = undefined;
 }
 
+/* The getKeyAttributes function extracts essential attributes from a VisboProjectVersion object (newVPV) and returns a new instance containing only 
+these key properties. This function is useful when only a subset of project version data is needed.
+*/
+/* it returns
+	keyVPV 		A new VisboProjectVersion instance containing only selected key attributes.
+	undefined 	if newVPV is null or undefined.
+*/
 function getKeyAttributes(newVPV) {
 	if (!newVPV) return undefined;
 	var keyVPV = new VisboProjectVersion();
@@ -165,6 +206,14 @@ function getKeyAttributes(newVPV) {
 	return keyVPV;
 }
 
+/* The setKeyAttributes function updates the key attributes of a VisboProjectVersion object (newVPV) using values
+from another VisboProjectVersion object (keyVPV). 
+If keyVPV is not provided, newVPV remains unchanged. 
+*/
+/* It returns
+	newVPV 				The modified newVPV object with updated attributes.
+	undefined 			If newVPV is null or undefined.
+ */
 function setKeyAttributes(newVPV, keyVPV) {
 	if (!newVPV) return undefined;
 	if (!keyVPV) return newVPV;
@@ -178,6 +227,15 @@ function setKeyAttributes(newVPV, keyVPV) {
 	return newVPV;
 }
 
+/* The createInitialVersions function is responsible for creating and storing a new VisboProjectVersion (VPV). 
+If the new version is a "pfv" variant, the function also creates a base version from it. 
+Additionally, it updates the version count and optionally calculates key metrics for the project. 
+*/
+/* It returns
+		If an error occurs				the function calls errorHandler() and returns an error response.
+		If the variant is "pfv"			a base project version is created, and a success response is sent.
+		Otherwise,						a success response is sent after storing newVPV.
+*/
 function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 	logger4js.debug('Store VPV for vpid %s/%s ', newVPV.vpid.toString(), newVPV.name);
 	newVPV.timestamp = new Date();
@@ -223,7 +281,13 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 	});
 }
 
-
+/* The setErloesWithSumOfInvoice function calculates the total sum of all invoice keys from the phases and results of a VisboProjectVersion (vpv).
+If the sum is greater than 0, it assigns the total to vpv.Erloes. 
+*/
+/* It returns
+		The function modifies vpv in place by updating its Erloes attribute.
+		If vpv is null or undefined, the function returns immediately without making changes.
+*/
 function setErloesWithSumOfInvoice(vpv) {
 
 	var sumOfInvoice = 0;

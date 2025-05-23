@@ -10,7 +10,18 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 
-// check if Project has a valid lock
+// check if Project has a valid lock/* 
+
+ /* The lockStatus function checks whether a VisboProject (vp) is locked for a given user and variant. 
+It iterates through the lock array in vp and determines if an active lock exists for the specified variantName.
+If a lock is found, it checks whether the current user (useremail) is the one who locked it. 
+*/
+/* It returns
+result  	– An object indicating lock status:
+			false; lockindex: '-1'			If the project is not locked
+			false; lockindex: number		If the project is locked but by the same user (number = index in lock-array)
+			true; lockindex: number			If the project is locked by another user  (number = index in lock-array)
+*/
 function lockStatus(vp, useremail, variantName) {
 
 	logger4js.trace('lockedVP Check Lock for VP %s for User %s and Variant :%s: Locks %O', vp._id, useremail, variantName, vp.lock);
@@ -48,6 +59,9 @@ function lockCleanup(listLock) {
 	return listLockNew;
 }
 
+/* The cleanupAllVPLock function removes expired locks from all VisboProject records in the database. This is driven by System Tasks
+It determines the expiration threshold based on the last successful execution date (or a default date) and removes locks that have expired.
+ */
 function cleanupAllVPLock(task, finishedTask) {
 	logger4js.debug('cleanuplock Execute %s', task && task._id);
 	if (!task || !task.value) finishedTask(task, false);

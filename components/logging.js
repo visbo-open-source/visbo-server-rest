@@ -22,6 +22,13 @@ function setLogLevelConfig(newConfigDebug) {
 	// console.log('LOG LEVEL SET: %O', newConfigDebug)
 }
 
+
+/* The cleanupLogFiles function scans a logging directory,
+ identifies log files older than a specified age,
+ and deletes them.
+ It also removes empty log folders.
+ The function supports customizable log retention periods through task.specificValue.logAge.
+ */
 function cleanupLogFiles(task, finishedTask) {
 	logger4js.debug('cleanupLogFiles Execute %s', task && task._id);
 	if (!task || !task.value) finishedTask(task, false);
@@ -33,9 +40,9 @@ function cleanupLogFiles(task, finishedTask) {
 	deleteLogDate.setDate(deleteLogDate.getDate()-ageDays);
 	deleteLogDate.setHours(0, 0, 0, 0);
 
-	var dir = path.join(__dirname, '../logging');
+	var dir = path.join(__dirname, '../logging'); 	// directory for the localhost
 	if (process.env.LOGPATH != undefined) {
-		dir = process.env.LOGPATH;
+		dir = process.env.LOGPATH;					// directory on the servers on aws, defined in the env-file
 	}
 
 	logger4js.debug('Delete Log File from Directory: %s Date %s', dir, deleteLogDate);
@@ -99,6 +106,11 @@ function cleanupLogFiles(task, finishedTask) {
 	finishedTask(task, false);
 }
 
+/* The initLog4js function initializes and configures log4js, 
+ a logging framework, for a project. 
+ It sets up appenders, categories, and log levels, ensuring structured logging across different components.
+ The logs are stored in date-based files within the provided fsLogPath.
+*/
 function initLog4js(fsLogPath) {
 	if (!logObj) {
 		logConfig = {
