@@ -70,7 +70,7 @@ var validateNumber = function(numberValue, allowEmpty) {
 };
 
 // check if string has invalid content
-// validate a string to prevent XSS
+// validate a string (ObjectID) to prevent XSS
 var validateObjectId = function(id, allowEmpty) {
 	logger4js.trace('validate ObjectID: %s Allow empty %s', id, allowEmpty);
 	if (allowEmpty != true && !id) {
@@ -125,6 +125,14 @@ var validateEmail = function(email, allowEmpty) {
 	return true;
 };
 
+/* The convertNumber function converts a string representation of a number into a JavaScript Number. 
+   If the conversion fails due to a comma (,) instead of a decimal point (.), it replaces the comma 
+   with a dot and attempts conversion again.
+*/
+/*  Returns
+   Number value 			(if conversion is successful).
+   NaN (Not a Number) 		(if conversion fails). 
+*/
 function convertNumber(str) {
 	var result = Number(str);
 	if (isNaN(result) && str.indexOf(',') >= 0) {
@@ -134,6 +142,15 @@ function convertNumber(str) {
 	return result;
 }
 
+/* The compareDate function compares two dates and returns the difference in milliseconds. 
+   If either date is missing or undefined, it is replaced with the earliest possible JavaScript date (-8640000000000000 or Sat Sep 13 275760 BCE).
+*/
+/* Returns
+	number representing the difference between first and second in milliseconds:
+		positive number 			if first is later than second.
+		negative number 			if first is earlier than second.
+		Zero 						if both dates are the same. 
+*/
 function compareDate(first, second) {
 	if (first === undefined) { first = new Date(-8640000000000000); }
 	if (second === undefined) { second = new Date(-8640000000000000); }
@@ -142,24 +159,40 @@ function compareDate(first, second) {
 	return first.getTime() - second.getTime();
 }
 
+/* The isSameDay function compares two dates to check 
+   if they fall on the same calendar day, ignoring time differences.
+*/
+/* Returns
+			true 	→ If both dates are the same day.
+			false 	→ If the dates are different.
+			true	→ If both dateA and dateB are null or undefined.
+ */
 function isSameDay(dateA, dateB) {
 	if (!dateA && !dateB) { return true; }
-  if (!dateA || !dateB) { return false; }
-  const localA = new Date(dateA);
-  const localB = new Date(dateB);
-  localA.setHours(0, 0, 0, 0);
-  localB.setHours(0, 0, 0, 0);
-  return localA.toISOString() === localB.toISOString();
+	if (!dateA || !dateB) { return false; }
+	const localA = new Date(dateA);
+	const localB = new Date(dateB);
+	localA.setHours(0, 0, 0, 0);
+	localB.setHours(0, 0, 0, 0);
+	return localA.toISOString() === localB.toISOString();
 }
 
+/* The getBeginningOfMonth function returns the first day of the month for a given date. 
+   The time is set to midnight (00:00:00.000).
+*/
+/* Returns
+		Date object representing the first day of the month at midnight.
+*/
 function getBeginningOfMonth(dateA) {
 	if (dateA === undefined) { dateA = new Date(); }
 	var result = new Date(dateA);
-  result.setHours(0, 0, 0, 0);
-  result.setDate(1);
-  return result;
+	result.setHours(0, 0, 0, 0);
+	result.setDate(1);
+	return result;
 }
-
+/* The evaluateLanguage function determines the preferred language for a request (req) based on accepted languages. 
+   If no preferred language is detected, it defaults to English ("en").
+*/
 var evaluateLanguage = function(req) {
 	var lang;
 	if (req) {

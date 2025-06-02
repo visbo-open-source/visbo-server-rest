@@ -10,6 +10,14 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
 // Check the GroupId parameter from URL
+/* The getGroupId function is a middleware for an Express.js application. 
+   It validates and retrieves a group (VisboGroup) from the database based on a given groupId, vcid (Visbo Center Id), and vpid (Visbo Project Id). 
+   The retrieved group is then attached to the request (req.oneGroup) for further processing.
+
+   If the groupId, vcid, or vpid are invalid, or if the group is not found, the function returns an error response.
+   		Logs a warning.
+		Returns HTTP 400 Bad Request with { state: 'failure', message: 'No valid Group' }.   
+  */
 function getGroupId(req, res, next, groupId) {
 	var userId = req.decoded._id;
 	var vcid = req.params.vcid ? req.params.vcid : undefined;
@@ -51,6 +59,13 @@ function getGroupId(req, res, next, groupId) {
 	});
 }
 
+
+/* The checkUserId function is an Express.js middleware that validates a given user ID (userid). 
+   If the ID is valid, it allows the request to proceed; otherwise,
+   it returns HTTP 400 Bad Request    
+
+   This function ensures that only properly formatted MongoDB ObjectIDs are used in user-related requests. 
+*/
 function checkUserId(req, res, next, userid) {
 	logger4js.debug('Check UserID %s user %s for url %s ', userid, req.decoded.email, req.url);
 	if (!validate.validateObjectId(userid, false)) {
@@ -64,6 +79,12 @@ function checkUserId(req, res, next, userid) {
 }
 
 // get VC Groups used for viewing the project manager, we need all VC Groups with the user members
+/* The getVCGroups function is an Express.js middleware that retrieves Visbo Center (VC) and Visbo Project (VP) groups from the VisboGroup collection. 
+   It only executes if the request matches a specific pattern (GET /:vcid/user). 
+   If the conditions are not met, it skips execution and moves to the next middleware.
+
+	The retrieved groups are then attached to req.listVCGroup for later use.
+ */
 function getVCGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -97,6 +118,11 @@ function getVCGroups(req, res, next) {
 }
 
 // get VP Groups used for manage restrictions and for updating the project manager, we need all VP Groups not only the groups where the user is member of
+/* The getVPGroups function is an Express.js middleware that retrieves Visbo Project (VP) groups from the VisboGroup collection. 
+   It determines whether the request requires fetching VP groups based on request method (POST, PUT, GET) and URL structure.
+
+   If the request meets the criteria, it fetches groups from the database where vpids matches the given vpid and stores the result in req.listVPGroup for further processing.
+*/
 function getVPGroups(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');

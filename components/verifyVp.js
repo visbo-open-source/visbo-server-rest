@@ -17,6 +17,12 @@ var logger4js = log4js.getLogger(logModule);
 var VisboPermission = ConstPerm.VisboPermission;
 
 // Generate the Groups where the user is member of and has VP Permission
+/* The getAllGroups function is an Express.js middleware that retrieves Visbo Project (VP) and Visbo Center (VC) groups for the authenticated user. 
+   It determines the required vcid (VC ID) and vpid (VP ID) from the request URL, query parameters, or request body and then queries the VisboGroup collection.
+
+   The function also handles system administrators and applies permission filters to determine if the user has access to VC/VP groups. 
+   The retrieved groups and permissions are then attached to the request object (req.listVPPerm, req.listVCPerm) for further processing.
+*/
 function getAllGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var baseUrl = req.originalUrl.split('?')[0];
@@ -49,7 +55,7 @@ function getAllGroups(req, res, next) {
 	// handle sysadmin case
 	logger4js.debug('Generate VP Groups for user %s for url %s', req.decoded.email, req.url);
 	// var checkDeleted = req.query.deleted == true;
-	var query = {'users.userId': userId};	// search for VP groups where user is member
+	var query = {'users.userId': userId};				// search for VP groups where user is member
 	if (req.query.sysadmin) {
 		query.groupType = 'System';						// search for System Groups only
 		// MS TODO: only if reuqired to show VPs from deleted VCs
@@ -120,6 +126,11 @@ function getAllGroups(req, res, next) {
 	});
 }
 
+/* The getVPGroupsOfVC function is an Express.js middleware that retrieves Visbo Project (VP) groups associated with a Visbo Center (VC) for an authenticated user.
+
+   The function checks if the user already has permission for VPs within the VC. If so, it skips execution. Otherwise, 
+   it fetches additional VP groups from the database and attaches the permissions to req.listVPPerm and req.listVCPerm for further processing.
+*/
 function getVPGroupsOfVC(req, res, next) {
 	var userId = req.decoded._id;
 	// get permission groups for Portfolio to include also all VPs of the VC,
@@ -161,6 +172,11 @@ function getVPGroupsOfVC(req, res, next) {
 	});
 }
 
+/* The checkVpfid function is an Express.js middleware that validates a Project Portfolio ID (vpfid) and ensures 
+   it belongs to the currently selected Visbo Project (req.oneVP). 
+   If the vpfid is valid and the corresponding project portfolio exists, it is attached to req.oneVPF for further processing. 
+   Otherwise, the function returns an error response. 
+*/
 function checkVpfid(req, res, next, vpfid) {
 	var isSysAdmin = req.query.sysadmin ? true : false;
 
@@ -197,6 +213,10 @@ function checkVpfid(req, res, next, vpfid) {
 }
 
 // Get the VP with vpid including View Permission Check and others depending on parameters
+/* The getVP function is an Express.js middleware that retrieves a Visbo Project (VP) from the database, 
+   validates user permissions, and ensures that the requested VP is not from a deleted Visbo Center (VC). 
+   If the vpid is valid and the user has the required permissions, the function attaches the retrieved VP to req.oneVP for further processing.
+ */
 function getVP(req, res, next, vpid) {
 	var userId = req.decoded._id;
 	var isSysAdmin = req.query.sysadmin ? true : false;
@@ -251,6 +271,13 @@ function getVP(req, res, next, vpid) {
 	});
 }
 
+/* The squeezePortfolio function filters a portfolio list (list) to remove projects that the user does not have permission to view. 
+   It does this by checking each portfolio version in the list and removing projects (vp) for which the user lacks View (constPermVP.View) or 
+   ViewRestricted (constPermVP.ViewRestricted) permissions.
+
+   The function modifies the list in place, removing unauthorized projects from allItems.
+*/
+
 function squeezePortfolio(req, list) {
 	if (!req || !list || !(list.length > 0)) return;
 	var projectIDs = req.listVPPerm.getVPIDs(constPermVP.View + constPermVP.ViewRestricted);
@@ -270,6 +297,12 @@ function squeezePortfolio(req, list) {
 	}
 }
 
+/* The getVPTemplate function is an Express.js middleware that retrieves a Visbo Project (VP) template based on a vpid query parameter. 
+   It ensures the template is valid, belongs to the correct Visbo Center (vcid), and is not deleted. Additionally, 
+   if the template has versions (vpvCount > 0), it fetches the latest Visbo Project Version (VPV).
+
+   If the requested VP template is invalid or the user lacks permission, the function returns an error response. 
+*/
 function getVPTemplate(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -356,6 +389,12 @@ function getVPTemplate(req, res, next) {
 }
 
 // Get the organisations for keyMetrics calculation
+/* The getVPOrgs function is an Express.js middleware that retrieves an organization for a Visbo Project (VP) during project creation. 
+   If a VP Template (vpid) is specified in the request query, the function fetches key metrics for the initial version.
+
+   The function ensures that the Visbo Center (vcid) is specified, and if valid, 
+   calls verifyVc.getVCOrganisation() to retrieve the corresponding organization. 
+*/
 function getVPOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	// fetch the organization in case of POST VP to calculate keyMetrics for the initial version
@@ -363,7 +402,7 @@ function getVPOrgs(req, res, next) {
 	let skip = true;
 	let withCapa = false;
 	if (req.method == 'POST' && baseUrl == '/vp') {	// create VP request
-		if (req.query.vpid) { // with a VP Template that requires keyMetrics calculation
+		if (req.query.vpid) { 						// with a VP Template that requires keyMetrics calculation
 			skip = false;
 		}
 	}

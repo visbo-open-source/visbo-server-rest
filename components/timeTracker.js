@@ -12,6 +12,13 @@ async function createTimeEntry(userId, transaction) {
     return timeTracker;
 }
 
+/* The updateMany function processes a list of time tracking entries that need to be updated with an approval date, approval ID, and status. 
+It validates each entry before updating it and returns an array of successfully updated entries.
+ */
+/* Returns
+        array of updated TimeTracker entries    (if updates were successful).
+        empty array                             (if no entries were updated or approvalList is empty/null). 
+*/
 async function updateMany(transaction) {
     const list = transaction.approvalList;
     const array = [];
@@ -31,6 +38,13 @@ async function updateMany(transaction) {
     return array;
 }
 
+/* The updateTimeEntry function updates a single time tracking entry in the TimeTracker collection. 
+Before updating, it validates the entry's status using validateStatus(id). If validation fails, it logs an error and do not change anything.
+ */
+/* Returns
+        The updated time entry  - if successful
+        undefined               - if validation fails or the update is unsuccessful
+ */
 async function updateTimeEntry(id, transaction) {
     var canUpdate = validateStatus(id);
     if (canUpdate) {
@@ -43,11 +57,17 @@ async function updateTimeEntry(id, transaction) {
     }
 }
 
+/* The deleteTimeEntry function deletes a time tracking entry from the TimeTracker collection based on the provided ID. 
+It returns the deleted entry if successful.
+ */
 async function deleteTimeEntry(id) {
     var timeEntry = await TimeTracker.findByIdAndRemove(id);
     return timeEntry;
 }
 
+/* The validateStatus function checks the status of a time tracking entry in the TimeTracker collection.
+It ensures that an entry cannot be updated if its status is "Yes".
+*/
 async function validateStatus(id) {
     var entry = TimeTracker.findById(id);
     if (entry.status === 'Yes') {
@@ -57,6 +77,14 @@ async function validateStatus(id) {
     }
 }
 
+
+/* The getTimeEntry function retrieves time tracking records for a specified user. It filters records based on status, date range, 
+and ensures that deleted records and records from deleted VCs are not returned.
+*/
+/* Returns
+            array of time tracking records       - if records are found
+            empty array                          - if no matching records exist 
+*/
 async function getTimeEntry(userId, status, startDate, endDate) {
     var query = {};
 	query.userId = userId;
@@ -78,7 +106,13 @@ async function getTimeEntry(userId, status, startDate, endDate) {
     return timeEntry ? timeEntry : [];
 }
 
-
+/* The getTimeTrackerRecords function retrieves time tracking records from the TimeTracker collection using an aggregation query. 
+It sorts records based on various fields and then filters them based on vcid, vpid, and userId.
+*/
+/* Returns
+        array of time tracking records      (if found).
+        empty array                         (if no records match the criteria).
+ */
 function getTimeTrackerRecords(vcid, vpid, userId, status) {
 	var query = {};
     var listVTR = [];
@@ -99,8 +133,15 @@ function getTimeTrackerRecords(vcid, vpid, userId, status) {
 async function findEntry(id) {
     const entryForUpdate = await TimeTracker.findById(id);
     return entryForUpdate ? entryForUpdate : [];
-}
 
+}
+/* The getSettings function retrieves organization settings for a given user based on their email address from the VCSettings collection. 
+It filters settings where the email appears in the value.allRoles field.
+ */
+/* Returns
+        array of settings         (if found).
+        empty array              (if no matching settings exist). 
+*/
 async function getSettings(email) {
     //var settingList = await VCSettings.find({"type": "organisation", 'value.allRoles': {$elemMatch: { 'email': email, 'isSummaryRole': { $exists: true }}}});	
     var settingList = await VCSettings.find({"type": "organisation", 'value.allRoles': {$elemMatch: { 'email': email}}}).lean();	
@@ -108,7 +149,13 @@ async function getSettings(email) {
     return settingList;
 }
 
-
+/* The isOrgaRoleinternPerson function determines whether a given role represents an internal person within an organization. 
+It returns true if the role is not a summary role, has no sub-roles, and is not marked as external.
+*/
+/* Returns
+        true        (if the role qualifies as an internal person).
+        false       (otherwise, or if the role object is missing/invalid).
+ */
 function isOrgaRoleinternPerson(role) {
     var result = false;
 
@@ -118,10 +165,16 @@ function isOrgaRoleinternPerson(role) {
         const isExternal = role.isExternRole ? role.isExternRole : false;
         result = (!isSummaryRole && !hasSubRoles && !isExternal);
     }
-
     return result;
 }
 
+/* The generateIndexedRoles function converts an array of roles into an indexed object (associative array) 
+where each role is stored under its unique uid key. This makes lookup operations more efficient.
+*/
+/* Returns
+        object                      where keys are uid values and values are role objects.
+        empty object {}             if allRoles is null or undefined.
+ */
 function generateIndexedRoles(allRoles) {
 	let listOrga = [];
 	if (!allRoles) {
@@ -132,7 +185,20 @@ function generateIndexedRoles(allRoles) {
 	});
 	return listOrga;
 }
+/* The generateIndexedTimeRecords function organizes a list of time records by vpid (Visbo Project ID) into an indexed structure. 
+It also allows retrieving a list of unique vpids when returnVPIDlist is true.
+*/
+/* Returns
+        object indexed by vpid  (if returnVPIDlist == false):
+            {
+                "vp1": [ { vpid: "vp1", userId: "user123", date: "2024-02-18", hours: 5 } ],
+                "vp2": [ { vpid: "vp2", userId: "user456", date: "2024-02-19", hours: 3 } ]
+            }
+        array of unique vpids   (if returnVPIDlist == true):
+            [ "vp1", "vp2" ]
 
+        empty array {} or []    if timerecordList is empty or null.
+*/
 function generateIndexedTimeRecords(timerecordList, returnVPIDlist) {
     var indexedTimeRecords = [];
     var vpIDList = [];
@@ -150,6 +216,16 @@ function generateIndexedTimeRecords(timerecordList, returnVPIDlist) {
     }
 }
 
+/* The filterSubRoles function filters and retrieves all sub-roles associated with a summary role for a given email within a vcid. 
+It recursively checks and collects sub-roles, ensuring that only internal person roles are included.
+*/
+/* Returns
+        array of objects, where each object contains:
+                [
+                    { vcid: "123", subRoles: [{ uid: "role456", name: "Manager" }, { uid: "role789", name: "Employee" }] }
+                ]
+        empty array []      if no sub-roles are found 
+*/
 async function filterSubRoles(list, email, vcid) {
     const subRolesList = [];
     let listSubRoles = [];
@@ -189,8 +265,17 @@ async function filterSubRoles(list, email, vcid) {
     return subRolesList;
 }
 
-
-
+/* The findSubRolesTimeTracker function retrieves time tracking records for a given list of roles within a specified date range.
+ It calls the parseRoles function for each role, collects the results, and flattens the final array.
+*/
+/* Returns
+        array of time tracking entries for the given roles:
+            [
+                { roleId: "role1", userId: "user123", date: "2024-02-18", hours: 5 },
+                { roleId: "role2", userId: "user456", date: "2024-02-19", hours: 3 }
+            ]
+        empty array []          If no entries are found
+ */
 async function findSubRolesTimeTracker(roles, startDate, endDate) {
     const subRoleEntries = [];
     for (let role of roles) {
@@ -202,6 +287,19 @@ async function findSubRolesTimeTracker(roles, startDate, endDate) {
     return subRoleEntries.flat();
 }
 
+/* The parseRoles function retrieves time tracking records from the TimeTracker collection for each sub-role within a specified date range. It ensures that:
+        - Only entries within the provided startDate and endDate are retrieved.
+        - Only active time entries (deletedAt does not exist) are returned.
+        - No time entries from deleted VCs are included. 
+*/
+/* Returns
+        array of time tracking entries:
+            [
+                { roleId: "role1", userId: "user123", date: "2024-02-18", hours: 5 },
+                { roleId: "role2", userId: "user456", date: "2024-02-19", hours: 3 }
+            ]
+        empty array [].         If no records are found
+*/
 async function parseRoles(lists, startDate, endDate) {
     const arrayList = [];
     for (let item of lists.subRoles) {
@@ -226,17 +324,17 @@ async function parseRoles(lists, startDate, endDate) {
     return arrayList.flat();
 }
 
-async function verifyManager(vpid, email, roleId) {
-    const vp = await VCSettings.findOne({ vpid: vpid, type: 'organisation' });
-    const role = vp.value.allRolles.find((item) => item.email === email);
-    const subRoles = role.subRoleIDs.find((value) => value.key === roleId);
-    if (subRoles) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
+// async function verifyManager(vpid, email, roleId) {
+//     const vp = await VCSettings.findOne({ vpid: vpid, type: 'organisation' });
+//     const role = vp.value.allRolles.find((item) => item.email === email);
+//     const subRoles = role.subRoleIDs.find((value) => value.key === roleId);
+//     if (subRoles) {
+//         return true;
+//     }
+//     else {
+//         return false;
+//     }
+// }
 
 module.exports = {
     createTimeEntry,

@@ -19,6 +19,11 @@ var logger4js = log4js.getLogger(logModule);
 var VisboPermission = ConstPerm.VisboPermission;
 
 // Calculate the oneVP if a vpid is specified
+/* The getOneVP function is an Express.js middleware that retrieves a single Visbo Project (VP) based on the request method and parameters. 
+   It identifies the vpid (VP ID) from either the query parameters (GET requests) or request body (POST requests) 
+   and then queries the database to retrieve the corresponding VP. 
+   If found, it attaches the retrieved project to req.oneVP for further processing.
+*/
 function getOneVP(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 
@@ -57,6 +62,13 @@ function getOneVP(req, res, next) {
 }
 
 // Generate the Groups where the user is member of and has VP Permission
+/* The getAllVPVGroups function is an Express.js middleware that retrieves Visbo Project Version (VPV) groups for the authenticated user. 
+   It ensures that the user is a member of at least one VP group and checks permissions for accessing specific projects (vpid) or system-level permissions (sysadmin).
+
+   The function constructs a query based on request parameters (e.g., vcid, vpid, sysadmin) 
+   and fetches the relevant groups from the VisboGroup collection. 
+   The retrieved groups are then processed into a permission list (req.listVPPerm) for further middleware execution.
+*/
 function getAllVPVGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var baseUrl = req.url.split('?')[0];
@@ -91,7 +103,7 @@ function getAllVPVGroups(req, res, next) {
 	// Permission check for GET & POST
 	if (req.method == 'GET') {
 		if (req.query.sysadmin) {
-			query.groupType = 'System';						// search for System Groups only
+			query.groupType = 'System';						 	// search for System Groups only
 			specificSystem = true;
 		} else {
 			checkPerm = checkPerm | constPermVP.ViewRestricted;
@@ -105,11 +117,11 @@ function getAllVPVGroups(req, res, next) {
 				message: 'No valid Project ID defined'
 			});
 		}
-		query.groupType = {$in: ['VC', 'VP']};				// search for VP and VC Groups only
+		query.groupType = {$in: ['VC', 'VP']};					// search for VP and VC Groups only
 		query.vpids = req.body.vpid;
 		specificVPID = req.body.vpid;
 	} else {
-		query.groupType = {$in: ['VC', 'VP']};				// search for VP and VC Groups only
+		query.groupType = {$in: ['VC', 'VP']};					// search for VP and VC Groups only
 	}
 
 	logger4js.debug('Query VGs %s', JSON.stringify(query));
@@ -163,6 +175,15 @@ function getAllVPVGroups(req, res, next) {
 }
 
 // Add the VC Groups to check Permission for Organisation
+/* The getVCGroups function is an Express.js middleware that retrieves Visbo Center (VC) groups for an authenticated user 
+   when querying specific cost-related or capacity-related endpoints. It ensures that the user has view permissions for the corresponding VC before proceeding.
+
+   The function:
+		- Extracts the vcid (Visbo Center ID) from req.oneVP.
+		- Checks if the user already has global VC view permission.
+		- Queries the database to fetch VC groups for local permissions.
+		- Validates permissions and restricts access if necessary. 
+*/
 function getVCGroups(req, res, next) {
 	var userId = req.decoded._id;
 	var baseUrl = req.url.split('?')[0];
@@ -226,6 +247,16 @@ function getVCGroups(req, res, next) {
 
 
 // Get the VPV for the specific vpvid
+/* The getVPV function is an Express.js middleware that retrieves a specific Visbo Project Version (VPV) based on the provided vpvid. 
+   It ensures that:
+		- The vpvid is valid.
+		- The user has permission to access the requested VPV.
+		- The associated Visbo Project (VP) and Visbo Center (VC) are not deleted.
+		- Permissions for system administrators (sysadmin) are enforced.
+   Once the VPV is retrieved, it is attached to req.oneVPV. 
+   If the URL specifies keyMetrics, cost, capacity, or costtypes, the function fetches additional organization details using 
+   verifyVc.getVCOrganisation().
+*/
 function getVPV(req, res, next, vpvid) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -331,6 +362,13 @@ function getVPV(req, res, next, vpvid) {
 
 
 // Get the organisations for calculation
+
+/* The getVPVOrgs function is an Express.js middleware that retrieves the organization (VC) associated with a Visbo Project Version (VPV). 
+   It executes only for POST or PUT requests targeting vpv, ensuring that key metrics can be calculated.
+
+   If the VC (vcid) cannot be identified, 		the function returns a HTTP 400 Bad Request error. 
+   Otherwise, 									it calls verifyVc.getVCOrganisation() to fetch the VC organization details.
+*/
 function getVPVOrgs(req, res, next) {
 	var baseUrl = req.originalUrl.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -356,6 +394,14 @@ function getVPVOrgs(req, res, next) {
 }
 
 // Generate the Portfolio List of VPs and the List of VPs including the Variant
+/* The getPortfolioVPs function is an Express.js middleware that retrieves the list of Visbo Projects (VPs) associated with a Visbo Portfolio (VPF).
+   It ensures that:
+		- The request targets valid portfolio-related routes (/vpv or /vp/:vpid/...).
+		- The provided vpfid (Portfolio ID) is valid.
+		- The user has permission to access the portfolio.
+		- The portfolio contains valid projects.
+   Once the VPs are retrieved, they are attached to req.listPortfolioVP (a list of project IDs) and req.listPortfolioVPVariant (a list of project IDs with variant names).
+*/
 function getPortfolioVPs(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.originalUrl.split('?')[0];
@@ -431,6 +477,16 @@ function getPortfolioVPs(req, res, next) {
 }
 
 // Get the base line (pfv) for keyMetrics calculation
+/* The getVPVpfv function is an Express.js middleware that retrieves the "pfv" (Portfolio Forecast Version) of a Visbo Project Version (VPV). 
+   This function is executed only during POST requests when creating a new VPV to fetch a baseline version (pfv) for key metric calculations.
+
+   It ensures that:
+		- The request is a POST request and does not include "pfv" as a variant name.
+		- The vpid (Visbo Project ID) is valid.
+		- A valid timestamp (timestamp) is provided (or uses the current time).
+		- The most recent pfv version is retrieved from the database.
+If a matching baseline version (pfvVPV) exists, it is attached to req.visboPFV for further processing.
+*/
 function getVPVpfv(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.url.split('?')[0];
@@ -480,6 +536,17 @@ function getVPVpfv(req, res, next) {
 	});
 }
 
+
+/* The getVPVwoPerm function is an Express.js middleware that retrieves a Visbo Project Version (VPV) without checking user permissions. 
+   This function is designed to fetch basic metadata about a specific VPV before performing further permission checks or additional processing.
+
+   Key Features
+		- Extracts vpvid (Project Version ID) from the URL.
+		- Validates vpvid to ensure it's a valid ObjectID.
+		- Queries the database to fetch the corresponding VPV.
+		- Attaches the retrieved VPV to req.oneVPV for later use.
+		- Sets req.query.vpid if it's not already provided (to speed up permission checks). 
+*/
 function getVPVwoPerm(req, res, next) {
 	var baseUrl = req.url.split('?')[0];
 	var urlComponent = baseUrl.split('/');
@@ -518,6 +585,16 @@ function getVPVwoPerm(req, res, next) {
 	});
 }
 
+
+/* The getAllVPVsShort function is an Express.js middleware that retrieves all short versions of a Visbo Project Version (VPV) when performing a DELETE or PUT request. 
+   This function ensures data consistency by fetching all versions of a Visbo Project (VP) before modifying or deleting a specific VPV.
+
+   Key Features
+		- Executes only for DELETE or PUT requests.
+		- Retrieves all VP versions (VPVs) related to req.oneVPV.vpid (if available).
+		- Ensures deleted versions are excluded from the query.
+		- Attaches the retrieved VPVs to req.visboAllVPVs for further processing.
+ */
 function getAllVPVsShort(req, res, next) {
 	if (req.method == 'DELETE' || req.method == 'PUT') {
 		logger4js.trace('GET AllVPVsShort');
@@ -549,6 +626,16 @@ function getAllVPVsShort(req, res, next) {
 }
 
 // Get the current base line (pfv) for keyMetrics calculation
+/* The getCurrentVPVpfv function is an Express.js middleware that retrieves the "pfv" (Portfolio Forecast Version) of a Visbo Project Version (VPV). 
+   This function is executed when an authorized user requests the latest "pfv" version of a VPV before a given timestamp.
+
+   Key Features
+		- Extracts timestamp from the request body (POST) or req.oneVPV.timestamp.
+		- Validates the timestamp to ensure it is correctly formatted.
+		- Checks if the user has View permissions for the Visbo Project (VP).
+		- Fetches the latest pfv version before the given timestamp.
+		- Attaches the retrieved pfv version to req.visboPFV for further processing. 
+*/
 function getCurrentVPVpfv(req, res, next) {
 	var startCalc = new Date();
 	var timestamp = req.method == 'POST' ? req.body.timestamp : req.oneVPV.timestamp;
@@ -592,6 +679,14 @@ function getCurrentVPVpfv(req, res, next) {
 }
 
 // Get vpvs of the Portfolio Version related to refDate for capacity calculation
+/* The getVPFVPVs function is an Express.js middleware that retrieves Visbo Project Versions (VPVs) associated with a Virtual Portfolio (VPF). 
+   It ensures that:
+		- The user has permission to view the project versions.
+		- The latest versions of VPVs are retrieved up to a specified reference date (refDate).
+		- If filtering by portfolio (req.listPortfolioVPVariant) is enabled, only VPVs belonging to the portfolio are considered.
+		- The most recent unique VPVs per project variant are selected.
+   The retrieved filtered VPVs are stored in req.listVPV for further processing. 
+*/
 function getVPFVPVs(req, res, next) {
 	var userId = req.decoded._id;
 
@@ -688,6 +783,15 @@ function getVPFVPVs(req, res, next) {
 }
 
 // Get pfv-vpvs of the Portfolio Version related to refDate for capacity/costInformation calculation
+/* The getVPFPFVs function is an Express.js middleware that retrieves Portfolio Forecast Versions (pfv) of Visbo Project Versions (VPV) for a given Visbo Portfolio (VPF). 
+   It ensures that:
+		- The request includes a pfv parameter to trigger Portfolio Forecast Version calculations.
+		- The reference date (refDate) is valid if provided.
+		- Only projects the user has permission to view are included.
+		- Only projects belonging to the requested portfolio are included.
+		- The most recent unique pfv VPVs per project variant are selected.
+   The retrieved filtered Portfolio Forecast VPVs are stored in req.listVPVPFV for further processing. 
+*/
 function getVPFPFVs(req, res, next) {
 	var userId = req.decoded._id;
 
@@ -777,6 +881,15 @@ var findVPVariantList = function(arrayItem) {
 };
 
 // Get vpvs of the VC related to refDate for capacity calculation
+/* The getVCVPVs function is an Express.js middleware that retrieves Visbo Project Versions (VPVs) associated with a Visbo Company (VC). 
+   This function ensures that:
+		- The reference date (refDate) is valid if provided.
+		- Only projects the user has permission to view are included.
+		- Only projects belonging to the requested VC (req.listVCVP) are considered.
+		- Both standard ('') and Portfolio Forecast Versions ('pfv') are retrieved.
+		- The most recent unique VPVs per project variant are selected.
+  The retrieved filtered VPVs are stored in req.listVPV (for standard VPVs) and req.listVPVPFV (for pfv versions) for further processing. 
+*/
 function getVCVPVs(req, res, next) {
 	var userId = req.decoded._id;
 
