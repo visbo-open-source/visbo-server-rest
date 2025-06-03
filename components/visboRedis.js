@@ -13,6 +13,18 @@ var currentPort = 6379;
 var maxErrorLog = 5;
 
 // Initialise Redis
+/* The VisboRedisInit function is responsible for initializing and managing a Redis client connection. 
+   It:
+		- Creates a Redis client if not already initialized.
+		- Handles host and port changes dynamically.
+		- Checks Redis connection status and logs errors appropriately.
+		- Returns the Redis client instance for use.
+	Key Features
+	✔️ Ensures a Redis client is initialized only once.
+	✔️ Handles Redis connection errors and logs warnings.
+	✔️ Reinitializes Redis when the host or port changes.
+	✔️ Returns the Redis client instance for external use. 
+*/
 function VisboRedisInit(host, port) {
 
 	host = host || currentHost;

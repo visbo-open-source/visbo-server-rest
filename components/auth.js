@@ -17,6 +17,17 @@ var jwtSecret = require('./../secrets/jwt');
 var pwPolicy = undefined;
 var pwPolicyPattern = undefined;
 
+/* The isAllowedPassword function validates a given password against a dynamically retrieved password policy.
+
+It:
+	Retrieves the password policy from:
+		Database (getSystemVCSetting('PW Policy')), if available.
+		Environment variable (process.env.PWPOLICY), as a fallback.
+		A default regex pattern, if neither of the above exists.
+	Compiles the password policy regex (pwPolicyPattern) if it is not already set.
+	Validates the given password against the compiled regex pattern.
+This function helps enforce security standards for passwords. */
+
 var isAllowedPassword = function(password){
 
 	if (!password) return false;
@@ -41,6 +52,22 @@ var isAllowedPassword = function(password){
 	var result = password.match(pwPolicyPattern);
 	return result;
 };
+
+/* The verifyUser function is a middleware for user authentication in an Express.js application. It verifies an access token (access-key or api-key) provided in the request headers.
+It:
+	Extracts and validates the token from the request headers.
+	Decodes the token using JWT (jsonwebtoken).
+	Checks for session hijacking risks by comparing the IP address and User-Agent.
+	Verifies that the session has not been terminated using Redis.
+	Allows access to the next middleware if authentication is successful. */
+
+/* 	It returns
+	Calls next() if authentication is successful.
+	Sends an HTTP response (401 Unauthorized or 500 Internal Server Error) if:
+		The token is missing or invalid.
+		The session is deemed compromised (e.g., IP/User-Agent mismatch).
+		The session has been explicitly terminated in Redis.
+ */
 
 // Verify User Authentication
 function verifyUser(req, res, next) {
@@ -119,6 +146,11 @@ function verifyUser(req, res, next) {
   }
 }
 
+/* The isApprover function checks if a user is an approver based on their email address. 
+It queries the VCSettings collection for an organization where the user has a role with the isSummaryRole flag set to true.
+
+This function is asynchronous and returns a boolean result. */
+
 // check if User is an Approver within all VC-organisations, he has access
 var isApprover = async function (email) {
 	var result = undefined;
@@ -132,6 +164,17 @@ var isApprover = async function (email) {
 
 
 // Verify User Authentication
+/* The verifyOTT function is a middleware for verifying a One-Time Token (OTT) in an Express.js application. 
+It checks whether the provided OTT is valid, ensuring that it:
+
+	Exists in the request body (req.body.ott).
+	Can be successfully decoded using JWT (jsonwebtoken).
+	Matches the session’s IP address to prevent token hijacking.
+	Has not been terminated (via Redis validation).
+	Deletes the OTT after successful validation to ensure it is only used once.
+
+If all checks pass, the function attaches the decoded OTT to the request (req.decoded) and calls next() to proceed. */
+
 function verifyOTT(req, res, next) {
 
 	var ott = req.body.ott;

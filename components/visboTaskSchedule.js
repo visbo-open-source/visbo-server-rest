@@ -23,7 +23,21 @@ var refreshSystemSetting = require('./../components/systemVC').refreshSystemSett
 var getSystemVCSetting = require('./../components/systemVC').getSystemVCSetting;
 var vcSystemId = undefined;
 
-//Create an event handler:
+/* The finishedTask function is responsible for marking a task as completed in the VCSetting collection. 
+   It:
+    - Logs task completion details.
+    - Updates the task's lastRun timestamp and duration in the database.
+    - Removes the lockedUntil field to unlock the task for future execution.
+    - Optionally updates taskSpecific details if present.
+    - Creates an audit entry (unless ignoreAudit is set to true).
+  Key Features
+    ✔️ Logs task completion with timestamps.
+    ✔️ Calculates task duration (lastDuration).
+    ✔️ Unlocks the task (unset lockedUntil) for future execution.
+    ✔️ Updates the lastRun timestamp.
+    ✔️ Optionally updates taskSpecific details.
+    ✔️ Triggers an audit log unless ignoreAudit is true. 
+*/
 function finishedTask(task, ignoreAudit) {
   logger4js.trace('Task Finished, Task (%s/%s)', task && task.name, task && task._id);
   if (!task || !task.value) {
@@ -51,6 +65,10 @@ function finishedTask(task, ignoreAudit) {
   if (!ignoreAudit) createTaskAudit(task, duration);
 }
 
+/* The createTaskAudit function is responsible for generating an audit entry for a completed task. 
+   It validates the task data, constructs an audit entry, and saves it to the system. 
+   If the task data is missing or incomplete, a warning is logged, and no audit entry is created.
+*/
 function createTaskAudit(task, duration) {
   if (!task || !task.value || !task.value.taskSpecific) {
     logger4js.warn('Finished Task Audit no Values');
@@ -85,6 +103,10 @@ function createTaskAudit(task, duration) {
   });
 }
 
+
+/* The checkNextRun function is responsible for managing the execution of scheduled tasks in the VISBO system. 
+   It retrieves all tasks that are due for execution, evaluates their conditions, updates their scheduling parameters, and executes necessary operations accordingly.
+*/
 function checkNextRun() {
   // mongoose.set('debug', true)
 	logger4js.trace('VISBO Task Schedule, check what to start');
@@ -215,6 +237,9 @@ function checkNextRun() {
   });
 }
 
+/* The taskTest function is a utility function used for testing task execution in the VISBO system. 
+   It ensures that the provided task object is processed, updates specific task-related properties, and marks the task as completed.
+ */
 function taskTest(task, finishedTask) {
   if (!task && !task.value) {
     finishedTask(task, true);
@@ -228,6 +253,8 @@ function taskTest(task, finishedTask) {
   logger4js.debug('TaskTest Done %s Result %O', task._id, task.value.taskSpecific);
 }
 
+/* The visboTaskScheduleInit function initializes the VISBO task scheduling system by periodically checking for tasks that need to be executed. 
+*/
 function visboTaskScheduleInit() {
 	logger4js.trace('VISBO Task Schedule Init! ');
 	setInterval(checkNextRun, 5000);

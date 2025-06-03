@@ -8,6 +8,19 @@ var logModule = 'VC';
 var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 
+
+/* The initOrga function initializes a new organization (VCOrganisation) by validating and processing role data from an input orga object.
+It:
+	Validates input data (roles, costs, structure).
+	Checks and corrects role properties (e.g., email, daily rate, capacities).
+	Ensures data integrity by comparing with the oldOrga (previous organization state).
+	Logs and collects errors in listError when inconsistencies are found.
+This function ensures that organizational roles and cost structures remain consistent and valid over time. */
+/* It returns
+	newOrga		The initialized VCOrganisation object (if valid).
+	undefined	If validation fails, returns undefined and logs errors.
+ */
+
 function initOrga(orga, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
@@ -75,12 +88,7 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 		if (role.email) {
 			newRole.email = role.email;
 		} 
-		// if (!newRole.isSummaryRole && !newRole.email) {
-		// 	errorstring = `Orga Role has to have email: uid: ${newRole.uid} email: ${newRole.dailyRate}`;
-		// 	listError?.push(errorstring);
-		// 	logger4js.info('InitOrga: ', errorstring);
-		// 	isOrgaValid = false;
-		// }	
+		
 		newRole.dailyRate = role.dailyRate;
 		// check Rule3: orga units need to have a valid dailyRate
 		if (!(newRole.dailyRate >= 0)) {
@@ -253,6 +261,14 @@ function initOrga(orga, timestamp, oldOrga, listError) {
 }
 
 // calculate the aggregationID for this orga unit for a summary role, either the folder itself or the first parent that has isAggregation set
+
+/* The calcAggregationID function determines the aggregation ID for a given role within an organizational structure.
+It:
+	Checks if the role is a summary role (isSummaryRole: true).
+	Traverses up the hierarchy (pid chain) to find the nearest role marked as isAggregationRole: true.
+	Returns the found aggregation role's uid or defaults to the role's own uid if none exists.
+This function is used to assign aggregation IDs to roles in hierarchical organizational structures. */
+
 function calcAggregationID(role, indexedOrga) {
 		if (!role?.isSummaryRole) {
 			return undefined;
@@ -270,6 +286,15 @@ function calcAggregationID(role, indexedOrga) {
 }
 
 // gets the maxID for Role or Cost either as a stored property or by calculation of the max value
+
+/* The getMaxID function retrieves the highest UID for roles or costs in an organization (orga).
+It:
+	Validates if orga exists (returns 0 if not provided).
+	Determines whether to search for maxRoleID or maxCostID based on type:
+	Type 1 or 2 → Search in allRoles.
+	Other types → Search in allCosts.
+	Returns the maximum ID found, either from maxRoleID/maxCostID or by iterating through the allRoles/allCosts arrays. */
+
 function getMaxID(orga, type) {
 	var result = 0;
 	if (!orga) {
@@ -295,6 +320,13 @@ function getMaxID(orga, type) {
 	return result;
 }
 
+/* The generateIndexedOrgaRoles function creates an indexed dictionary (object) of roles from an organization's allRoles array.
+It:
+	Validates the input orga object (returns an empty object if invalid).
+	Iterates through orga.allRoles and maps each role's uid to the role object.
+	Returns the indexed object, allowing faster lookups by uid.
+
+This function is useful for quick role retrieval in hierarchical organization structures. */
 function generateIndexedOrgaRoles(orga) {
 	let listOrga = [];
 	if (!orga?.allRoles) {
@@ -311,6 +343,20 @@ function getFullPath(role) {
 	return role.path.concat(role.name || '');
 }
 
+/* The initOrgaFromList function initializes an organization (VCOrganisation) from a list of roles and costs, ensuring data integrity, 
+role hierarchy, and unique identifiers.
+It:
+	Validates the input organization list (orgaList).
+	Processes roles and costs, ensuring correct IDs, hierarchy, and attributes.
+	Checks for data integrity, including email validation, duplicate names, and hierarchy consistency.
+	Links roles and costs to their respective parents for correct hierarchical relationships.
+	Performs final validation checks before returning a new VCOrganisation.
+This function ensures that organizational data is properly structured and error-free.
+ */
+/* Returns
+	newOrga		A newly initialized VCOrganisation object (if validation is successful).
+	undefined	if validation fails, returns undefined and logs errors. 
+*/
 function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	var minDate = new Date('0001-01-01T00:00:00.000Z');
 	var maxDate = new Date('2200-01-01');
@@ -636,6 +682,18 @@ function initOrgaFromList(orgaList, timestamp, oldOrga, listError) {
 	return isOrgaValid ? newOrga : undefined;
 }
 
+/* The checkOrgaUnitDelete function validates if roles from an old organization (oldOrga) have been improperly deleted in a new organization (newOrga).
+It:
+	Checks for missing roles in newOrga that were in oldOrga.
+	Allows deletion if the role's exitDate is older than three months.
+	Allows renaming of roles but ensures the uid remains unchanged.
+	Logs errors if roles are deleted without proper justification.
+This function prevents unintended role deletions and ensures data integrity in organizational updates. 
+*/
+/* It returns
+	true		If all deletions are valid.
+	false		If invalid deletions are found (logged in listError). 
+*/
 function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 	var isOrgaValid = true;
 	var errorstring;
@@ -686,6 +744,21 @@ function checkOrgaUnitDelete(newOrga, oldOrga, uniqueRoleNames, listError) {
 }
 
 // reduce orga to a flat list with parent reference
+
+/* The reduceOrga function processes an organization's roles and costs into a simplified, structured list (allUnits).
+It:
+	Validates the input organization (orga).
+	Extracts roles from orga.allRoles and organizes them into a structured format.
+	Links sub-roles, teams, and costs to maintain hierarchy.
+	Duplicates team members and assigns them proper attributes.
+	Processes orga.allCosts to build a cost hierarchy.
+	Sorts the final allUnits list based on type and name.
+This function transforms a complex organization structure into a compact, hierarchical format. 
+*/
+/* It returns
+	allUnits	A structured array of roles and costs with parent-child relationships.
+	[]			If orga is missing or empty.
+ */
 function reduceOrga(orga) {
 	var allUnits = [];
 	var minDate = new Date('0001-01-01');
@@ -833,6 +906,15 @@ function reduceOrga(orga) {
 	return allUnits;
 }
 
+/* The convertSettingToOrga function transforms a setting object into an organizational structure (resultOrga).
+It:
+	Extracts essential metadata (_id, name, timestamp, vcid).
+	Formats organizational data based on getListFormat:
+	If getListFormat is true → Calls reduceOrga(setting.value) to produce a simplified, structured list.
+	Otherwise → Directly copies allRoles and allCosts.
+This function is useful for handling organization settings and converting them into different formats.
+ */
+
 function convertSettingToOrga(setting, getListFormat) {
 	var resultOrga = {};
 	resultOrga._id = setting._id;
@@ -848,7 +930,20 @@ function convertSettingToOrga(setting, getListFormat) {
 	}
 	return resultOrga;
 }
-
+/* 
+The getParent function extracts the direct parent name from a given hierarchical path, ignoring trailing slashes and ensuring the child itself is not returned.
+It:
+	Splits the path into parts using / as a delimiter.
+	Reverses the parts to search from the end.
+	Finds the first valid parent name, skipping:
+	Empty strings ('') from extra slashes.
+	The childName itself.
+This function is useful for retrieving hierarchical parent relationships in organizational structures, file paths, or category trees. 
+*/
+/* Returns
+	parentName		The direct parent name from the path.
+	''				If no valid parent exists. 
+*/
 function getParent(path, childName) {
 	// get the direct parent from path independent how many slashes were at the end
 	if (!path) return '';
@@ -858,6 +953,17 @@ function getParent(path, childName) {
 	return result;
 }
 
+/* The calcFullPath function calculates the full hierarchical path for an organization unit by traversing up the organizational tree.
+It:
+	Traverses up the hierarchy starting from the given unit (id).
+	Builds the path string by concatenating the names of parent roles.
+	Limits the traversal to a maximum level (maxLevel) to prevent infinite loops.
+	Stores the resulting path and hierarchical level in the organization's structure.
+This function is useful for generating hierarchical paths to represent the full lineage of an organizational role or cost.
+*/
+/* It returns:
+The function does not return a value; it modifies the organisation object in place by adding path and level properties to the specified role.
+ */
 function calcFullPath(id, organisation) {
 	if (!organisation || !organisation[id]) {
 		return;
@@ -882,6 +988,19 @@ function calcFullPath(id, organisation) {
 
 // check orga
 // compares uid consistency between new & old orga
+
+/* The verifyOrga function validates the integrity and consistency of an updated organization (newOrga) against a previous version (oldOrga).
+It:
+	Handles missing newOrga or oldOrga cases.
+	Compares timestamps to ensure newOrga is not older than oldOrga.
+	Calls checkUIDs(newOrga, oldOrga) to verify UID consistency.
+	Logs validation checks for debugging.
+This function is useful for ensuring that new organization updates are valid and properly timestamped before applying changes. 
+*/
+/* It returns
+	true		If newOrga is valid and newer than oldOrga.
+	false		If newOrga is invalid or has an earlier timestamp.
+ */
 function verifyOrga(newOrga, oldOrga) {
 	if (!newOrga) {
 		return false;
@@ -903,6 +1022,18 @@ function verifyOrga(newOrga, oldOrga) {
 	return result;
 }
 
+/* The checkUIDs function verifies whether all role and cost UIDs from an old organization (oldOrga) exist in the updated organization (newOrga).
+It:
+	Ensures that newOrga and oldOrga are defined.
+	Validates that all UIDs in oldOrga.allRoles exist in newOrga.allRoles.
+	Validates that all UIDs in oldOrga.allCosts exist in newOrga.allCosts.
+	Logs any missing UIDs and returns false if any are missing.
+This function is useful for ensuring that an updated organization retains all previously defined roles and costs, preventing unintended deletions. 
+*/
+/* It returns
+	true		If all role and cost UIDs from oldOrga exist in newOrga.
+	false		If any role or cost UID is missing in newOrga. 
+*/
 function checkUIDs(newOrga, oldOrga) {
 	logger4js.trace('checkUIDs: Are all uids of the oldOrga in the newOrga as well? ', newOrga && newOrga.allRoles && newOrga.allRoles.length, oldOrga && oldOrga.allRoles && oldOrga.allRoles.length);
 
@@ -945,6 +1076,19 @@ function checkUIDs(newOrga, oldOrga) {
 	return resultCosts && resultRoles;
 }
 
+/* The joinCapacity function merges capacity data into an organization (orga) by assigning capacity values to individual roles.
+It:
+	Validates the input organization (orga) and capacity data.
+	Combines the capacity data using combineCapacity(capacity).
+	Iterates over orga.value.allRoles and:
+		Finds a matching capacity entry based on role.uid.
+		Assigns capaPerMonth and startOfCal to each non-summary role.
+	Logs missing data or invalid cases.
+This function ensures that each role in the organization has up-to-date capacity information. 
+*/
+/* Returns
+	void (modifies orga in place). 
+*/
 function joinCapacity(orga, capacity) {
 	if (!orga?.value?.allRoles) {
 		logger4js.warn('JoinCapacity invalid organisation %s/%s All Roles %d Capacity Length %d', orga?._id, orga?.timestamp?.toISOString(), orga?.value?.allRoles?.length, capacity?.length);
@@ -967,6 +1111,20 @@ function joinCapacity(orga, capacity) {
 	});
 }
 
+/* The compatibilityOldOrga function modifies an organization (setting) to ensure compatibility with an older format.
+It:
+	Validates that setting is an organization (type === 'organisation').
+	Ensures allRoles exists before making modifications.
+	Adds missing properties (subRoleIDs, teamIDs) if undefined.
+	Updates certain role properties for backward compatibility:
+	Converts dailyRate, defCapaMonth, and defCapaDay into their older equivalents (tagessatz, defaultKapa, defaultDayCapa).
+	Marks roles with type == 2 and isSummaryRole as isTeam = true.
+	Moves capaPerMonth into kapazitaet, ensuring an old-style array format.
+This function is useful for ensuring smooth migration between different organization data structures. 
+*/
+/* Returns
+	void (modifies setting in place). 
+*/
 function compatibilityOldOrga(setting) {
 	if (setting?.type != 'organisation' || !setting?.value?.allRoles) {
 		logger4js.warn('CompatibilityOldOrga invalid organisation %d', setting?.value?.allRoles?.length);
@@ -989,6 +1147,18 @@ function compatibilityOldOrga(setting) {
 	});
 }
 
+/* The combineCapacity function aggregates and merges capacity data for roles over multiple years, ensuring continuity and filling gaps where necessary.
+It:
+	Sorts the input capacity data by startOfYear.
+	Groups capacity records by roleID.
+	Merges consecutive years' capacities:
+	If a role's capacity spans multiple years, it appends the new year's capacity while filling any gaps with -1.
+	Returns a list of combined capacity records.
+This function ensures that all capacity data for a role is stored in a continuous format while preserving chronological order. 
+*/
+/* It returns
+	combinedCapacity	A new array where capacity records for each roleID are merged into a continuous timeline.
+ */
 function combineCapacity(capacity) {
 	var combinedCapacity = [];
 	if (!capacity) {
