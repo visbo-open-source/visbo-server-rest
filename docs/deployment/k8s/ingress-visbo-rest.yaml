@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visbo-rest-ingress
+  namespace: visbo
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+    - api.visbo.example.com
+    secretName: visbo-rest-tls
+  rules:
+  - host: api.visbo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visbo-rest
+            port:
+              number: 80

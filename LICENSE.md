@@ -1,11 +1,18 @@
-# VISBO Software License
+﻿# VISBO Software License
 ## AGPL v3 with Commons Clause Restriction  
 Version 1.0 — Effective from 20.11.2025
 
 Copyright (c) VISBO GmbH  
 All rights reserved.
 
-This software ("VISBO Software") is licensed under the terms of the GNU Affero General Public License Version 3 ("AGPL v3"), **supplemented by the Commons Clause License Condition v1.0**.
+All VISBO software is provided strictly on an “AS IS” basis.
+No warranties, guarantees, or assurances of any kind—whether express, implied, statutory, or otherwise—are provided.
+This includes, but is not limited to, warranties of merchantability, fitness for a particular purpose, non-infringement, or continuous availability of the software or repositories.
+By using, contributing to, or redistributing VISBO software, you acknowledge and accept these conditions.
+
+This software ("VISBO Software") is licensed under the terms of the GNU Affero General Public License Version 3 ("AGPL v3"), **supplemented by the Commons Clause License Condition v1.0**. Organizations that are interested in acquiring the intellectual property (IP) and software rights of VISBO are kindly requested to contact the VISBO  Founder and Managing Director 
+Thomas Koytek, VISBO Founder, Email: thomas.koytek@visbo.de
+
 
 In case of conflict between AGPL v3 and the Commons Clause, **the Commons Clause prevails**.
 
@@ -72,3 +79,4 @@ This link points to the official, unmodified AGPL v3 license text.
 ---
 
 # END OF LICENSE
+

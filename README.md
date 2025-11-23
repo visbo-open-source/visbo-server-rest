@@ -1,5 +1,20 @@
 # node-rest-server
 Secure REST API server example with Nodejs, Express, mongoose & JsonWebToken
+
+<h2>Deployment Guides</h2>
+
+Disclaimer: The following deployment guides were generated with the assistance of an AI system (ChatGPT 5.1).
+They are provided solely for informational and convenience purposes. VISBO GmbH does not provide any warranty, express or implied, regarding the accuracy, completeness, correctness, or suitability of these deployment examples for any particular use case or environment.
+
+Any use of these guides is strictly at the user’s own risk. Users are responsible for independently validating all deployment steps, configurations and security settings before using the software in production environments.
+
+Please see: 
+- SaaS / AWS Deployment: /.docs/deployment/README_SaaS_AWS.md
+- On-Premise Deployment: /.docs/deployment/README_OnPremise.md
+- Private Cloud Deployment: /.docs/deployment/README_PrivateCloud.md
+- Kubernetes Deployment: ./docs/deployment/README_Kubernetes.md
+
+
 <h2>Installing on local machine</h2>
 <h4>Please make sure you have node.js installed on your machine</h4>
 If you don't have, <a href="https://nodejs.org/" >click here...</a>

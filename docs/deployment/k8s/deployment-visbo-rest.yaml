@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visbo-rest
+  namespace: visbo
+  labels:
+    app: visbo-rest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: visbo-rest
+  template:
+    metadata:
+      labels:
+        app: visbo-rest
+    spec:
+      containers:
+      - name: visbo-rest
+        image: visbo/visbo-server-rest:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3484
+        envFrom:
+        - configMapRef:
+            name: visbo-rest-config
+        - secretRef:
+            name: visbo-rest-secret
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 3484
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 3484
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+      restartPolicy: Always

@@ -1,0 +1,104 @@
+# Contributing to VISBO Open Source
+Thank you for your interest in contributing to the VISBO Open Source project!  
+
+We welcome contributions and are grateful for your effort to improve the platform.
+This document explains how to contribute code, documentation, bug reports, and feature ideas to the VISBO repositories under the **visbo-open-source** GitHub organization.
+
+#1 Preamble
+Organizations that are interested in acquiring the intellectual property (IP) and software rights of VISBO are kindly requested to contact the VISBO  Founder and Managing Director 
+Thomas Koytek, VISBO Founder, Email: thomas.koytek@visbo.de
+
+The VISBO founder will collaborate with our preferred partner, WTT Solutions (Ukraine), to coordinate the processing of pull requests, the review of contributions, and the overall management of the open-source development process.
+
+All VISBO software is provided strictly on an “AS IS” basis.
+No warranties, guarantees, or assurances of any kind—whether express, implied, statutory, or otherwise—are provided.
+This includes, but is not limited to, warranties of merchantability, fitness for a particular purpose, non-infringement, or continuous availability of the software or repositories.
+By using, contributing to, or redistributing VISBO software, you acknowledge and accept these conditions.
+
+# 2. Code of Conduct
+We expect all contributors to behave respectfully and professionally.  
+Harassment, discrimination, or disrespectful behaviour will not be tolerated.
+By participating in this project, you agree to follow these principles.
+
+# 3. Contributor License Agreement (CLA)
+Please be aware, that with submitting code, you **herewidth  agree to the VISBO Contributor License Agreement (CLA)**:
+**See: `CLA.md`**
+The CLA ensures that:
+- You keep full ownership of your contributions.  
+- VISBO receives a license to use your contribution *only* within the open-source version (AGPL v3 + Commons Clause).  
+- VISBO does **not** automatically receive commercial rights to your contribution.  
+- VISBO may independently develop features similar to yours without legal conflict.  
+- You grant VISBO the option to request a commercial license separately, which you may accept or decline.
+
+Important: Submitting a pull request automatically indicates your acceptance of the CLA.
+
+# 4. How to Contribute Code
+## 4.1 Fork the Repository
+1. Click **Fork** at the top-right of the GitHub repository page.  
+2. Clone your fork:
+Bash: 
+git clone https://github.com/<your-username>/<repo>.git
+4.2 Create a Feature Branch
+Please follow this branch naming convention:
+git checkout -b feature/<short-description>
+Examples:
+* feature/add-api-endpoint
+* feature/ui-dark-mode
+* bugfix/login-timeout
+
+
+4.3 Coding Guidelines
+Please ensure:
+* Code is clean, readable, and well-structured
+* Public functions and APIs are documented
+* ESLint / Prettier / TypeScript or Java conventions are respected (per repo)
+* Tests are included if applicable
+* Commit messages describe why the change was made, not only what
+
+4. Submitting a Pull Request
+4.1 Push Your Branch
+git push origin feature/<short-description>
+4.2 Open a Pull Request (PR)
+In the PR, please include:
+* A clear description of the change
+* The problem it solves
+* Screenshots (if UI-related)
+* Notes on testing or potential impact
+A VISBO/WTT maintainer will review the PR, discuss improvements if needed, and merge it once ready.
+
+5. Reporting Bugs
+Please open a GitHub Issue and include:
+* Steps to reproduce
+* Expected behaviour
+* Actual behaviour
+* Logs or screenshots (if applicable)
+* Environment details (browser, OS, version)
+Use the Bug Report issue template when available.
+
+6. Proposing New Features
+Feature requests are welcome!
+Please open a GitHub Issue tagged enhancement and describe:
+* The problem
+* Your proposed solution
+* Why it benefits the community
+* Possible alternatives
+
+
+7. Development Setup
+Each VISBO repository includes a detailed local setup guide in its specific README.md.
+
+8. Security Issues
+If you discover a security vulnerability, do not file a public issue.
+Instead, contact us directly:
+security@visbo.de
+(or, if not yet active, temporarily: info@visbo.de)
+We will handle all disclosures responsibly.
+
+9. Communication and Questions
+If you need help:
+* Open a Discussion on GitHub
+* Use GitHub Issues for technical questions
+* Or email us at info@visbo.de
+We appreciate your support and contributions.
+Thank you for helping VISBO grow and evolve!
+
