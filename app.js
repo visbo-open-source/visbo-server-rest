@@ -167,11 +167,15 @@ function dbConnect(dbconnection, launchServer) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
   } else {
-    var position = dbconnection.indexOf(':') + 1;
-    position = dbconnection.indexOf(':', position) + 1;
-    var cleanString = dbconnection.substring(0, position);
-    position = dbconnection.indexOf('@', position + 1);
-    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length));
+    var cleanString = dbconnection;
+    // If URI contains credentials, mask them in logs
+    if (dbconnection.indexOf('@') > -1) {
+      var position = dbconnection.indexOf(':') + 1;
+      position = dbconnection.indexOf(':', position) + 1;
+      cleanString = dbconnection.substring(0, position);
+      position = dbconnection.indexOf('@', position + 1);
+      cleanString = cleanString.concat('XX..XX', dbconnection.substring(position));
+    }
     logger4js.warn('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri

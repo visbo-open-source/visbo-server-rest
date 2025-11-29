@@ -20,6 +20,13 @@ function getKey() {
 
 function initIV (text) {
 	if (iv != undefined) return;
+	// Prefer IV from environment for easier rotation per environment.
+	// INTERNAL_IV is expected as plain string; we take the first 16 bytes.
+	if (process.env.INTERNAL_IV && process.env.INTERNAL_IV.length >= 16) {
+		iv = Buffer.from(process.env.INTERNAL_IV.slice(0, 16), 'utf8');
+		return;
+	}
+	// Legacy behavior (backward compatible): use fixed or text-derived IV
 	if (!text || text.length < 16) iv = 'visbovisbo123456';
 	else iv = text.substr(0, 16);
 }

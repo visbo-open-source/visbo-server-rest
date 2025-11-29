@@ -46,7 +46,8 @@ router.use('/', verifyVpv.getPortfolioVPs);
 router.use('/', verifyVc.getVCSetting);
 
 // register the get VPF middleware for calls for a specific VPV, like /cost, /costtypes, /capacity, /copy, /deliveries, /deadlines
-router.use('/:vpvid/*', verifyVpv.getCurrentVPVpfv);
+// NOTE: '/:vpvid' will also match '/:vpvid/...', so we don't need a bare wildcard which is not supported by newer path-to-regexp
+router.use('/:vpvid', verifyVpv.getCurrentVPVpfv);
 router.use('/:vpvid', verifyVpv.getVCGroups);
 
 
