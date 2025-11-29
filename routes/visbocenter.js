@@ -2,7 +2,6 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var bCrypt = require('bcrypt-nodejs');
 var crypt = require('./../components/encrypt');
 
 var auth = require('./../components/auth');
@@ -112,10 +111,8 @@ function squeezeSetting(item, email) {
 	}
 }
 
-// Generates hash using bCrypt
-var createHash = function(secret){
-	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
-};
+// Password hashing function from auth module
+var createHash = auth.createHash;
 
 // updates the VC Name in the VP after rename VC
 var updateVCName = function(vcid, name){

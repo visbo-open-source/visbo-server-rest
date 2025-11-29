@@ -1,4 +1,5 @@
 var mongoose = require('mongoose');
+var bcrypt = require('bcrypt');
 
 var logModule = 'OTHER';
 var log4js = require('log4js');
@@ -16,6 +17,70 @@ var jwtSecret = require('./../secrets/jwt');
 
 var pwPolicy = undefined;
 var pwPolicyPattern = undefined;
+
+// ============================================
+// Password Hashing Functions (bcrypt)
+// ============================================
+
+const SALT_ROUNDS = 10;
+
+/**
+ * Generate a hash for a password/secret (sync)
+ * @param {string} secret - The password or secret to hash
+ * @returns {string} - The bcrypt hash
+ */
+function createHash(secret) {
+	return bcrypt.hashSync(secret, SALT_ROUNDS);
+}
+
+/**
+ * Generate a hash for a password/secret (async)
+ * @param {string} secret - The password or secret to hash
+ * @returns {Promise<string>} - The bcrypt hash
+ */
+async function createHashAsync(secret) {
+	return bcrypt.hash(secret, SALT_ROUNDS);
+}
+
+/**
+ * Validate a password against a user's stored hash (sync)
+ * @param {object} user - User object with password field
+ * @param {string} password - Plain text password to validate
+ * @returns {boolean} - True if password matches
+ */
+function isValidPassword(user, password) {
+	return bcrypt.compareSync(password, user.password);
+}
+
+/**
+ * Validate a password against a user's stored hash (async)
+ * @param {object} user - User object with password field
+ * @param {string} password - Plain text password to validate
+ * @returns {Promise<boolean>} - True if password matches
+ */
+async function isValidPasswordAsync(user, password) {
+	return bcrypt.compare(password, user.password);
+}
+
+/**
+ * Validate a secret against a hash (sync)
+ * @param {string} hash - The stored hash
+ * @param {string} secret - The secret to validate
+ * @returns {boolean} - True if secret matches hash
+ */
+function isValidHash(hash, secret) {
+	return bcrypt.compareSync(secret, hash);
+}
+
+/**
+ * Validate a secret against a hash (async)
+ * @param {string} hash - The stored hash
+ * @param {string} secret - The secret to validate
+ * @returns {Promise<boolean>} - True if secret matches hash
+ */
+async function isValidHashAsync(hash, secret) {
+	return bcrypt.compare(secret, hash);
+}
 
 /* The isAllowedPassword function validates a given password against a dynamically retrieved password policy.
 
@@ -70,7 +135,7 @@ It:
  */
 
 // Verify User Authentication
-function verifyUser(req, res, next) {
+async function verifyUser(req, res, next) {
 
 	var apiToken = false;
 	var options = {};
@@ -85,18 +150,18 @@ function verifyUser(req, res, next) {
 	}
 
 	// decode token
-  if (token) {
-    // verifies secret and checks exp
-    jwt.verify(token, jwtSecret.user.secret, options, function(err, decoded) {
-      if (err) {
+	if (token) {
+		// verifies secret and checks exp
+		jwt.verify(token, jwtSecret.user.secret, options, async function(err, decoded) {
+			if (err) {
 				logger4js.debug('Authentication with token. Decode Issue', JSON.stringify(req.headers));
 				if (decoded) req.decoded = decoded;
-        return res.status(401).send({
+				return res.status(401).send({
 					state: 'failure',
 					message: 'Session is no longer valid'
-        });
-      } else {
-        // if everything is good, check IP and User Agent to prevent session steeling
+				});
+			} else {
+				// if everything is good, check IP and User Agent to prevent session steeling
 				var sessionValid = true;
 				if (!apiToken) {
 					if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
@@ -114,16 +179,13 @@ function verifyUser(req, res, next) {
 						message: 'Session is no longer valid'
 					});
 				}
-				var redisClient = visboRedis.VisboRedisInit();
-				var tokenID = token.split('.')[2];
-				redisClient.get('token.'+tokenID, function(err, reply) {
-					// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
-					if (err) {
-						return res.status(500).send({
-							state: 'failure',
-							message: 'Logout Validation'
-						});
-					}
+				
+				try {
+					// Redis v4: async/await
+					var redisClient = await visboRedis.VisboRedisInit();
+					var tokenID = token.split('.')[2];
+					var reply = await redisClient.get('token.' + tokenID);
+					
 					if (reply) {
 						logger4js.info('Token already terminated');
 						return res.status(401).send({
@@ -134,16 +196,21 @@ function verifyUser(req, res, next) {
 					// if everything is good, save to request for use in other routes
 					req.decoded = decoded;
 					return next();
-				});
-      }
-    });
-  } else {
+				} catch (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'Logout Validation'
+					});
+				}
+			}
+		});
+	} else {
 		logger4js.info('Authentication without token. Headers', JSON.stringify(req.headers));
 		return res.status(401).send({
 			state: 'failure',
 			message: 'No token provided'
 		});
-  }
+	}
 }
 
 /* The isApprover function checks if a user is an approver based on their email address. 
@@ -175,80 +242,91 @@ It checks whether the provided OTT is valid, ensuring that it:
 
 If all checks pass, the function attaches the decoded OTT to the request (req.decoded) and calls next() to proceed. */
 
-function verifyOTT(req, res, next) {
+async function verifyOTT(req, res, next) {
 
 	var ott = req.body.ott;
 	// decode token
-    if (ott) {
+	if (ott) {
 		logger4js.debug('OTT Authentication with token:', ott);
-    	// verifies secret and checks exp
-    	jwt.verify(ott, jwtSecret.user.secret, function(err, decoded) {
-		if (err) {
-			logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
-			if (decoded) req.decoded = decoded;
-			return res.status(400).send({
-				state: 'failure',
-				message: 'One Time Token is no longer valid'
-			});
-		} else {
-			// if everything is good, check IP and User Agent to prevent session steeling
-			var sessionValid = true;
-			if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
-				logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
-				sessionValid = false;
-			}
-			if (!sessionValid) {
+		// verifies secret and checks exp
+		jwt.verify(ott, jwtSecret.user.secret, async function(err, decoded) {
+			if (err) {
+				logger4js.debug('OTT Authentication with token. Decode Issue', JSON.stringify(decoded));
+				if (decoded) req.decoded = decoded;
 				return res.status(400).send({
 					state: 'failure',
 					message: 'One Time Token is no longer valid'
 				});
-			}
-			var redisClient = visboRedis.VisboRedisInit();
-			var ottID = ott.split('.')[2];
-			redisClient.get('ott.'+ottID, function(err, reply) {
-				// logger4js.debug('Redis Token Check err %O reply %s', err, reply);
-				if (err) {
-					return res.status(500).send({
-						state: 'failure',
-						message: 'OTT Authentication Validation'
-					});
+			} else {
+				// if everything is good, check IP and User Agent to prevent session steeling
+				var sessionValid = true;
+				if (decoded.session.ip != (req.headers['x-real-ip'] || req.ip)) {
+					logger4js.info('User %s: Different IPs for Session %s vs %s', decoded.email, decoded.session.ip, req.headers['x-real-ip'] || req.ip);
+					sessionValid = false;
 				}
-				if (!reply || reply != decoded._id) {
-					logger4js.warn('OTT Token already terminated');
+				if (!sessionValid) {
 					return res.status(400).send({
 						state: 'failure',
 						message: 'One Time Token is no longer valid'
 					});
 				}
-				// if everything is good, save to request for use in other routes
-				req.decoded = decoded;
-				redisClient.del('ott.'+ottID, function(err, response) {
-					if (err) {
-						errorHandler(err, undefined, 'REDIS: Del OTT Error ', undefined);
-						return;
+				
+				try {
+					// Redis v4: async/await
+					var redisClient = await visboRedis.VisboRedisInit();
+					var ottID = ott.split('.')[2];
+					var reply = await redisClient.get('ott.' + ottID);
+					
+					if (!reply || reply != decoded._id) {
+						logger4js.warn('OTT Token already terminated');
+						return res.status(400).send({
+							state: 'failure',
+							message: 'One Time Token is no longer valid'
+						});
 					}
-					if (response) {
-						logger4js.debug('REDIS: OTT Deleted Successfully');
-					} else  {
-						logger4js.info('REDIS: OTT Item not found or no longer present');
+					
+					// if everything is good, save to request for use in other routes
+					req.decoded = decoded;
+					
+					try {
+						var response = await redisClient.del('ott.' + ottID);
+						if (response) {
+							logger4js.debug('REDIS: OTT Deleted Successfully');
+						} else {
+							logger4js.info('REDIS: OTT Item not found or no longer present');
+						}
+					} catch (delErr) {
+						errorHandler(delErr, undefined, 'REDIS: Del OTT Error ', undefined);
 					}
+					
 					return next();
-				});
-			});
-		}
-    });
-  } else {
+				} catch (err) {
+					return res.status(500).send({
+						state: 'failure',
+						message: 'OTT Authentication Validation'
+					});
+				}
+			}
+		});
+	} else {
 		logger4js.info('OTT Authentication without token.');
 		return res.status(400).send({
 			state: 'failure',
 			message: 'No One Time Token provided'
 		});
-  }
+	}
 }
 
 module.exports = {
 	verifyUser: verifyUser,
 	verifyOTT: verifyOTT,
 	isAllowedPassword: isAllowedPassword,
-	isApprover: isApprover
+	isApprover: isApprover,
+	// Password hashing (bcrypt)
+	createHash: createHash,
+	createHashAsync: createHashAsync,
+	isValidPassword: isValidPassword,
+	isValidPasswordAsync: isValidPasswordAsync,
+	isValidHash: isValidHash,
+	isValidHashAsync: isValidHashAsync
 };

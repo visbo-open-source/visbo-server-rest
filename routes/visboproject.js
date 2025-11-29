@@ -2,7 +2,6 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var bCrypt = require('bcrypt-nodejs');
 
 var auth = require('./../components/auth');
 var validate = require('./../components/validate');
@@ -208,10 +207,8 @@ function findVPList(vp) {
 		return vp._id.toString() == this.toString();
 }
 
-// Generates hash using bCrypt
-function createHash(secret){
-	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
-}
+// Password hashing function from auth module
+var createHash = auth.createHash;
 
 // updates the VP Count in the VC after create/delete/undelete Project
 var updateVPCount = function(vcid, increment){

@@ -1,72 +1,85 @@
-var logModule = 'OTHER';
-var log4js = require('log4js');
-var logger4js = log4js.getLogger(logModule);
+/**
+ * Redis client wrapper using redis v4 with async/await
+ */
 
-var redis = require('redis');
-var bluebird = require('bluebird');
-bluebird.promisifyAll(redis);
+const logModule = 'OTHER';
+const log4js = require('log4js');
+const logger4js = log4js.getLogger(logModule);
 
-var initialised = false;
-var redisClient;
-var currentHost = 'localhost';
-var currentPort = 6379;
-var maxErrorLog = 5;
+const { createClient } = require('redis');
 
-// Initialise Redis
-/* The VisboRedisInit function is responsible for initializing and managing a Redis client connection. 
-   It:
-		- Creates a Redis client if not already initialized.
-		- Handles host and port changes dynamically.
-		- Checks Redis connection status and logs errors appropriately.
-		- Returns the Redis client instance for use.
-	Key Features
-	✔️ Ensures a Redis client is initialized only once.
-	✔️ Handles Redis connection errors and logs warnings.
-	✔️ Reinitializes Redis when the host or port changes.
-	✔️ Returns the Redis client instance for external use. 
-*/
-function VisboRedisInit(host, port) {
+let redisClient = null;
+let currentHost = 'localhost';
+let currentPort = 6379;
+let maxErrorLog = 5;
+let isConnecting = false;
 
+/**
+ * Initialize and return Redis client (redis v4)
+ * Returns a connected client instance
+ */
+async function VisboRedisInit(host, port) {
 	host = host || currentHost;
 	port = port || currentPort;
-	// logger4js.info('Redis Client Setup Host %s:%d', host, port);
 
-	if (redisClient) {
-		// redis Client already initialised check if host or port Changes
-		if (host != currentHost || port != currentPort) {
-			logger4js.trace('Redis Client Change Host %s:%d', host, port);
-			redisClient.quit();
-			initialised = false;
-		}
+	// If client exists and host/port changed, disconnect and reinit
+	if (redisClient && (host !== currentHost || port !== currentPort)) {
+		logger4js.trace('Redis Client Change Host %s:%d', host, port);
+		await redisClient.quit();
+		redisClient = null;
 	}
 
-	// if there is no client initialised do it
-	if (!initialised) {
-		logger4js.trace('Redis Client  Init');
+	// Create new client if needed
+	if (!redisClient) {
+		logger4js.trace('Redis Client Init');
 		currentHost = host;
 		currentPort = port;
-		redisClient = redis.createClient({host : currentHost, port : currentPort});
 
-		// Check if Redis is up and running
-		redisClient.on('ready',function() {
+		redisClient = createClient({
+			socket: {
+				host: currentHost,
+				port: currentPort
+			}
+		});
+
+		redisClient.on('ready', () => {
 			logger4js.info('Redis is connected');
 		});
 
-		redisClient.on('error',function() {
-
+		redisClient.on('error', (err) => {
 			if (maxErrorLog > 0) {
 				maxErrorLog -= 1;
-                logger4js.warn('Error in Redis: Take care that the redis server is installed and up and running');
+				logger4js.warn('Error in Redis: %s', err.message);
 			}
-			if (host != 'localhost') throw Error('Error connecting to Redis Server');
 		});
 
-		logger4js.trace('Redis initialised');
-		initialised = true;
+		// Connect if not already connecting
+		if (!isConnecting && !redisClient.isOpen) {
+			isConnecting = true;
+			try {
+				await redisClient.connect();
+				logger4js.trace('Redis connected successfully');
+			} catch (err) {
+				logger4js.warn('Redis connection failed: %s', err.message);
+			} finally {
+				isConnecting = false;
+			}
+		}
 	}
 
-	logger4js.trace('Redis all prepared return Client ');
+	logger4js.trace('Redis all prepared return Client');
 	return redisClient;
 }
 
-module.exports = { VisboRedisInit: VisboRedisInit };
+/**
+ * Get the current Redis client (sync, for backward compatibility)
+ * Returns null if not initialized
+ */
+function getRedisClient() {
+	return redisClient;
+}
+
+module.exports = { 
+	VisboRedisInit,
+	getRedisClient
+};

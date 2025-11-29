@@ -5,10 +5,9 @@ var logger = require('morgan');
 var fs = require('fs');
 var i18n = require('i18n');
 // var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
-var moment = require('moment');
+var dateFormat = require('./components/dateFormat');
 var process = require('process');
 var os = require( 'os' );
 
@@ -218,8 +217,8 @@ function launchServer() {
   visboTaskScheduleInit();
   app.use(express.static(path.join(__dirname, 'public'), options));
   // app.use(cookieParser());
-  app.use(bodyParser.urlencoded({ extended: false }));
-  app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
+  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: '5mb' }));
 
   // simple logger for this router's requests
   // all requests to this router will first hit this middleware
@@ -329,7 +328,7 @@ app.use(logger(function (tokens, req, res) {
       ''
     ].join(' ');
     logger4jsRest.info(webLog);
-    webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+    webLog = dateFormat.formatLogTimestamp() + ' ' + webLog;
   }
   if (tokens.status(req, res) == 500) {
     var headers = JSON.parse(JSON.stringify(req.headers));

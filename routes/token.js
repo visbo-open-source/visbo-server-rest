@@ -3,7 +3,6 @@ var router = express.Router();
 
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 var auth = require('./../components/auth');
@@ -45,18 +44,10 @@ var findUserAgent = function(currentUserAgent) {
 	return currentUserAgent.userAgent == this.userAgent;
 };
 
-var isValidHash = function(hash, secret){
-	return bCrypt.compareSync(secret, hash);
-};
-
-var isValidPassword = function(user, password){
-	return bCrypt.compareSync(password, user.password);
-};
-
-// Generates hash using bCrypt
-var createHash = function(secret){
-	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
-};
+// Password hashing functions from auth module
+var isValidHash = auth.isValidHash;
+var isValidPassword = auth.isValidPassword;
+var createHash = auth.createHash;
 
 var redirectURL = getReSTUrl().concat('/token/user/googleRedirect');
 var settingOAuth = getSystemVCSetting('OAuthGoogle');
