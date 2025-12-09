@@ -4,8 +4,7 @@ var log4js = require('log4js');
 var logger4js = log4js.getLogger(logModule);
 var getSystemUrl = require('./../components/systemVC').getSystemUrl;
 
-var moment = require('moment');
-moment.locale('de');
+var dateFormat = require('./dateFormat');
 
 var useragent = require('useragent');
 var validate = require('./../components/validate');
@@ -45,12 +44,12 @@ function accountLocked(req, res, user) {
 	var eMailSubject = res.__('Mail.Subject.UserLocked');
 	var info = {};
 	logger4js.trace('E-Mail template %s, url %s', template, uiUrl);
-	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
+	info.changedAt = dateFormat.formatDateTime();
 	info.ip = req.headers['x-real-ip'] || req.ip;
 	var agent = useragent.parse(req.get('User-Agent'));
 	visboParseUA(agent, req.headers['user-agent']);
 	info.userAgent = agent.toString();
-	info.lockedUntil = moment(user.status.lockedUntil).format('HH:mm');
+	info.lockedUntil = dateFormat.formatTime(user.status.lockedUntil);
 	ejs.renderFile(template, {userTo: user, url: uiUrl, info}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
@@ -98,7 +97,7 @@ function passwordExpiresSoon(req, res, user, expiresAt) {
 	var uiUrl =  getSystemUrl();
 	uiUrl = uiUrl.concat('/login', '?email=', user.email);
 	var eMailSubject = res.__('Mail.Subject.PWExpiresSoon');
-	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: moment(expiresAt).format('DD.MM. HH:mm')}, function(err, emailHtml) {
+	ejs.renderFile(template, {userTo: user, url: uiUrl, expiresAt: dateFormat.formatDateTimeShort(expiresAt)}, function(err, emailHtml) {
 		if (err) {
 			logger4js.warn('E-Mail Rendering failed %s', err.message);
 		} else {
@@ -171,7 +170,7 @@ function accountNewLogin(req, res, user) {
 	var eMailSubject = res.__('Mail.Subject.NewLogin');
 	var info = {};
 	logger4js.trace('E-Mail template %s, url %s', template, uiUrl);
-	info.changedAt = moment().format('DD.MM.YY HH:mm:ss');
+	info.changedAt = dateFormat.formatDateTime();
 	info.ip = req.headers['x-real-ip'] || req.ip;
 	// var agent = useragent.parse(req.get('User-Agent'));
 	// visboParseUA(agent, req.headers['user-agent']);

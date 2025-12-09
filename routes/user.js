@@ -2,7 +2,6 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 mongoose.Promise = require('q').Promise;
-var bCrypt = require('bcrypt-nodejs');
 var jwt = require('jsonwebtoken');
 var jwtSecret = require('./../secrets/jwt');
 
@@ -44,13 +43,9 @@ var logger4js = log4js.getLogger(logModule);
 
 var visboRedis = require('./../components/visboRedis');
 
-// Generates hash using bCrypt
-var createHash = function (secret) {
-	return bCrypt.hashSync(secret, bCrypt.genSaltSync(10), null);
-};
-var isValidPassword = function (user, password) {
-	return bCrypt.compareSync(password, user.password);
-};
+// Password hashing functions from auth module
+var createHash = auth.createHash;
+var isValidPassword = auth.isValidPassword;
 
 // Register the authentication middleware for all URLs under this module
 router.use('/', auth.verifyUser);
@@ -360,18 +355,27 @@ router.route('/logout')
 		* }
 		*/
 	// Logout
-	.post(function (req, res) {
+	.post(async function (req, res) {
 		req.auditDescription = 'Logout';
 
 		logger4js.info('Post Logout %s', req.decoded._id);
 		// add token to Redis
-		var redisClient = visboRedis.VisboRedisInit();
-		var token = req.headers['access-key'].split('.')[2];
-		redisClient.set('token.' + token, req.decoded._id, 'EX', 3600);
-		return res.status(200).send({
-			state: 'success',
-			message: 'You have successfully logged out'
-		});
+		try {
+			var redisClient = await visboRedis.VisboRedisInit();
+			var token = req.headers['access-key'].split('.')[2];
+			// Redis v4: set with expiry uses { EX: seconds } option
+			await redisClient.set('token.' + token, req.decoded._id, { EX: 3600 });
+			return res.status(200).send({
+				state: 'success',
+				message: 'You have successfully logged out'
+			});
+		} catch (err) {
+			logger4js.error('Logout Redis error: %O', err);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Logout failed'
+			});
+		}
 	});
 
 router.route('/ott')
@@ -392,7 +396,7 @@ router.route('/ott')
 		*  'message':'One Time Token successfully generated'
 		* }
 		*/
-	.get(function (req, res) {
+	.get(async function (req, res) {
 		req.auditDescription = 'Generate One Time Token';
 		req.auditTTLMode = 1;
 
@@ -407,29 +411,29 @@ router.route('/ott')
 		userReduced.session.timestamp = timestamp;
 
 		logger4js.trace('User Reduced User: %O', JSON.stringify(userReduced));
-		jwt.sign(userReduced, jwtSecret.user.secret,
-			{ expiresIn: expiresIn },
-			function (err, ott) {
-				if (err) {
-					logger4js.error('JWT Signing Error %s ', err.message);
-					return res.status(500)({
-						state: 'failure',
-						message: 'token generation failed',
-						error: err
-					});
-				}
-				logger4js.trace('JWT Signing Success ');
-				// add token to Redis
-				var redisClient = visboRedis.VisboRedisInit();
-				var ottID = ott.split('.')[2];
-				redisClient.set('ott.' + ottID, req.decoded._id, 'EX', expiresIn);
-				return res.status(200).send({
-					state: 'success',
-					message: 'One Time Token successfully generated',
-					ott: ott
-				});
-			}
-		);
+		
+		try {
+			var ott = jwt.sign(userReduced, jwtSecret.user.secret, { expiresIn: expiresIn });
+			logger4js.trace('JWT Signing Success ');
+			
+			// add token to Redis (v4: async/await)
+			var redisClient = await visboRedis.VisboRedisInit();
+			var ottID = ott.split('.')[2];
+			await redisClient.set('ott.' + ottID, req.decoded._id, { EX: expiresIn });
+			
+			return res.status(200).send({
+				state: 'success',
+				message: 'One Time Token successfully generated',
+				ott: ott
+			});
+		} catch (err) {
+			logger4js.error('OTT Generation Error %s ', err.message);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'token generation failed',
+				error: err.message
+			});
+		}
 	});
 
 router.route('/timetracker')

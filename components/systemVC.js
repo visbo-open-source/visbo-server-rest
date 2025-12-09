@@ -24,7 +24,7 @@ var path = require('path');
 var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
-var redisClient = undefined;
+var redisClient = null;
 // var predictConfigured = undefined;
 // var fsModell = undefined;
 
@@ -32,69 +32,70 @@ var redisClient = undefined;
 /* The createSystemVC function is responsible for initializing the System VISBO Center (VC) if it does not already exist. 
 It creates a default system VC, a default user, and a SysAdmin group with administrative permissions.
  */
-var createSystemVC = function (body, launchServer) {
+var createSystemVC = async function (body, launchServer) {
 	logger4js.debug('Create System VISBO Center if not existent');
 	if (!body && !body.users) {
 		logger4js.warn('No Body or no users System VISBO Center %s', body);
 		return undefined;
 	}
-	redisClient = visboRedis.VisboRedisInit();
+	
+	// Initialize Redis client (async in v4)
+	redisClient = await visboRedis.VisboRedisInit();
+	
 	var nameSystemVC = 'Visbo-System';
-	// check that VC name is unique
 	var query = {system: true};
-	VisboCenter.findOne(query, function(err, vc) {
-		if (err) {
-			errorHandler(err, undefined, 'DB: System VC Find error', undefined);
-			return undefined;
-		}
+	
+	try {
+		var vc = await VisboCenter.findOne(query);
+		
 		if (vc) {
 			logger4js.debug('System VISBO Center already exists');
 			vcSystem = vc;
-			redisClient.set('vcSystem', vcSystem._id.toString());
+			await redisClient.set('vcSystem', vcSystem._id.toString());
 			crypt.initIV(vcSystem._id.toString());
-			initSystemSettings(launchServer);
+			await initSystemSettings(launchServer);
 			return vc;
 		}
+		
 		// System VC does not exist create systemVC, default user, default sysadmin group
 		logger4js.warn('No System VISBO Center, Create a new one');
 		var newVC = new VisboCenter();
 		newVC.name = nameSystemVC;
 		newVC.system = true;
 		newVC.vpCount = 0;
-		newVC.save(function(err, vc) {
-			if (err) {
-				errorHandler(err, undefined, 'DB: System VC save error', undefined);
-				return undefined;
-			}
-			vcSystem = vc;
-			redisClient.set('vcSystem', vcSystem._id.toString());
-			crypt.initIV(vcSystem._id.toString());
+		
+		vc = await newVC.save();
+		vcSystem = vc;
+		await redisClient.set('vcSystem', vcSystem._id.toString());
+		crypt.initIV(vcSystem._id.toString());
+		
+		// Initialize system settings and launch server even if creating the default group fails
+		await initSystemSettings(launchServer);
 
+		// Create default user and group (non-blocking, errors logged but don't stop server)
+		try {
 			var newUser = new User();
 			newUser.email = body.users[0].email;
-			newUser.save(function(err, user) {
-				if (err) {
-					errorHandler(err, undefined, 'DB: System VC User Create error', undefined);
-					return undefined;
-				}
-				var newGroup = new VisboGroup();
-				newGroup.groupType = 'System';
-				newGroup.global = false;
-				newGroup.name = 'SysAdmin';
-				newGroup.vcid = vc._id;
-				newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permDeleteVC: true, permManagePerm: true}};
-				newGroup.users.push({userId: user._id, email: user.email});
-				newGroup.save(function(err, group) {
-					if (err) {
-						logger4js.warn('System VISBO Center Group Created failed: %s', err.message);
-						return undefined;
-					}
-					logger4js.warn('System VISBO Center Group Created, group: %O', group);
-					return vc;
-				});
-			});
-		});
-	});
+			var user = await newUser.save();
+			
+			var newGroup = new VisboGroup();
+			newGroup.groupType = 'System';
+			newGroup.global = false;
+			newGroup.name = 'SysAdmin';
+			newGroup.vcid = vc._id;
+			newGroup.permission = {system: {permView: true, permViewAudit: true, permViewLog: true, permViewVC: true, permCreateVC: true, permDeleteVC: true, permManagePerm: true}};
+			newGroup.users.push({userId: user._id, email: user.email});
+			var group = await newGroup.save();
+			logger4js.warn('System VISBO Center Group Created, group: %O', group);
+		} catch (err) {
+			logger4js.warn('System VISBO Center Group Created failed: %s', err.message);
+		}
+		
+		return vc;
+	} catch (err) {
+		errorHandler(err, undefined, 'DB: System VC error', undefined);
+		return undefined;
+	}
 };
 
 var getSystemVC = function () {
@@ -110,58 +111,55 @@ It decrypts stored credentials (e.g., SMTP passwords), initializes Redis if nece
 	Nothing (void) 						– The function modifies system-wide configurations in place and updates Redis.
 	If vcSystem is not initialized, 	- the function logs a warning and exits.
  */
-var initSystemSettings = function(launchServer) {
+var initSystemSettings = async function(launchServer) {
 	// Get the Default Log Level from DB
 	logger4js.info('Check System VC during init setting');
 	if (!vcSystem) {
 		logger4js.warn('No System VC during init setting');
 		return;
 	}
-	var query = {};
-	query.vcid = vcSystem._id;
-	query.type = {$in: ['SysConfig', '_VCConfig']};
-	var queryVCSetting = VCSetting.find(query);
-	queryVCSetting.exec(function (err, listVCSetting) {
-		if (err) {
-			errorHandler(err, undefined, 'DB: Get System Setting Select ', undefined);
-		}
+	
+	try {
+		var query = {};
+		query.vcid = vcSystem._id;
+		query.type = {$in: ['SysConfig', '_VCConfig']};
+		
+		var listVCSetting = await VCSetting.find(query);
+		
 		logger4js.info('Setting %d found for System VC', listVCSetting ? listVCSetting.length : undefined);
 		vcSystemSetting = listVCSetting;
 		lastUpdatedAt = new Date('2000-01-01');
-		for (var i=0; i<vcSystemSetting.length; i++) {
+		
+		for (var i = 0; i < vcSystemSetting.length; i++) {
 			if (vcSystemSetting[i].name == 'SMTP') {
 				vcSystemSetting[i].value.auth.pass = crypt.decrypt(vcSystemSetting[i].value.auth.pass);
 				logger4js.debug('Setting SMTP found Decrypt Password');
 			}
 			if (vcSystemSetting[i].name == 'REDIS') {
 				logger4js.info('Setting REDIS found init Client');
-				redisClient = visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
-				redisClient.set('vcSystem', vcSystem._id.toString());
+				redisClient = await visboRedis.VisboRedisInit(vcSystemSetting[i].value.host, vcSystemSetting[i].value.port);
+				await redisClient.set('vcSystem', vcSystem._id.toString());
 			}
-			// if (vcSystemSetting[i].name == 'EnablePredict') {
-			// 	if (predictConfigured == undefined) {
-			// 		// Check if the Predict Module is installed and the Model data is available
-			// 		var fsModule = '../predictkm';
-			// 		fsModell = (process.env.DATAPATH || path.join(__dirname, '../data')).concat('/predictkm');
-			// 		if(fs.existsSync(fsModule) && fs.existsSync(fsModell)) {
-			// 			logger4js.warn('Predict Configured', fsModule, fsModell);
-			// 			predictConfigured = 1;
-			// 		} else {
-			// 			logger4js.warn('Predict not Configured', fsModule, fsModell);
-			// 		}
-			// 	}
-			// }
 			if (vcSystemSetting[i].updatedAt > lastUpdatedAt) {
 				lastUpdatedAt = vcSystemSetting[i].updatedAt;
 			}
 		}
-		redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), 'EX', 3600*4);
-		logging.setLogLevelConfig(getSystemVCSetting('DEBUG').value);
+		
+		// Redis v4: set with expiry uses { EX: seconds } option
+		await redisClient.set('vcSystemConfigUpdatedAt', lastUpdatedAt.toISOString(), { EX: 3600 * 4 });
+		
+		var debugSetting = getSystemVCSetting('DEBUG');
+		if (debugSetting && debugSetting.value) {
+			logging.setLogLevelConfig(debugSetting.value);
+		}
+		
 		if (launchServer) {
 			launchServer();
 		}
 		logger4js.info('Cache System Setting last Updated %s', lastUpdatedAt.toISOString());
-	});
+	} catch (err) {
+		errorHandler(err, undefined, 'DB: Get System Setting Select ', undefined);
+	}
 };
 
 /* The refreshSystemSetting function checks whether system settings need to be refreshed by comparing the last updated timestamp stored in Redis (vcSystemConfigUpdatedAt).
@@ -172,21 +170,21 @@ This function will be called from a VISBO system task.
 		Nothing (void) 						– The function updates system settings if necessary and marks the task as complete.
 		If task or task.value is missing,  	- the function immediately returns. 
 */
-var refreshSystemSetting = function(task, finishedTask) {
-	if (!task || !task.value) finishedTask(task, false);
+var refreshSystemSetting = async function(task, finishedTask) {
+	if (!task || !task.value) {
+		finishedTask(task, false);
+		return;
+	}
 	logger4js.debug('Task(%s) refreshSystemSetting Execute Value %O', task._id, task.value);
-	// Check Redis if a new Date is set and if get all System Settings and init
-	redisClient.get('vcSystemConfigUpdatedAt', function(err, newUpdatedAt) {
-		if (err) {
-			errorHandler(err, undefined, 'REDIS: Get System Setting vcSystemConfigUpdatedAt Error ', undefined);
-			task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
-			finishedTask(task, false);
-			return;
-		}
+	
+	try {
+		// Redis v4: get returns promise
+		var newUpdatedAt = await redisClient.get('vcSystemConfigUpdatedAt');
+		
 		var result = {};
 		if (!newUpdatedAt || lastUpdatedAt < new Date(newUpdatedAt)) {
 			logger4js.trace('Task(%s) refreshSystemSetting Init Settings %s %s', task._id, newUpdatedAt, lastUpdatedAt.toISOString());
-			initSystemSettings();
+			await initSystemSettings();
 			result = {result: 1, resultDescription: 'Init System Settings'};
 		} else {
 			logger4js.trace('Task(%s) refreshSystemSetting Settings Still UpToDate %s %s', task._id, newUpdatedAt, lastUpdatedAt.toISOString());
@@ -195,7 +193,11 @@ var refreshSystemSetting = function(task, finishedTask) {
 		task.value.taskSpecific = result;
 		finishedTask(task, task.value.taskSpecific.result == 0);
 		logger4js.trace('Task(%s) refreshSystemSetting Done UpdatedAt %s', task._id, newUpdatedAt);
-	});
+	} catch (err) {
+		errorHandler(err, undefined, 'REDIS: Get System Setting vcSystemConfigUpdatedAt Error ', undefined);
+		task.value.taskSpecific = {result: -1, resultDescription: 'Err: Redis Setting vcSystemConfigUpdatedAt'};
+		finishedTask(task, false);
+	}
 };
 
 /* The reloadSystemSetting function forces a reload of system settings by deleting the vcSystemConfigUpdatedAt key from Redis 
@@ -208,21 +210,22 @@ This function will be called after changes in the systemSetting. After the reloa
 		If an error occurs while deleting the Redis key,	- logs the error and does not reload settings.
  */
 
-var reloadSystemSetting = function() {
+var reloadSystemSetting = async function() {
 	logger4js.info('reloadSystemSetting from DB');
-	// MS TODO: Check Redis if a new Date is set and if get all System Settings and init
-	redisClient.del('vcSystemConfigUpdatedAt', function(err, response) {
-		if (err) {
-			errorHandler(err, undefined, 'REDIS: Del System Setting vcSystemConfigUpdatedAt Error ', undefined);
-			return;
-		}
+	
+	try {
+		// Redis v4: del returns promise
+		var response = await redisClient.del('vcSystemConfigUpdatedAt');
+		
 		if (response) {
 			logger4js.info('REDIS: vcSystemConfigUpdatedAt Deleted Successfully');
-		} else  {
+		} else {
 			logger4js.warn('REDIS: vcSystemConfigUpdatedAt Deletion Problem');
 		}
-		initSystemSettings();
-	});
+		await initSystemSettings();
+	} catch (err) {
+		errorHandler(err, undefined, 'REDIS: Del System Setting vcSystemConfigUpdatedAt Error ', undefined);
+	}
 };
 
 /* The getSystemVCSetting function retrieves a specific system setting of the VISBO Center. 

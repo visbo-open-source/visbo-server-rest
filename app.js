@@ -5,10 +5,9 @@ var logger = require('morgan');
 var fs = require('fs');
 var i18n = require('i18n');
 // var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
 var delay = require('delay');
 var environment = require('dotenv');
-var moment = require('moment');
+var dateFormat = require('./components/dateFormat');
 var process = require('process');
 var os = require( 'os' );
 
@@ -168,11 +167,15 @@ function dbConnect(dbconnection, launchServer) {
   if (!dbconnection) {
     logger4js.fatal('Connecting string missing in .env');
   } else {
-    var position = dbconnection.indexOf(':') + 1;
-    position = dbconnection.indexOf(':', position) + 1;
-    var cleanString = dbconnection.substring(0, position);
-    position = dbconnection.indexOf('@', position + 1);
-    cleanString = cleanString.concat('XX..XX', dbconnection.substring(position, dbconnection.length));
+    var cleanString = dbconnection;
+    // If URI contains credentials, mask them in logs
+    if (dbconnection.indexOf('@') > -1) {
+      var position = dbconnection.indexOf(':') + 1;
+      position = dbconnection.indexOf(':', position) + 1;
+      cleanString = dbconnection.substring(0, position);
+      position = dbconnection.indexOf('@', position + 1);
+      cleanString = cleanString.concat('XX..XX', dbconnection.substring(position));
+    }
     logger4js.warn('Connecting database %s', cleanString);
     mongoose.connect(
       // Replace CONNECTION_URI with your connection uri
@@ -218,8 +221,8 @@ function launchServer() {
   visboTaskScheduleInit();
   app.use(express.static(path.join(__dirname, 'public'), options));
   // app.use(cookieParser());
-  app.use(bodyParser.urlencoded({ extended: false }));
-  app.use(bodyParser.json({limit: '5mb', type: 'application/json'}));
+  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: '5mb' }));
 
   // simple logger for this router's requests
   // all requests to this router will first hit this middleware
@@ -329,7 +332,7 @@ app.use(logger(function (tokens, req, res) {
       ''
     ].join(' ');
     logger4jsRest.info(webLog);
-    webLog = moment().format('YYYY-MM-DD HH:mm:ss:SSS:') + ' ' + webLog;
+    webLog = dateFormat.formatLogTimestamp() + ' ' + webLog;
   }
   if (tokens.status(req, res) == 500) {
     var headers = JSON.parse(JSON.stringify(req.headers));
