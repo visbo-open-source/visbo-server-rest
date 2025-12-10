@@ -1,5 +1,7 @@
 var crypto = require('crypto');
 var secrets = require('./../secrets/jwt.js');
+var log4js = require('log4js');
+var logger4js = log4js.getLogger('OTHER');
 
 var algorithm = 'aes-256-cbc';
 var iv = undefined;
@@ -7,11 +9,22 @@ var iv = undefined;
 function getKey() {
 	// Prefer key from environment for easier rotation and per-environment config
 	if (process.env.INTERNAL_ENCRYPTION) {
+		var keyBuffer = undefined;
 		try {
 			// Expect a hex-encoded key for AES-256 (32 bytes => 64 hex chars)
-			return Buffer.from(process.env.INTERNAL_ENCRYPTION, 'hex');
+			keyBuffer = Buffer.from(process.env.INTERNAL_ENCRYPTION, 'hex');
 		} catch (e) {
-			// If parsing fails, fall back to legacy secret implementation
+			// If parsing fails, log and fall back to legacy secret implementation
+			logger4js.warn('INTERNAL_ENCRYPTION could not be parsed as hex, falling back to legacy internalEncryption.secret. Error: %s', e.message);
+		}
+		// Validate that the key length matches AES-256 requirements
+		if (keyBuffer && keyBuffer.length === 32) {
+			return keyBuffer;
+		}
+		if (keyBuffer) {
+			logger4js.warn('INTERNAL_ENCRYPTION has invalid length %d bytes, expected 32. Falling back to legacy internalEncryption.secret.', keyBuffer.length);
+		} else {
+			logger4js.warn('INTERNAL_ENCRYPTION is set but resulted in an undefined key buffer, falling back to legacy internalEncryption.secret.');
 		}
 	}
 	// Legacy fallback: keep old behaviour for existing deployments
