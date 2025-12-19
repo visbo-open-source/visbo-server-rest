@@ -143,7 +143,7 @@ async function verifyUser(req, res, next) {
 	if (!token) {
 		token = req.headers['api-key'];
 		var uiUrl =  getSystemUrl();
-		if (token && process.env.NODE_ENV == 'development' && (uiUrl == 'http://localhost:4200' || uiUrl == 'https://dev.visbo.net') && req.body.debug) {
+		if (token && process.env.NODE_ENV == 'development' && (uiUrl == 'http://localhost:4200' || uiUrl == 'https://dev.visbo.net') && req.body && req.body.debug) {
 			apiToken = true;
 			options.ignoreExpiration = true;
 		}

@@ -39,7 +39,7 @@ function getAllGroups(req, res, next) {
 	} else if (req.method == 'GET' && req.query.vcid) {
 		// in case of vp get we get the vcid from the query parameter if available
 		vcid = req.query.vcid;
-	} else if (req.method == 'POST' && req.body.vcid) {
+	} else if (req.method == 'POST' && req.body && req.body.vcid) {
 		// in case of vp create we get the vcid from the body
 		vcid = req.body.vcid;
 	}
@@ -311,7 +311,7 @@ function getVPTemplate(req, res, next) {
 	if (req.method != 'POST'|| urlComponent.length > 2 || req.query.vpid == undefined) {
 		return next();
 	}
-	if (req.body.vpType == 1 || req.body.vpType == 2) {
+	if (req.body && (req.body.vpType == 1 || req.body.vpType == 2)) {
 		return next();
 	}
 	logger4js.debug('Check if we need VP Template', baseUrl, req.query.vpid);
@@ -327,7 +327,7 @@ function getVPTemplate(req, res, next) {
 	}
 	var query = {};
 	query._id = vpTemplateID;
-	query.vcid = req.body.vcid;
+	query.vcid = req.body && req.body.vcid;
 	query.deletedAt =  {$exists: false};	// not deleted
 	// Test Ute // 
 	// query.vpType = 2; // is a VP Template	
@@ -410,7 +410,7 @@ function getVPOrgs(req, res, next) {
 		return next();
 	}
 
-	if (!req.body.vcid) {
+	if (!req.body || !req.body.vcid) {
 		logger4js.warn('No VISBO Center identified');
 		return res.status(400).send({
 			state: 'failure',

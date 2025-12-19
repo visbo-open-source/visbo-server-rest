@@ -34,7 +34,7 @@ function getOneVP(req, res, next) {
 	if (req.method == 'GET' && baseUrl == '/' && validate.validateObjectId(req.query.vpid, false)) {
 		skip = false;
 		vpid = req.query.vpid;
-	} else if (req.method == 'POST' && baseUrl == '/') {
+	} else if (req.method == 'POST' && baseUrl == '/' && req.body) {
 		skip = false;
 		vpid = req.body.vpid;
 	} else if (req.method == 'POST' && req.oneVPV) {
@@ -111,7 +111,7 @@ function getAllVPVGroups(req, res, next) {
 		}
 	} else if (req.method == 'POST' && baseUrl == '/') {
 		// Only Create VP Request, check vpid from Body
-		if (!validate.validateObjectId(req.body.vpid, false)) {
+		if (!req.body || !validate.validateObjectId(req.body.vpid, false)) {
 			return res.status(400).send({
 				state: 'failure',
 				message: 'No valid Project ID defined'
@@ -643,7 +643,7 @@ function getAllVPVsShort(req, res, next) {
 */
 function getCurrentVPVpfv(req, res, next) {
 	var startCalc = new Date();
-	var timestamp = req.method == 'POST' ? req.body.timestamp : req.oneVPV.timestamp;
+	var timestamp = req.method == 'POST' && req.body ? req.body.timestamp : req.oneVPV.timestamp;
 	timestamp = timestamp || new Date();
 
 	if (!validate.validateDate(timestamp, false)) {
