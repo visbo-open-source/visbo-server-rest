@@ -490,14 +490,19 @@ If a matching baseline version (pfvVPV) exists, it is attached to req.visboPFV f
 function getVPVpfv(req, res, next) {
 	var startCalc = new Date();
 	var baseUrl = req.url.split('?')[0];
-	var vpid = req.body.vpid;
-	var timestamp = req.body.timestamp;
 
 	logger4js.trace('VPV getVPVpfv Information');
 	// fetch the base line in case of POST VPV to calculate keyMetrics
-	if (req.method != 'POST' || baseUrl != '/' || req.body.variantName == 'pfv') {
+	if (req.method != 'POST' || baseUrl != '/') {
 		return next();
 	}
+
+	var body = req.body || {};
+	if (body.variantName == 'pfv') {
+		return next();
+	}
+	var vpid = body.vpid;
+	var timestamp = body.timestamp;
 	// check that vpid is present and is a valid ObjectID
 	if (!validate.validateObjectId(vpid, false)
 	|| !validate.validateDate(timestamp, true)) {
