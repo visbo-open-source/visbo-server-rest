@@ -49,7 +49,7 @@ function getAllGroups(req, res, next) {
 		vcid = req.query.vcid;
 	} else if (urlComponent.length >= 2) {
 		vcid = urlComponent[1];
-	} else if (req.method == 'POST' && req.body.vcid) {
+	} else if (req.method == 'POST' && req.body && req.body.vcid) {
 		vcid = req.body.vcid;
 	}
 	if (!validate.validateObjectId(vcid, true)) {
@@ -458,7 +458,7 @@ function checkVCOrgs(req, res, next) {
 	if ((req.method == 'POST')
 	&& urlComponent.length == 4 && urlComponent[3] == 'setting') {
 		// User does a POST of a setting, check if it is an organisation
-		if (req.body.type == 'organisation') {
+		if (req.body && req.body.type == 'organisation') {
 			logger4js.debug('Check old Organisation without Capacity');
 			getVCOrganisation(req.oneVC._id, false, req, res, next);
 		} else {

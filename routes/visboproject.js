@@ -2857,7 +2857,6 @@ router.route('/:vpid/variant/:vid')
 		var lockResult;
 
 		req.auditDescription = 'Project Variant Delete';
-		req.auditInfo = req.body.variantId;
 
 		logger4js.info('DELETE Project Variant for userid %s vp %s variantID :%s:', userId, req.params.vpid, req.params.vid);
 
