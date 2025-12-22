@@ -175,6 +175,13 @@ router.route('/profile')
 		req.auditDescription = 'User Profile Update';
 
 		logger4js.info('Put/Update user %s', req.decoded._id);
+		if (!req.body || !req.body.profile || !req.body.profile.firstName || !req.body.profile.lastName) {
+			logger4js.debug('Put/Update user %s body %O', req.decoded._id, req.body);
+			return res.status(400).send({
+				state: 'failure',
+				message: 'Body does not contain correct Profile data'
+			});
+		}
 		User.findById(req.decoded._id, function (err, user) {
 			if (err) {
 				errorHandler(err, res, `DB: PUT Profile ${req.decoded._id} Find `, 'Error update profile failed');

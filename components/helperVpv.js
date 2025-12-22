@@ -245,8 +245,6 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 			return;
 		}
 		req.visboPFV = oneVPV;
-		// update the version count of the base version or the variant
-		updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 		if (oneVPV.variantName == 'pfv') {
 			// now create a copy of the pfv version as the first version of the project
 			var baseVPV = initVPV(oneVPV);
@@ -262,8 +260,8 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 					errorHandler(err, res, 'DB: Create VP Template VPV Save', 'Error creating Project Version ');
 					return;
 				}
-				//?????
 				req.visboPFV = oneVPV;
+				// update the version count only for the base version (variantName=''), not for pfv
 				updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 				return res.status(200).send({
 					state: 'success',
@@ -272,6 +270,8 @@ function createInitialVersions(req, res, newVPV, calcKeyMetrics) {
 				});
 			});
 		} else {
+			// update the version count of the variant
+			updateVPVCount(oneVPV.vpid, oneVPV.variantName, 1);
 			return res.status(200).send({
 				state: 'success',
 				message: 'Successfully created new Project',

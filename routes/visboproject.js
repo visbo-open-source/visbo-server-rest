@@ -59,10 +59,19 @@ function findUserById(currentUser) {
 function convertCustomFieldString(customFieldString) {
 	var result;
 	if (customFieldString) {
+		var isValid = true;
 		customFieldString.forEach(item => {
-			if (!validateName(item.name, false)
-			|| !validateName(item.value, true)) {
-				return result;
+			if (!validateName(item.name, false)) {
+				isValid = false;
+				return;
+			}
+			// Convert value to string if it's a number
+			if (typeof item.value === 'number') {
+				item.value = item.value.toString();
+			}
+			if (!validateName(item.value, true)) {
+				isValid = false;
+				return;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
 				item.type = 'System';
@@ -70,7 +79,9 @@ function convertCustomFieldString(customFieldString) {
 				item.type = 'VP';
 			}
 		});
-		result = customFieldString.filter(item => item.value);
+		if (isValid) {
+			result = customFieldString.filter(item => item.value);
+		}
 	}
 	return result;
 }
@@ -519,7 +530,10 @@ router.route('/')
 			query._id = {$in: req.listVPPerm.getVPIDs(requiredPerm, true)};
 		}
 		query.deletedAt = {$exists: req.query.deleted ? true : false};				// Not deleted
-		query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
+		// For sysadmin with deleted flag, allow VPs from deleted VCs
+		if (!isSysAdmin || !req.query.deleted) {
+			query['vc.deletedAt'] = {$exists: false}; // Do not deliver any VP from a deleted VC
+		}
 		// check if query string is used to restrict to a specific VC
 		if (req.query.vcid) {
 			query.vcid = req.query.vcid;
@@ -659,7 +673,6 @@ router.route('/')
 		var customFieldString, customFieldDouble, customFieldDate;
 		var vpType = (req.body.vpType == undefined || req.body.vpType < 0 || req.body.vpType > 2) ? 0 : req.body.vpType;
 		var kundennummer = (req.body.kundennummer || '').trim();
-		var isPMO = false;
 
 		if (vpType == 1) {
 			req.auditDescription = 'Portfolio Create';
@@ -717,10 +730,6 @@ router.route('/')
 				state: 'failure',
 				message: 'No Permission to create Project'
 			});
-		}
-		var permPMO = constPermVC.View + constPermVC.Modify;
-		if ((req.listVCPerm.getPerm(vcid).vc & permPMO) == permPMO) {
-			isPMO = true;
 		}
 		var query = {'_id': vcid};
 		VisboCenter.findOne(query, function (err, vc) {
@@ -781,20 +790,18 @@ router.route('/')
 					newVP.customFieldDate = customFieldDate;
 				}
 				newVP.vpType = vpType;
+				newVP.variant = [];
+				if (req.oneVPTemplate && req.oneVPTemplate.variant) {
+					req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
+				}
+				if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
+					newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail});
+				}
 				newVP.vpvCount = 0;
 				if (newVP.vpType == 1) {
 					newVP.vpfCount = 0;
 				}
 				newVP.vpStatus = constVPStatus[0];
-				if (req.oneVPTemplate) {
-					newVP.variant = [];
-					if (req.oneVPTemplate.variant) {
-						req.oneVPTemplate.variant.forEach(item => newVP.variant.push({variantName: item.variantName, vpvCount: 0, email: useremail}));
-					}
-					if (!newVP.variant.find(variant => variant.variantName == 'pfv')) {
-						newVP.variant.push({variantName: 'pfv', vpvCount: 0, email: useremail});
-					}
-				}
 
 				// Create new VP Group
 				var newVG = new VisboGroup();
@@ -874,7 +881,7 @@ router.route('/')
 							newVPV.vpid = req.oneVP._id;
 							newVPV.description = req.oneVP.description;
 
-							newVPV.variantName = isPMO ? 'pfv' : ''; // first Version is the pfv if user is PMO
+							newVPV.variantName = 'pfv';
 							newVPV.startDate = startDate;
 							newVPV.endDate = endDate;
 							if (req.body.rac && validate.validateNumber(req.body.rac) != undefined ) {
@@ -1095,11 +1102,19 @@ router.route('/:vpid')
 					});
 				}
 				if (vpStatusNew == 'ordered') {
+					// Check if pfv variant exists
 					var variantIndex = req.oneVP.variant.findIndex(element => element.variantName == 'pfv');
-					if (variantIndex < 0 || req.oneVP.variant[variantIndex].vpvCount <= 0) {
+					if (variantIndex < 0) {
 						return res.status(400).send({
 							state: 'failure',
 							message: 'Project does not have a pfv variant, status could not be changed to ordered'
+						});
+					}
+					// Check if baseline version (variantName='') has at least one version
+					if (req.oneVP.vpvCount <= 0) {
+						return res.status(400).send({
+							state: 'failure',
+							message: 'Project does not have any baseline version, status could not be changed to ordered'
 						});
 					}
 				}
@@ -2704,15 +2719,30 @@ router.route('/:vpid/variant')
 			});
 		}
 		logger4js.trace('Variant %s current list %O', variantName, variantList);
-		var variantDuplicate = false;
-		variantDuplicate = variantList.findIndex(variant => variant.variantName == variantName) >= 0;
+		var existingVariantIndex = variantList.findIndex(variant => variant.variantName == variantName);
+		var variantDuplicate = existingVariantIndex >= 0;
 		logger4js.debug('Variant Duplicate %s Variant Name %s', variantDuplicate, variantName);
-		if (variantDuplicate || variantName == '') {
+		if (variantName == '') {
 			return res.status(409).send({
 				state: 'failure',
 				message: 'Variant already exists',
 				vp: [req.oneVP]
-		});
+			});
+		}
+		if (variantDuplicate) {
+			// For pfv variant, return 200 to make it idempotent
+			if (variantName == 'pfv') {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Created Project Variant',
+					variant: [variantList[existingVariantIndex]]
+				});
+			}
+			return res.status(409).send({
+				state: 'failure',
+				message: 'Variant already exists',
+				vp: [req.oneVP]
+			});
 		}
 		logger4js.trace('Variant List %d orig %O ', variantList.length, variantList);
 		var newVariant = new Variant;
