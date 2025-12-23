@@ -47,7 +47,7 @@ function getAllGroups(req, res, next) {
 
 	if (req.method == 'GET' && req.query.vcid) {
 		vcid = req.query.vcid;
-	} else if (urlComponent.length >= 2) {
+	} else if (urlComponent.length >= 2 && urlComponent[1] !== 'vc') {
 		vcid = urlComponent[1];
 	} else if (req.method == 'POST' && req.body && req.body.vcid) {
 		vcid = req.body.vcid;
@@ -208,6 +208,12 @@ function checkSettingId(req, res, next, settingID) {
 		if (!oneVCSetting) {
 			logger4js.warn('SettingId %s for VC %s not found', settingID, vcid);
 			// do not accept requests without a group assignement especially to System Group
+			if (req.method == 'DELETE') {
+				return res.status(200).send({
+					state: 'success',
+					message: 'Setting already deleted'
+				});
+			}
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No valid Setting'

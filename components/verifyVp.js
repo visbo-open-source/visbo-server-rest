@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var ConstPerm = require('../models/constPerm');
 var constPermVP = ConstPerm.constPermVP;
+var constPermSystem = ConstPerm.constPermSystem;
 
 var VisboProject = mongoose.model('VisboProject');
 var VisboGroup = mongoose.model('VisboGroup');
@@ -103,9 +104,9 @@ function getAllGroups(req, res, next) {
 		req.listVCPerm = listVCPerm;
 
 		if (req.query.sysadmin) {
-			// MS TODO: Check if ok for users with sysadmin permission but without View VC
-			if ((listVCPerm.getPerm(0).vp & constPermVP.View) == 0) {
-				// no View permission for VP
+			// Check system permissions for sysadmin requests
+			if ((listVCPerm.getPerm(0).system & constPermSystem.View) == 0) {
+				// no View permission for system
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No valid VISBO Center or no Permission'

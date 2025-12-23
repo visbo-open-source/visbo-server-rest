@@ -150,8 +150,10 @@ function saveRecalcKM(req, res, message) {
 						return;
 					}
 					req.oneVPV = oneVPV;
-					// update the version count of the base version or the variant
-					helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+					// update the version count of the base version or the variant (only if validated)
+					if (!req.query.noValidate) {
+						helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
+					}
 
 					// cleanup cost keyMetrics in case of missing audit permission
 					var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
@@ -177,8 +179,10 @@ function saveRecalcKM(req, res, message) {
 		
 		newOneVPV.save() 
 			.then (function() {
-				// update the version count of the base version or the variant
-				helperVpv.updateVPVCount(newOneVPV.vpid, newOneVPV.variantName, 1);
+				// update the version count of the base version or the variant (only if validated)
+				if (!req.query.noValidate) {
+					helperVpv.updateVPVCount(newOneVPV.vpid, newOneVPV.variantName, 1);
+				}
 
 				// cleanup cost keyMetrics in case of missing audit permission
 				var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);

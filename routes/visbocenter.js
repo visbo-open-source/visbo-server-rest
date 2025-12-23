@@ -86,6 +86,8 @@ router.use('/:vcid/timetracking', verifyVpv.getVCVPVs);
 router.use('/:vcid/timetracking', verifyVc.getVCAllVP);
 
 router.use('/:vcid/setting', verifyVc.checkVCOrgs);
+router.use('/:vcid/setting/:settingid', verifyVp.getAllGroups);
+router.use('/:vcid/setting/:settingid', verifyVc.getVCOrgs);
 router.use('/', verifyVg.getVCGroups);
 
 function findUserById(currentUser) {
@@ -3250,7 +3252,7 @@ router.route('/:vcid/setting')
 			return res.status(403).send({
 				state: 'failure',
 				message: 'No Permission to create VISBO Center Setting',
-				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				perm: req.listVCPerm.getPerm(req.listVCPerm.getPerm(0).system? 0 : req.oneVC._id)
 			});
 		}
 		logger4js.debug('Post Setting to VC %s Permission is ok', req.params.vcid);
@@ -3282,31 +3284,56 @@ router.route('/:vcid/setting')
 		newTimeStamp = Date.parse(newTimeStamp) ? new Date(newTimeStamp) : undefined;
 		vcSetting.timestamp = newTimeStamp;
 
-		vcSetting.save(function(err, oneVCSetting) {
+		// Prevent duplicate setting for same vc, type, name and userId (if provided)
+		var duplicateQuery = {
+			vcid: vcSetting.vcid,
+			type: vcSetting.type,
+			name: vcSetting.name
+		};
+		if (vcSetting.userId) {
+			duplicateQuery.userId = vcSetting.userId;
+		} else {
+			duplicateQuery.userId = { $exists: false };
+		}
+
+		VCSetting.findOne(duplicateQuery, function(err, existingSetting) {
 			if (err) {
-				errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VISBO Center Setting ${req.oneVC.name}`);
+				errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} find duplicate`, `Error finding VISBO Center Setting ${req.oneVC.name}`);
 				return;
 			}
-			req.oneVCSetting = oneVCSetting;
-			return res.status(200).send({
-				state: 'success',
-				message: 'Inserted VISBO Center Setting',
-				vcsetting: [ oneVCSetting ],
-				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+			if (existingSetting) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Setting already exists'
+				});
+			}
+
+			vcSetting.save(function(err, oneVCSetting) {
+				if (err) {
+					errorHandler(err, res, `DB: POST VC Settings ${req.params.vcid} save`, `Error creating VISBO Center Setting ${req.oneVC.name}`);
+					return;
+				}
+				req.oneVCSetting = oneVCSetting;
+				return res.status(200).send({
+					state: 'success',
+					message: 'Inserted VISBO Center Setting',
+					vcsetting: [ oneVCSetting ],
+					perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+				});
 			});
 		});
-	});
+	})
 
 router.route('/:vcid/setting/:settingid')
 
 	/**
-	  * @api {delete} /vc/:vcid/setting/:settingid Delete a Setting
-	  * @apiVersion 1.0.0
-	  * @apiGroup VISBO Center Properties
-	  * @apiName DeleteVISBOCenterSetting
-	  * @apiHeader {String} access-key User authentication token.
-	  * @apiDescription Deletes the specified setting in the VISBO Center
-	  *
+		* @api {delete} /vc/:vcid/setting/:settingid Delete a Setting
+		* @apiVersion 1.0.0
+		* @apiGroup VISBO Center Properties
+		* @apiName DeleteVISBOCenterSetting
+		* @apiHeader {String} access-key User authentication token.
+		* @apiDescription Deletes the specified setting in the VISBO Center
+		*
 		* @apiParam {String} vcid The requested VISBO Center ID.
 		* @apiParam {String} settingid The requested VISBO Center Setting ID.
 		* @apiPermission Authenticated and VC.View and VC.Modify Permission for the VISBO Center.
@@ -3373,12 +3400,21 @@ router.route('/:vcid/setting/:settingid')
 		}
 		req.oneVCSetting.remove(function(err) {
 			if (err) {
+				// if already deleted/missing, return 200 to keep delete idempotent
+				if (err.name === 'DocumentNotFoundError' || err.kind === 'ObjectId') {
+					return res.status(200).send({
+						state: 'success',
+						message: 'VISBO Center Setting already deleted',
+						perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
+					});
+				}
 				errorHandler(err, res, `DB: DELETE VC Setting ${req.params.settingid} Delete`, `Error deleting VISBO Center Setting ${req.params.settingid}`);
 				return;
 			}
 			return res.status(200).send({
 				state: 'success',
-				message: 'Deleted VISBO Center Setting'
+				message: 'Deleted VISBO Center Setting',
+				perm: req.listVCPerm.getPerm(req.oneVC.system? 0 : req.oneVC._id)
 			});
 		});
 	})
@@ -3995,6 +4031,20 @@ router.route('/:vcid/capa')
 			});
 		}
 
+		// prevent duplicate capacity for same vcid, roleID and year
+		VCCapacity.findOne({ vcid: req.oneVC._id, roleID: roleID, startOfYear: startOfYear }, function(err, existing) {
+			if (err) {
+				errorHandler(err, res, `DB: POST VC Capacity ${req.oneVC._id} Find`, `Failed to create VISBO Center Capacity ${req.oneVC._id}`);
+				return;
+			}
+			if (existing) {
+				return res.status(409).send({
+					state: 'failure',
+					message: 'Capacity already exists for role and year',
+					capacityId: existing._id
+				});
+			}
+
 		var newCapacity = new VCCapacity();
 		newCapacity.vcid = req.oneVC._id;
 		newCapacity.roleID = roleID;
@@ -4018,6 +4068,13 @@ router.route('/:vcid/capa')
 		logger4js.debug('Save VISBO Center Capacity %s %s %s', newCapacity.vcid, newCapacity.roleID, newCapacity.startOfCal);
 		newCapacity.save(function(err, capacity) {
 			if (err) {
+				// handle duplicate key (unique index vcid+roleID+startOfYear)
+				if (err.code === 11000) {
+					return res.status(409).send({
+						state: 'failure',
+						message: 'Capacity already exists for role and year'
+					});
+				}
 				errorHandler(err, res, `DB: POST VC Capacity ${req.oneVC._id} Save`, `Failed to create VISBO Center Capacity ${req.oneVC._id}`);
 				return;
 			}
@@ -4028,6 +4085,7 @@ router.route('/:vcid/capa')
 				message: 'Successfully created new capacity definition',
 				capacity: [ capacity ]
 			});
+		});
 		});
 	});
 

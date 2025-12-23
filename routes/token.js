@@ -139,17 +139,20 @@ router.route('/user/login')
 		var currentDate = new Date();
 		req.auditDescription = 'Login';
 
-		logger4js.debug('Try to Login %s', req.body.email);
+		var body = req.body || {};
+
+		logger4js.debug('Try to Login %s', body.email);
 		logger4js.debug('Login Headers %O', req.headers);
 		var lang = validate.evaluateLanguage(req);
     	logger4js.debug('The Accepted Language is: ' + lang);
-		if (!req.body.email || !req.body.password){
-			logger4js.debug('Authentication Missing email or password %s', req.body.email);
+		if (!body.email || !body.password){
+			logger4js.debug('Authentication Missing email or password %s', body.email);
 			return res.status(400).send({
 				state: 'failure',
 				message: 'email or password missing'
 			});
 		}
+		req.body = body;
 		req.body.email = req.body.email.toLowerCase().trim();
 		req.visboUserAgent = visboShortUA(req.headers['user-agent']);
 		logger4js.debug('Shortened User Agent ', req.visboUserAgent);
