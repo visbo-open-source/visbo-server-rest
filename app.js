@@ -70,7 +70,7 @@ var corsOptions = {
       callback(null, true);
     } else {
       logger4js.warn('CorsOptions deny  %s vs allowed %s', origin, uiUrl);
-      callback(origin + ' is not allowed to access', null);
+      callback(null, false);
     }
   }
 };

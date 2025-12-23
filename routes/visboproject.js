@@ -164,10 +164,12 @@ function detectChangeVPStatus(original, update) {
 function convertCustomFieldDouble(customFieldDouble) {
 	var result;
 	if (customFieldDouble) {
+		var isValid = true;
 		customFieldDouble.forEach(item => {
 			if (!validateName(item.name, false)
 			|| validateNumber(item.value, true) == undefined) {
-				return result;
+				isValid = false;
+				return;
 			}
 			if (constSystemCustomName.find(element => element == item.name)) {
 				item.type = 'System';
@@ -175,7 +177,9 @@ function convertCustomFieldDouble(customFieldDouble) {
 				item.type = 'VP';
 			}
 		});
-		result = customFieldDouble.filter(item => item.value != undefined);
+		if (isValid) {
+			result = customFieldDouble.filter(item => item.value != undefined);
+		}
 	}
 	return result;
 }
@@ -440,6 +444,7 @@ router.param('groupid', verifyVg.getGroupId);
 // Register the UserId middleware to check the userid param
 router.param('userid', verifyVg.checkUserId);
 // get details for capacity calculation
+// Note: This middleware applies to all /portfolio routes including /:vpid/portfolio/:vpfid
 router.use('/:vpid/portfolio', verifyVp.getVPGroupsOfVC);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVc.getVCOrgs);
 router.use('/:vpid/portfolio/:vpfid/capacity', verifyVpv.getPortfolioVPs);
@@ -1145,7 +1150,7 @@ router.route('/:vpid')
 		}
 
 		if (req.body.customFieldDouble) {
-			customFieldDouble =  convertCustomFieldString(req.body.customFieldDouble);
+			customFieldDouble =  convertCustomFieldDouble(req.body.customFieldDouble);
 			if (!customFieldDouble ) {
 				logger4js.info('PUT Project contains illegal values in customFieldDouble %O', req.body.customFieldDouble.name);
 				return res.status(400).send({
@@ -3454,19 +3459,31 @@ router.route('/:vpid/portfolio/:vpfid')
 	.put(function(req, res) {
 		var userId = req.decoded._id;
 		var useremail = req.decoded.email;
-		var variantName = req.body.variantName == undefined ? '' : req.body.variantName.trim();
+		var body = req.body || {};
+		var variantName = body.variantName == undefined ? '' : body.variantName.trim();
 
 		req.auditDescription = 'Portfolio List Update';
 		req.auditInfo = req.oneVP.name;
-		if (req.body.variantName) {
-			req.auditInfo = req.auditInfo.concat(' / ', req.body.variantName);
+		if (body.variantName) {
+			req.auditInfo = req.auditInfo.concat(' / ', body.variantName);
 		}
 
 		logger4js.info('PUT/Save Portfolio List for userid %s email %s and vpf %s', userId, useremail, req.params.vpfid);
+		
+		// Safety check: ensure req.listVPPerm exists
+		if (!req.listVPPerm) {
+			logger4js.error('PUT VPF: req.listVPPerm is undefined for vpid %s', req.params.vpid);
+			return res.status(500).send({
+				state: 'failure',
+				message: 'Internal error: permissions not loaded'
+			});
+		}
+		
 		// undelete the VPF in case of PUT
 		if (req.oneVPF.deletedAt) {
 			req.auditDescription = 'Portfolio List Undelete';
-			if (!req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete) {
+			logger4js.debug('Checking undelete permission for vpid %s', req.params.vpid);
+			if (!(req.listVPPerm.getPerm(req.params.vpid).vp & constPermVP.Delete)) {
 				return res.status(403).send({
 					state: 'failure',
 					message: 'No Permission to undelete Portfolio List!'
