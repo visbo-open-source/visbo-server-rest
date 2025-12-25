@@ -194,6 +194,10 @@ function checkVpfid(req, res, next, vpfid) {
 	var query = {};
 	query.vpid = req.oneVP._id;
 	query._id = vpfid;
+	// Allow loading deleted VPF for undelete operations
+	if (req.query.deletedVPF) {
+		query.deletedAt = {$exists: true};
+	}
 	var queryVPF = VisboPortfolio.findOne(query);
 	// queryVP.select('name users updatedAt createdAt');
 	queryVPF.exec(function (err, oneVPF) {
