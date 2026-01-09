@@ -8,26 +8,26 @@ var restrictSchema = new Schema({
 		userId: {type: Schema.Types.ObjectId, ref: 'User'},
 		email: {type: String, required: false}
 	},
-	elementPath: [{ type: String, reuqired: true }],
+	elementPath: [{ type: String, required: false }],
 	inclChildren: {type: Boolean, required: false},
-	validUntil: { type: Date, reuqired: false },
-	createdAt: { type: Date, reuqired: true }
+	validUntil: { type: Date, required: false },
+	createdAt: { type: Date, required: false }
 });
 
 var lockSchema = new Schema({
 	variantName: { type: String, maxlength: 256 },
 	email: { type: String, required: true, maxlength: 256 },
-	createdAt: { type: Date, reuqired: true },
-	expiresAt: { type: Date, reuqired: true }
+	createdAt: { type: Date, required: false },
+	expiresAt: { type: Date, required: false }
 });
 
 var variantSchema = new Schema({
 	variantName: { type: String, required: true, maxlength: 256 },
 	description: { type: String, required: false, maxlength: 4096 },
 	email: { type: String, required: false, maxlength: 256 },
-	createdAt: { type: Date, reuqired: true },
-	vpvCount: { type: Number, reuqired: true },
-	vpfCount: { type: Number, reuqired: false }
+	createdAt: { type: Date, required: false },
+	vpvCount: { type: Number, required: false },
+	vpfCount: { type: Number, required: false }
 });
 
 var visboProjectSchema = new mongoose.Schema({
@@ -58,7 +58,7 @@ var visboProjectSchema = new mongoose.Schema({
 		deletedAt: {type: Date, required: false}
 	},
 	vpvCount: { type: Number, required: true },
-	vpfCount: { type: Number, reuqired: false },
+	vpfCount: { type: Number, required: false },
 	variant: [{type: variantSchema, required: false}],
 	lock: [{type: lockSchema, required: false}],
 	restrict: [{type: restrictSchema, required: false}],
