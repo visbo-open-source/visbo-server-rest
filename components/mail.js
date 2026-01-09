@@ -66,6 +66,22 @@ function VisboSendMail(message) {
 			}
 			logger4js.debug('MAIL SMTP gateway %s with user %s', smtpConfig.host, smtpConfig.auth.user);
 			mailUser = smtpConfig.auth.user;
+
+			// ============================================================
+			// FIX: Accept self-signed certificates in development environment
+			// This is necessary when the SMTP server uses a self-signed certificate
+			// which Node.js/nodemailer would otherwise reject.
+			// IMPORTANT: This setting is ONLY applied in development mode!
+			// ============================================================
+			if (process.env.NODE_ENV === 'development') {
+				if (!smtpConfig.tls) {
+					smtpConfig.tls = {};
+				}
+				smtpConfig.tls.rejectUnauthorized = false;
+				logger4js.warn('MAIL TLS certificate validation disabled for development environment');
+			}
+			// ============================================================
+
 		} else {
 			logger4js.fatal('MAIL SMTP Configuration Missing in Environment');
 			return;
