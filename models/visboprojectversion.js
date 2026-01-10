@@ -86,7 +86,6 @@ var clsKeyMetrics = new Schema({
 	RACCurrentActual: { type: Number },
 	costCurrentActual: { type: Number },
 	costCurrentTotal: { type: Number },
-	costCurrentTotalPredict: { type: Number },
 	costBaseLastActual: { type: Number },
 	costBaseLastTotal: { type: Number },
 	timeCompletionCurrentActual: { type: Number },

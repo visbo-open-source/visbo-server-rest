@@ -184,7 +184,6 @@ function cleanupKM(keyMetrics) {
 	keyMetrics.costCurrentTotal = undefined;
 	keyMetrics.costBaseLastActual = undefined;
 	keyMetrics.costBaseLastTotal = undefined;
-	keyMetrics.costCurrentTotalPredict = undefined;
 }
 
 /* The getKeyAttributes function extracts essential attributes from a VisboProjectVersion object (newVPV) and returns a new instance containing only 

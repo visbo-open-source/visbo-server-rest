@@ -109,126 +109,37 @@ function saveRecalcKM(req, res, message) {
 			});
 		}
 	}
-	// check if prediction is enabled and needed
-	// var fsModell = systemVC.getPredictModel();
-	// logger4js.info(`Recalc Predict? VPV ${req.oneVPV._id} VP: ${req.oneVPV.vpid} Enabled: ${verifyVc.isVCEnabled(req, 'EnablePredict', 2)} PredictModel: ${fsModell}`);
-	// if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
-	if (req.oneVPV.keyMetrics && verifyVc.isVCEnabled(req, 'EnablePredict', 2) ) {
-		var cmd = './PredictKM';
-		var reducedKM = [];
-		if (req.oneVPV.keyMetrics && req.oneVPV.keyMetrics.costBaseLastTotal && req.oneVPV.keyMetrics.endDateBaseLast) {
-			var tmpVPV = {};
-			tmpVPV._id = req.oneVPV._id;
-			tmpVPV.vpid = req.oneVPV.vpid;
-			tmpVPV.timestamp = req.oneVPV.timestamp;
-			tmpVPV.costCurrentActual = req.oneVPV.keyMetrics.costCurrentActual || 0;
-			tmpVPV.costCurrentTotal = req.oneVPV.keyMetrics.costCurrentTotal || 0;
-			tmpVPV.costBaseLastActual = req.oneVPV.keyMetrics.costBaseLastActual || 0;
-			tmpVPV.costBaseLastTotal = req.oneVPV.keyMetrics.costBaseLastTotal || 0;
-			tmpVPV.endDateCurrent = req.oneVPV.keyMetrics.endDateCurrent || req.oneVPV.endDate;
-			tmpVPV.endDateBaseLast = req.oneVPV.keyMetrics.endDateBaseLast;
-			reducedKM.push(tmpVPV);
-		}
-		cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
-		if (reducedKM.length) {
-			logger4js.warn('POST VPV calculate Prediction for Version', req.oneVPV._id, req.oneVPV.variantName || 'Standard');
-			exec(cmd, function callback(error, stdout, stderr) {
-				if (error) {
-					errorHandler(undefined, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
-					return;
-				}
-				var predictVPV = JSON.parse(stdout);
-				if (!predictVPV || predictVPV.length != 1) {
-					errorHandler(undefined, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
-					return;
-				}
-				// update the original keyMetric with predictedKM
-				req.oneVPV.keyMetrics.costCurrentTotalPredict = predictVPV[0].costCurrentTotal && Math.round(predictVPV[0].costCurrentTotal*1000)/1000; //round to euros
-				req.oneVPV.save(function(err, oneVPV) {
-					if (err) {
-						errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 1');
-						return;
-					}
-					req.oneVPV = oneVPV;
-					// update the version count of the base version or the variant (only if validated)
-					if (!req.query.noValidate) {
-						helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-					}
 
-					// cleanup cost keyMetrics in case of missing audit permission
-					var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
-					if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
-						helperVpv.cleanupKM(req.oneVPV.keyMetrics);
-					}
+	logger4js.info('standard key metrics calculation');
 
-					return res.status(200).send({
-						state: 'success',
-						message: message,
-						vpv: [ req.oneVPV ]
-					});
-				});
-			});
-		}
-	} else {
-		logger4js.info('No Versions for Prediction');
-
-		var newOneVPV = new VisboProjectVersion();
-		newOneVPV = helperVpv.initVPV(req.oneVPV);
-		helperVpv.setErloesWithSumOfInvoice(newOneVPV);
-		newOneVPV.keyMetrics = req.oneVPV.keyMetrics;
+	var newOneVPV = new VisboProjectVersion();
+	newOneVPV = helperVpv.initVPV(req.oneVPV);
+	helperVpv.setErloesWithSumOfInvoice(newOneVPV);
+	newOneVPV.keyMetrics = req.oneVPV.keyMetrics;
 		
-		newOneVPV.save() 
-			.then (function() {
-				// update the version count of the base version or the variant (only if validated)
-				if (!req.query.noValidate) {
-					helperVpv.updateVPVCount(newOneVPV.vpid, newOneVPV.variantName, 1);
-				}
-
-				// cleanup cost keyMetrics in case of missing audit permission
-				var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
-				if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
-					helperVpv.cleanupKM(req.oneVPV.keyMetrics);
-		 		}
-
-				return res.status(200).send({
-					state: 'success',
-					message: message,
-					vpv: [ newOneVPV ]
-				});	
-			})
-			.catch(function(err) {
-				errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 2');
-				return;
-			});
+	newOneVPV.save() 
+		.then (function() {
+			// update the version count of the base version or the variant (only if validated)
+			if (!req.query.noValidate) {
+				helperVpv.updateVPVCount(newOneVPV.vpid, newOneVPV.variantName, 1);
+			}
+			// cleanup cost keyMetrics in case of missing audit permission
+			var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
+			if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
+				helperVpv.cleanupKM(req.oneVPV.keyMetrics);
+	 		}
+			return res.status(200).send({
+				state: 'success',
+				message: message,
+				vpv: [ newOneVPV ]
+			});	
+		})
+		.catch(function(err) {
+			errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 2');
+			return;
+	});
 
 
-		
-		// req.oneVPV.save(function(err, oneVPV) {
-		// 	if (err) {
-		// 		errorHandler(err, res, 'DB: POST VPV Save', 'Error creating Project Versions 2');
-		// 		return;
-
-		// 	} else {
-
-		// 		req.oneVPV = oneVPV;
-		// 		// update the version count of the base version or the variant
-		// 		helperVpv.updateVPVCount(req.oneVPV.vpid, req.oneVPV.variantName, 1);
-	
-		// 		// cleanup cost keyMetrics in case of missing audit permission
-		// 		var perm = req.listVPPerm.getPerm(req.oneVPV.vpid);
-		// 		if ((perm.vp & constPermVP.ViewAudit) == 0 && req.oneVPV.keyMetrics) {
-		// 			helperVpv.cleanupKM(req.oneVPV.keyMetrics);
-		// 		}
-	
-		// 		return res.status(200).send({
-		// 			state: 'success',
-		// 			message: message,
-		// 			vpv: [ oneVPV ]
-		// 		});	
-		// 	}
-			
-		// });
-	}
 }
 
 
@@ -237,65 +148,6 @@ function getRecalcKM(req, res, message) {
 		errorHandler(undefined, res, 'fetchRecalcKM: No VPV list found', 'Error getting Project Versions ');
 		return;
 	}
-	// check if prediction is enabled and needed
-	// var fsModell = systemVC.getPredictModel();
-	// if (verifyVc.isVCEnabled(req, 'EnablePredict', 2) && fsModell) {
-	// 	var cmd = './PredictKM';
-	// 	var reducedKM = [];
-	// 	req.listVPV.forEach(vpv => {
-	// 		if (vpv.keyMetrics && vpv.keyMetrics.costBaseLastTotal && vpv.keyMetrics.endDateBaseLast) {
-	// 			var newVPV = {};
-	// 			newVPV._id = vpv._id;
-	// 			newVPV.vpid = vpv.vpid;
-	// 			newVPV.timestamp = vpv.timestamp;
-	// 			newVPV.costCurrentActual = vpv.keyMetrics.costCurrentActual || 0;
-	// 			newVPV.costCurrentTotal = vpv.keyMetrics.costCurrentTotal || 0;
-	// 			newVPV.costBaseLastActual = vpv.keyMetrics.costBaseLastActual || 0;
-	// 			newVPV.costBaseLastTotal = vpv.keyMetrics.costBaseLastTotal || 0;
-	// 			newVPV.endDateCurrent = vpv.keyMetrics.endDateCurrent || vpv.keyMetrics.endDateBaseLast;
-	// 			newVPV.endDateBaseLast = vpv.keyMetrics.endDateBaseLast;
-	// 			reducedKM.push(newVPV);
-	// 		}
-	// 	});
-	// 	cmd = cmd.concat(' \'', JSON.stringify(reducedKM), '\' ', fsModell);
-	// 	if (reducedKM.length) {
-	// 		logger4js.warn('Recalc %d Versions for Prediction', reducedKM.length, cmd.length);
-	// 		exec(cmd, function callback(error, stdout, stderr) {
-	// 			if (error) {
-	// 				errorHandler(undefined, res, 'predictKM:'.concat(stderr), 'Error getting Prediction ');
-	// 				return;
-	// 			}
-	// 			var predictVPV = JSON.parse(stdout);
-	// 			if (!predictVPV) {
-	// 				errorHandler(undefined, res, 'predictKM no JSON:'.concat(stdout), 'Error getting Prediction ');
-	// 				return;
-	// 			}
-	// 			// update the original keyMetric with predicted BAC
-	// 			predictVPV.forEach(vpv => {
-	// 				if (vpv._id && vpv.costCurrentTotal) {
-	// 					var origVPV = req.listVPV.find(item => item._id.toString() == vpv._id.toString());
-	// 					if (origVPV) {
-	// 						origVPV.keyMetrics.costCurrentTotalPredict = vpv.costCurrentTotal;
-	// 					}
-	// 				}
-	// 			});
-	// 			return res.status(200).send({
-	// 				state: 'success',
-	// 				message: message,
-	// 				count: req.listVPV.length,
-	// 				vpv: req.listVPV
-	// 			});
-	// 		});
-	// 	} else {
-	// 		logger4js.info('No Versions for Prediction');
-	// 		return res.status(200).send({
-	// 			state: 'success',
-	// 			message: message,
-	// 			count: req.listVPV.length,
-	// 			vpv: req.listVPV
-	// 		});
-	// 	}
-// } else {
 	return res.status(200).send({
 		state: 'success',
 		message: message,
@@ -337,7 +189,7 @@ router.route('/')
 	* @apiQuery {String} variantID Deliver only versions for the specified variant, the parameter can contain a list of variantIDs separated by colon. If client wants to have only versions from the main branch, use variantID=
 	* @apiQuery {String} variantName Deliver only versions for the specified variant, the parameter can contain a list of variantNames separated by colon. (outdated)
 	* @apiQuery {String} longList if set deliver all details instead of a short version info for the project version
-	* @apiQuery {String} keyMetrics if set to 1 deliver the keyMetrics for the project version if 2 recalculate prediction and deliver the keyMetrics
+	* @apiQuery {String} keyMetrics if set to 1 deliver the keyMetrics for the project version 
 	*
 	* @apiPermission Authenticated and in case a vcid/vpid/vpfid is specified the VP.View or VP.ViewRestricted Permission for the specified object.
 	* @apiError {number} 400 Bad Values in paramter in URL
@@ -1719,7 +1571,7 @@ router.route('/:vpvid/keyMetrics')
  	* @apiGroup VISBO Project Version
  	* @apiName GetVISBOProjectVersionKeyMetrics
  	* @apiHeader {String} access-key User authentication token.
-	* @apiDescription Get returns the VPV and recalculates the keyMetrics including prediction if configured for this specific Project Version the user has access permission to the Project
+	* @apiDescription Get returns the VPV and recalculates the keyMetrics for this specific Project Version the user has access permission to the Project
 	* In case of success it delivers an array of VPVs, the array contains 0 or 1 element of the VPV including a list with the special properties for the calculation
 	*
 	* @apiParam {String} vpvid The requested VISBO Project Version ID.

@@ -16,7 +16,6 @@ var logger4js = log4js.getLogger(logModule);
 var visboRedis = require('./../components/visboRedis');
 var errorHandler = require('./../components/errorhandler').handler;
 var visboAudit = require('./../components/visboAudit');
-var visboPredict = require('./../components/visboPredict');
 var logging = require('./../components/logging');
 var lock = require('./../components/lock');
 var refreshSystemSetting = require('./../components/systemVC').refreshSystemSetting;
@@ -44,7 +43,6 @@ function finishedTask(task, ignoreAudit) {
     logger4js.warn('No Task available during Finish, Task %s', task._id);
     return;
   }
-  if (task.name == 'Predict Training') logger4js.trace('Task Finished, Task (%s/%s)', task.name, task._id);
   var updateQuery = {_id: task._id};
   var updateOption = {upsert: false};
   var currentDate = new Date();
@@ -140,11 +138,9 @@ async function checkNextRun() {
 					continue;
 				} else {
 					logger4js.trace('CheckNextRun Task(%s/%s): Check %s nextRun %s actual %s ', task.name, task._id, task.value.nextRun.toISOString().substr(11, 8), actual.toISOString().substr(11, 8));
-					if (task.value.nextRun.getTime() > actual.getTime()) {  // nextRun has not expired
-						if (task.name == 'Predict Training') logger4js.trace('CheckNextRun Task(%s/%s): Skip execution actual %s next %s', task.name, task._id, actual.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
+					if (task.value.nextRun.getTime() > actual.getTime()) {  // nextRun has not expired						
 						continue;
-					} else {  // nextRun has expired already
-						if (task.name == 'Predict Training' && task.value.lockedUntil) logger4js.trace('CheckNextRun Task(%s/%s): Is Locked %s next %s', task.name, task._id, task.value.lockedUntil.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
+					} else {  // nextRun has expired already						
 						if (task.value.lockedUntil) {  // Task was locked
 							if (task.value.lockedUntil.getTime() < actual.getTime()) { // lock expired
 								logger4js.info('CheckNextRun Task(%s/%s): Has an expired lock %s lastRun %s', task.name, task._id, task.value.lockedUntil.toISOString().substr(11, 8), task.value.lastRun.toISOString().substr(11, 8));
@@ -155,7 +151,6 @@ async function checkNextRun() {
 						}
 					}
 				}
-				if (task.name == 'Predict Training') logger4js.trace('CheckNextRun Task(%s/%s): process actual %s next %s', task.name, task._id, actual.toISOString().substr(11, 8), task.value.nextRun.toISOString().substr(11, 8));
 				// update task entry lock & next run
 				task.value.nextRun = new Date(); // to guarantee that it is set
 				task.value.nextRun.setTime(actual.getTime() + task.value.interval * 1000);
@@ -169,7 +164,7 @@ async function checkNextRun() {
 					task.value.nextRun.setHours(0, 0, 0, 0);
 				}
 				var lockPeriod = 5 * 60;
-				if (task.name == 'Predict Training') { logger4js.trace('Prepare Task(%s/%s): Needs execution next %s new lock %s', task.name, task._id, task.value.nextRun && task.value.nextRun.toISOString(), task.value.lockedUntil && task.value.lockedUntil.toISOString()); }
+	
 				lockPeriod = lockPeriod > task.value.interval ? task.value.interval / 2 : lockPeriod;
 				task.value.lockedUntil = new Date(actual);
 				task.value.lockedUntil.setTime(task.value.lockedUntil.getTime() + lockPeriod * 1000);
@@ -181,8 +176,7 @@ async function checkNextRun() {
 				var updateUpdate = {$set : {'value.lastRun' : task.value.lastRun, 'value.nextRun' : task.value.nextRun, 'value.lockedUntil' : task.value.lockedUntil} };
 
 				var result = await VCSetting.updateOne(updateQuery, updateUpdate, updateOption);
-				
-				if (task.name == 'Predict Training') { logger4js.trace('Updated Task (%s/%s): updated last run/next run execute task now', task.name, task._id); }
+								
 				logger4js.trace('CheckNextRun Task (%s/%s) Saved Items %s', task.name, task._id, result.modifiedCount);
 				
 				if (result.modifiedCount == 1) {
@@ -208,14 +202,6 @@ async function checkNextRun() {
 							break;
 						case 'System Config':
 							refreshSystemSetting(task, finishedTask);
-							break;
-						case 'Predict Collect':
-						//   !!do not execute any longer !!
-						//   visboPredict.kmCollect(task, finishedTask, vcSystemId);
-							break;
-						case 'Predict Training':
-						//   !!do not execute any longer !!
-						//   visboPredict.kmTraining(task, finishedTask, vcSystemId);
 							break;
 						case 'Task Test':
 							taskTest(task, finishedTask);

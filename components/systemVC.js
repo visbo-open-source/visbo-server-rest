@@ -25,8 +25,7 @@ var vcSystem = undefined;
 var vcSystemSetting = undefined;
 var lastUpdatedAt = new Date('2000-01-01');
 var redisClient = null;
-// var predictConfigured = undefined;
-// var fsModell = undefined;
+
 
 // Verify/Create VISBO Center with an initial user
 /* The createSystemVC function is responsible for initializing the System VISBO Center (VC) if it does not already exist. 
@@ -347,13 +346,6 @@ var getReSTUrl = function () {
 	return result;
 };
 
-// var checkPredictConfigured = function () {
-// 	return predictConfigured;
-// };
-
-// var getPredictModel = function () {
-// 	return predictConfigured ? fsModell : undefined;
-// };
 
 module.exports = {
 	createSystemVC: createSystemVC,
@@ -362,9 +354,7 @@ module.exports = {
 	getSystemUrl: getSystemUrl,
 	getReSTUrl: getReSTUrl,
 	refreshSystemSetting: refreshSystemSetting,
-	reloadSystemSetting: reloadSystemSetting,
-	//checkSystemEnabled: checkSystemEnabled,
+	reloadSystemSetting: reloadSystemSetting,	
 	getSystemSettingList: getSystemSettingList
-	// checkPredictConfigured: checkPredictConfigured,
-	// getPredictModel: getPredictModel
+	
 };
