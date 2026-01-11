@@ -1,136 +1,120 @@
-# VISBO Contributor License Agreement (CLA)
-Version 2.0 — Effective from 20.11.2025
+# VISBO – Contributor License Agreement (CLA)
+Version Dec 01, 2025
 
-This Contributor License Agreement ("Agreement") is entered into between:
+IMPORTANT:
+By submitting a contribution to the VISBO project (“Contribution”), you agree to the terms of this Contributor License Agreement (“Agreement”).
+This Agreement ensures that VISBO GmbH and any future acquiring entity retain full legal rights to use, distribute, and commercialize Contributions.
 
-**VISBO GmbH**  
-Kurt-Koch-Str. 4a  
-83607 Holzkirchen  
-Germany  
-
-and
-
-**You** (“Contributor”).
-
-By submitting a Contribution (as defined below) to any VISBO repository, you accept and agree to the terms of this Agreement.
+This Agreement is legally binding **without a handwritten or digital signature**.
+Submitting a Contribution through GitHub/GitLab, pull requests, email, or any VISBO submission channel constitutes **silent (implied) acceptance** of this CLA.
 
 ---
 
-# 1. Definitions
+## 1. Definitions
 
-- **“Software”** means the VISBO software and all associated components published under the AGPL v3 license with the Commons Clause restriction.  
-- **“Contribution”** means any source code, documentation, configuration, bug fix, feature, suggestion, idea, or other material that you submit to a VISBO repository (e.g., via pull request, patch, issue, or other submission mechanism).  
-- **“You”** or **“Contributor”** means the individual or legal entity submitting the Contribution. If a Contribution is made as part of employment or on behalf of a company, “You” includes that entity.
-
----
-
-# 2. License Granted to VISBO (Open-Source Use Only)
-
-## 2.1 Open Source License Grant  
-You grant VISBO a **perpetual, worldwide, non-exclusive, royalty-free license** to:
-
-- use, reproduce, and modify your Contribution,  
-- distribute your Contribution as part of the AGPL v3 + Commons Clause version of the Software,  
-- publicly display and publicly perform the Contribution,  
-- create derivative works **for open-source distribution only**.
-
-**This license is limited to open-source use under AGPL v3 + Commons Clause.**  
-**No commercial rights are granted unless separately agreed in writing.**
-
-You retain full copyright ownership of your Contribution.
+- **“You” / “Contributor”**: the individual or legal entity submitting a Contribution.  
+- **“Contribution”**: any source code, documentation, configuration, design, ideas, or other material submitted to the VISBO project.  
+- **“VISBO” / “Licensor”**: VISBO GmbH and any legal successor or acquiring entity.  
+- **“Project”**: all VISBO repositories, codebases, components, documentation, and related materials.
 
 ---
 
-# 3. Commercial Rights (NOT automatically transferred)
+## 2. Copyright License
 
-## 3.1 No Automatic Commercial License  
-VISBO **does not automatically receive** any commercial rights to your Contribution.
+You grant VISBO a perpetual, irrevocable, worldwide, royalty-free, non-exclusive, transferable license to:
 
-## 3.2 Optional Commercial Licensing  
-If VISBO or a legal successor wishes to include your Contribution in a **commercial** (closed-source or SaaS) offering, VISBO must:
-
-1. Request a commercial license from you, and  
-2. Negotiate commercially reasonable terms in good faith.
-
-You may choose to grant or refuse such a commercial license at your sole discretion.
+- use, reproduce, modify, display, perform, sublicense, and distribute your Contribution in both source and object form  
+- combine your Contribution with other software  
+- redistribute your Contribution under open-source or commercial terms  
+- transfer these rights to any future owner or acquiring organization  
 
 ---
 
-# 4. Protection for VISBO (Independent Development)
+## 3. Commercial License (Full Rights Granted)
 
-To ensure VISBO can continue development of the Software without legal risk:
+You expressly grant VISBO — **and any successor or acquiring entity** — a perpetual, irrevocable, worldwide, royalty-free license to:
 
-## 4.1 Ideas Are Not Protected  
-You acknowledge that:
+- commercialize your Contribution in any form, including proprietary or closed-source products  
+- offer your Contribution as SaaS, managed services, OEM modules, or embedded components  
+- sublicense your Contribution to any customers, partners, or third parties  
+- relicense your Contribution under commercial terms outside the scope of AGPL  
 
-- only your **specific code** is protected,  
-- **ideas, concepts, functionality, designs, feature descriptions, and architectural suggestions are NOT protected**,  
-- VISBO may freely use, expand, or implement such ideas independently.
+No compensation, royalty, or revenue-share is owed to the Contributor.
 
-## 4.2 Independent Development Is Allowed  
-VISBO may develop features or functionality **similar or identical** to a Contribution, **as long as VISBO does not copy your code**.
-
-## 4.3 Waiver of Claims  
-You expressly waive any claim that VISBO’s independently developed code:
-
-- infringes your Contribution,  
-- misappropriates your Contribution,  
-- constitutes an unlawful derivative work,  
-- replicates “your idea”,  
-- or otherwise violates your rights,
-
-**even if the VISBO implementation provides the same or similar functionality**.
-
-## 4.4 No Obligation to Accept or Acquire Commercial Rights  
-VISBO is **not obligated** to:
-
-- buy a commercial license from you,  
-- accept your offered licensing terms,  
-- or avoid implementing its own solution if your price is too high.
-
-VISBO is free to refuse your commercial licensing offer and implement the feature independently.
+This clause ensures clear and consolidated commercial IP rights for VISBO and any acquirer.
 
 ---
 
-# 5. Contributor’s Representations
+## 4. Patent License
 
-You represent and warrant that:
+You grant VISBO a perpetual, worldwide, non-exclusive, royalty-free patent license to:
 
-1. You have the authority to submit the Contribution.  
-2. The Contribution is your original work, or you have the necessary rights to submit it.  
-3. You are not violating any confidentiality or contractual obligations.  
-4. The Contribution does not knowingly infringe third-party rights.
+- use, modify, distribute, commercialize, and sublicense any patents you own or control that are necessary to practice your Contribution.
 
----
-
-# 6. No Warranty
-
-Your Contribution is provided **“AS IS”**, without warranties of any kind, including:
-
-- merchantability,  
-- fitness for a particular purpose,  
-- non-infringement,  
-- or absence of defects.
+This extends to any acquiring entity.
 
 ---
 
-# 7. Governing Law and Jurisdiction
+## 5. Representations and Warranties
 
-This Agreement is governed by the laws of the Federal Republic of Germany.  
-Exclusive jurisdiction, where permissible, is Munich, Germany.
+You represent that:
 
----
-
-# 8. Entire Agreement
-
-This Agreement constitutes the entire agreement between the Contributor and VISBO regarding Contributions.
+1. You are legally permitted to submit the Contribution.  
+2. The Contribution is your original work, OR you have the right to submit it.  
+3. The Contribution does not knowingly infringe third-party rights.  
+4. You understand the VISBO Project uses a dual-licensing model (AGPLv3 + Commons Clause + Commercial License).  
 
 ---
 
-# 9. Acceptance
+## 6. No Obligation to Use
 
-By submitting a Contribution (PR, patch, etc.), you confirm that you have read and agreed to this Agreement.
+VISBO is not required to:
+
+- use your Contribution  
+- merge or publish your Contribution  
+- maintain attribution  
+- continue distributing the project as open source  
+
+VISBO may modify or reject Contributions at its discretion.
 
 ---
 
-# END OF AGREEMENT
+## 7. No Employment or Partnership Relationship
+
+This Agreement does not create:
+
+- employment,  
+- partnership,  
+- joint venture,  
+- agency,  
+- or any fiduciary relationship.
+
+---
+
+## 8. Governing Law
+
+This Agreement is governed by the laws of Germany.  
+Exclusive jurisdiction: the competent court in Münster, Germany.
+
+---
+
+## 9. Entire Agreement
+
+This Agreement supersedes all prior CLA versions and represents the full understanding between the Contributor and VISBO.
+
+---
+
+## 10. Acceptance Without Signature
+
+This CLA becomes fully effective **without any manual signature**.  
+Submitting a Contribution through:
+
+- GitHub / GitLab commits or pull requests  
+- email patch submissions  
+- VISBO-managed contribution systems  
+
+constitutes **automatic, silent acceptance** of this CLA.
+
+---
+
+# END OF CLA
