@@ -1,0 +1,58 @@
+# .github/workflows/pr-target-check.yml
+# This workflow checks if PRs from external contributors target the correct branch
+
+name: PR Target Branch Check
+
+on:
+  pull_request_target:
+    types: [opened]
+    branches:
+      - main
+      - staging
+
+jobs:
+  check-pr-target:
+    runs-on: ubuntu-latest
+    
+    # Only run for PRs from forks (external contributors)
+    if: github.event.pull_request.head.repo.fork == true
+    
+    steps:
+      - name: Comment and Close PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const targetBranch = context.payload.pull_request.base.ref;
+            const author = context.payload.pull_request.user.login;
+            
+            // Post a friendly comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `Hi @${author}, thank you for your contribution! 👋
+
+However, this PR targets the \`${targetBranch}\` branch, which is not open for external contributions.
+
+**Please re-submit your PR targeting the \`development\` branch instead.**
+
+Here's how:
+1. Close this PR
+2. Create a new PR with \`development\` as the base branch
+3. We'll review it there
+
+See our [CONTRIBUTING.md](./CONTRIBUTING.md) for more details.
+
+This PR will be closed automatically.`
+            });
+            
+            // Close the PR
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              state: 'closed'
+            });
+            
+            console.log(`Closed PR #${prNumber} from ${author} targeting ${targetBranch}`);
