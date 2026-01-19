@@ -17,39 +17,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.payload.pull_request.number;
-            const targetBranch = context.payload.pull_request.base.ref;
-            const author = context.payload.pull_request.user.login;
-            
-            const message = [
-              `Hi @${author}, thank you for your contribution!`,
-              '',
-              `However, this PR targets the **${targetBranch}** branch, which is not open for external contributions.`,
-              '',
-              '**Please re-submit your PR targeting the `development` branch instead.**',
-              '',
-              'Here is how:',
-              '1. Close this PR',
-              '2. Create a new PR with `development` as the base branch',
-              '3. We will review it there',
-              '',
-              'See our [CONTRIBUTING.md](./CONTRIBUTING.md) for more details.',
-              '',
-              'This PR will be closed automatically.'
-            ].join('\n');
-            
+            const pr = context.payload.pull_request;
+            const msg = 'Hi @' + pr.user.login + ', thank you for your contribution!\n\n' +
+              'However, this PR targets the **' + pr.base.ref + '** branch, which is not open for external contributions.\n\n' +
+              '**Please re-submit your PR targeting the development branch instead.**\n\n' +
+              'Here is how:\n' +
+              '1. Close this PR\n' +
+              '2. Create a new PR with development as the base branch\n' +
+              '3. We will review it there\n\n' +
+              'See our CONTRIBUTING.md for more details.\n\n' +
+              'This PR will be closed automatically.';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              body: message
+              issue_number: pr.number,
+              body: msg
             });
-            
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: prNumber,
+              pull_number: pr.number,
               state: 'closed'
             });
-            
-            console.log(`Closed PR #${prNumber} from ${author} targeting ${targetBranch}`);
