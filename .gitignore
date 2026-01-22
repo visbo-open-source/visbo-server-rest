@@ -12,3 +12,7 @@ postman/environment/specials
 test-rest-*-log.txt
 data/
 var/log/visbo/*/
+lint*.txt
+package.json.backup
+package-lock.json.backup
+*postman*log.txt
