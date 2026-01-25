@@ -1,0 +1,33 @@
+name: Enforce branch flow
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches:
+      - staging
+      - main
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR source branch
+        shell: bash
+        run: |
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "PR target: $BASE"
+          echo "PR source: $HEAD"
+
+          if [[ "$BASE" == "staging" && "$HEAD" != "development" ]]; then
+            echo "❌ PRs into 'staging' must come from 'development'."
+            exit 1
+          fi
+
+          if [[ "$BASE" == "main" && "$HEAD" != "staging" ]]; then
+            echo "❌ PRs into 'main' must come from 'staging'."
+            exit 1
+          fi
+
+          echo "✅ Branch flow valid."
