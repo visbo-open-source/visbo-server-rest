@@ -1,4 +1,4 @@
-# node-rest-server
+# node-rest-Server VISBO
 Secure REST API server example with Nodejs, Express, mongoose & JsonWebToken
 
 <h2>Deployment Guides</h2>
