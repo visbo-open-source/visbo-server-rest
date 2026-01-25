@@ -7,8 +7,9 @@ public/ui/
 .env
 logging/
 dump.rdb
-postman/VCClone/*.json
-postman/environment/specials
+postman/VCClone/
+postman/VCMigrate/
+postman/environment/
 test-rest-*-log.txt
 data/
 var/log/visbo/*/
