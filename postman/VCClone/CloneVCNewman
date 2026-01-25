@@ -1,2 +1,0 @@
-export NODE_OPTIONS=--max_old_space_size=8192
-newman run "99 Clone Anonym.postman_collection.json" -e "environment/VisboReST_AWS_Prod.postman_environment.json" -d "VCClone/export/exportIS.json"
