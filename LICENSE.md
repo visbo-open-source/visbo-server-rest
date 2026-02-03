@@ -38,20 +38,36 @@ Official text: https://commonsclause.com
 # 2. VISBO-Specific Clarifications  
 
 ## 2.1 Prohibited without a commercial license:
-- Offering VISBO as a **multi-tenant SaaS**  
-- Hosting VISBO for **multiple unaffiliated organisations**  
-- Integrating VISBO into **commercial SaaS platforms**  
-- Providing VISBO as a **managed service** for multiple customers  
-- Any offering where the primary value derives from VISBO functionality  
+- Operating VISBO on the provider's own infrastructure and granting third parties access for a fee — regardless of whether this is labelled SaaS, hosting, managed service, or otherwise
+- Integrating VISBO into commercial SaaS platforms
+- Commercially distributing a forked or modified version of VISBO without a commercial license from VISBO or its legal successor
 
 ## 2.2 Allowed under AGPL + Commons Clause:
-- Internal business use within a single organisation  
+- Internal business use within a single organisation, including all affiliated companies as defined by § 15 AktG  
 - Private cloud / on-premises deployments  
 - Academic, research and experimental use  
 - Consulting, installation and support services  
 - Internal modifications  
+- Development and commercial distribution of independent interfaces and connectors that exclusively use the VISBO API and data model without modifying VISBO source code
 - Contributions under the VISBO CLA  
+- Forking the codebase for internal use within a single organisation (including affiliated companies)
 - Redistribution under AGPL v3 + Commons Clause  
+
+## 2.3 Liquidation Period Terms (1.1.2026 - 31.12.2026)
+- Commercial Licenses issued during 2026: One-Time Fee only, 3-year term, binding on any acquirer of VISBO IP
+- Post-2026 terms revert to standard commercial terms including recurring components
+
+## 2.4 IP-Succession 
+If no acquirer for the VISBO intellectual property and assets has been found by 31 December 2026, all VISBO intellectual property rights — including but not limited to copyrights, trademark rights, commercial licensing rights, CLA-derived rights, and all rights to the VISBO codebase, documentation, and the my.visbo.net platform — shall be transferred to an entity designated by resolution of the VISBO GmbH shareholders' meeting (Gesellschafterversammlung) prior to the conclusion of the liquidation phase.
+
+The designated successor entity shall assume all rights and obligations of VISBO GmbH with respect to:
+- the grant and administration of commercial licenses under the VISBO dual-licensing model,
+- the acceptance or rejection of Contributions under the VISBO CLA,
+- the maintenance of automated quality assurance and testing processes for the VISBO standard release,
+- the enforcement of the VISBO trademarks and branding rights.
+
+All commercial licenses validly issued during the liquidation period (1 January 2026 – 31 December 2026) shall remain fully binding upon the designated successor entity for their agreed term.
+The open-source license (AGPL v3 + Commons Clause) is irrevocable and shall remain in full force regardless of the identity of the successor entity.
 
 ---
 

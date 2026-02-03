@@ -32,7 +32,7 @@ You grant VISBO a perpetual, irrevocable, worldwide, royalty-free, non-exclusive
 
 ## 3. Commercial License (Full Rights Granted)
 
-You expressly grant VISBO — **and any successor or acquiring entity** — a perpetual, irrevocable, worldwide, royalty-free license to:
+You expressly grant VISBO — **and any successor or acquiring entity of VISBO Assets and IP ** — a perpetual, irrevocable, worldwide, royalty-free license to:
 
 - commercialize your Contribution in any form, including proprietary or closed-source products  
 - offer your Contribution as SaaS, managed services, OEM modules, or embedded components  
@@ -40,6 +40,8 @@ You expressly grant VISBO — **and any successor or acquiring entity** — a pe
 - relicense your Contribution under commercial terms outside the scope of AGPL  
 
 No compensation, royalty, or revenue-share is owed to the Contributor.
+
+Accepted Contributions become part of the VISBO standard release and are included in automated quality assurance and testing processes.
 
 This clause ensures clear and consolidated commercial IP rights for VISBO and any acquirer.
 

@@ -49,12 +49,10 @@ Existing AGPL v3 + Commons Clause users may continue to use VISBO under those te
 
 ## 4. Fees (Indicative Structure)
 
-A typical commercial license model may include:
+- During VISBO Liquidation Period (2026): One-Time Fee, no recurring, 3-year term, binding on acquirer
+- Standard Terms (post-2026): One-Time Fee + ARR-based recurring
 
-- a **one-time license fee**, and  
-- an ongoing **revenue-based fee** (for example, a percentage of ARR — annual recurring revenue — generated from VISBO-based services).
-
-The actual fee structure and amounts are subject to negotiation and are specified in the individual contract.
+The actual fee structure and amounts are subject to negotiation with the VISBO IP owner and are specified in the individual contract.
 
 ---
 
@@ -91,8 +89,7 @@ Email: **info@visbo.de**
 Please include in your inquiry:
 
 - a short description of your intended use case,  
-- whether you plan to provide VISBO as a SaaS platform, embed it into your product, or use it internally at scale, and  
-- an estimate of expected user count or ARR (if available).
+- whether you plan to provide VISBO as a SaaS platform or embed it into your product.
 
 ---
 
