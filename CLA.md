@@ -6,7 +6,9 @@ By submitting a contribution to the VISBO project (“Contribution”), you agre
 This Agreement ensures that VISBO GmbH and any future acquiring entity retain full legal rights to use, distribute, and commercialize Contributions.
 
 This Agreement is legally binding **without a handwritten or digital signature**.
-Submitting a Contribution through GitHub/GitLab, pull requests, email, or any VISBO submission channel constitutes **silent (implied) acceptance** of this CLA.
+Submitting a Contribution through a GitHub pull request and the acceptance of that pull request constitutes a **silent (implied) acceptance** of this CLA.
+
+Contributors are strongly encouraged to confirm their acceptance of this CLA by including the statement 'I have read and agree to the VISBO CLA' in their first pull request or contribution message. VISBO reserves the right to request explicit written confirmation before accepting any Contribution.
 
 ---
 
@@ -109,13 +111,8 @@ This Agreement supersedes all prior CLA versions and represents the full underst
 ## 10. Acceptance Without Signature
 
 This CLA becomes fully effective **without any manual signature**.  
-Submitting a Contribution through:
 
-- GitHub / GitLab commits or pull requests  
-- email patch submissions  
-- VISBO-managed contribution systems  
-
-constitutes **automatic, silent acceptance** of this CLA.
+Submitting a Contribution through GitHub pull requests and the acceptance of that pull request by the current VISBO IP owner constitutes acceptance of this CLA. Contributors are strongly encouraged to include the statement 'I have read and agree to the VISBO CLA' in their pull request. VISBO reserves the right to request explicit written confirmation before accepting any Contribution.
 
 ---
 

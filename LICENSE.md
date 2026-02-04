@@ -58,16 +58,13 @@ Official text: https://commonsclause.com
 - Post-2026 terms revert to standard commercial terms including recurring components
 
 ## 2.4 IP-Succession 
-If no acquirer for the VISBO intellectual property and assets has been found by 31 December 2026, all VISBO intellectual property rights — including but not limited to copyrights, trademark rights, commercial licensing rights, CLA-derived rights, and all rights to the VISBO codebase, documentation, and the my.visbo.net platform — shall be transferred to an entity designated by resolution of the VISBO GmbH shareholders' meeting (Gesellschafterversammlung) prior to the conclusion of the liquidation phase.
+If no acquirer for the VISBO intellectual property has been found by 31 December 2026, all VISBO intellectual property rights shall be transferred to a successor entity designated by VISBO GmbH. The open-source license (AGPL v3 + Commons Clause) is irrevocable and shall remain in full force regardless of the identity of the successor entity. All commercial licenses validly issued during the liquidation period shall remain fully binding upon the designated successor entity for their agreed term.
 
 The designated successor entity shall assume all rights and obligations of VISBO GmbH with respect to:
 - the grant and administration of commercial licenses under the VISBO dual-licensing model,
 - the acceptance or rejection of Contributions under the VISBO CLA,
 - the maintenance of automated quality assurance and testing processes for the VISBO standard release,
 - the enforcement of the VISBO trademarks and branding rights.
-
-All commercial licenses validly issued during the liquidation period (1 January 2026 – 31 December 2026) shall remain fully binding upon the designated successor entity for their agreed term.
-The open-source license (AGPL v3 + Commons Clause) is irrevocable and shall remain in full force regardless of the identity of the successor entity.
 
 ---
 
